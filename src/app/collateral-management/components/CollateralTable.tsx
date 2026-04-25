@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock,  } from 'lucide-react';
-import { Collateral, CollateralStatus } from './collateralData';
+import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { FolderOpen } from 'lucide-react';
@@ -196,7 +196,7 @@ export default function CollateralTable({
                     </td>
                     {/* ID */}
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs font-600 text-primary">{item.id}</span>
+                      <span className="font-mono text-xs font-600 text-primary">{item.collateralId}</span>
                     </td>
                     {/* Obligor */}
                     <td className="px-4 py-3 max-w-[160px]">

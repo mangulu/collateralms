@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
-import { Collateral, CollateralStatus } from './collateralData';
+import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -23,6 +23,7 @@ interface CollateralDetailModalProps {
   item: Collateral | null;
   onClose: () => void;
   onEdit: (item: Collateral) => void;
+  onStatusChange?: (id: string, status: CollateralStatus) => void;
 }
 
 const statusBadgeMap: Record<CollateralStatus, 'perfected' | 'pending' | 'overdue' | 'draft' | 'released' | 'monitoring' | 'rejected' | 'under-review' | 'submitted'> = {
@@ -82,6 +83,7 @@ export default function CollateralDetailModal({
   item,
   onClose,
   onEdit,
+  onStatusChange,
 }: CollateralDetailModalProps) {
   if (!item) return null;
 
@@ -99,7 +101,7 @@ export default function CollateralDetailModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={`Collateral Detail — ${item.id}`}
+      title={`Collateral Detail — ${item.collateralId}`}
       subtitle={`${item.obligor} · ${item.type}`}
       size="xl"
     >
@@ -131,7 +133,7 @@ export default function CollateralDetailModal({
           <div className="bg-muted/30 rounded-lg px-3 py-1">
             <DetailRow
               label="Collateral ID"
-              value={<span className="font-mono font-600 text-primary">{item.id}</span>}
+              value={<span className="font-mono font-600 text-primary">{item.collateralId}</span>}
               icon={Shield}
             />
             <DetailRow

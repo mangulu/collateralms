@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { AlertCircle } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
-import { Collateral } from './collateralData';
+import { CollateralRecord as Collateral } from '@/lib/supabase/collateralService';
 
 interface FormData {
   obligor: string;

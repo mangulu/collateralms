@@ -1,8 +1,9 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Download, Filter, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { mockCollateral, Collateral, CollateralStatus } from './collateralData';
+import { collateralService, auditService, CollateralRecord, CollateralStatus } from '@/lib/supabase/collateralService';
+import { useAuth } from '@/contexts/AuthContext';
 import CollateralTable from './CollateralTable';
 import CollateralFilters from './CollateralFilters';
 import AddEditCollateralModal from './AddEditCollateralModal';
@@ -16,7 +17,11 @@ export interface FilterState {
   officer: string;
 }
 
+// Re-export Collateral type alias for backward compatibility
+export type { CollateralRecord as Collateral } from '@/lib/supabase/collateralService';
+
 export default function CollateralManagementContent() {
+  const { user } = useAuth();
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     type: '',
@@ -27,18 +32,35 @@ export default function CollateralManagementContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [editItem, setEditItem] = useState<Collateral | null>(null);
-  const [detailItem, setDetailItem] = useState<Collateral | null>(null);
-  const [collateralData, setCollateralData] = useState<Collateral[]>(mockCollateral);
+  const [editItem, setEditItem] = useState<CollateralRecord | null>(null);
+  const [detailItem, setDetailItem] = useState<CollateralRecord | null>(null);
+  const [collateralData, setCollateralData] = useState<CollateralRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await collateralService.getAll();
+      setCollateralData(data);
+    } catch (err: any) {
+      toast.error('Failed to load collateral records');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filtered = useMemo(() => {
     return collateralData.filter((c) => {
       const matchSearch =
         !filters.search ||
         c.obligor.toLowerCase().includes(filters.search.toLowerCase()) ||
-        c.id.toLowerCase().includes(filters.search.toLowerCase()) ||
+        c.collateralId.toLowerCase().includes(filters.search.toLowerCase()) ||
         c.facilityId.toLowerCase().includes(filters.search.toLowerCase()) ||
         c.description.toLowerCase().includes(filters.search.toLowerCase());
       const matchType = !filters.type || c.type === filters.type;
@@ -55,36 +77,77 @@ export default function CollateralManagementContent() {
     currentPage * itemsPerPage
   );
 
-  const handleBulkDelete = () => {
-    setCollateralData((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
-    toast.success(`${selectedIds.length} collateral item(s) removed`);
-    setSelectedIds([]);
+  const handleBulkDelete = async () => {
+    const count = selectedIds.length;
+    try {
+      await collateralService.deleteMany(selectedIds);
+      toast.success(`${count} collateral item(s) removed`);
+      setSelectedIds([]);
+      fetchData();
+    } catch {
+      toast.error('Failed to remove selected items');
+    }
   };
 
-  const handleStatusChange = (id: string, status: CollateralStatus) => {
-    setCollateralData((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status } : c))
-    );
-    toast.success(`Status updated to ${status}`);
+  const handleStatusChange = async (id: string, status: CollateralStatus) => {
+    try {
+      await collateralService.updateStatus(id, status);
+      const record = collateralData.find((c) => c.id === id);
+      if (record) {
+        await auditService.log({
+          collateralRecordId: id,
+          collateralId: record.collateralId,
+          action: 'status_changed',
+          message: `Status updated to ${status} for ${record.collateralId}`,
+          detail: `${record.obligor} · ${record.type}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        });
+      }
+      toast.success(`Status updated to ${status}`);
+      fetchData();
+    } catch {
+      toast.error('Failed to update status');
+    }
   };
 
-  const handleSave = (data: Partial<Collateral>) => {
-    if (editItem) {
-      // Backend integration point: PUT /api/collateral/:id
-      setCollateralData((prev) =>
-        prev.map((c) => (c.id === editItem.id ? { ...c, ...data } : c))
-      );
-      toast.success('Collateral record updated');
-      setEditItem(null);
-    } else {
-      // Backend integration point: POST /api/collateral
-      const newId = `col-${String(collateralData.length + 313).padStart(4, '0')}`;
-      setCollateralData((prev) => [
-        { ...data, id: newId, status: 'Draft', daysToDeadline: 42 } as Collateral,
-        ...prev,
-      ]);
-      toast.success('Collateral record created');
-      setAddModalOpen(false);
+  const handleSave = async (data: Partial<CollateralRecord>) => {
+    try {
+      if (editItem) {
+        const updated = await collateralService.update(editItem.id, data);
+        if (updated) {
+          await auditService.log({
+            collateralRecordId: editItem.id,
+            collateralId: editItem.collateralId,
+            action: 'updated',
+            message: `Collateral ${editItem.collateralId} updated`,
+            detail: `${editItem.obligor} · ${editItem.type}`,
+            performedBy: user?.id,
+            performedByName: user?.email ?? '',
+          });
+          toast.success('Collateral record updated');
+          setEditItem(null);
+          fetchData();
+        }
+      } else {
+        const created = await collateralService.create(data, user?.id ?? '');
+        if (created) {
+          await auditService.log({
+            collateralRecordId: created.id,
+            collateralId: created.collateralId,
+            action: 'created',
+            message: `New collateral registered: ${created.collateralId}`,
+            detail: `${created.obligor} · ${created.type} · TSh ${created.valueTSh}`,
+            performedBy: user?.id,
+            performedByName: user?.email ?? '',
+          });
+          toast.success('Collateral record created');
+          setAddModalOpen(false);
+          fetchData();
+        }
+      }
+    } catch {
+      toast.error('Failed to save collateral record');
     }
   };
 
@@ -208,25 +271,38 @@ export default function CollateralManagementContent() {
         </div>
       )}
 
-      {/* Table */}
-      <CollateralTable
-        data={paginated}
-        selectedIds={selectedIds}
-        onSelectChange={setSelectedIds}
-        allIds={filtered.map((c) => c.id)}
-        onEdit={(item) => setEditItem(item)}
-        onView={(item) => setDetailItem(item)}
-        onStatusChange={handleStatusChange}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={filtered.length}
-        itemsPerPage={itemsPerPage}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={(n) => {
-          setItemsPerPage(n);
-          setCurrentPage(1);
-        }}
-      />
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-3">
+            <svg className="animate-spin w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <p className="text-sm text-muted-foreground">Loading collateral records...</p>
+          </div>
+        </div>
+      ) : (
+        /* Table */
+        <CollateralTable
+          data={paginated}
+          selectedIds={selectedIds}
+          onSelectChange={setSelectedIds}
+          allIds={filtered.map((c) => c.id)}
+          onEdit={(item) => setEditItem(item)}
+          onView={(item) => setDetailItem(item)}
+          onStatusChange={handleStatusChange}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(n) => {
+            setItemsPerPage(n);
+            setCurrentPage(1);
+          }}
+        />
+      )}
 
       {/* Add/Edit Modal */}
       <AddEditCollateralModal
@@ -248,6 +324,7 @@ export default function CollateralManagementContent() {
           setDetailItem(null);
           setEditItem(item);
         }}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );
