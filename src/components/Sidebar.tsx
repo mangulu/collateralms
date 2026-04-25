@@ -1,0 +1,226 @@
+'use client';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import AppLogo from './ui/AppLogo';
+import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList,  } from 'lucide-react';
+import Icon from '@/components/ui/AppIcon';
+
+
+interface SidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+  currentPath?: string;
+}
+
+const navGroups = [
+  {
+    label: 'Overview',
+    items: [
+      {
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        href: '/collateral-dashboard',
+        badge: null,
+      },
+    ],
+  },
+  {
+    label: 'Collateral',
+    items: [
+      {
+        label: 'Collateral Registry',
+        icon: FolderOpen,
+        href: '/collateral-management',
+        badge: '3',
+      },
+      {
+        label: 'Perfection Actions',
+        icon: Shield,
+        href: '/collateral-management',
+        badge: '7',
+      },
+      {
+        label: 'Documents',
+        icon: FileText,
+        href: '/collateral-management',
+        badge: null,
+      },
+    ],
+  },
+  {
+    label: 'Compliance',
+    items: [
+      {
+        label: 'Overdue Alerts',
+        icon: AlertTriangle,
+        href: '/collateral-dashboard',
+        badge: '5',
+        badgeVariant: 'danger' as const,
+      },
+      {
+        label: 'Audit Trail',
+        icon: ClipboardList,
+        href: '/collateral-management',
+        badge: null,
+      },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      {
+        label: 'User Management',
+        icon: Users,
+        href: '/collateral-management',
+        badge: null,
+      },
+      {
+        label: 'System Settings',
+        icon: Settings,
+        href: '/collateral-management',
+        badge: null,
+      },
+    ],
+  },
+];
+
+const badgeVariantClasses: Record<string, string> = {
+  default: 'bg-primary/10 text-primary',
+  danger: 'bg-red-100 text-red-700',
+  warning: 'bg-amber-100 text-amber-700',
+};
+
+export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarProps) {
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+
+  return (
+    <aside
+      className="relative flex flex-col bg-white border-r border-border h-full shrink-0 sidebar-transition z-20"
+      style={{ width: collapsed ? '64px' : '240px' }}
+    >
+      {/* Logo */}
+      <div className="flex items-center h-16 px-3 border-b border-border shrink-0 overflow-hidden">
+        <div className="flex items-center gap-2 min-w-0">
+          <AppLogo size={32} />
+          {!collapsed && (
+            <div className="min-w-0 fade-in">
+              <p className="text-sm font-semibold text-primary truncate leading-tight">
+                CollateralMS
+              </p>
+              <p className="text-xs text-muted-foreground truncate leading-tight">
+                EXIM Bank Tanzania
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2">
+        {navGroups.map((group) => (
+          <div key={`group-${group.label}`} className="mb-4">
+            {!collapsed && (
+              <p className="text-xs font-600 tracking-wider text-muted-foreground uppercase px-2 mb-1">
+                {group.label}
+              </p>
+            )}
+            {collapsed && <div className="border-t border-border mx-1 mb-2" />}
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPath === item.href;
+              const isHovered = hoveredItem === item.label;
+              const badgeClass =
+                badgeVariantClasses[item.badgeVariant ?? 'default'];
+
+              return (
+                <div key={`nav-${item.label}`} className="relative">
+                  <Link
+                    href={item.href}
+                    onMouseEnter={() => setHoveredItem(item.label)}
+                    onMouseLeave={() => setHoveredItem(null)}
+                    className={`flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150 group mb-0.5 ${
+                      isActive
+                        ? 'bg-primary/10 text-primary' :'text-foreground/70 hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Icon
+                      size={18}
+                      className={`shrink-0 ${isActive ? 'text-primary' : ''}`}
+                    />
+                    {!collapsed && (
+                      <span className="flex-1 truncate">{item.label}</span>
+                    )}
+                    {!collapsed && item.badge && (
+                      <span
+                        className={`text-xs font-600 px-1.5 py-0.5 rounded-full ${badgeClass}`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                    {collapsed && item.badge && (
+                      <span
+                        className={`absolute top-1 right-1 text-xs font-600 px-1 py-0 rounded-full text-[10px] ${badgeClass}`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                  {/* Collapsed tooltip */}
+                  {collapsed && isHovered && (
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
+                      <div className="bg-foreground text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap">
+                        {item.label}
+                        {item.badge && (
+                          <span className="ml-1 opacity-75">({item.badge})</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* User Profile */}
+      <div className="border-t border-border p-2 shrink-0">
+        {!collapsed ? (
+          <div className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted cursor-pointer transition-colors">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+              <span className="text-white text-xs font-600">AM</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-500 text-foreground truncate">
+                Amina Mwangi
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                Legal Officer
+              </p>
+            </div>
+            <LogOut size={15} className="text-muted-foreground shrink-0" />
+          </div>
+        ) : (
+          <div className="flex justify-center py-1">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors">
+              <span className="text-white text-xs font-600">AM</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Collapse Toggle */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-20 w-6 h-6 bg-white border border-border rounded-full flex items-center justify-center shadow-card hover:bg-muted transition-colors z-30"
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {collapsed ? (
+          <ChevronRight size={12} className="text-muted-foreground" />
+        ) : (
+          <ChevronLeft size={12} className="text-muted-foreground" />
+        )}
+      </button>
+    </aside>
+  );
+}

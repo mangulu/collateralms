@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --primary: 213 82% 23%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 158 100% 33%;
+    --accent-foreground: 0 0% 100%;
+    --background: 210 20% 97%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --border: 214 20% 88%;
+    --muted: 214 15% 94%;
+    --muted-foreground: 215 16% 47%;
+    --destructive: 0 72% 51%;
+    --warning: 38 92% 50%;
+    --success: 158 64% 40%;
+    --foreground: 215 25% 15%;
+    --ring: 213 82% 23%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sidebar-transition {
+    transition: width 300ms ease, opacity 200ms ease;
+  }
+
+  .fade-in {
+    animation: fadeIn 200ms ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-up {
+    animation: slideUp 200ms ease forwards;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-enter {
+    animation: modalEnter 180ms ease forwards;
+  }
+
+  @keyframes modalEnter {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .pulse-highlight {
+    animation: pulseHighlight 600ms ease;
+  }
+
+  @keyframes pulseHighlight {
+    0% { background-color: transparent; }
+    30% { background-color: hsl(38 92% 90%); }
+    100% { background-color: transparent; }
+  }
+}
