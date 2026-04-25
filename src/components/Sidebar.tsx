@@ -60,7 +60,7 @@ const navGroups = [
       {
         label: 'Audit Trail',
         icon: ClipboardList,
-        href: '/collateral-management',
+        href: '/compliance-audit',
         badge: null,
       },
     ],
