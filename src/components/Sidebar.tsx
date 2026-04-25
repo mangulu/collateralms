@@ -77,7 +77,7 @@ const navGroups = [
       {
         label: 'System Settings',
         icon: Settings,
-        href: '/collateral-management',
+        href: '/settings',
         badge: null,
       },
     ],
