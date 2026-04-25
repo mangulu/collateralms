@@ -71,7 +71,7 @@ const navGroups = [
       {
         label: 'User Management',
         icon: Users,
-        href: '/collateral-management',
+        href: '/user-management',
         badge: null,
       },
       {
