@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList,  } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2 } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -61,6 +61,12 @@ const navGroups = [
         label: 'Audit Trail',
         icon: ClipboardList,
         href: '/compliance-audit',
+        badge: null,
+      },
+      {
+        label: 'Reports',
+        icon: BarChart2,
+        href: '/reports',
         badge: null,
       },
     ],
