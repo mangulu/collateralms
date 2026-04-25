@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Copy, CheckCircle2, AlertCircle } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LoginFormData {
   email: string;
@@ -38,6 +39,7 @@ const mockCredentials = [
 
 export default function LoginForm() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -53,18 +55,16 @@ export default function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-    // Backend integration point: POST /api/auth/login
-    await new Promise((r) => setTimeout(r, 1400));
-    const validCred = mockCredentials.find(
-      (c) => c.email === data.email && c.password === data.password
-    );
-    if (!validCred) {
+    try {
+      await signIn(data.email, data.password);
+      const cred = mockCredentials.find((c) => c.email === data.email);
+      toast.success(`Welcome back${cred ? ` — signed in as ${cred.role}` : ''}`);
+      router.push('/collateral-dashboard');
+      router.refresh();
+    } catch (err: any) {
       setIsLoading(false);
-      toast.error('Invalid credentials — use the demo accounts below to sign in');
-      return;
+      toast.error(err?.message ?? 'Invalid credentials — please try again');
     }
-    toast.success(`Welcome back — signed in as ${validCred.role}`);
-    setTimeout(() => router.push('/collateral-dashboard'), 800);
   };
 
   const autofill = (email: string, password: string) => {
