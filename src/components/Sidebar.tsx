@@ -55,7 +55,7 @@ const navGroups = [
       {
         label: 'Documents',
         icon: FileText,
-        href: '/collateral-management',
+        href: '/document-management',
         badge: null,
         permission: PERMISSIONS.COLLATERAL_VIEW,
       },
