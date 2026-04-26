@@ -56,17 +56,15 @@ CREATE POLICY "admin_manage_email_provider_config"
   FOR ALL
   TO authenticated
   USING (
-    (auth.jwt() ->> 'role' = 'admin') OR
     EXISTS (
       SELECT 1 FROM public.user_profiles up
-      WHERE up.id = auth.uid() AND up.role = 'admin'
+      WHERE up.id = auth.uid() AND up.role = 'system_admin'
     )
   )
   WITH CHECK (
-    (auth.jwt() ->> 'role' = 'admin') OR
     EXISTS (
       SELECT 1 FROM public.user_profiles up
-      WHERE up.id = auth.uid() AND up.role = 'admin'
+      WHERE up.id = auth.uid() AND up.role = 'system_admin'
     )
   );
 
