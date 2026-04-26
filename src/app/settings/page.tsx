@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import RegistrySettingsContent from './components/RegistrySettingsContent';
 import NotificationSettingsContent from './components/NotificationSettingsContent';
+import EmailProviderSettingsContent from './components/EmailProviderSettingsContent';
 import { usePathname } from 'next/navigation';
-import { Settings, Bell } from 'lucide-react';
+import { Settings, Bell, Mail } from 'lucide-react';
 
-type Tab = 'registry' | 'notifications';
+type Tab = 'registry' | 'notifications' | 'email-provider';
 
 export default function SettingsPage() {
   const pathname = usePathname();
@@ -14,6 +15,7 @@ export default function SettingsPage() {
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'notifications', label: 'Notifications', icon: <Bell size={15} /> },
+    { id: 'email-provider', label: 'Email Provider', icon: <Mail size={15} /> },
     { id: 'registry', label: 'Registry Integrations', icon: <Settings size={15} /> },
   ];
 
@@ -39,6 +41,7 @@ export default function SettingsPage() {
 
         {/* Tab Content */}
         {activeTab === 'notifications' && <NotificationSettingsContent />}
+        {activeTab === 'email-provider' && <EmailProviderSettingsContent />}
         {activeTab === 'registry' && <RegistrySettingsContent />}
       </div>
     </AppLayout>
