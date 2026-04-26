@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -38,6 +38,12 @@ const navGroups = [
         icon: Shield,
         href: '/collateral-management',
         badge: '7',
+      },
+      {
+        label: 'Approval Workflow',
+        icon: GitBranch,
+        href: '/perfection-workflow',
+        badge: null,
       },
       {
         label: 'Documents',
