@@ -273,103 +273,60 @@ export default function ExportContent() {
     setExporting(true);
     setExported(null);
 
-    // Simulate async export processing
-    await new Promise((r) => setTimeout(r, 900));
-
     const filename = buildFilename(config);
 
-    if (config.format === 'csv') {
-      const csv = generateCSV(config);
-      downloadBlob(csv, filename, 'text/csv');
-    } else if (config.format === 'excel') {
-      // Generate a simple TSV-based Excel-compatible file
-      const csv = generateCSV(config).replace(/,/g, '\t');
-      downloadBlob(csv, filename, 'application/vnd.ms-excel');
-    } else {
-      // PDF: generate a printable HTML page and open print dialog
-      const rows = mockCollateral.filter((c) => {
-        if (config.registries.length && !config.registries.includes(c.registry)) return false;
-        if (config.statuses.length && !config.statuses.includes(c.status)) return false;
-        if (config.collateralTypes.length && !config.collateralTypes.includes(c.type)) return false;
-        return true;
-      });
+    try {
+      if (config.format === 'csv') {
+        await new Promise((r) => setTimeout(r, 400));
+        const csv = generateCSV(config);
+        downloadBlob(csv, filename, 'text/csv');
+        setExported(filename);
+      } else if (config.format === 'excel') {
+        await new Promise((r) => setTimeout(r, 400));
+        const csv = generateCSV(config).replace(/,/g, '\t');
+        downloadBlob(csv, filename, 'application/vnd.ms-excel');
+        setExported(filename);
+      } else {
+        // PDF: call backend API with Supabase filtering
+        const response = await fetch('/api/export/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reportType: config.reportType,
+            dateFrom: config.dateFrom,
+            dateTo: config.dateTo,
+            registries: config.registries,
+            statuses: config.statuses,
+            collateralTypes: config.collateralTypes,
+            includeCharts: config.includeCharts,
+            includeSummary: config.includeSummary,
+            includeDetails: config.includeDetails,
+            stakeholderMode: config.stakeholderMode,
+          }),
+        });
 
-      const reportLabel = REPORT_OPTIONS.find((r) => r.id === config.reportType)?.label ?? '';
-      const totalValue = rows.reduce((s, c) => s + parseInt(c.valueTSh.replace(/,/g, ''), 10), 0);
-      const perfected = rows.filter((c) => c.status === 'Perfected').length;
-      const overdue = rows.filter((c) => c.status === 'Overdue').length;
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(err.error ?? `HTTP ${response.status}`);
+        }
 
-      const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>${reportLabel} — CollateralMS</title>
-  <style>
-    body { font-family: 'DM Sans', Arial, sans-serif; font-size: 11px; color: #1e2a3a; margin: 0; padding: 24px; }
-    h1 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
-    .subtitle { color: #6b7280; font-size: 11px; margin-bottom: 16px; }
-    .meta { display: flex; gap: 24px; margin-bottom: 16px; }
-    .meta-item { background: #f3f4f6; border-radius: 6px; padding: 8px 12px; }
-    .meta-item .label { font-size: 10px; color: #6b7280; }
-    .meta-item .value { font-size: 14px; font-weight: 700; }
-    table { width: 100%; border-collapse: collapse; }
-    th { background: #1a3a5c; color: white; text-align: left; padding: 6px 8px; font-size: 10px; font-weight: 600; }
-    td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; }
-    tr:nth-child(even) td { background: #f9fafb; }
-    .badge { display: inline-block; padding: 1px 6px; border-radius: 9999px; font-size: 9px; font-weight: 600; }
-    .badge-perfected { background: #d1fae5; color: #065f46; }
-    .badge-overdue { background: #fee2e2; color: #991b1b; }
-    .badge-default { background: #e5e7eb; color: #374151; }
-    .footer { margin-top: 16px; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
-    @media print { body { padding: 0; } }
-  </style>
-</head>
-<body>
-  <h1>${reportLabel}</h1>
-  <div class="subtitle">EXIM Bank Tanzania — CollateralMS &nbsp;|&nbsp; Period: ${config.dateFrom} to ${config.dateTo} &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-GB')}</div>
-  <div class="meta">
-    <div class="meta-item"><div class="label">Total Records</div><div class="value">${rows.length}</div></div>
-    <div class="meta-item"><div class="label">Total Value (TSh)</div><div class="value">${totalValue.toLocaleString()}</div></div>
-    <div class="meta-item"><div class="label">Perfected</div><div class="value">${perfected}</div></div>
-    <div class="meta-item"><div class="label">Overdue</div><div class="value">${overdue}</div></div>
-    <div class="meta-item"><div class="label">Perfection Rate</div><div class="value">${rows.length ? Math.round((perfected / rows.length) * 100) : 0}%</div></div>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th><th>Obligor</th><th>Type</th><th>Registry</th><th>Status</th>
-        <th>Value (TSh)</th><th>Deadline</th><th>Days Left</th><th>Officer</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows.map((r) => `
-      <tr>
-        <td>${r.id}</td>
-        <td>${r.obligor}</td>
-        <td>${r.type}</td>
-        <td>${r.registry}</td>
-        <td><span class="badge ${r.status === 'Perfected' ? 'badge-perfected' : r.status === 'Overdue' ? 'badge-overdue' : 'badge-default'}">${r.status}</span></td>
-        <td>${r.valueTSh}</td>
-        <td>${r.perfectionDeadline}</td>
-        <td>${r.daysToDeadline ?? '—'}</td>
-        <td>${r.assignedOfficer}</td>
-      </tr>`).join('')}
-    </tbody>
-  </table>
-  <div class="footer">Confidential — EXIM Bank Tanzania &nbsp;|&nbsp; CollateralMS &nbsp;|&nbsp; ${new Date().toLocaleDateString('en-GB')}</div>
-  <script>window.onload = function(){ window.print(); }</script>
-</body>
-</html>`;
-
-      const win = window.open('', '_blank');
-      if (win) {
-        win.document.write(html);
-        win.document.close();
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        setExported(filename);
       }
+    } catch (err: any) {
+      console.error('Export failed:', err);
+      // Fallback: show error in banner area
+      setExported(null);
+      alert(`Export failed: ${err.message ?? 'Unknown error'}. Please try again.`);
+    } finally {
+      setExporting(false);
     }
-
-    setExporting(false);
-    setExported(filename);
   }, [config]);
 
   const selectedReport = REPORT_OPTIONS.find((r) => r.id === config.reportType)!;
@@ -714,10 +671,10 @@ export default function ExportContent() {
               )}
 
               {/* Tip */}
-              <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-100 rounded-lg">
-                <AlertTriangle size={13} className="text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 leading-snug">
-                  PDF exports open a print dialog. Use <strong>Save as PDF</strong> in your browser for best results.
+              <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                <AlertTriangle size={13} className="text-blue-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-800 leading-snug">
+                  PDF reports are generated server-side with live Supabase data and downloaded directly to your device.
                 </p>
               </div>
             </div>
