@@ -75,9 +75,9 @@ const navGroups = [
       {
         label: 'Audit Trail',
         icon: ClipboardList,
-        href: '/compliance-audit',
+        href: '/audit-trail',
         badge: null,
-        permission: PERMISSIONS.COMPLIANCE_VIEW,
+        permission: PERMISSIONS.AUDIT_LOG_VIEW,
       },
       {
         label: 'Audit Log',
