@@ -18,14 +18,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const supabase = createClient();
+
+  // Load user profile including role
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      setUserProfile(data ?? null);
+    } catch {
+      setUserProfile(null);
+    }
+  };
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        loadUserProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
     // Listen for auth changes
@@ -34,7 +53,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        loadUserProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setUserProfile(null);
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -47,8 +71,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password,
       options: {
         data: {
-          full_name: metadata?.fullName || '',
-          avatar_url: metadata?.avatarUrl || ''
+          full_name: (metadata as any)?.fullName || '',
+          avatar_url: (metadata as any)?.avatarUrl || ''
         },
         emailRedirectTo: `${window.location.origin}/auth/callback`
       }
@@ -97,10 +121,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return data;
   };
 
+  // Convenience: current user's role
+  const userRole: string | null = userProfile?.role ?? null;
+
+  // Check if current user has a specific role
+  const hasRole = (role: string): boolean => userRole === role;
+
   const value = {
     user,
     session,
     loading,
+    userProfile,
+    userRole,
+    hasRole,
     signUp,
     signIn,
     signOut,
