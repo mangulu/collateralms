@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 
 export type PerfectionRequestStatus =
-  | 'Draft' |'Submitted' |'Under Review' |'Approved' |'Rejected' |'Returned';
+  | 'Draft' |'Submitted' |'Under Review' |'Approved' |'Perfected' |'Rejected' |'Returned';
 
 export type PerfectionAction =
   | 'submitted' |'reviewed' |'approved' |'rejected' |'returned' |'commented' |'reopened';
@@ -40,6 +40,18 @@ export interface PerfectionComment {
   createdAt: string;
 }
 
+export interface PerfectionStatusHistory {
+  id: string;
+  perfectionRequestId: string;
+  fromStatus: string | null;
+  toStatus: string;
+  reason: string;
+  changedBy: string | null;
+  changedByName: string;
+  changedByRole: string;
+  createdAt: string;
+}
+
 function rowToRequest(row: any): PerfectionRequest {
   return {
     id: row.id,
@@ -72,6 +84,20 @@ function rowToComment(row: any): PerfectionComment {
     performedBy: row.performed_by,
     performedByName: row.performed_by_name ?? '',
     performedByRole: row.performed_by_role ?? '',
+    createdAt: row.created_at,
+  };
+}
+
+function rowToHistory(row: any): PerfectionStatusHistory {
+  return {
+    id: row.id,
+    perfectionRequestId: row.perfection_request_id,
+    fromStatus: row.from_status,
+    toStatus: row.to_status,
+    reason: row.reason ?? '',
+    changedBy: row.changed_by,
+    changedByName: row.changed_by_name ?? '',
+    changedByRole: row.changed_by_role ?? '',
     createdAt: row.created_at,
   };
 }
@@ -329,5 +355,50 @@ export const perfectionService = {
       .order('created_at', { ascending: true });
     if (error) throw error;
     return (data ?? []).map(rowToComment);
+  },
+
+  async perfected(
+    id: string,
+    userId: string,
+    userName: string,
+    decisionNotes: string,
+    userRole: string
+  ): Promise<boolean> {
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from('perfection_requests')
+      .update({
+        request_status: 'Perfected',
+        reviewed_by: userId,
+        reviewed_by_name: userName,
+        reviewed_at: new Date().toISOString(),
+        decision_notes: decisionNotes,
+      })
+      .eq('id', id);
+    if (updateError) throw updateError;
+
+    const { error: commentError } = await supabase
+      .from('perfection_comments')
+      .insert({
+        perfection_request_id: id,
+        action: 'approved',
+        comment: decisionNotes || 'Collateral perfected successfully.',
+        performed_by: userId,
+        performed_by_name: userName,
+        performed_by_role: userRole,
+      });
+    if (commentError) throw commentError;
+    return true;
+  },
+
+  async getStatusHistory(requestId: string): Promise<PerfectionStatusHistory[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('perfection_status_history')
+      .select('*')
+      .eq('perfection_request_id', requestId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(rowToHistory);
   },
 };

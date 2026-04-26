@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Filter, Search, X } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award } from 'lucide-react';
 import { toast } from 'sonner';
-import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus } from '@/lib/supabase/perfectionService';
+import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus, PerfectionStatusHistory } from '@/lib/supabase/perfectionService';
 import { useAuth } from '@/contexts/AuthContext';
 
 const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -10,6 +10,7 @@ const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; color: str
   Submitted: { label: 'Submitted', color: 'text-blue-700', bg: 'bg-blue-100', icon: <Send size={12} /> },
   'Under Review': { label: 'Under Review', color: 'text-amber-700', bg: 'bg-amber-100', icon: <Eye size={12} /> },
   Approved: { label: 'Approved', color: 'text-green-700', bg: 'bg-green-100', icon: <CheckCircle size={12} /> },
+  Perfected: { label: 'Perfected', color: 'text-emerald-700', bg: 'bg-emerald-100', icon: <Award size={12} /> },
   Rejected: { label: 'Rejected', color: 'text-red-700', bg: 'bg-red-100', icon: <XCircle size={12} /> },
   Returned: { label: 'Returned', color: 'text-orange-700', bg: 'bg-orange-100', icon: <RotateCcw size={12} /> },
 };
@@ -23,7 +24,7 @@ const PRIORITY_CONFIG: Record<string, { color: string; bg: string }> = {
 const ACTION_LABELS: Record<string, string> = {
   submitted: 'Submitted',
   reviewed: 'Review Started',
-  approved: 'Approved',
+  approved: 'Approved / Perfected',
   rejected: 'Rejected',
   returned: 'Returned for Revision',
   commented: 'Comment Added',
@@ -33,11 +34,21 @@ const ACTION_LABELS: Record<string, string> = {
 const ACTION_COLORS: Record<string, string> = {
   submitted: 'bg-blue-500',
   reviewed: 'bg-amber-500',
-  approved: 'bg-green-500',
+  approved: 'bg-emerald-500',
   rejected: 'bg-red-500',
   returned: 'bg-orange-500',
   commented: 'bg-gray-400',
   reopened: 'bg-purple-500',
+};
+
+const STAGE_STATUS_COLORS: Record<string, string> = {
+  Draft: 'bg-gray-400',
+  Submitted: 'bg-blue-500',
+  'Under Review': 'bg-amber-500',
+  Perfected: 'bg-emerald-500',
+  Approved: 'bg-green-500',
+  Rejected: 'bg-red-500',
+  Returned: 'bg-orange-500',
 };
 
 function formatDate(iso: string | null): string {
@@ -50,10 +61,103 @@ function formatDateTime(iso: string | null): string {
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// ─── Workflow Stage Bar ────────────────────────────────────────────────────────
+const WORKFLOW_STAGES: PerfectionRequestStatus[] = ['Submitted', 'Under Review', 'Perfected'];
+
+function WorkflowStageBar({ status }: { status: PerfectionRequestStatus }) {
+  const isRejected = status === 'Rejected' || status === 'Returned';
+  const currentIdx = WORKFLOW_STAGES.indexOf(status);
+  // Approved maps to Perfected visually
+  const effectiveIdx = status === 'Approved' ? 2 : currentIdx;
+
+  return (
+    <div>
+      <div className="flex items-center gap-1">
+        {WORKFLOW_STAGES.map((step, i) => {
+          const isDone = !isRejected && effectiveIdx > i;
+          const isCurrent = !isRejected && effectiveIdx === i;
+          return (
+            <React.Fragment key={step}>
+              <div className="flex flex-col items-center gap-1 flex-1">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                  isDone ? 'bg-emerald-500 text-white' : isCurrent ?'bg-primary text-white': 'bg-muted text-muted-foreground'
+                }`}>
+                  {isDone ? '✓' : i + 1}
+                </div>
+                <span className={`text-[10px] text-center leading-tight ${isCurrent || isDone ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                  {step}
+                </span>
+              </div>
+              {i < WORKFLOW_STAGES.length - 1 && (
+                <div className={`h-px flex-1 mb-4 ${isDone ? 'bg-emerald-400' : 'bg-border'}`} />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+      {isRejected && (
+        <div className={`mt-2 text-xs px-3 py-1.5 rounded-md ${
+          status === 'Rejected' ?'bg-red-50 text-red-700 border border-red-200' :'bg-orange-50 text-orange-700 border border-orange-200'
+        }`}>
+          {status === 'Rejected' ? '✗ Rejected' : '↩ Returned for Revision'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Status History Panel ──────────────────────────────────────────────────────
+function StatusHistoryPanel({ history }: { history: PerfectionStatusHistory[] }) {
+  if (history.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-4">No status history yet.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {history.map((h) => {
+        const dotColor = STAGE_STATUS_COLORS[h.toStatus] ?? 'bg-gray-400';
+        return (
+          <div key={h.id} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${dotColor}`} />
+              <div className="w-px flex-1 bg-border mt-1" />
+            </div>
+            <div className="pb-3 flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                <span className="text-xs font-semibold text-foreground">{h.changedByName || 'System'}</span>
+                {h.changedByRole && (
+                  <span className="text-xs text-muted-foreground capitalize">{h.changedByRole.replace('_', ' ')}</span>
+                )}
+                <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(h.createdAt)}</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {h.fromStatus && (
+                  <>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${STAGE_STATUS_COLORS[h.fromStatus] ?? 'bg-gray-400'} text-white`}>
+                      {h.fromStatus}
+                    </span>
+                    <span className="text-xs text-muted-foreground">→</span>
+                  </>
+                )}
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${dotColor} text-white`}>
+                  {h.toStatus}
+                </span>
+              </div>
+              {h.reason && (
+                <p className="text-xs text-foreground/70 mt-1 italic">{h.reason}</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Detail Panel ──────────────────────────────────────────────────────────────
 interface DetailPanelProps {
   request: PerfectionRequest;
   comments: PerfectionComment[];
+  history: PerfectionStatusHistory[];
   userRole: string;
   userId: string;
   userName: string;
@@ -61,13 +165,14 @@ interface DetailPanelProps {
   onRefresh: () => void;
 }
 
-function DetailPanel({ request, comments, userRole, userId, userName, onClose, onRefresh }: DetailPanelProps) {
+function DetailPanel({ request, comments, history, userRole, userId, userName, onClose, onRefresh }: DetailPanelProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [decisionNotes, setDecisionNotes] = useState('');
-  const [activeAction, setActiveAction] = useState<'approve' | 'reject' | 'return' | 'review' | 'comment' | null>(null);
+  const [activeAction, setActiveAction] = useState<'perfected' | 'reject' | 'return' | 'review' | 'comment' | null>(null);
+  const [activeTab, setActiveTab] = useState<'activity' | 'history'>('activity');
 
-  const statusCfg = STATUS_CONFIG[request.requestStatus];
+  const statusCfg = STATUS_CONFIG[request.requestStatus] ?? STATUS_CONFIG.Draft;
   const priorityCfg = PRIORITY_CONFIG[request.priority] ?? PRIORITY_CONFIG.Normal;
 
   const canSubmit = userRole === 'credit_officer' && request.requestStatus === 'Draft';
@@ -75,7 +180,7 @@ function DetailPanel({ request, comments, userRole, userId, userName, onClose, o
   const canDecide = userRole === 'legal_officer' && request.requestStatus === 'Under Review';
   const canComment = ['credit_officer', 'legal_officer', 'system_admin'].includes(userRole);
 
-  async function handleAction(type: 'submit' | 'review' | 'approve' | 'reject' | 'return' | 'comment') {
+  async function handleAction(type: 'submit' | 'review' | 'perfected' | 'reject' | 'return' | 'comment') {
     setActionLoading(true);
     try {
       if (type === 'submit') {
@@ -84,10 +189,10 @@ function DetailPanel({ request, comments, userRole, userId, userName, onClose, o
       } else if (type === 'review') {
         await perfectionService.startReview(request.id, userId, userName, commentText || 'Review started.', userRole);
         toast.success('Review started');
-      } else if (type === 'approve') {
-        if (!decisionNotes.trim()) { toast.error('Please provide approval notes'); setActionLoading(false); return; }
-        await perfectionService.approve(request.id, userId, userName, decisionNotes, userRole);
-        toast.success('Perfection approved');
+      } else if (type === 'perfected') {
+        if (!decisionNotes.trim()) { toast.error('Please provide perfection notes'); setActionLoading(false); return; }
+        await perfectionService.perfected(request.id, userId, userName, decisionNotes, userRole);
+        toast.success('Collateral marked as Perfected');
       } else if (type === 'reject') {
         if (!decisionNotes.trim()) { toast.error('Please provide rejection reason'); setActionLoading(false); return; }
         await perfectionService.reject(request.id, userId, userName, decisionNotes, userRole);
@@ -134,38 +239,16 @@ function DetailPanel({ request, comments, userRole, userId, userName, onClose, o
         </button>
       </div>
 
-      {/* Workflow Steps */}
+      {/* Workflow Stage Bar */}
       <div className="px-5 py-4 border-b border-border">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Workflow Progress</p>
-        <div className="flex items-center gap-1">
-          {(['Draft', 'Submitted', 'Under Review', 'Approved'] as PerfectionRequestStatus[]).map((step, i) => {
-            const steps: PerfectionRequestStatus[] = ['Draft', 'Submitted', 'Under Review', 'Approved'];
-            const currentIdx = steps.indexOf(request.requestStatus);
-            const isRejected = request.requestStatus === 'Rejected' || request.requestStatus === 'Returned';
-            const isDone = isRejected ? false : currentIdx > i;
-            const isCurrent = !isRejected && currentIdx === i;
-            return (
-              <React.Fragment key={step}>
-                <div className="flex flex-col items-center gap-1 flex-1">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                    isDone ? 'bg-green-500 text-white' : isCurrent ?'bg-primary text-white' :
-                    isRejected && i === currentIdx ? 'bg-red-500 text-white': 'bg-muted text-muted-foreground'
-                  }`}>
-                    {isDone ? '✓' : i + 1}
-                  </div>
-                  <span className={`text-[10px] text-center leading-tight ${isCurrent || isDone ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                    {step}
-                  </span>
-                </div>
-                {i < 3 && <div className={`h-px flex-1 mb-4 ${isDone ? 'bg-green-400' : 'bg-border'}`} />}
-              </React.Fragment>
-            );
-          })}
-        </div>
-        {(request.requestStatus === 'Rejected' || request.requestStatus === 'Returned') && (
-          <div className={`mt-2 text-xs px-3 py-1.5 rounded-md ${request.requestStatus === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-orange-50 text-orange-700 border border-orange-200'}`}>
-            {request.requestStatus === 'Rejected' ? '✗ Rejected' : '↩ Returned for Revision'}
-            {request.decisionNotes && ` — ${request.decisionNotes}`}
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Workflow Stages</p>
+        <WorkflowStageBar status={request.requestStatus} />
+        {request.decisionNotes && (request.requestStatus === 'Rejected' || request.requestStatus === 'Returned' || request.requestStatus === 'Perfected') && (
+          <div className={`mt-2 text-xs px-3 py-1.5 rounded-md ${
+            request.requestStatus === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
+            request.requestStatus === 'Returned'? 'bg-orange-50 text-orange-700 border border-orange-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+          }`}>
+            <span className="font-medium">Reason: </span>{request.decisionNotes}
           </div>
         )}
       </div>
@@ -190,33 +273,61 @@ function DetailPanel({ request, comments, userRole, userId, userName, onClose, o
         </div>
       </div>
 
-      {/* Activity Timeline */}
+      {/* Tabs: Activity / Status History */}
+      <div className="flex border-b border-border shrink-0">
+        <button
+          onClick={() => setActiveTab('activity')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
+            activeTab === 'activity' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <MessageSquare size={13} /> Activity
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
+            activeTab === 'history' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <History size={13} /> Status History
+          {history.length > 0 && (
+            <span className="ml-1 bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">{history.length}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Tab Content */}
       <div className="flex-1 overflow-y-auto px-5 py-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity Timeline</p>
-        {comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">No activity yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {comments.map((c) => (
-              <div key={c.id} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${ACTION_COLORS[c.action] ?? 'bg-gray-400'}`} />
-                  <div className="w-px flex-1 bg-border mt-1" />
-                </div>
-                <div className="pb-3 flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs font-semibold text-foreground">{c.performedByName}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{c.performedByRole?.replace('_', ' ')}</span>
-                    <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(c.createdAt)}</span>
+        {activeTab === 'activity' ? (
+          <>
+            {comments.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No activity yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {comments.map((c) => (
+                  <div key={c.id} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${ACTION_COLORS[c.action] ?? 'bg-gray-400'}`} />
+                      <div className="w-px flex-1 bg-border mt-1" />
+                    </div>
+                    <div className="pb-3 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-semibold text-foreground">{c.performedByName}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{c.performedByRole?.replace('_', ' ')}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(c.createdAt)}</span>
+                      </div>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${ACTION_COLORS[c.action] ?? 'bg-gray-400'} text-white`}>
+                        {ACTION_LABELS[c.action] ?? c.action}
+                      </span>
+                      {c.comment && <p className="text-sm text-foreground/80 mt-1">{c.comment}</p>}
+                    </div>
                   </div>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${ACTION_COLORS[c.action] ?? 'bg-gray-400'} text-white`}>
-                    {ACTION_LABELS[c.action] ?? c.action}
-                  </span>
-                  {c.comment && <p className="text-sm text-foreground/80 mt-1">{c.comment}</p>}
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
+        ) : (
+          <StatusHistoryPanel history={history} />
         )}
       </div>
 
@@ -253,18 +364,22 @@ function DetailPanel({ request, comments, userRole, userId, userName, onClose, o
           </button>
         )}
 
-        {/* Legal Officer: Approve / Reject / Return */}
+        {/* Legal Officer: Perfect / Reject / Return */}
         {canDecide && (
           <div className="space-y-2">
             {activeAction && (
               <div className="space-y-2">
+                <label className="block text-xs font-medium text-foreground">
+                  {activeAction === 'perfected' ? 'Perfection Notes *' :
+                   activeAction === 'reject'? 'Rejection Reason *' : 'Revision Instructions *'}
+                </label>
                 <textarea
                   value={decisionNotes}
                   onChange={(e) => setDecisionNotes(e.target.value)}
                   placeholder={
-                    activeAction === 'approve' ? 'Approval notes...' :
-                    activeAction === 'reject' ? 'Rejection reason (required)...' :
-                    'Revision instructions (required)...'
+                    activeAction === 'perfected' ? 'Describe how the collateral was perfected...' :
+                    activeAction === 'reject' ? 'Provide reason for rejection (required)...' :
+                    'Provide revision instructions (required)...'
                   }
                   rows={3}
                   className="w-full text-sm border border-border rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -274,17 +389,17 @@ function DetailPanel({ request, comments, userRole, userId, userName, onClose, o
                     onClick={() => handleAction(activeAction)}
                     disabled={actionLoading}
                     className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-md disabled:opacity-50 transition-colors text-white ${
-                      activeAction === 'approve' ? 'bg-green-600 hover:bg-green-700' :
+                      activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
                       activeAction === 'reject'? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
                     }`}
                   >
                     {actionLoading ? 'Processing...' :
-                      activeAction === 'approve' ? <><CheckCircle size={14} /> Confirm Approval</> :
+                      activeAction === 'perfected' ? <><Award size={14} /> Confirm Perfected</> :
                       activeAction === 'reject' ? <><XCircle size={14} /> Confirm Rejection</> :
                       <><RotateCcw size={14} /> Confirm Return</>
                     }
                   </button>
-                  <button onClick={() => setActiveAction(null)} className="px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">
+                  <button onClick={() => { setActiveAction(null); setDecisionNotes(''); }} className="px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">
                     Cancel
                   </button>
                 </div>
@@ -292,8 +407,8 @@ function DetailPanel({ request, comments, userRole, userId, userName, onClose, o
             )}
             {!activeAction && (
               <div className="flex gap-2">
-                <button onClick={() => setActiveAction('approve')} className="flex-1 flex items-center justify-center gap-1.5 bg-green-600 text-white text-sm font-medium py-2 rounded-md hover:bg-green-700 transition-colors">
-                  <CheckCircle size={14} /> Approve
+                <button onClick={() => setActiveAction('perfected')} className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-sm font-medium py-2 rounded-md hover:bg-emerald-700 transition-colors">
+                  <Award size={14} /> Perfect
                 </button>
                 <button onClick={() => setActiveAction('return')} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 text-white text-sm font-medium py-2 rounded-md hover:bg-orange-600 transition-colors">
                   <RotateCcw size={14} /> Return
@@ -435,6 +550,7 @@ export default function PerfectionWorkflowContent() {
   const { user, getUserProfile } = useAuth();
   const [requests, setRequests] = useState<PerfectionRequest[]>([]);
   const [comments, setComments] = useState<PerfectionComment[]>([]);
+  const [statusHistory, setStatusHistory] = useState<PerfectionStatusHistory[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<PerfectionRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -456,10 +572,15 @@ export default function PerfectionWorkflowContent() {
 
   const fetchComments = useCallback(async (requestId: string) => {
     try {
-      const data = await perfectionService.getComments(requestId);
-      setComments(data);
+      const [commentsData, historyData] = await Promise.all([
+        perfectionService.getComments(requestId),
+        perfectionService.getStatusHistory(requestId),
+      ]);
+      setComments(commentsData);
+      setStatusHistory(historyData);
     } catch {
       setComments([]);
+      setStatusHistory([]);
     }
   }, []);
 
@@ -506,7 +627,7 @@ export default function PerfectionWorkflowContent() {
     total: requests.length,
     submitted: requests.filter(r => r.requestStatus === 'Submitted').length,
     underReview: requests.filter(r => r.requestStatus === 'Under Review').length,
-    approved: requests.filter(r => r.requestStatus === 'Approved').length,
+    perfected: requests.filter(r => r.requestStatus === 'Perfected' || r.requestStatus === 'Approved').length,
     rejected: requests.filter(r => r.requestStatus === 'Rejected').length,
   };
 
@@ -534,18 +655,18 @@ export default function PerfectionWorkflowContent() {
         {/* KPI Strip */}
         <div className="grid grid-cols-5 gap-3 mt-4">
           {[
-            { label: 'Total', value: kpis.total, color: 'text-foreground', bg: 'bg-muted/50' },
-            { label: 'Submitted', value: kpis.submitted, color: 'text-blue-700', bg: 'bg-blue-50' },
-            { label: 'Under Review', value: kpis.underReview, color: 'text-amber-700', bg: 'bg-amber-50' },
-            { label: 'Approved', value: kpis.approved, color: 'text-green-700', bg: 'bg-green-50' },
-            { label: 'Rejected', value: kpis.rejected, color: 'text-red-700', bg: 'bg-red-50' },
+            { label: 'Total', value: kpis.total, color: 'text-foreground', bg: 'bg-muted/50', filter: '' },
+            { label: 'Submitted', value: kpis.submitted, color: 'text-blue-700', bg: 'bg-blue-50', filter: 'Submitted' },
+            { label: 'Under Review', value: kpis.underReview, color: 'text-amber-700', bg: 'bg-amber-50', filter: 'Under Review' },
+            { label: 'Perfected', value: kpis.perfected, color: 'text-emerald-700', bg: 'bg-emerald-50', filter: 'Perfected' },
+            { label: 'Rejected', value: kpis.rejected, color: 'text-red-700', bg: 'bg-red-50', filter: 'Rejected' },
           ].map((k) => (
             <button
               key={k.label}
-              onClick={() => setStatusFilter(k.label === 'Total' ? '' : k.label as PerfectionRequestStatus)}
+              onClick={() => setStatusFilter(k.filter)}
               className={`rounded-lg p-3 text-left transition-all border ${
-                (k.label === 'Total' && !statusFilter) || statusFilter === k.label
-                  ? 'border-primary/40 ring-1 ring-primary/20' :'border-border hover:border-primary/20'
+                statusFilter === k.filter
+                  ? 'border-primary/40 ring-1 ring-primary/20' : 'border-border hover:border-primary/20'
               } ${k.bg}`}
             >
               <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
@@ -598,7 +719,7 @@ export default function PerfectionWorkflowContent() {
               </div>
             ) : (
               filtered.map((req) => {
-                const cfg = STATUS_CONFIG[req.requestStatus];
+                const cfg = STATUS_CONFIG[req.requestStatus] ?? STATUS_CONFIG.Draft;
                 const priorityCfg = PRIORITY_CONFIG[req.priority] ?? PRIORITY_CONFIG.Normal;
                 const isSelected = selectedRequest?.id === req.id;
                 return (
@@ -641,6 +762,7 @@ export default function PerfectionWorkflowContent() {
             <DetailPanel
               request={selectedRequest}
               comments={comments}
+              history={statusHistory}
               userRole={userRole}
               userId={userId}
               userName={userName}
