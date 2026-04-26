@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -64,6 +64,13 @@ const navGroups = [
   {
     label: 'Compliance',
     items: [
+      {
+        label: 'Notifications Hub',
+        icon: Bell,
+        href: '/notifications-hub',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
       {
         label: 'Overdue Alerts',
         icon: AlertTriangle,
