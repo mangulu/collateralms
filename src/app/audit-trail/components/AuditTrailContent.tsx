@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight, User, Clock, FileText, ArrowRight, X, AlertCircle, Globe, LogIn, FolderOpen, GitBranch, Upload, Activity,  } from 'lucide-react';
 import { auditLogService, AuditLogEntry, FieldChange } from '@/lib/supabase/auditLogService';
+import Icon from '@/components/ui/AppIcon';
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

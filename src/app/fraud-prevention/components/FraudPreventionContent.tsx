@@ -1,8 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { ShieldAlert, AlertTriangle, XCircle, RefreshCw, Search, TrendingUp, Fingerprint, FileWarning, Clock, ChevronDown, Activity, Zap,  } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ShieldAlert, AlertTriangle, XCircle, RefreshCw, Search, TrendingUp, Fingerprint, FileWarning, Clock, ChevronDown, Activity, Zap, Brain, CheckCircle2, Loader2 } from 'lucide-react';
 
+import { useChat } from '@/lib/hooks/useChat';
+import toast from 'react-hot-toast';
+import { saveFraudAlert, fetchFraudAlerts, updateFraudAlertStatus, type FraudAlertRow } from '@/lib/supabase/fraudAlertService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,11 +27,36 @@ interface FraudAlert {
     found?: string;
     duplicateWith?: string;
     deviation?: string;
+    [key: string]: string | undefined;
   };
   status: AlertStatus;
   reviewedBy?: string;
   reviewedAt?: string;
   createdAt: string;
+  fromDb?: boolean;
+  dbId?: string;
+}
+
+interface AnalysisInput {
+  titleDeedNumber: string;
+  customerId: string;
+  valuationAmount: string;
+  propertyAddress: string;
+  customerName: string;
+  idDocumentName: string;
+}
+
+interface AIAnalysisResult {
+  risk_score: number;
+  alerts: Array<{
+    type: AlertType;
+    description: string;
+    confidence: number;
+    severity: 'HIGH' | 'MEDIUM' | 'LOW';
+    details: Record<string, string>;
+  }>;
+  recommendation: string;
+  summary: string;
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -167,9 +194,30 @@ function RiskScoreBar({ score }: { score: number }) {
   );
 }
 
+function dbRowToAlert(row: FraudAlertRow, index: number): FraudAlert {
+  const details = row.details ?? {};
+  const severity: Severity = details.severity ?? (row.risk_score >= 75 ? 'HIGH' : row.risk_score >= 50 ? 'MEDIUM' : 'LOW');
+  return {
+    id: `DB-${String(index + 1).padStart(3, '0')}`,
+    collateralId: row.collateral_id ?? 'N/A',
+    alertType: row.alert_type,
+    riskScore: Number(row.risk_score),
+    confidence: Number(row.confidence),
+    severity,
+    description: details.description ?? `${row.alert_type.replace(/_/g, ' ')} detected`,
+    details: details.field_details ?? {},
+    status: row.status,
+    reviewedBy: row.reviewed_by ?? undefined,
+    reviewedAt: row.reviewed_at ?? undefined,
+    createdAt: row.created_at,
+    fromDb: true,
+    dbId: row.id,
+  };
+}
+
 // ─── Summary Cards ────────────────────────────────────────────────────────────
 
-function SummaryCard({ label, value, sub, icon: Icon, variant = 'default' }: {
+function SummaryCard({ label, value, sub, icon: IconComp, variant = 'default' }: {
   label: string; value: string | number; sub: string;
   icon: React.ElementType; variant?: 'default' | 'danger' | 'warning' | 'success';
 }) {
@@ -181,7 +229,7 @@ function SummaryCard({ label, value, sub, icon: Icon, variant = 'default' }: {
       <div className="flex items-start justify-between mb-3">
         <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider leading-tight pr-2">{label}</p>
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${iconBg[variant]}`}>
-          <Icon size={18} />
+          <IconComp size={18} />
         </div>
       </div>
       <p className={`text-3xl font-700 tabular-nums mb-1 font-mono ${valColor[variant]}`}>{value}</p>
@@ -192,7 +240,7 @@ function SummaryCard({ label, value, sub, icon: Icon, variant = 'default' }: {
 
 // ─── Alert Row ────────────────────────────────────────────────────────────────
 
-function AlertRow({ alert, onAction }: { alert: FraudAlert; onAction: (id: string, action: 'FALSE_POSITIVE' | 'ESCALATED') => void }) {
+function AlertRow({ alert, onAction }: { alert: FraudAlert; onAction: (id: string, action: 'FALSE_POSITIVE' | 'ESCALATED', dbId?: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const typeConf = alertTypeConfig[alert.alertType];
   const statusConf = statusConfig[alert.status];
@@ -211,6 +259,9 @@ function AlertRow({ alert, onAction }: { alert: FraudAlert; onAction: (id: strin
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-600 text-foreground">{alert.id}</span>
+            {alert.fromDb && (
+              <span className="text-[10px] font-700 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">AI Analyzed</span>
+            )}
             <span className="text-xs text-muted-foreground">·</span>
             <span className="text-xs text-muted-foreground font-500">{alert.collateralId}</span>
             <span className={`inline-flex items-center gap-1 text-xs font-600 px-2 py-0.5 rounded-full border ${statusConf.color}`}>
@@ -263,13 +314,13 @@ function AlertRow({ alert, onAction }: { alert: FraudAlert; onAction: (id: strin
           {alert.status === 'PENDING_REVIEW' && (
             <div className="flex items-center gap-2 pt-3 border-t border-border">
               <button
-                onClick={() => onAction(alert.id, 'FALSE_POSITIVE')}
+                onClick={() => onAction(alert.id, 'FALSE_POSITIVE', alert.dbId)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-600 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 <XCircle size={13} /> Mark False Positive
               </button>
               <button
-                onClick={() => onAction(alert.id, 'ESCALATED')}
+                onClick={() => onAction(alert.id, 'ESCALATED', alert.dbId)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-600 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
               >
                 <AlertTriangle size={13} /> Escalate for Investigation
@@ -282,43 +333,345 @@ function AlertRow({ alert, onAction }: { alert: FraudAlert; onAction: (id: strin
   );
 }
 
+// ─── AI Analysis Panel ────────────────────────────────────────────────────────
+
+function AIAnalysisPanel({ onAlertsGenerated }: { onAlertsGenerated: (alerts: FraudAlert[]) => void }) {
+  const [form, setForm] = useState<AnalysisInput>({
+    titleDeedNumber: '',
+    customerId: '',
+    valuationAmount: '',
+    propertyAddress: '',
+    customerName: '',
+    idDocumentName: '',
+  });
+  const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const { response, isLoading, error, sendMessage } = useChat('OPEN_AI', 'gpt-4o', false);
+
+  useEffect(() => {
+    if (error) toast.error(error.message);
+  }, [error]);
+
+  useEffect(() => {
+    if (response && !isLoading) {
+      try {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed: AIAnalysisResult = JSON.parse(jsonMatch[0]);
+          setAnalysisResult(parsed);
+          setSaved(false);
+        }
+      } catch {
+        toast.error('Failed to parse AI analysis response');
+      }
+    }
+  }, [response, isLoading]);
+
+  const handleAnalyze = () => {
+    if (!form.titleDeedNumber && !form.customerId && !form.valuationAmount) {
+      toast.error('Please fill in at least Title Deed Number, Customer ID, or Valuation Amount');
+      return;
+    }
+    setAnalysisResult(null);
+    setSaved(false);
+
+    const systemPrompt = `You are a collateral fraud detection AI for a bank. Analyze the provided collateral submission data and return a JSON object with the following structure:
+{
+  "risk_score": <number 0-100>,
+  "alerts": [
+    {
+      "type": "<DUPLICATE_TITLE|IDENTITY_MISMATCH|VALUATION_ANOMALY|EARLY_WARNING|DOCUMENT_FORGERY>",
+      "description": "<string>",
+      "confidence": <number 0-100>,
+      "severity": "<HIGH|MEDIUM|LOW>",
+      "details": { "<key>": "<value>" }
+    }
+  ],
+  "recommendation": "<APPROVE|MANUAL_REVIEW|REJECT>",
+  "summary": "<brief summary string>"
+}
+
+Rules:
+- Flag DUPLICATE_TITLE if the title deed number pattern suggests reuse (e.g., common prefixes like TD-00123)
+- Flag VALUATION_ANOMALY if valuation seems unusually high or low for the region/property type
+- Flag IDENTITY_MISMATCH if customer name and ID document name differ significantly
+- Return empty alerts array if no issues found
+- risk_score should reflect overall fraud risk (0=clean, 100=definite fraud)
+- Return ONLY valid JSON, no markdown, no explanation outside the JSON`;
+
+    const userMessage = `Analyze this collateral submission for fraud indicators:
+- Title Deed Number: ${form.titleDeedNumber || 'Not provided'}
+- Customer ID: ${form.customerId || 'Not provided'}
+- Valuation Amount: ${form.valuationAmount || 'Not provided'} TZS
+- Property Address: ${form.propertyAddress || 'Not provided'}
+- Customer Name: ${form.customerName || 'Not provided'}
+- ID Document Name: ${form.idDocumentName || 'Not provided'}`;
+
+    sendMessage(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      { max_completion_tokens: 1000 }
+    );
+  };
+
+  const handleSaveToSupabase = async () => {
+    if (!analysisResult) return;
+    setIsSaving(true);
+
+    const savedAlerts: FraudAlert[] = [];
+    let savedCount = 0;
+
+    for (const alert of analysisResult.alerts) {
+      const row = await saveFraudAlert({
+        collateral_id: null,
+        alert_type: alert.type,
+        risk_score: alert.confidence > 0 ? (analysisResult.risk_score * alert.confidence) / 100 : analysisResult.risk_score,
+        confidence: alert.confidence,
+        details: {
+          description: alert.description,
+          severity: alert.severity,
+          recommendation: analysisResult.recommendation,
+          summary: analysisResult.summary,
+          field_details: alert.details,
+          input: {
+            title_deed_number: form.titleDeedNumber,
+            customer_id: form.customerId,
+            valuation_amount: form.valuationAmount,
+            property_address: form.propertyAddress,
+          },
+        },
+        status: 'PENDING_REVIEW',
+      });
+
+      if (row) {
+        savedCount++;
+        savedAlerts.push(dbRowToAlert(row, savedCount - 1));
+      }
+    }
+
+    // If no specific alerts but risk score is significant, save a general alert
+    if (analysisResult.alerts.length === 0 && analysisResult.risk_score > 20) {
+      const row = await saveFraudAlert({
+        collateral_id: null,
+        alert_type: 'EARLY_WARNING',
+        risk_score: analysisResult.risk_score,
+        confidence: 70,
+        details: {
+          description: analysisResult.summary,
+          severity: analysisResult.risk_score >= 75 ? 'HIGH' : analysisResult.risk_score >= 50 ? 'MEDIUM' : 'LOW',
+          recommendation: analysisResult.recommendation,
+          field_details: { summary: analysisResult.summary },
+          input: {
+            title_deed_number: form.titleDeedNumber,
+            customer_id: form.customerId,
+          },
+        },
+        status: 'PENDING_REVIEW',
+      });
+      if (row) {
+        savedCount++;
+        savedAlerts.push(dbRowToAlert(row, savedCount - 1));
+      }
+    }
+
+    setIsSaving(false);
+    if (savedCount > 0) {
+      setSaved(true);
+      toast.success(`${savedCount} alert${savedCount > 1 ? 's' : ''} saved to fraud alerts`);
+      onAlertsGenerated(savedAlerts);
+    } else if (analysisResult.alerts.length === 0) {
+      toast.success('No fraud indicators detected — submission appears clean');
+      setSaved(true);
+    } else {
+      toast.error('Failed to save alerts to database');
+    }
+  };
+
+  const riskColor = analysisResult
+    ? analysisResult.risk_score >= 75 ? 'text-red-600' : analysisResult.risk_score >= 50 ? 'text-amber-600' : 'text-green-600' :'text-foreground';
+
+  const recColor = analysisResult?.recommendation === 'REJECT' ?'bg-red-100 text-red-700'
+    : analysisResult?.recommendation === 'MANUAL_REVIEW' ?'bg-amber-100 text-amber-700' :'bg-green-100 text-green-700';
+
+  return (
+    <div className="bg-white border border-border rounded-xl shadow-card overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-border bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+          <Brain size={18} className="text-blue-600" />
+        </div>
+        <div>
+          <h2 className="text-sm font-700 text-foreground">AI Fraud Analysis</h2>
+          <p className="text-xs text-muted-foreground">Powered by OpenAI · Analyzes duplicate titles, valuation anomalies & identity mismatches</p>
+        </div>
+      </div>
+
+      <div className="p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+          {[
+            { key: 'titleDeedNumber', label: 'Title Deed Number', placeholder: 'e.g. TD-00123' },
+            { key: 'customerId', label: 'Customer ID', placeholder: 'e.g. CUST-56789' },
+            { key: 'valuationAmount', label: 'Valuation Amount (TZS)', placeholder: 'e.g. 500000000' },
+            { key: 'propertyAddress', label: 'Property Address', placeholder: 'e.g. Ohio Street, Dar es Salaam' },
+            { key: 'customerName', label: 'Customer Name', placeholder: 'e.g. John Doe' },
+            { key: 'idDocumentName', label: 'Name on ID Document', placeholder: 'e.g. Jonathan Doe' },
+          ].map(({ key, label, placeholder }) => (
+            <div key={key}>
+              <label className="block text-xs font-600 text-muted-foreground mb-1">{label}</label>
+              <input
+                type="text"
+                placeholder={placeholder}
+                value={form[key as keyof AnalysisInput]}
+                onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+                disabled={isLoading}
+              />
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={handleAnalyze}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors"
+        >
+          {isLoading ? <Loader2 size={15} className="animate-spin" /> : <Brain size={15} />}
+          {isLoading ? 'Analyzing...' : 'Run AI Analysis'}
+        </button>
+
+        {analysisResult && (
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl border border-border flex-wrap">
+              <div>
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-0.5">Overall Risk Score</p>
+                <p className={`text-3xl font-700 font-mono tabular-nums ${riskColor}`}>{analysisResult.risk_score.toFixed(1)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-0.5">Recommendation</p>
+                <span className={`text-xs font-700 px-2.5 py-1 rounded-full ${recColor}`}>{analysisResult.recommendation}</span>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-0.5">Summary</p>
+                <p className="text-sm text-foreground">{analysisResult.summary}</p>
+              </div>
+            </div>
+
+            {analysisResult.alerts.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-700 text-foreground uppercase tracking-wider">Detected Issues ({analysisResult.alerts.length})</p>
+                {analysisResult.alerts.map((a, i) => {
+                  const conf = alertTypeConfig[a.type] ?? alertTypeConfig.EARLY_WARNING;
+                  const AlertIcon = conf.icon;
+                  return (
+                    <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${conf.bg} border-opacity-50`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${conf.bg}`}>
+                        <AlertIcon size={15} className={conf.color} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                          <span className="text-xs font-700 text-foreground">{conf.label}</span>
+                          <span className={`text-[10px] font-700 px-1.5 py-0.5 rounded ${a.severity === 'HIGH' ? 'bg-red-100 text-red-600' : a.severity === 'MEDIUM' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>{a.severity}</span>
+                          <span className="text-xs text-muted-foreground">Confidence: {a.confidence.toFixed(1)}%</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{a.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                <p className="text-sm text-green-700">No fraud indicators detected in this submission</p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleSaveToSupabase}
+                disabled={isSaving || saved}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-green-600 hover:bg-green-700 disabled:opacity-60 rounded-lg transition-colors"
+              >
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <ShieldAlert size={14} />}
+                {isSaving ? 'Saving...' : saved ? 'Saved to Fraud Alerts' : 'Save to Fraud Alerts'}
+              </button>
+              <button
+                onClick={() => { setAnalysisResult(null); setSaved(false); }}
+                className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border hover:bg-muted rounded-lg transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FraudPreventionContent() {
   const [alerts, setAlerts] = useState<FraudAlert[]>(mockAlerts);
+  const [dbAlerts, setDbAlerts] = useState<FraudAlert[]>([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
+  const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
 
   useEffect(() => {
     setLastRefreshed(new Date().toLocaleTimeString('en-GB'));
+    loadDbAlerts();
   }, []);
 
-  const handleRefresh = () => {
+  const loadDbAlerts = useCallback(async () => {
+    const rows = await fetchFraudAlerts();
+    const converted = rows.map((row, i) => dbRowToAlert(row, i));
+    setDbAlerts(converted);
+  }, []);
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      setLastRefreshed(new Date().toLocaleTimeString('en-GB'));
-    }, 1000);
+    await loadDbAlerts();
+    setIsRefreshing(false);
+    setLastRefreshed(new Date().toLocaleTimeString('en-GB'));
   };
 
-  const handleAction = (id: string, action: 'FALSE_POSITIVE' | 'ESCALATED') => {
-    setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, status: action, reviewedBy: 'Current User', reviewedAt: new Date().toISOString() } : a));
+  const handleAction = async (id: string, action: 'FALSE_POSITIVE' | 'ESCALATED', dbId?: string) => {
+    // Update local state immediately
+    const updateList = (list: FraudAlert[]) =>
+      list.map((a) => a.id === id ? { ...a, status: action, reviewedBy: 'Current User', reviewedAt: new Date().toISOString() } : a);
+    setAlerts((prev) => updateList(prev));
+    setDbAlerts((prev) => updateList(prev));
+
+    // Persist to Supabase if it's a DB alert
+    if (dbId) {
+      await updateFraudAlertStatus(dbId, action, 'Current User');
+    }
   };
 
-  const filtered = alerts.filter((a) => {
+  const handleAlertsGenerated = (newAlerts: FraudAlert[]) => {
+    setDbAlerts((prev) => [...newAlerts, ...prev]);
+  };
+
+  const allAlerts = [...dbAlerts, ...alerts];
+
+  const filtered = allAlerts.filter((a) => {
     const matchSearch = !search || a.id.toLowerCase().includes(search.toLowerCase()) || a.collateralId.toLowerCase().includes(search.toLowerCase()) || a.description.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === 'All' || a.alertType === typeFilter;
     const matchStatus = statusFilter === 'All' || a.status === statusFilter;
     return matchSearch && matchType && matchStatus;
   });
 
-  const pending = alerts.filter((a) => a.status === 'PENDING_REVIEW').length;
-  const escalated = alerts.filter((a) => a.status === 'ESCALATED').length;
-  const highRisk = alerts.filter((a) => a.severity === 'HIGH').length;
-  const avgScore = alerts.length > 0 ? (alerts.reduce((s, a) => s + a.riskScore, 0) / alerts.length).toFixed(1) : '0.0';
+  const pending = allAlerts.filter((a) => a.status === 'PENDING_REVIEW').length;
+  const escalated = allAlerts.filter((a) => a.status === 'ESCALATED').length;
+  const highRisk = allAlerts.filter((a) => a.severity === 'HIGH').length;
+  const avgScore = allAlerts.length > 0 ? (allAlerts.reduce((s, a) => s + a.riskScore, 0) / allAlerts.length).toFixed(1) : '0.0';
 
   return (
     <div className="p-6 space-y-6">
@@ -336,13 +689,22 @@ export default function FraudPreventionContent() {
             {lastRefreshed && <span className="ml-2 text-xs">· Last refreshed {lastRefreshed}</span>}
           </p>
         </div>
-        <button
-          onClick={handleRefresh}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-500 text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors"
-        >
-          <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAnalysisPanel((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-600 rounded-lg transition-colors border ${showAnalysisPanel ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}
+          >
+            <Brain size={14} />
+            {showAnalysisPanel ? 'Hide AI Analysis' : 'Run AI Analysis'}
+          </button>
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-500 text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -352,6 +714,11 @@ export default function FraudPreventionContent() {
         <SummaryCard label="High Risk Alerts" value={highRisk} sub="Severity: HIGH" icon={ShieldAlert} variant="danger" />
         <SummaryCard label="Avg Risk Score" value={avgScore} sub="Across all active alerts" icon={Zap} variant="default" />
       </div>
+
+      {/* AI Analysis Panel */}
+      {showAnalysisPanel && (
+        <AIAnalysisPanel onAlertsGenerated={handleAlertsGenerated} />
+      )}
 
       {/* Detection Capabilities */}
       <div className="bg-white border border-border rounded-xl p-5 shadow-card">
@@ -420,7 +787,12 @@ export default function FraudPreventionContent() {
 
       {/* Alert List */}
       <div>
-        <h2 className="text-sm font-700 text-foreground mb-3">Fraud Alerts</h2>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-700 text-foreground">Fraud Alerts</h2>
+          {dbAlerts.length > 0 && (
+            <span className="text-xs font-600 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{dbAlerts.length} AI-analyzed</span>
+          )}
+        </div>
         {filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <ShieldAlert size={32} className="mx-auto mb-3 opacity-30" />
