@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -109,6 +109,13 @@ const navGroups = [
         label: 'Notifications Hub',
         icon: Bell,
         href: '/notifications-hub',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
+      {
+        label: 'Alerts Inbox',
+        icon: Inbox,
+        href: '/alerts-inbox',
         badge: null,
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
