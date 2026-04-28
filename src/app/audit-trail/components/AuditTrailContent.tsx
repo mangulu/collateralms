@@ -206,10 +206,11 @@ function KpiCard({
   color: string;
   sub?: string;
 }) {
+  const Icon = IconComp;
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-4 flex items-start gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-        <IconComp size={18} />
+        <Icon size={18} />
       </div>
       <div className="min-w-0">
         <p className="text-2xl font-bold tabular-nums text-foreground font-mono">{value}</p>

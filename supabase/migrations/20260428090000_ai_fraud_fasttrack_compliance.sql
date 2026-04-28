@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS public.fraud_alerts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    collateral_id UUID REFERENCES public.collateral(id) ON DELETE SET NULL,
+    collateral_id UUID REFERENCES public.collateral_records(id) ON DELETE SET NULL,
     alert_type VARCHAR(50) NOT NULL, -- DUPLICATE_TITLE, IDENTITY_MISMATCH, VALUATION_ANOMALY, DOCUMENT_FORGERY, EARLY_WARNING
     risk_score DECIMAL(5,2),         -- 0-100
     confidence DECIMAL(5,2),
@@ -55,36 +55,36 @@ CREATE TABLE IF NOT EXISTS public.compliance_rules (
 CREATE INDEX IF NOT EXISTS idx_compliance_rules_rule_type ON public.compliance_rules(rule_type);
 CREATE INDEX IF NOT EXISTS idx_compliance_rules_is_active ON public.compliance_rules(is_active);
 
--- ─── collateral location columns (PostGIS-ready) ──────────────────────────────
+-- ─── collateral_records location columns (PostGIS-ready) ──────────────────────
 
 DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'collateral' AND column_name = 'address_verified'
+        WHERE table_schema = 'public' AND table_name = 'collateral_records' AND column_name = 'address_verified'
     ) THEN
-        ALTER TABLE public.collateral ADD COLUMN address_verified BOOLEAN DEFAULT FALSE;
+        ALTER TABLE public.collateral_records ADD COLUMN address_verified BOOLEAN DEFAULT FALSE;
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'collateral' AND column_name = 'risk_zone'
+        WHERE table_schema = 'public' AND table_name = 'collateral_records' AND column_name = 'risk_zone'
     ) THEN
-        ALTER TABLE public.collateral ADD COLUMN risk_zone VARCHAR(10); -- LOW, MEDIUM, HIGH
+        ALTER TABLE public.collateral_records ADD COLUMN risk_zone VARCHAR(10); -- LOW, MEDIUM, HIGH
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'collateral' AND column_name = 'latitude'
+        WHERE table_schema = 'public' AND table_name = 'collateral_records' AND column_name = 'latitude'
     ) THEN
-        ALTER TABLE public.collateral ADD COLUMN latitude DECIMAL(10,7);
+        ALTER TABLE public.collateral_records ADD COLUMN latitude DECIMAL(10,7);
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'collateral' AND column_name = 'longitude'
+        WHERE table_schema = 'public' AND table_name = 'collateral_records' AND column_name = 'longitude'
     ) THEN
-        ALTER TABLE public.collateral ADD COLUMN longitude DECIMAL(10,7);
+        ALTER TABLE public.collateral_records ADD COLUMN longitude DECIMAL(10,7);
     END IF;
 END $$;
 
