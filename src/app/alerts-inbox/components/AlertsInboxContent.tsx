@@ -1,6 +1,7 @@
 'use client';
-import React, { useState, useCallback, useId } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Inbox, Mail, MessageSquare, AlertTriangle, Search, RefreshCw, CheckCheck, Trash2, X, Filter, ChevronDown, Shield, GitBranch, Building2, FileText, Activity, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
+import { alertsInboxService, type InboxAlert } from '@/lib/supabase/alertsInboxService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -11,21 +12,8 @@ type ChannelFilter = 'all' | AlertChannel;
 type TypeFilter = 'all' | AlertType;
 type SortOrder = 'newest' | 'oldest' | 'priority';
 
-interface Alert {
-  id: string;
-  channel: AlertChannel;
-  type: AlertType;
-  subject: string;
-  body: string;
-  sender: string;
-  recipient: string;
-  isRead: boolean;
-  priority: 'high' | 'medium' | 'low';
-  receivedAt: string;
-  collateralId?: string;
-  actionLabel?: string;
-  actionHref?: string;
-}
+// Use InboxAlert as Alert for backward compat
+type Alert = InboxAlert;
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -90,193 +78,6 @@ const CHANNEL_CONFIG: Record<AlertChannel, { icon: React.ElementType; bg: string
   sms: { icon: MessageSquare, bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'SMS' },
   email: { icon: Mail, bg: 'bg-sky-50', text: 'text-sky-700', label: 'Email' },
 };
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-function generateMockAlerts(): Alert[] {
-  const now = new Date();
-  const ago = (minutes: number) => new Date(now.getTime() - minutes * 60 * 1000).toISOString();
-
-  return [
-    {
-      id: 'a-001',
-      channel: 'sms',
-      type: 'fraud_detection',
-      subject: 'FRAUD ALERT: Duplicate collateral detected',
-      body: 'Potential duplicate collateral detected for COL-2024-0045 (Land Title, Plot 45 Mikocheni). Risk score: 87/100. Immediate review required.',
-      sender: 'CollateralMS System',
-      recipient: '+255712345678',
-      isRead: false,
-      priority: 'high',
-      receivedAt: ago(8),
-      collateralId: 'COL-2024-0045',
-      actionLabel: 'Review Alert',
-      actionHref: '/fraud-prevention',
-    },
-    {
-      id: 'a-002',
-      channel: 'email',
-      type: 'approval_request',
-      subject: 'Action Required: Perfection Request PR-2024-0118 awaiting approval',
-      body: 'Credit Officer A. Kimani has submitted perfection request PR-2024-0118 for COL-2024-0072 (Motor Vehicle — Toyota Land Cruiser, TZS 45M). Please review and approve or return for revision.',
-      sender: 'noreply@collateralms.exim.co.tz',
-      recipient: 'legal.officer@exim.co.tz',
-      isRead: false,
-      priority: 'high',
-      receivedAt: ago(22),
-      collateralId: 'COL-2024-0072',
-      actionLabel: 'Review Request',
-      actionHref: '/perfection-workflow',
-    },
-    {
-      id: 'a-003',
-      channel: 'sms',
-      type: 'brela_deadline',
-      subject: 'BRELA DEADLINE: 3 days remaining — COL-2024-0067',
-      body: 'Company charge registration for Karibu Enterprises Ltd (COL-2024-0067) is due in 3 days on 29 Apr 2026. Assign officer immediately.',
-      sender: 'CollateralMS System',
-      recipient: '+255712345678',
-      isRead: false,
-      priority: 'high',
-      receivedAt: ago(45),
-      collateralId: 'COL-2024-0067',
-      actionLabel: 'Take Action',
-      actionHref: '/compliance-audit',
-    },
-    {
-      id: 'a-004',
-      channel: 'email',
-      type: 'fraud_detection',
-      subject: 'Fraud Risk: Suspicious valuation discrepancy on COL-2024-0033',
-      body: 'AI analysis flagged a 42% valuation discrepancy on COL-2024-0033 (Commercial Property, Kariakoo). Market value: TZS 120M vs. declared: TZS 210M. Risk score: 74/100.',
-      sender: 'noreply@collateralms.exim.co.tz',
-      recipient: 'compliance@exim.co.tz',
-      isRead: false,
-      priority: 'high',
-      receivedAt: ago(90),
-      collateralId: 'COL-2024-0033',
-      actionLabel: 'View Fraud Alert',
-      actionHref: '/fraud-prevention',
-    },
-    {
-      id: 'a-005',
-      channel: 'email',
-      type: 'overdue_collateral',
-      subject: 'Overdue: Perfection action 12 days past deadline — COL-2024-0045',
-      body: 'BRELA registration for Land Title (Plot 45, Mikocheni) assigned to J. Mwangi is 12 days past the submission deadline. Escalation may be required.',
-      sender: 'noreply@collateralms.exim.co.tz',
-      recipient: 'manager@exim.co.tz',
-      isRead: true,
-      priority: 'high',
-      receivedAt: ago(180),
-      collateralId: 'COL-2024-0045',
-      actionLabel: 'View Collateral',
-      actionHref: '/collateral-management',
-    },
-    {
-      id: 'a-006',
-      channel: 'sms',
-      type: 'approval_request',
-      subject: 'APPROVAL NEEDED: PR-2024-0115 submitted for review',
-      body: 'New perfection request PR-2024-0115 for COL-2024-0058 (Equipment — Generator Set) submitted by B. Omondi. Awaiting your approval.',
-      sender: 'CollateralMS System',
-      recipient: '+255712345678',
-      isRead: true,
-      priority: 'medium',
-      receivedAt: ago(240),
-      collateralId: 'COL-2024-0058',
-      actionLabel: 'Review Request',
-      actionHref: '/perfection-workflow',
-    },
-    {
-      id: 'a-007',
-      channel: 'email',
-      type: 'status_change',
-      subject: 'Status Update: PR-2024-0112 approved — COL-2024-0031',
-      body: 'Perfection request PR-2024-0112 for COL-2024-0031 has been approved by Legal Officer M. Hassan. Status changed: Under Review → Perfected. No further action required.',
-      sender: 'noreply@collateralms.exim.co.tz',
-      recipient: 'credit.officer@exim.co.tz',
-      isRead: true,
-      priority: 'medium',
-      receivedAt: ago(360),
-      collateralId: 'COL-2024-0031',
-      actionLabel: 'View Workflow',
-      actionHref: '/perfection-workflow',
-    },
-    {
-      id: 'a-008',
-      channel: 'sms',
-      type: 'brela_deadline',
-      subject: 'BRELA DEADLINE: 7 days remaining — COL-2024-0089',
-      body: 'Debenture registration for Simba Holdings Ltd (COL-2024-0089) is due in 7 days on 3 May 2026. Assign an officer to proceed.',
-      sender: 'CollateralMS System',
-      recipient: '+255712345678',
-      isRead: true,
-      priority: 'medium',
-      receivedAt: ago(480),
-      collateralId: 'COL-2024-0089',
-      actionLabel: 'Take Action',
-      actionHref: '/compliance-audit',
-    },
-    {
-      id: 'a-009',
-      channel: 'email',
-      type: 'overdue_collateral',
-      subject: 'Overdue: TRA lien registration 21 days past deadline — COL-2024-0011',
-      body: 'TRA lien registration for equipment collateral (COL-2024-0011) is 21 days overdue. Assigned officer: P. Njoroge. Immediate escalation recommended.',
-      sender: 'noreply@collateralms.exim.co.tz',
-      recipient: 'manager@exim.co.tz',
-      isRead: true,
-      priority: 'high',
-      receivedAt: ago(720),
-      collateralId: 'COL-2024-0011',
-      actionLabel: 'View Collateral',
-      actionHref: '/collateral-management',
-    },
-    {
-      id: 'a-010',
-      channel: 'email',
-      type: 'status_change',
-      subject: 'Request Returned: PR-2024-0109 needs revision — COL-2024-0019',
-      body: 'Perfection request PR-2024-0109 was returned by Legal Officer for revision. Reason: Incomplete title deed documentation for COL-2024-0019. Please resubmit with complete documents.',
-      sender: 'noreply@collateralms.exim.co.tz',
-      recipient: 'credit.officer@exim.co.tz',
-      isRead: true,
-      priority: 'medium',
-      receivedAt: ago(900),
-      collateralId: 'COL-2024-0019',
-      actionLabel: 'View Workflow',
-      actionHref: '/perfection-workflow',
-    },
-    {
-      id: 'a-011',
-      channel: 'sms',
-      type: 'fraud_detection',
-      subject: 'FRAUD ALERT: Ownership conflict on COL-2024-0077',
-      body: 'Ownership conflict detected on COL-2024-0077 (Land Title, Sinza). Property appears in another institution\'s collateral registry. Risk score: 91/100.',
-      sender: 'CollateralMS System',
-      recipient: '+255712345678',
-      isRead: false,
-      priority: 'high',
-      receivedAt: ago(1200),
-      collateralId: 'COL-2024-0077',
-      actionLabel: 'Review Alert',
-      actionHref: '/fraud-prevention',
-    },
-    {
-      id: 'a-012',
-      channel: 'email',
-      type: 'system',
-      subject: 'System: Scheduled maintenance completed successfully',
-      body: 'Scheduled database maintenance completed at 02:00 EAT. All services are operational. No data loss occurred. Next maintenance window: 15 May 2026.',
-      sender: 'system@collateralms.exim.co.tz',
-      recipient: 'admin@exim.co.tz',
-      isRead: true,
-      priority: 'low',
-      receivedAt: ago(2880),
-    },
-  ];
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -446,8 +247,8 @@ const TYPE_FILTER_TABS: { key: TypeFilter; label: string }[] = [
 ];
 
 export default function AlertsInboxContent() {
-  const [alerts, setAlerts] = useState<Alert[]>(() => generateMockAlerts());
-  const [isLoading, setIsLoading] = useState(false);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
   const [readFilter, setReadFilter] = useState<ReadStatus>('all');
@@ -455,28 +256,42 @@ export default function AlertsInboxContent() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [showBulkMenu, setShowBulkMenu] = useState(false);
 
-  const handleRefresh = useCallback(() => {
+  const loadAlerts = useCallback(async () => {
     setIsLoading(true);
-    setSelectedIds(new Set());
-    setTimeout(() => {
-      setAlerts(generateMockAlerts());
+    try {
+      const data = await alertsInboxService.fetchAlerts(200);
+      setAlerts(data);
+    } catch (err) {
+      console.error('Failed to load alerts:', err);
+      setAlerts([]);
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   }, []);
 
-  const handleMarkRead = useCallback((id: string) => {
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
+
+  const handleRefresh = useCallback(() => {
+    setSelectedIds(new Set());
+    loadAlerts();
+  }, [loadAlerts]);
+
+  const handleMarkRead = useCallback(async (id: string) => {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: true } : a)));
+    await alertsInboxService.markRead(id);
   }, []);
 
   const handleMarkUnread = useCallback((id: string) => {
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: false } : a)));
   }, []);
 
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
     setSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    await alertsInboxService.deleteAlert(id);
   }, []);
 
   const handleToggleExpand = useCallback((id: string) => {
@@ -516,7 +331,6 @@ export default function AlertsInboxContent() {
     .sort((a, b) => {
       if (sortOrder === 'newest') return new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime();
       if (sortOrder === 'oldest') return new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime();
-      // priority sort: high > medium > low
       const p = { high: 0, medium: 1, low: 2 };
       return p[a.priority] - p[b.priority];
     });
@@ -537,23 +351,23 @@ export default function AlertsInboxContent() {
     }
   };
 
-  // Bulk actions
-  const handleBulkMarkRead = () => {
+  const handleBulkMarkRead = async () => {
+    const ids = Array.from(selectedIds);
     setAlerts((prev) => prev.map((a) => selectedIds.has(a.id) ? { ...a, isRead: true } : a));
     setSelectedIds(new Set());
-    setShowBulkMenu(false);
+    await Promise.all(ids.map((id) => alertsInboxService.markRead(id)));
   };
 
   const handleBulkMarkUnread = () => {
     setAlerts((prev) => prev.map((a) => selectedIds.has(a.id) ? { ...a, isRead: false } : a));
     setSelectedIds(new Set());
-    setShowBulkMenu(false);
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
     setAlerts((prev) => prev.filter((a) => !selectedIds.has(a.id)));
     setSelectedIds(new Set());
-    setShowBulkMenu(false);
+    await Promise.all(ids.map((id) => alertsInboxService.deleteAlert(id)));
   };
 
   return (

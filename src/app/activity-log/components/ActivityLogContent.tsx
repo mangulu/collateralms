@@ -65,134 +65,7 @@ function getActionStyle(action: string): { bg: string; text: string; dot: string
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const MOCK_ENTRIES: AuditLogEntry[] = [
-  {
-    id: 'al-001', collateralId: 'col-0312', entityType: 'collateral', action: 'created',
-    message: 'New collateral record registered: col-0312',
-    detail: 'Coastal Traders Co. · Mortgage · TSh 780M · Justification: New loan application LAP-2026-0312 approved by credit committee',
-    performedByName: 'J. Kamau', ipAddress: '196.216.10.45', eventCategory: 'collateral_change',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: '', new_value: 'Draft' },
-      { field: 'collateral_type', label: 'Collateral Type', old_value: '', new_value: 'Mortgage' },
-      { field: 'value_tsh', label: 'Value (TSh)', old_value: '', new_value: '780,000,000' },
-      { field: 'assigned_officer', label: 'Assigned Officer', old_value: '', new_value: 'J. Kamau' },
-    ],
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-002', collateralId: 'col-0289', entityType: 'collateral', action: 'approved',
-    message: 'Collateral col-0289 approved for perfection',
-    detail: 'Karibu Textiles Ltd · Debenture · Justification: All documentation verified, LTV within acceptable range (65%), no fraud flags',
-    performedByName: 'A. Mwangi', ipAddress: '196.216.10.67', eventCategory: 'approval',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: 'Under Review', new_value: 'Approved' },
-      { field: 'approved_by', label: 'Approved By', old_value: '', new_value: 'A. Mwangi' },
-      { field: 'approval_date', label: 'Approval Date', old_value: '', new_value: '28 Apr 2026' },
-    ],
-    createdAt: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-003', collateralId: undefined, entityType: 'system', action: 'login',
-    message: 'User login successful — J. Kamau',
-    detail: 'Session started via Chrome 124 on Windows 11 · MFA verified',
-    performedByName: 'J. Kamau', ipAddress: '196.216.10.45', eventCategory: 'login',
-    fieldChanges: null,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-004', collateralId: 'col-0041', entityType: 'collateral', action: 'overdue',
-    message: 'Status transition: col-0041 moved to Overdue',
-    detail: 'Karibu Enterprises Ltd · BRELA deadline missed by 12 days · Justification: Automatic system escalation per compliance rule CR-004',
-    performedByName: 'System', ipAddress: '127.0.0.1', eventCategory: 'status_transition',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: 'Submitted', new_value: 'Overdue' },
-      { field: 'days_overdue', label: 'Days Overdue', old_value: '0', new_value: '12' },
-    ],
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-005', collateralId: 'col-0312', entityType: 'collateral', action: 'updated',
-    message: 'Collateral record updated: col-0312',
-    detail: 'Value and perfection deadline revised · Justification: Revaluation report received from certified valuer (REF: VAL-2026-0312)',
-    performedByName: 'J. Kamau', ipAddress: '196.216.10.45', eventCategory: 'collateral_change',
-    fieldChanges: [
-      { field: 'value_tsh', label: 'Value (TSh)', old_value: '780,000,000', new_value: '850,000,000' },
-      { field: 'perfection_deadline', label: 'Perfection Deadline', old_value: '01 May 2026', new_value: '15 May 2026' },
-      { field: 'valuation_date', label: 'Valuation Date', old_value: '01 Jan 2026', new_value: '25 Apr 2026' },
-    ],
-    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-006', collateralId: 'col-0178', entityType: 'collateral', action: 'rejected',
-    message: 'Approval rejected for col-0178',
-    detail: 'Simba Holdings Ltd · Justification: Title deed number mismatch detected — AI fraud flag confirmed by compliance officer. Returned to originator for correction.',
-    performedByName: 'P. Ochieng', ipAddress: '41.188.32.12', eventCategory: 'approval',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: 'Under Review', new_value: 'Rejected' },
-      { field: 'rejection_reason', label: 'Rejection Reason', old_value: '', new_value: 'Title deed mismatch — fraud flag' },
-    ],
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-007', collateralId: undefined, entityType: 'system', action: 'login',
-    message: 'User login successful — A. Mwangi',
-    detail: 'Session started via Firefox 125 on macOS · MFA verified',
-    performedByName: 'A. Mwangi', ipAddress: '196.216.10.67', eventCategory: 'login',
-    fieldChanges: null,
-    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-008', collateralId: 'col-0289', entityType: 'collateral', action: 'perfected',
-    message: 'Status transition: col-0289 perfected at BRELA',
-    detail: 'Karibu Textiles Ltd · Debenture · Registration No: BRELA/2026/04/0289 · Justification: BRELA confirmation received, certificate uploaded',
-    performedByName: 'A. Mwangi', ipAddress: '196.216.10.67', eventCategory: 'status_transition',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: 'Approved', new_value: 'Perfected' },
-      { field: 'registration_number', label: 'Registration No.', old_value: '', new_value: 'BRELA/2026/04/0289' },
-      { field: 'perfection_date', label: 'Perfection Date', old_value: '', new_value: '28 Apr 2026' },
-    ],
-    createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-009', collateralId: undefined, entityType: 'system', action: 'login_failed',
-    message: 'Login attempt failed — unknown user',
-    detail: 'Invalid credentials · 3 consecutive failed attempts · Account temporarily locked',
-    performedByName: 'Unknown', ipAddress: '102.89.45.201', eventCategory: 'login',
-    fieldChanges: null,
-    createdAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-010', collateralId: 'col-0099', entityType: 'collateral', action: 'submitted',
-    message: 'Status transition: col-0099 submitted for review',
-    detail: 'Mombasa Freight Ltd · Motor Vehicle · Justification: All pre-submission checks passed, submitted by relationship manager per SOP-COL-003',
-    performedByName: 'S. Njoroge', ipAddress: '196.216.10.88', eventCategory: 'status_transition',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: 'Draft', new_value: 'Submitted' },
-      { field: 'submitted_by', label: 'Submitted By', old_value: '', new_value: 'S. Njoroge' },
-      { field: 'submission_date', label: 'Submission Date', old_value: '', new_value: '28 Apr 2026' },
-    ],
-    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-011', collateralId: 'col-0099', entityType: 'collateral', action: 'reviewed',
-    message: 'Collateral col-0099 reviewed by compliance',
-    detail: 'Mombasa Freight Ltd · Justification: Compliance review completed, minor documentation gap noted — owner asked to provide updated insurance certificate',
-    performedByName: 'P. Ochieng', ipAddress: '41.188.32.12', eventCategory: 'approval',
-    fieldChanges: [
-      { field: 'review_status', label: 'Review Status', old_value: 'Pending', new_value: 'Reviewed' },
-      { field: 'review_notes', label: 'Review Notes', old_value: '', new_value: 'Insurance certificate required' },
-    ],
-    createdAt: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'al-012', collateralId: undefined, entityType: 'system', action: 'logout',
-    message: 'User session ended — P. Ochieng',
-    detail: 'Session duration: 3h 42m · Normal logout',
-    performedByName: 'P. Ochieng', ipAddress: '41.188.32.12', eventCategory: 'login',
-    fieldChanges: null,
-    createdAt: new Date(Date.now() - 16 * 60 * 60 * 1000).toISOString(),
-  },
-];
+// remove MOCK_ENTRIES
 
 // ─── FieldChangeDiff ──────────────────────────────────────────────────────────
 
@@ -418,12 +291,12 @@ export default function ActivityLogContent() {
         auditLogService.getAll({ search, dateFrom, dateTo }, 1000),
         auditLogService.getDistinctUsers(),
       ]);
-      setEntries(data.length > 0 ? data : MOCK_ENTRIES);
-      setDistinctUsers(users.length > 0 ? users : Array.from(new Set(MOCK_ENTRIES.map(e => e.performedByName))));
+      setEntries(data);
+      setDistinctUsers(users);
       setLastRefreshed(new Date());
     } catch {
-      setEntries(MOCK_ENTRIES);
-      setDistinctUsers(Array.from(new Set(MOCK_ENTRIES.map(e => e.performedByName))));
+      setEntries([]);
+      setDistinctUsers([]);
     } finally {
       setIsLoading(false);
     }

@@ -4,6 +4,7 @@ import { FileText, Download, RefreshCw, ShieldAlert, Scale, Map, AlertTriangle, 
 
 import { fetchFraudAlerts, type FraudAlertRow } from '@/lib/supabase/fraudAlertService';
 import { collateralService, type CollateralRecord } from '@/lib/supabase/collateralService';
+import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -100,74 +101,66 @@ const riskZoneBadge: Record<string, string> = {
   LOW: 'bg-green-50 text-green-600',
 };
 
-// Mock rule violations derived from compliance rules
-const mockRuleViolations: RuleViolation[] = [
-  {
-    id: 'VIO-001', ruleName: 'LTV Supervisor Approval', ruleType: 'LTV', action: 'BLOCK',
-    collateralId: 'COL-2024-0891', obligor: 'Karibu Enterprises Ltd',
-    triggeredAt: '2024-06-15T09:30:00Z', severity: 'HIGH',
-    message: 'LTV exceeds 70% limit. Supervisor approval required before proceeding.',
-  },
-  {
-    id: 'VIO-002', ruleName: 'BRELA 42-Day Deadline Warning', ruleType: 'DEADLINE', action: 'WARN',
-    collateralId: 'COL-2024-0756', obligor: 'Sunrise Trading Co.',
-    triggeredAt: '2024-06-14T11:00:00Z', severity: 'MEDIUM',
-    message: 'BRELA submission deadline is within 7 days. Immediate action required.',
-  },
-  {
-    id: 'VIO-003', ruleName: 'Overdue BRELA Filing Block', ruleType: 'DEADLINE', action: 'BLOCK',
-    collateralId: 'COL-2024-0612', obligor: 'Mwanga Holdings',
-    triggeredAt: '2024-06-13T08:15:00Z', severity: 'HIGH',
-    message: 'BRELA filing deadline has passed. Escalate to compliance team immediately.',
-  },
-  {
-    id: 'VIO-004', ruleName: 'High LTV Audit Log', ruleType: 'LTV', action: 'LOG',
-    collateralId: 'COL-2024-0543', obligor: 'Bahari Investments',
-    triggeredAt: '2024-06-12T14:45:00Z', severity: 'LOW',
-    message: 'LTV above 60% — logged for audit trail review.',
-  },
-  {
-    id: 'VIO-005', ruleName: 'Ineligible Collateral Type Block', ruleType: 'ELIGIBILITY', action: 'BLOCK',
-    collateralId: 'COL-2024-0489', obligor: 'Kilimanjaro Traders',
-    triggeredAt: '2024-06-11T10:20:00Z', severity: 'HIGH',
-    message: 'Collateral type not eligible under current lending policy.',
-  },
-  {
-    id: 'VIO-006', ruleName: 'Missing Insurance Warning', ruleType: 'ELIGIBILITY', action: 'WARN',
-    collateralId: 'COL-2024-0401', obligor: 'Serengeti Logistics',
-    triggeredAt: '2024-06-10T16:00:00Z', severity: 'MEDIUM',
-    message: 'Insurance documentation missing or expired.',
-  },
-];
+// ─── Live data fetchers ───────────────────────────────────────────────────────
 
-// Mock geo collateral data
-const mockGeoCollateral: GeoCollateralRecord[] = [
-  {
-    id: 'GEO-001', collateralId: 'COL-2024-0891', obligor: 'Karibu Enterprises Ltd',
-    type: 'Land Title', address: 'Plot 45, Msasani Peninsula, Dar es Salaam',
-    status: 'Perfected', riskZone: 'LOW', coordinates: '-6.7924, 39.2083', verificationStatus: 'VERIFIED',
-  },
-  {
-    id: 'GEO-002', collateralId: 'COL-2024-0756', obligor: 'Sunrise Trading Co.',
-    type: 'Commercial Property', address: 'Kariakoo Market Area, Dar es Salaam',
-    status: 'Under Review', riskZone: 'MEDIUM', coordinates: '-6.8235, 39.2695', verificationStatus: 'UNVERIFIED',
-  },
-  {
-    id: 'GEO-003', collateralId: 'COL-2024-0612', obligor: 'Mwanga Holdings',
-    type: 'Residential Property', address: 'Kinondoni District, Dar es Salaam',
-    status: 'Overdue', riskZone: 'HIGH', coordinates: '-6.7780, 39.2494', verificationStatus: 'MISMATCH',
-  },
-  {
-    id: 'GEO-004', collateralId: 'COL-2024-0543', obligor: 'Bahari Investments',
-    type: 'Land Title', address: 'Mikocheni B, Dar es Salaam',
-    status: 'Perfected', riskZone: 'LOW', coordinates: '-6.7600, 39.2300', verificationStatus: 'VERIFIED',
-  },
-  {
-    id: 'GEO-005', collateralId: 'COL-2024-0489', obligor: 'Kilimanjaro Traders',
-    type: 'Warehouse', address: 'Ubungo Industrial Area, Dar es Salaam',
-    status: 'Submitted', riskZone: 'MEDIUM', coordinates: '-6.7900, 39.2100', verificationStatus: 'UNVERIFIED',
-  },
-];
+async function fetchRuleViolations(): Promise<RuleViolation[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('compliance_rules')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((rule: any): RuleViolation => {
+    const action = rule.action ?? 'LOG';
+    const severity: 'HIGH' | 'MEDIUM' | 'LOW' =
+      action === 'BLOCK' ? 'HIGH' : action === 'WARN' ? 'MEDIUM' : 'LOW';
+    return {
+      id: rule.id,
+      ruleName: rule.rule_name,
+      ruleType: rule.rule_type ?? 'GENERAL',
+      action,
+      collateralId: rule.condition?.collateral_id ?? '—',
+      obligor: rule.condition?.obligor ?? '—',
+      triggeredAt: rule.updated_at ?? rule.created_at,
+      severity,
+      message: rule.message ?? '',
+    };
+  });
+}
+
+async function fetchGeoCollateral(): Promise<GeoCollateralRecord[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('collateral_records')
+    .select('id, collateral_id, obligor, collateral_type, description, status, risk_zone, latitude, longitude, address_verified')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((row: any): GeoCollateralRecord => {
+    const hasCoords = row.latitude != null && row.longitude != null;
+    const verificationStatus: 'VERIFIED' | 'UNVERIFIED' | 'MISMATCH' =
+      row.address_verified === true ? 'VERIFIED' :
+      row.address_verified === false && hasCoords ? 'MISMATCH' : 'UNVERIFIED';
+    const riskZone = row.risk_zone ?? (
+      row.status === 'Overdue' ? 'HIGH' :
+      row.status === 'Under Review' || row.status === 'Submitted' ? 'MEDIUM' : 'LOW'
+    );
+    return {
+      id: row.id,
+      collateralId: row.collateral_id,
+      obligor: row.obligor,
+      type: row.collateral_type,
+      address: row.description || '—',
+      status: row.status,
+      riskZone,
+      coordinates: hasCoords ? `${Number(row.latitude).toFixed(4)}, ${Number(row.longitude).toFixed(4)}` : '—',
+      verificationStatus,
+    };
+  });
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -213,6 +206,8 @@ function SectionHeader({ title, sub, icon: Icon }: { title: string; sub: string;
 export default function AuditReportContent() {
   const [fraudAlerts, setFraudAlerts] = useState<FraudAlertRow[]>([]);
   const [collaterals, setCollaterals] = useState<CollateralRecord[]>([]);
+  const [ruleViolations, setRuleViolations] = useState<RuleViolation[]>([]);
+  const [geoCollateral, setGeoCollateral] = useState<GeoCollateralRecord[]>([]);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -230,26 +225,30 @@ export default function AuditReportContent() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [alerts, collateralData] = await Promise.all([
+      const [alerts, collateralData, violations, geoData] = await Promise.all([
         fetchFraudAlerts(),
         collateralService.getAll(),
+        fetchRuleViolations(),
+        fetchGeoCollateral(),
       ]);
 
       setFraudAlerts(alerts);
       setCollaterals(collateralData);
+      setRuleViolations(violations);
+      setGeoCollateral(geoData);
 
       const highRisk = alerts.filter((a) => a.risk_score >= 80).length;
       const pending = alerts.filter((a) => a.status === 'PENDING_REVIEW').length;
-      const activeViolations = mockRuleViolations.filter((v) => v.action === 'BLOCK').length;
-      const unverified = mockGeoCollateral.filter((g) => g.verificationStatus !== 'VERIFIED').length;
+      const activeViolations = violations.filter((v) => v.action === 'BLOCK').length;
+      const unverified = geoData.filter((g) => g.verificationStatus !== 'VERIFIED').length;
 
       setSummary({
-        totalFraudAlerts: alerts.length + 3, // include mock
-        highRiskAlerts: highRisk + 2,
-        pendingReview: pending + 1,
-        ruleViolations: mockRuleViolations.length,
+        totalFraudAlerts: alerts.length,
+        highRiskAlerts: highRisk,
+        pendingReview: pending,
+        ruleViolations: violations.length,
         activeViolations,
-        geoCollateral: mockGeoCollateral.length + collateralData.length,
+        geoCollateral: geoData.length,
         unverifiedLocations: unverified,
         reportDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }),
       });
@@ -264,8 +263,7 @@ export default function AuditReportContent() {
   useEffect(() => { loadData(); }, [loadData]);
 
   // Filtered fraud alerts
-  const allFraudAlerts: FraudAlertRow[] = fraudAlerts;
-  const filteredFraudAlerts = allFraudAlerts.filter((a) => {
+  const filteredFraudAlerts = fraudAlerts.filter((a) => {
     if (fraudFilter === 'All') return true;
     if (fraudFilter === 'High Risk') return a.risk_score >= 80;
     if (fraudFilter === 'Pending') return a.status === 'PENDING_REVIEW';
@@ -273,7 +271,7 @@ export default function AuditReportContent() {
     return true;
   });
 
-  const filteredViolations = mockRuleViolations.filter((v) => {
+  const filteredViolations = ruleViolations.filter((v) => {
     if (violationFilter === 'All') return true;
     if (violationFilter === 'BLOCK') return v.action === 'BLOCK';
     if (violationFilter === 'WARN') return v.action === 'WARN';
@@ -291,9 +289,9 @@ export default function AuditReportContent() {
         body: JSON.stringify({
           dateFrom: reportDateFrom,
           dateTo: reportDateTo,
-          fraudAlerts: allFraudAlerts,
-          ruleViolations: mockRuleViolations,
-          geoCollateral: mockGeoCollateral,
+          fraudAlerts,
+          ruleViolations,
+          geoCollateral,
           summary,
         }),
       });
@@ -599,70 +597,77 @@ export default function AuditReportContent() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Rule</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Type</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Action</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Severity</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Collateral</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Obligor</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Message</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Triggered</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filteredViolations.map((v) => (
-                        <tr key={v.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="py-3 pr-4">
-                            <span className="text-xs font-medium text-foreground">{v.ruleName}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{v.ruleType}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                              v.action === 'BLOCK' ? 'bg-red-100 text-red-700 border border-red-200' :
-                              v.action === 'WARN'? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-100 text-blue-700 border border-blue-200'
-                            }`}>{v.action}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${severityBadge[v.severity]}`}>{v.severity}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="text-xs font-mono text-primary">{v.collateralId}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="text-xs text-foreground">{v.obligor}</span>
-                          </td>
-                          <td className="py-3 pr-4 max-w-xs">
-                            <p className="text-xs text-muted-foreground truncate">{v.message}</p>
-                          </td>
-                          <td className="py-3">
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(v.triggeredAt)}</span>
-                          </td>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-16 rounded-lg bg-gray-100 animate-pulse" />
+                    ))}
+                  </div>
+                ) : filteredViolations.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Scale size={32} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No rule violations found.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Rule</th>
+                          <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Type</th>
+                          <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Action</th>
+                          <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Severity</th>
+                          <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Message</th>
+                          <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Triggered</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filteredViolations.map((v) => (
+                          <tr key={v.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="py-3 pr-4">
+                              <span className="text-xs font-medium text-foreground">{v.ruleName}</span>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{v.ruleType}</span>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                                v.action === 'BLOCK' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                v.action === 'WARN'? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-100 text-blue-700 border border-blue-200'
+                              }`}>{v.action}</span>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${severityBadge[v.severity]}`}>{v.severity}</span>
+                            </td>
+                            <td className="py-3 pr-4 max-w-xs">
+                              <p className="text-xs text-muted-foreground truncate">{v.message}</p>
+                            </td>
+                            <td className="py-3">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(v.triggeredAt)}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 {/* Violation summary by type */}
-                <div className="mt-6 grid grid-cols-3 gap-4">
-                  {['LTV', 'DEADLINE', 'ELIGIBILITY'].map((type) => {
-                    const count = mockRuleViolations.filter((v) => v.ruleType === type).length;
-                    const blocking = mockRuleViolations.filter((v) => v.ruleType === type && v.action === 'BLOCK').length;
-                    return (
-                      <div key={type} className="bg-gray-50 rounded-lg p-4 border border-border">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{type} Violations</p>
-                        <p className="text-2xl font-bold text-foreground font-mono">{count}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{blocking} blocking · {count - blocking} warnings</p>
-                      </div>
-                    );
-                  })}
-                </div>
+                {!isLoading && ruleViolations.length > 0 && (
+                  <div className="mt-6 grid grid-cols-3 gap-4">
+                    {Array.from(new Set(ruleViolations.map((v) => v.ruleType))).slice(0, 3).map((type) => {
+                      const count = ruleViolations.filter((v) => v.ruleType === type).length;
+                      const blocking = ruleViolations.filter((v) => v.ruleType === type && v.action === 'BLOCK').length;
+                      return (
+                        <div key={type} className="bg-gray-50 rounded-lg p-4 border border-border">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">{type} Violations</p>
+                          <p className="text-2xl font-bold text-foreground font-mono">{count}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{blocking} blocking · {count - blocking} warnings</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -677,76 +682,91 @@ export default function AuditReportContent() {
                   />
                 </div>
 
-                {/* Geo summary cards */}
-                <div className="grid grid-cols-3 gap-4 mb-5">
-                  {[
-                    { label: 'Verified Locations', count: mockGeoCollateral.filter((g) => g.verificationStatus === 'VERIFIED').length, color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
-                    { label: 'Unverified Locations', count: mockGeoCollateral.filter((g) => g.verificationStatus === 'UNVERIFIED').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
-                    { label: 'Address Mismatches', count: mockGeoCollateral.filter((g) => g.verificationStatus === 'MISMATCH').length, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
-                  ].map((item) => (
-                    <div key={item.label} className={`rounded-lg p-4 border ${item.bg}`}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{item.label}</p>
-                      <p className={`text-2xl font-bold font-mono ${item.color}`}>{item.count}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Collateral ID</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Obligor</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Type</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Address</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Coordinates</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Risk Zone</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Status</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Verification</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {mockGeoCollateral.map((geo) => (
-                        <tr key={geo.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="py-3 pr-4">
-                            <span className="text-xs font-mono text-primary">{geo.collateralId}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="text-xs font-medium text-foreground">{geo.obligor}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="text-xs text-muted-foreground">{geo.type}</span>
-                          </td>
-                          <td className="py-3 pr-4 max-w-xs">
-                            <div className="flex items-start gap-1.5">
-                              <MapPin size={11} className="text-muted-foreground mt-0.5 shrink-0" />
-                              <p className="text-xs text-muted-foreground truncate">{geo.address}</p>
-                            </div>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className="text-xs font-mono text-muted-foreground">{geo.coordinates}</span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskZoneBadge[geo.riskZone] ?? 'bg-gray-100 text-gray-600'}`}>
-                              {geo.riskZone}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
-                              geo.status === 'Perfected' ? 'bg-green-100 text-green-700 border-green-200' :
-                              geo.status === 'Overdue'? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-700 border-amber-200'
-                            }`}>{geo.status}</span>
-                          </td>
-                          <td className="py-3">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${verificationBadge[geo.verificationStatus]}`}>
-                              {geo.verificationStatus}
-                            </span>
-                          </td>
-                        </tr>
+                {isLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-16 rounded-lg bg-gray-100 animate-pulse" />
+                    ))}
+                  </div>
+                ) : geoCollateral.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Map size={32} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No geomapped collateral records found.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Geo summary cards */}
+                    <div className="grid grid-cols-3 gap-4 mb-5">
+                      {[
+                        { label: 'Verified Locations', count: geoCollateral.filter((g) => g.verificationStatus === 'VERIFIED').length, color: 'text-green-600', bg: 'bg-green-50 border-green-200' },
+                        { label: 'Unverified Locations', count: geoCollateral.filter((g) => g.verificationStatus === 'UNVERIFIED').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+                        { label: 'Address Mismatches', count: geoCollateral.filter((g) => g.verificationStatus === 'MISMATCH').length, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
+                      ].map((item) => (
+                        <div key={item.label} className={`rounded-lg p-4 border ${item.bg}`}>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{item.label}</p>
+                          <p className={`text-2xl font-bold font-mono ${item.color}`}>{item.count}</p>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Collateral ID</th>
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Obligor</th>
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Type</th>
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Address</th>
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Coordinates</th>
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Risk Zone</th>
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2 pr-4">Status</th>
+                            <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider pb-2">Verification</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {geoCollateral.map((geo) => (
+                            <tr key={geo.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3 pr-4">
+                                <span className="text-xs font-mono text-primary">{geo.collateralId}</span>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <span className="text-xs font-medium text-foreground">{geo.obligor}</span>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <span className="text-xs text-muted-foreground">{geo.type}</span>
+                              </td>
+                              <td className="py-3 pr-4 max-w-xs">
+                                <div className="flex items-start gap-1.5">
+                                  <MapPin size={11} className="text-muted-foreground mt-0.5 shrink-0" />
+                                  <p className="text-xs text-muted-foreground truncate">{geo.address}</p>
+                                </div>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <span className="text-xs font-mono text-muted-foreground">{geo.coordinates}</span>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskZoneBadge[geo.riskZone] ?? 'bg-gray-100 text-gray-600'}`}>
+                                  {geo.riskZone}
+                                </span>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                                  geo.status === 'Perfected' ? 'bg-green-100 text-green-700 border-green-200' :
+                                  geo.status === 'Overdue'? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-700 border-amber-200'
+                                }`}>{geo.status}</span>
+                              </td>
+                              <td className="py-3">
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${verificationBadge[geo.verificationStatus]}`}>
+                                  {geo.verificationStatus}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
