@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight, User, Clock, ArrowRight, X, LogIn, FolderOpen, GitBranch, CheckCircle, Globe, MessageSquare, Eye, Users, Lock } from 'lucide-react';
+import { Activity, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight, User, Clock, ArrowRight, X, LogIn, FolderOpen, GitBranch, CheckCircle, Globe, MessageSquare, Eye, Users, Lock, AlertCircle } from 'lucide-react';
 import { auditLogService, AuditLogEntry, FieldChange } from '@/lib/supabase/auditLogService';
 import Icon from '@/components/ui/AppIcon';
 
@@ -274,6 +274,7 @@ const PAGE_SIZE = 25;
 export default function ActivityLogContent() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [userFilter, setUserFilter] = useState('All');
@@ -286,6 +287,7 @@ export default function ActivityLogContent() {
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const [data, users] = await Promise.all([
         auditLogService.getAll({ search, dateFrom, dateTo }, 1000),
@@ -295,6 +297,7 @@ export default function ActivityLogContent() {
       setDistinctUsers(users);
       setLastRefreshed(new Date());
     } catch {
+      setFetchError('Failed to load activity log. Please refresh to try again.');
       setEntries([]);
       setDistinctUsers([]);
     } finally {
@@ -537,6 +540,21 @@ export default function ActivityLogContent() {
               <div className="flex items-center justify-center h-48">
                 <RefreshCw size={20} className="animate-spin text-muted-foreground" />
                 <span className="ml-2 text-sm text-muted-foreground">Loading activity…</span>
+              </div>
+            ) : fetchError ? (
+              <div className="flex flex-col items-center justify-center h-48 text-center px-6 gap-3">
+                <AlertCircle size={32} className="text-red-400" />
+                <div>
+                  <p className="text-sm font-semibold text-red-600">Failed to load activity</p>
+                  <p className="text-xs text-muted-foreground mt-1">{fetchError}</p>
+                </div>
+                <button
+                  onClick={loadData}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <RefreshCw size={13} />
+                  Retry
+                </button>
               </div>
             ) : paginated.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-48 text-center px-6">

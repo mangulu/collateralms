@@ -97,12 +97,16 @@ export default function KPIBentoGrid() {
     perfectionRate: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     dashboardService.getKPIStats().then((data) => {
       setStats(data);
       setIsLoading(false);
-    }).catch(() => setIsLoading(false));
+    }).catch(() => {
+      setError('Failed to load KPI statistics. Please refresh to try again.');
+      setIsLoading(false);
+    });
   }, []);
 
   if (isLoading) {
@@ -111,6 +115,20 @@ export default function KPIBentoGrid() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={`kpi-skel-${i}`} className="rounded-xl p-5 shadow-card border bg-white animate-pulse h-28" />
         ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+          <AlertTriangle size={18} className="text-red-600" />
+        </div>
+        <div>
+          <p className="text-sm font-600 text-red-700">Unable to load KPI data</p>
+          <p className="text-xs text-red-600 mt-0.5">{error}</p>
+        </div>
       </div>
     );
   }

@@ -36,16 +36,19 @@ export default function CollateralManagementContent() {
   const [detailItem, setDetailItem] = useState<CollateralRecord | null>(null);
   const [collateralData, setCollateralData] = useState<CollateralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const data = await collateralService.getAll();
       setCollateralData(data);
     } catch (err: any) {
       toast.error('Failed to load collateral records');
+      setFetchError('Unable to load collateral records. Check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -281,6 +284,46 @@ export default function CollateralManagementContent() {
             </svg>
             <p className="text-sm text-muted-foreground">Loading collateral records...</p>
           </div>
+        </div>
+      ) : fetchError ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+            <X size={24} className="text-red-500" />
+          </div>
+          <div className="text-center">
+            <p className="text-base font-600 text-foreground">Failed to load records</p>
+            <p className="text-sm text-muted-foreground mt-1">{fetchError}</p>
+          </div>
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-md text-sm font-500 hover:bg-primary/90 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+            <Filter size={22} className="text-muted-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="text-base font-600 text-foreground">No records found</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {collateralData.length === 0
+                ? 'No collateral records have been registered yet.' :'No records match your current filters. Try adjusting your search or filters.'}
+            </p>
+          </div>
+          {collateralData.length > 0 && (
+            <button
+              onClick={() => {
+                setFilters({ search: '', type: '', status: '', registry: '', officer: '' });
+                setCurrentPage(1);
+              }}
+              className="text-sm text-primary hover:underline"
+            >
+              Clear all filters
+            </button>
+          )}
         </div>
       ) : (
         /* Table */

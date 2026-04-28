@@ -309,6 +309,7 @@ const PAGE_SIZE = 50;
 export default function AuditTrailContent() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [actionFilter, setActionFilter] = useState('All');
@@ -324,6 +325,7 @@ export default function AuditTrailContent() {
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const [data, actions, users] = await Promise.all([
         auditLogService.getAll({
@@ -336,14 +338,15 @@ export default function AuditTrailContent() {
         auditLogService.getDistinctActions(),
         auditLogService.getDistinctUsers(),
       ]);
-      setEntries(data.length > 0 ? data : MOCK_ENTRIES);
-      setDistinctActions(actions.length > 0 ? actions : Array.from(new Set(MOCK_ENTRIES.map((e) => e.action))));
-      setDistinctUsers(users.length > 0 ? users : Array.from(new Set(MOCK_ENTRIES.map((e) => e.performedByName))));
+      setEntries(data);
+      setDistinctActions(actions);
+      setDistinctUsers(users);
       setLastRefreshed(new Date());
     } catch {
-      setEntries(MOCK_ENTRIES);
-      setDistinctActions(Array.from(new Set(MOCK_ENTRIES.map((e) => e.action))));
-      setDistinctUsers(Array.from(new Set(MOCK_ENTRIES.map((e) => e.performedByName))));
+      setFetchError('Failed to load audit trail. Please refresh to try again.');
+      setEntries([]);
+      setDistinctActions([]);
+      setDistinctUsers([]);
     } finally {
       setIsLoading(false);
     }
@@ -600,6 +603,19 @@ export default function AuditTrailContent() {
                   <div className="h-4 flex-1 bg-muted rounded" />
                 </div>
               ))}
+            </div>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+              <AlertCircle size={32} className="text-red-400 mb-3" />
+              <p className="text-sm font-semibold text-red-600">Failed to load audit trail</p>
+              <p className="text-xs text-muted-foreground mt-1 mb-4">{fetchError}</p>
+              <button
+                onClick={loadData}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <RefreshCw size={13} />
+                Retry
+              </button>
             </div>
           ) : paginated.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">

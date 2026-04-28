@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Clock, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Clock, ChevronRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { dashboardService, CollateralRecord } from '@/lib/supabase/collateralService';
 
@@ -15,12 +15,16 @@ const registryBadgeColors: Record<string, string> = {
 export default function OverdueAlertsPanel() {
   const [overdueItems, setOverdueItems] = useState<CollateralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     dashboardService.getOverdueItems().then((data) => {
       setOverdueItems(data);
       setIsLoading(false);
-    }).catch(() => setIsLoading(false));
+    }).catch(() => {
+      setError('Failed to load overdue items.');
+      setIsLoading(false);
+    });
   }, []);
 
   return (
@@ -33,7 +37,7 @@ export default function OverdueAlertsPanel() {
           <div>
             <h3 className="text-base font-600 text-foreground">Overdue Perfection Actions</h3>
             <p className="text-xs text-muted-foreground">
-              {isLoading ? 'Loading...' : `${overdueItems.length} items past their registry submission deadline`}
+              {isLoading ? 'Loading...' : error ? 'Error loading data' : `${overdueItems.length} items past their registry submission deadline`}
             </p>
           </div>
         </div>
@@ -50,6 +54,12 @@ export default function OverdueAlertsPanel() {
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={`skel-${i}`} className="h-10 bg-muted animate-pulse rounded" />
           ))}
+        </div>
+      ) : error ? (
+        <div className="px-5 py-10 flex flex-col items-center gap-2 text-center">
+          <AlertCircle size={28} className="text-red-400" />
+          <p className="text-sm font-500 text-red-600">Could not load overdue items</p>
+          <p className="text-xs text-muted-foreground">{error}</p>
         </div>
       ) : (
         <div className="overflow-x-auto">

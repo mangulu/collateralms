@@ -210,6 +210,7 @@ export default function AuditReportContent() {
   const [geoCollateral, setGeoCollateral] = useState<GeoCollateralRecord[]>([]);
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'fraud' | 'violations' | 'geomapping'>('fraud');
   const [fraudFilter, setFraudFilter] = useState('All');
@@ -224,6 +225,7 @@ export default function AuditReportContent() {
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const [alerts, collateralData, violations, geoData] = await Promise.all([
         fetchFraudAlerts(),
@@ -255,6 +257,7 @@ export default function AuditReportContent() {
       setLastRefreshed(new Date());
     } catch (err) {
       console.error('Failed to load audit report data:', err);
+      setFetchError('Failed to load report data. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -393,6 +396,26 @@ export default function AuditReportContent() {
             For Regulator Use
           </span>
         </div>
+
+        {/* Error State */}
+        {fetchError && !isLoading && (
+          <div className="flex items-center gap-4 bg-red-50 border border-red-200 rounded-xl px-5 py-4">
+            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+              <AlertTriangle size={18} className="text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-700">Failed to load report data</p>
+              <p className="text-xs text-red-600 mt-0.5">{fetchError}</p>
+            </div>
+            <button
+              onClick={loadData}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shrink-0"
+            >
+              <RefreshCw size={12} />
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* KPI Summary */}
         {isLoading ? (
