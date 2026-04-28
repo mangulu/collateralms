@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -58,6 +58,47 @@ const navGroups = [
         href: '/document-management',
         badge: null,
         permission: PERMISSIONS.COLLATERAL_VIEW,
+      },
+    ],
+  },
+  {
+    label: 'Intelligence',
+    items: [
+      {
+        label: 'AI Fraud Prevention',
+        icon: ShieldAlert,
+        href: '/fraud-prevention',
+        badge: '3',
+        badgeVariant: 'danger' as const,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+      {
+        label: 'Portfolio Monitoring',
+        icon: Activity,
+        href: '/portfolio-monitoring',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
+      {
+        label: 'Fast Track',
+        icon: Zap,
+        href: '/fast-track',
+        badge: null,
+        permission: PERMISSIONS.COLLATERAL_VIEW,
+      },
+      {
+        label: 'Geomapping',
+        icon: Map,
+        href: '/geomapping',
+        badge: null,
+        permission: PERMISSIONS.COLLATERAL_VIEW,
+      },
+      {
+        label: 'Compliance Rules',
+        icon: Scale,
+        href: '/compliance-rules',
+        badge: null,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
       },
     ],
   },
