@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -131,6 +131,13 @@ const navGroups = [
         label: 'Audit Log',
         icon: ScrollText,
         href: '/audit-log',
+        badge: null,
+        permission: PERMISSIONS.AUDIT_LOG_VIEW,
+      },
+      {
+        label: 'Activity Log',
+        icon: UserCheck,
+        href: '/activity-log',
         badge: null,
         permission: PERMISSIONS.AUDIT_LOG_VIEW,
       },
