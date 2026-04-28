@@ -1,10 +1,12 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldAlert, AlertTriangle, XCircle, RefreshCw, Search, TrendingUp, Fingerprint, FileWarning, Clock, ChevronDown, Activity, Zap, Brain, CheckCircle2, Loader2 } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 
 import { useChat } from '@/lib/hooks/useChat';
 import toast from 'react-hot-toast';
 import { saveFraudAlert, fetchFraudAlerts, updateFraudAlertStatus, type FraudAlertRow } from '@/lib/supabase/fraudAlertService';
+import { smsAlertService } from '@/lib/supabase/smsAlertService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -238,10 +240,127 @@ function SummaryCard({ label, value, sub, icon: IconComp, variant = 'default' }:
   );
 }
 
+// ─── SMS Alert Modal ──────────────────────────────────────────────────────────
+
+interface SmsAlertModalProps {
+  alert: FraudAlert;
+  onClose: () => void;
+}
+
+function SmsAlertModal({ alert, onClose }: SmsAlertModalProps) {
+  const [phone, setPhone] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://collateral8511.builtwithrocket.new';
+  const message = smsAlertService.buildFraudMessage(
+    alert.collateralId,
+    alert.alertType,
+    alert.riskScore,
+    appUrl
+  );
+
+  const handleSend = async () => {
+    if (!phone.trim()) { setError('Phone number is required'); return; }
+    setSending(true);
+    setError(null);
+    const result = await smsAlertService.sendAlert({
+      to: phone.trim(),
+      recipientName: recipientName.trim() || undefined,
+      alertType: 'FRAUD_DETECTION',
+      collateralId: alert.collateralId,
+      actionUrl: `${appUrl}/fraud-prevention`,
+      message,
+    });
+    setSending(false);
+    if (result.success) {
+      setSent(true);
+      setTimeout(onClose, 1500);
+    } else {
+      setError(result.error || 'Failed to send SMS');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+              <MessageSquare size={16} className="text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-700 text-foreground">Send Fraud Alert SMS</h3>
+              <p className="text-xs text-muted-foreground">{alert.collateralId} · {alert.alertType.replace(/_/g, ' ')}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+            <XCircle size={16} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Recipient Name (optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. Risk Officer"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Phone Number *</label>
+            <input
+              type="tel"
+              placeholder="+255712345678"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setError(null); }}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Message Preview</label>
+            <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 border border-border rounded-lg leading-relaxed">
+              {message}
+            </div>
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+              <AlertTriangle size={13} className="shrink-0" /> {error}
+            </div>
+          )}
+          {sent && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+              <CheckCircle2 size={13} className="shrink-0" /> SMS sent successfully!
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 px-5 py-4 border-t border-border">
+          <button
+            onClick={handleSend}
+            disabled={sending || sent}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-lg transition-colors"
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : sent ? <CheckCircle2 size={14} /> : <MessageSquare size={14} />}
+            {sending ? 'Sending...' : sent ? 'Sent!' : 'Send SMS Alert'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border hover:bg-muted rounded-lg transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Alert Row ────────────────────────────────────────────────────────────────
 
 function AlertRow({ alert, onAction }: { alert: FraudAlert; onAction: (id: string, action: 'FALSE_POSITIVE' | 'ESCALATED', dbId?: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [showSmsModal, setShowSmsModal] = useState(false);
   const typeConf = alertTypeConfig[alert.alertType];
   const statusConf = statusConfig[alert.status];
   const sevConf = severityConfig[alert.severity];
@@ -325,10 +444,17 @@ function AlertRow({ alert, onAction }: { alert: FraudAlert; onAction: (id: strin
               >
                 <AlertTriangle size={13} /> Escalate for Investigation
               </button>
+              <button
+                onClick={() => setShowSmsModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-600 text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors ml-auto"
+              >
+                <MessageSquare size={13} /> Send SMS Alert
+              </button>
             </div>
           )}
         </div>
       )}
+      {showSmsModal && <SmsAlertModal alert={alert} onClose={() => setShowSmsModal(false)} />}
     </div>
   );
 }

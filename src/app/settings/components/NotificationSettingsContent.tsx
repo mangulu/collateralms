@@ -16,6 +16,9 @@ import {
   Loader2,
   Volume2,
   VolumeX,
+  MessageSquare,
+  ShieldAlert,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { notificationService, NotificationPreferences } from '@/lib/supabase/notificationService';
@@ -119,12 +122,14 @@ export default function NotificationSettingsContent() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [smsPhone, setSmsPhone] = useState('');
 
   useEffect(() => {
     if (!user?.id) return;
     setLoading(true);
     notificationService.getPreferences(user.id).then((p) => {
       setPrefs(p);
+      setSmsPhone((p as any).smsPhone || '');
       setLoading(false);
     });
   }, [user?.id]);
@@ -138,7 +143,8 @@ export default function NotificationSettingsContent() {
     if (!prefs) return;
     setSaving(true);
     setError(null);
-    const result = await notificationService.savePreferences(prefs);
+    const prefsWithPhone = { ...prefs, smsPhone: smsPhone.trim() || undefined };
+    const result = await notificationService.savePreferences(prefsWithPhone as any);
     setSaving(false);
     if (result) {
       setPrefs(result);
@@ -403,6 +409,76 @@ export default function NotificationSettingsContent() {
             disabled={!prefs.inappEnabled}
           />
         </div>
+      </div>
+
+      {/* ── SMS Notifications (Twilio) ───────────────────────────────────────── */}
+      <div className="bg-card rounded-lg border border-border shadow-card p-5">
+        <SectionHeader
+          icon={<MessageSquare size={18} />}
+          title="SMS Notifications (Twilio)"
+          description="Receive instant SMS alerts for critical events via Twilio."
+          masterToggle={{ checked: (prefs as any).smsEnabled ?? false, onChange: (v) => update('smsEnabled' as any, v) }}
+        />
+
+        {/* Phone Number Input */}
+        <div className={`mb-4 ${!(prefs as any).smsEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <label className="block text-xs font-medium text-foreground mb-1.5">
+            Default SMS Phone Number
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="tel"
+              placeholder="+255712345678"
+              value={smsPhone}
+              onChange={(e) => setSmsPhone(e.target.value)}
+              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Include country code (e.g. +255 for Tanzania)</p>
+        </div>
+
+        <div className="divide-y divide-border/60">
+          <PrefRow
+            icon={<ShieldAlert size={15} />}
+            label="Fraud Detection Alerts"
+            description="SMS when AI detects fraud indicators on collateral"
+            checked={(prefs as any).smsFraudDetection ?? true}
+            onChange={(v) => update('smsFraudDetection' as any, v)}
+            disabled={!(prefs as any).smsEnabled}
+          />
+          <PrefRow
+            icon={<Building2 size={15} />}
+            label="BRELA Deadline Warnings"
+            description="SMS for overdue and critical BRELA/registry deadlines"
+            checked={(prefs as any).smsBrelaDeadline ?? true}
+            onChange={(v) => update('smsBrelaDeadline' as any, v)}
+            disabled={!(prefs as any).smsEnabled}
+          />
+          <PrefRow
+            icon={<GitBranch size={15} />}
+            label="Approval Request Alerts"
+            description="SMS when perfection requests require your approval"
+            checked={(prefs as any).smsApprovalRequest ?? true}
+            onChange={(v) => update('smsApprovalRequest' as any, v)}
+            disabled={!(prefs as any).smsEnabled}
+          />
+          <PrefRow
+            icon={<AlertTriangle size={15} />}
+            label="Overdue Collateral SMS"
+            description="SMS for collateral items past perfection deadline"
+            checked={(prefs as any).smsOverdueCollateral ?? false}
+            onChange={(v) => update('smsOverdueCollateral' as any, v)}
+            disabled={!(prefs as any).smsEnabled}
+          />
+        </div>
+
+        {!(prefs as any).smsEnabled && (
+          <div className="mt-4 p-3 bg-muted/30 border border-border rounded-lg">
+            <p className="text-xs text-muted-foreground">
+              Enable SMS notifications above to configure Twilio SMS alerts. Requires Twilio credentials configured in Supabase Edge Function secrets.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Bottom Save */}

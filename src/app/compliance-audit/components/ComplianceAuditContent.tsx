@@ -16,10 +16,13 @@ import {
   CalendarClock,
   User,
   Building2,
+  MessageSquare,
+  Loader2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { collateralService, type AuditLog, type CollateralRecord } from '@/lib/supabase/collateralService';
 import Icon from '@/components/ui/AppIcon';
+import { smsAlertService } from '@/lib/supabase/smsAlertService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -125,6 +128,124 @@ function SectionHeader({ title, sub }: { title: string; sub: string }) {
   );
 }
 
+// ─── SMS Deadline Modal ───────────────────────────────────────────────────────
+
+interface SmsDeadlineModalProps {
+  record: DeadlineRecord;
+  onClose: () => void;
+}
+
+function SmsDeadlineModal({ record, onClose }: SmsDeadlineModalProps) {
+  const [phone, setPhone] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://collateral8511.builtwithrocket.new';
+  const daysLeft = record.daysToDeadline ?? 0;
+  const message = smsAlertService.buildBrelaMessage(record.collateralId, daysLeft, appUrl);
+
+  const handleSend = async () => {
+    if (!phone.trim()) { setError('Phone number is required'); return; }
+    setSending(true);
+    setError(null);
+    const result = await smsAlertService.sendAlert({
+      to: phone.trim(),
+      recipientName: recipientName.trim() || undefined,
+      alertType: 'BRELA_DEADLINE',
+      collateralId: record.collateralId,
+      actionUrl: `${appUrl}/compliance-audit`,
+      message,
+    });
+    setSending(false);
+    if (result.success) {
+      setSent(true);
+      setTimeout(onClose, 1500);
+    } else {
+      setError(result.error || 'Failed to send SMS');
+    }
+  };
+
+  const urgency = daysLeft < 0 ? 'OVERDUE' : daysLeft <= 3 ? 'CRITICAL' : 'WARNING';
+  const urgencyColor = urgency === 'OVERDUE' ? 'text-red-700 bg-red-100' : urgency === 'CRITICAL' ? 'text-orange-700 bg-orange-100' : 'text-amber-700 bg-amber-100';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <MessageSquare size={16} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-700 text-foreground">Send BRELA Deadline SMS</h3>
+              <p className="text-xs text-muted-foreground">{record.collateralId} · {record.obligor}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+            <XCircle size={16} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-700 ${urgencyColor}`}>
+            <AlertTriangle size={12} /> {urgency} — {daysLeft < 0 ? `${Math.abs(daysLeft)} days overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft} days remaining`}
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Recipient Name (optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. Legal Officer"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Phone Number *</label>
+            <input
+              type="tel"
+              placeholder="+255712345678"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setError(null); }}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Message Preview</label>
+            <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 border border-border rounded-lg leading-relaxed">
+              {message}
+            </div>
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+              <AlertTriangle size={13} className="shrink-0" /> {error}
+            </div>
+          )}
+          {sent && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+              <CheckCircle2 size={13} className="shrink-0" /> SMS sent successfully!
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 px-5 py-4 border-t border-border">
+          <button
+            onClick={handleSend}
+            disabled={sending || sent}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-lg transition-colors"
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : sent ? <CheckCircle2 size={14} /> : <MessageSquare size={14} />}
+            {sending ? 'Sending...' : sent ? 'Sent!' : 'Send SMS Alert'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border hover:bg-muted rounded-lg transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ComplianceAuditContent() {
@@ -137,6 +258,7 @@ export default function ComplianceAuditContent() {
   const [deadlineFilter, setDeadlineFilter] = useState('All');
   const [exportingPDF, setExportingPDF] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [smsDeadlineRecord, setSmsDeadlineRecord] = useState<DeadlineRecord | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -413,12 +535,13 @@ export default function ComplianceAuditContent() {
                 <th className="text-left py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Days Remaining</th>
                 <th className="text-left py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="text-left py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assigned Officer</th>
+                <th className="text-left py-2.5 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">SMS</th>
               </tr>
             </thead>
             <tbody>
               {filteredDeadlines.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-muted-foreground text-sm">No deadline records match the selected filter.</td>
+                  <td colSpan={8} className="py-10 text-center text-muted-foreground text-sm">No deadline records match the selected filter.</td>
                 </tr>
               ) : (
                 filteredDeadlines.map((d) => {
@@ -435,6 +558,7 @@ export default function ComplianceAuditContent() {
                     ok: 'text-muted-foreground',
                   }[urgency];
                   const rowBg = urgency === 'overdue' ? 'bg-red-50/40' : urgency === 'critical' ? 'bg-orange-50/30' : '';
+                  const showSmsBtn = urgency === 'overdue' || urgency === 'critical' || urgency === 'warning';
                   return (
                     <tr key={d.id} className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${rowBg}`}>
                       <td className="py-3 px-3 font-mono text-xs text-primary font-medium">{d.collateralId}</td>
@@ -455,6 +579,17 @@ export default function ComplianceAuditContent() {
                           <User size={11} />
                           {d.assignedOfficer || '—'}
                         </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        {showSmsBtn && (
+                          <button
+                            onClick={() => setSmsDeadlineRecord(d)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-600 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                            title="Send SMS deadline warning"
+                          >
+                            <MessageSquare size={11} /> SMS
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -546,6 +681,10 @@ export default function ComplianceAuditContent() {
           </div>
         )}
       </div>
+
+      {smsDeadlineRecord && (
+        <SmsDeadlineModal record={smsDeadlineRecord} onClose={() => setSmsDeadlineRecord(null)} />
+      )}
     </div>
   );
 }

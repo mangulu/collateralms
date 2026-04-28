@@ -1,9 +1,11 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus, PerfectionStatusHistory } from '@/lib/supabase/perfectionService';
 import { useAuth } from '@/contexts/AuthContext';
+import { smsAlertService } from '@/lib/supabase/smsAlertService';
 
 const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   Draft: { label: 'Draft', color: 'text-gray-600', bg: 'bg-gray-100', icon: <Clock size={12} /> },
@@ -171,6 +173,7 @@ function DetailPanel({ request, comments, history, userRole, userId, userName, o
   const [decisionNotes, setDecisionNotes] = useState('');
   const [activeAction, setActiveAction] = useState<'perfected' | 'reject' | 'return' | 'review' | 'comment' | null>(null);
   const [activeTab, setActiveTab] = useState<'activity' | 'history'>('activity');
+  const [showSmsModal, setShowSmsModal] = useState(false);
 
   const statusCfg = STATUS_CONFIG[request.requestStatus] ?? STATUS_CONFIG.Draft;
   const priorityCfg = PRIORITY_CONFIG[request.priority] ?? PRIORITY_CONFIG.Normal;
@@ -440,6 +443,132 @@ function DetailPanel({ request, comments, history, userRole, userId, userName, o
             </button>
           </div>
         )}
+
+        {/* SMS Approval Request Button — always visible for submitted/under review */}
+        {(request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review') && (
+          <button
+            onClick={() => setShowSmsModal(true)}
+            className="w-full flex items-center justify-center gap-2 bg-violet-50 text-violet-700 border border-violet-200 text-sm font-medium py-2 rounded-md hover:bg-violet-100 transition-colors"
+          >
+            <MessageSquare size={14} /> Send Approval Request SMS
+          </button>
+        )}
+      </div>
+      {showSmsModal && <SmsApprovalModal request={request} onClose={() => setShowSmsModal(false)} />}
+    </div>
+  );
+}
+
+// ─── SMS Approval Modal ───────────────────────────────────────────────────────
+
+interface SmsApprovalModalProps {
+  request: PerfectionRequest;
+  onClose: () => void;
+}
+
+function SmsApprovalModal({ request, onClose }: SmsApprovalModalProps) {
+  const [phone, setPhone] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://collateral8511.builtwithrocket.new';
+  const message = smsAlertService.buildApprovalMessage(
+    request.id.slice(0, 8).toUpperCase(),
+    request.collateralId,
+    appUrl
+  );
+
+  const handleSend = async () => {
+    if (!phone.trim()) { setError('Phone number is required'); return; }
+    setSending(true);
+    setError(null);
+    const result = await smsAlertService.sendAlert({
+      to: phone.trim(),
+      recipientName: recipientName.trim() || undefined,
+      alertType: 'APPROVAL_REQUEST',
+      collateralId: request.collateralId,
+      actionUrl: `${appUrl}/perfection-workflow`,
+      message,
+    });
+    setSending(false);
+    if (result.success) {
+      setSent(true);
+      setTimeout(onClose, 1500);
+    } else {
+      setError(result.error || 'Failed to send SMS');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <MessageSquare size={16} className="text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-700 text-foreground">Send Approval Request SMS</h3>
+              <p className="text-xs text-muted-foreground">{request.collateralId} · {request.obligor}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Recipient Name (optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. Legal Officer"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Phone Number *</label>
+            <input
+              type="tel"
+              placeholder="+255712345678"
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setError(null); }}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground mb-1">Message Preview</label>
+            <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 border border-border rounded-lg leading-relaxed">
+              {message}
+            </div>
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+              <AlertCircle size={13} className="shrink-0" /> {error}
+            </div>
+          )}
+          {sent && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+              <CheckCircle2 size={13} className="shrink-0" /> SMS sent successfully!
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 px-5 py-4 border-t border-border">
+          <button
+            onClick={handleSend}
+            disabled={sending || sent}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-lg transition-colors"
+          >
+            {sending ? <Loader2 size={14} className="animate-spin" /> : sent ? <CheckCircle2 size={14} /> : <MessageSquare size={14} />}
+            {sending ? 'Sending...' : sent ? 'Sent!' : 'Send SMS Alert'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border hover:bg-muted rounded-lg transition-colors">
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
