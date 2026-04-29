@@ -1,11 +1,12 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2,  } from 'lucide-react';
+import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2, Package, MapPin } from 'lucide-react';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
+import SecurityPocketPanel from './SecurityPocketPanel';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -649,6 +650,8 @@ export default function CollateralDocumentsContent() {
   const [versionModal, setVersionModal] = useState<{ docs: CollateralDocument[]; fileName: string } | null>(null);
   const [deleteModal, setDeleteModal] = useState<CollateralDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [activeView, setActiveView] = useState<'documents' | 'pockets'>('documents');
+  const [selectedPocketCollateral, setSelectedPocketCollateral] = useState<CollateralRecord | null>(null);
 
   const userId = user?.id ?? '';
   const userName = userProfile?.full_name ?? user?.email ?? 'Unknown';
@@ -777,6 +780,25 @@ export default function CollateralDocumentsContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
+            <button
+              onClick={() => setActiveView('documents')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'documents' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <FileText size={13} /> Documents
+            </button>
+            <button
+              onClick={() => setActiveView('pockets')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'pockets' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Package size={13} /> Security Pockets
+            </button>
+          </div>
           <button
             onClick={fetchData}
             className="p-2 rounded-lg hover:bg-muted transition-colors"
@@ -784,7 +806,7 @@ export default function CollateralDocumentsContent() {
           >
             <RefreshCw size={16} className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
           </button>
-          {collateralRecords.length > 0 && (
+          {collateralRecords.length > 0 && activeView === 'documents' && (
             <div className="relative">
               <select
                 className="appearance-none border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -804,15 +826,17 @@ export default function CollateralDocumentsContent() {
               <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
           )}
-          <button
-            onClick={() => {
-              if (collateralRecords.length > 0) setUploadModal(collateralRecords[0]);
-            }}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Upload size={14} />
-            Upload Document
-          </button>
+          {activeView === 'documents' && (
+            <button
+              onClick={() => {
+                if (collateralRecords.length > 0) setUploadModal(collateralRecords[0]);
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Upload size={14} />
+              Upload Document
+            </button>
+          )}
         </div>
       </div>
 
@@ -838,7 +862,7 @@ export default function CollateralDocumentsContent() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-white shrink-0 flex-wrap">
+      <div className={`flex items-center gap-3 px-6 py-3 border-b border-border bg-white shrink-0 flex-wrap ${activeView === 'pockets' ? 'hidden' : ''}`}>
         {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -899,7 +923,7 @@ export default function CollateralDocumentsContent() {
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-auto">
+      <div className={`flex-1 overflow-auto ${activeView === 'pockets' ? 'hidden' : ''}`}>
         {/* Error state */}
         {error && !loading && (
           <div className="m-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -978,6 +1002,103 @@ export default function CollateralDocumentsContent() {
           </table>
         )}
       </div>
+
+      {/* Security Pockets View */}
+      {activeView === 'pockets' && (
+        <div className="flex-1 overflow-auto p-6">
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-48 bg-muted/50 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : collateralRecords.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Package size={24} className="text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1">No Collateral Records</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Add collateral records first to create security pockets.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Collateral selector */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <MapPin size={15} className="text-primary" />
+                  <span className="text-sm font-semibold text-foreground">Select Collateral</span>
+                </div>
+                <div className="relative flex-1 max-w-sm">
+                  <select
+                    value={selectedPocketCollateral?.id ?? ''}
+                    onChange={(e) => {
+                      const rec = collateralRecords.find((r) => r.id === e.target.value);
+                      setSelectedPocketCollateral(rec ?? null);
+                    }}
+                    className="w-full appearance-none border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <option value="">— Choose a collateral record —</option>
+                    {collateralRecords.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.collateralId} — {r.obligor}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+                {!selectedPocketCollateral && (
+                  <p className="text-xs text-muted-foreground">or browse all pockets below</p>
+                )}
+              </div>
+
+              {/* Single collateral pocket */}
+              {selectedPocketCollateral ? (
+                <div className="max-w-2xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <p className="text-sm font-semibold text-foreground">
+                      {selectedPocketCollateral.collateralId}
+                    </p>
+                    <span className="text-xs text-muted-foreground">·</span>
+                    <p className="text-xs text-muted-foreground">{selectedPocketCollateral.obligor}</p>
+                  </div>
+                  <SecurityPocketPanel
+                    collateralRecord={selectedPocketCollateral}
+                    userId={userId}
+                    userName={userName}
+                  />
+                </div>
+              ) : (
+                /* All collaterals grid */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {collateralRecords.map((record) => (
+                    <div key={record.id}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        <p className="text-xs font-semibold text-foreground">{record.collateralId}</p>
+                        <span className="text-xs text-muted-foreground truncate max-w-[160px]">{record.obligor}</span>
+                        <button
+                          onClick={() => setSelectedPocketCollateral(record)}
+                          className="ml-auto text-xs text-primary hover:underline"
+                        >
+                          Focus
+                        </button>
+                      </div>
+                      <SecurityPocketPanel
+                        collateralRecord={record}
+                        userId={userId}
+                        userName={userName}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       {uploadModal && (
