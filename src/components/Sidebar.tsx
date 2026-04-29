@@ -234,6 +234,13 @@ const navGroups = [
         badge: null,
         permission: PERMISSIONS.SETTINGS_VIEW,
       },
+      {
+        label: 'User Guide',
+        icon: BookOpen,
+        href: '/user-guide',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
     ],
   },
 ];
