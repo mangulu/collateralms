@@ -31,8 +31,19 @@ const ACTION_STYLES: Record<string, { bg: string; text: string; dot: string }> =
   commented:            { bg: 'bg-gray-100',    text: 'text-gray-600',    dot: 'bg-gray-400' },
   reopened:             { bg: 'bg-indigo-100',  text: 'text-indigo-700',  dot: 'bg-indigo-500' },
   STATUS_CHANGE:        { bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500' },
+  status_changed:       { bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500' },
   DOCUMENT_UPLOAD:      { bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500' },
   DOCUMENT_DELETE:      { bg: 'bg-orange-100',  text: 'text-orange-700',  dot: 'bg-orange-500' },
+  document_uploaded:    { bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500' },
+  document_deleted:     { bg: 'bg-orange-100',  text: 'text-orange-700',  dot: 'bg-orange-500' },
+  sms_sent:             { bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
+  login:                { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  logout:               { bg: 'bg-slate-100',   text: 'text-slate-600',   dot: 'bg-slate-400' },
+  export:               { bg: 'bg-indigo-100',  text: 'text-indigo-700',  dot: 'bg-indigo-500' },
+  bulk_upload:          { bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500' },
+  user_created:         { bg: 'bg-green-100',   text: 'text-green-700',   dot: 'bg-green-500' },
+  user_updated:         { bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500' },
+  user_deactivated:     { bg: 'bg-red-100',     text: 'text-red-700',     dot: 'bg-red-500' },
   REVIEW:               { bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
   // ── Multi-collateral events ──────────────────────────────────────────────
   charge_rank_changed:  { bg: 'bg-indigo-100',  text: 'text-indigo-700',  dot: 'bg-indigo-500' },
@@ -69,6 +80,19 @@ const CATEGORY_PILLS = [
   { key: 'batch_operation',      label: 'Batch Operations' },
   { key: 'document',             label: 'Documents' },
 ];
+
+// ─── Entity icon map ──────────────────────────────────────────────────────────
+
+const ENTITY_ICON_MAP: Record<string, React.ElementType> = {
+  collateral:        FileText,
+  perfection_request: Stamp,
+  user:              User,
+  document:          FileText,
+  system:            BarChart2,
+  collateral_link:   Link2,
+  charge_registry:   Stamp,
+  batch_operation:   Layers,
+};
 
 // ─── FieldChangeDiff ──────────────────────────────────────────────────────────
 
@@ -202,6 +226,11 @@ function AuditLogRow({ entry }: { entry: AuditLogEntry }) {
             {entry.detail && !expanded && (
               <span className="text-xs text-muted-foreground truncate max-w-xs">{entry.detail}</span>
             )}
+            {entry.reason && !expanded && (
+              <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 truncate max-w-xs" title={`Reason: ${entry.reason}`}>
+                Reason: {entry.reason}
+              </span>
+            )}
             {hasChanges && (
               <span className="text-xs text-primary font-medium flex items-center gap-0.5">
                 {entry.fieldChanges!.length} field{entry.fieldChanges!.length !== 1 ? 's' : ''} changed
@@ -219,6 +248,12 @@ function AuditLogRow({ entry }: { entry: AuditLogEntry }) {
           {expanded && (
             <div className="mt-2">
               {entry.detail && <p className="text-xs text-muted-foreground mb-2">{entry.detail}</p>}
+              {entry.reason && (
+                <div className="flex items-start gap-1.5 mb-2 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5">
+                  <span className="text-xs font-semibold text-amber-700 shrink-0 mt-0.5">Reason:</span>
+                  <span className="text-xs text-amber-800">{entry.reason}</span>
+                </div>
+              )}
               {hasChanges && <FieldChangeDiff changes={entry.fieldChanges!} />}
               {hasBatchSummary && <BatchSummaryPanel items={entry.batchSummary!} />}
             </div>
@@ -228,19 +263,6 @@ function AuditLogRow({ entry }: { entry: AuditLogEntry }) {
     </div>
   );
 }
-
-// ─── Entity icon map ──────────────────────────────────────────────────────────
-
-const ENTITY_ICON_MAP: Record<string, React.ElementType> = {
-  collateral:        FileText,
-  perfection_request: Stamp,
-  user:              User,
-  document:          FileText,
-  system:            BarChart2,
-  collateral_link:   Link2,
-  charge_registry:   Stamp,
-  batch_operation:   Layers,
-};
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
