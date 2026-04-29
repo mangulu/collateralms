@@ -23,6 +23,7 @@ import {
   Trash2,
   ChevronRight,
   Activity,
+  PieChart,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Badge from '@/components/ui/Badge';
@@ -34,6 +35,7 @@ import { perfectionService, PerfectionRequest } from '@/lib/supabase/perfectionS
 import AddEditCollateralModal from '@/app/collateral-management/components/AddEditCollateralModal';
 import { collateralService } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
+import CollateralUtilizationTab from './CollateralUtilizationTab';
 
 
 
@@ -98,7 +100,7 @@ function SectionHeader({ title, icon: IconComponent }: { title: string; icon: Re
   return (
     <div className="flex items-center gap-2 mb-4">
       <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-        {IconComponent && <IconComponent size={14} className="text-primary" />}
+        {IconComponent && React.createElement(IconComponent, { size: 14, className: "text-primary" })}
       </div>
       <h2 className="text-sm font-700 text-foreground uppercase tracking-wider">{title}</h2>
     </div>
@@ -110,7 +112,7 @@ function DetailRow({ label, value, icon: RowIcon }: { label: string; value: Reac
     <div className="flex items-start gap-3 py-2.5 border-b border-border/60 last:border-0">
       {RowIcon && (
         <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center shrink-0 mt-0.5">
-          {<RowIcon size={13} className="text-muted-foreground" />}
+          {React.createElement(RowIcon, { size: 13, className: "text-muted-foreground" })}
         </div>
       )}
       <div className="flex-1 min-w-0">
@@ -571,6 +573,7 @@ export default function CollateralDetailContent({
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'utilization'>('overview');
 
   const handleSave = async (data: Partial<CollateralRecord>) => {
     if (!collateral) return;
@@ -697,146 +700,173 @@ export default function CollateralDetailContent({
         </div>
       )}
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left column — core details */}
-        <div className="xl:col-span-2 space-y-6">
-          {/* Core Info Card */}
-          <div className="bg-white rounded-xl border border-border shadow-card p-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Collateral Information */}
-              <div>
-                <SectionHeader title="Collateral Information" icon={Shield} />
-                <div className="bg-muted/30 rounded-lg px-3 py-1">
-                  <DetailRow label="Collateral ID" value={<span className="font-mono font-600 text-primary">{collateral.collateralId}</span>} icon={Shield} />
-                  <DetailRow
-                    label="Obligor"
-                    value={
-                      <div>
-                        <p className="font-500">{collateral.obligor}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{collateral.obligorId}</p>
-                      </div>
-                    }
-                    icon={Building2}
-                  />
-                  <DetailRow label="Collateral Type" value={collateral.type} icon={FileText} />
-                  <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{collateral.description}</p>} icon={FileText} />
-                  <DetailRow
-                    label="Collateral Value"
-                    value={<span className="font-mono font-600 text-base">TSh {collateral.valueTSh}</span>}
-                    icon={Building2}
-                  />
-                  <DetailRow label="Facility ID" value={<span className="font-mono text-xs">{collateral.facilityId}</span>} icon={FileText} />
-                  <DetailRow label="Assigned Officer" value={collateral.assignedOfficer} icon={User} />
-                </div>
-              </div>
-
-              {/* Perfection & Registry */}
-              <div>
-                <SectionHeader title="Perfection & Registry" icon={CheckCircle2} />
-                <div className="bg-muted/30 rounded-lg px-3 py-1">
-                  <DetailRow
-                    label="Perfection Status"
-                    value={<Badge variant={statusBadgeMap[collateral.status]} label={collateral.status} />}
-                    icon={Shield}
-                  />
-                  <DetailRow
-                    label="Target Registry"
-                    value={
-                      collateral.registry !== 'N/A' && registryUrl ? (
-                        <a href={registryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline font-500">
-                          {collateral.registry} <ExternalLink size={11} />
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground">{collateral.registry}</span>
-                      )
-                    }
-                    icon={Building2}
-                  />
-                  <DetailRow label="Execution Date" value={collateral.registrationDate || '—'} icon={Calendar} />
-                  <DetailRow
-                    label="Perfection Deadline"
-                    value={
-                      collateral.perfectionDeadline ? (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={isOverdue ? 'text-red-600 font-500' : isApproaching ? 'text-amber-600 font-500' : 'text-foreground'}>
-                            {collateral.perfectionDeadline}
-                          </span>
-                          {collateral.daysToDeadline !== null && (
-                            <span className={`text-xs px-1.5 py-0.5 rounded font-500 ${isOverdue ? 'bg-red-100 text-red-700' : isApproaching ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                              {isOverdue ? `${Math.abs(collateral.daysToDeadline)}d overdue` : `${collateral.daysToDeadline}d remaining`}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">Not required</span>
-                      )
-                    }
-                    icon={Clock}
-                  />
-                  <DetailRow
-                    label="Requires Perfection"
-                    value={
-                      collateral.requiresPerfection ? (
-                        <span className="flex items-center gap-1 text-foreground"><CheckCircle2 size={13} className="text-green-600" /> Yes</span>
-                      ) : (
-                        <span className="text-muted-foreground">No (Guarantee / FDR)</span>
-                      )
-                    }
-                    icon={Shield}
-                  />
-                  <DetailRow label="Created" value={collateral.createdAt ? new Date(collateral.createdAt).toLocaleString() : '—'} icon={Calendar} />
-                  <DetailRow label="Last Updated" value={collateral.updatedAt ? new Date(collateral.updatedAt).toLocaleString() : '—'} icon={Calendar} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Geomapping */}
-          <GeoSection collateral={collateral} />
-
-          {/* Documents */}
-          <DocumentsSection collateral={collateral} />
-
-          {/* Audit Trail */}
-          <AuditTrailSection collateral={collateral} />
-        </div>
-
-        {/* Right column — intelligence panels */}
-        <div className="space-y-6">
-          {/* Fraud Alerts */}
-          <FraudAlertsSection collateral={collateral} />
-
-          {/* Workflow */}
-          <WorkflowSection collateral={collateral} />
-
-          {/* Quick Links */}
-          <div className="bg-white rounded-xl border border-border shadow-card p-5">
-            <SectionHeader title="Quick Links" icon={ExternalLink} />
-            <div className="space-y-2">
-              {[
-                { label: 'Collateral Documents', href: '/collateral-documents', icon: Files },
-                { label: 'Perfection Workflow', href: '/perfection-workflow', icon: Activity },
-                { label: 'Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert },
-                { label: 'Security & Compliance Trail', href: '/audit-trail', icon: History },
-                { label: 'Geomapping', href: '/geomapping', icon: MapPin },
-              ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
-                >
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    {link.icon && <link.icon size={13} className="text-primary" />}
-                  </div>
-                  <span className="text-sm text-foreground group-hover:text-primary transition-colors">{link.label}</span>
-                  <ChevronRight size={13} className="ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* ── Tab Navigation ── */}
+      <div className="flex items-center gap-1 mb-6 border-b border-border">
+        {[
+          { key: 'overview', label: 'Overview', icon: Shield },
+          { key: 'utilization', label: 'Utilization & Charges', icon: PieChart },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as 'overview' | 'utilization')}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${
+              activeTab === tab.key
+                ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <tab.icon size={13} />
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* ── Tab: Overview ── */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Left column — core details */}
+          <div className="xl:col-span-2 space-y-6">
+            {/* Core Info Card */}
+            <div className="bg-white rounded-xl border border-border shadow-card p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Collateral Information */}
+                <div>
+                  <SectionHeader title="Collateral Information" icon={Shield} />
+                  <div className="bg-muted/30 rounded-lg px-3 py-1">
+                    <DetailRow label="Collateral ID" value={<span className="font-mono font-600 text-primary">{collateral.collateralId}</span>} icon={Shield} />
+                    <DetailRow
+                      label="Obligor"
+                      value={
+                        <div>
+                          <p className="font-500">{collateral.obligor}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{collateral.obligorId}</p>
+                        </div>
+                      }
+                      icon={Building2}
+                    />
+                    <DetailRow label="Collateral Type" value={collateral.type} icon={FileText} />
+                    <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{collateral.description}</p>} icon={FileText} />
+                    <DetailRow
+                      label="Collateral Value"
+                      value={<span className="font-mono font-600 text-base">TSh {collateral.valueTSh}</span>}
+                      icon={Building2}
+                    />
+                    <DetailRow label="Facility ID" value={<span className="font-mono text-xs">{collateral.facilityId}</span>} icon={FileText} />
+                    <DetailRow label="Assigned Officer" value={collateral.assignedOfficer} icon={User} />
+                  </div>
+                </div>
+
+                {/* Perfection & Registry */}
+                <div>
+                  <SectionHeader title="Perfection & Registry" icon={CheckCircle2} />
+                  <div className="bg-muted/30 rounded-lg px-3 py-1">
+                    <DetailRow
+                      label="Perfection Status"
+                      value={<Badge variant={statusBadgeMap[collateral.status]} label={collateral.status} />}
+                      icon={Shield}
+                    />
+                    <DetailRow
+                      label="Target Registry"
+                      value={
+                        collateral.registry !== 'N/A' && registryUrl ? (
+                          <a href={registryUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline font-500">
+                            {collateral.registry} <ExternalLink size={11} />
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">{collateral.registry}</span>
+                        )
+                      }
+                      icon={Building2}
+                    />
+                    <DetailRow label="Execution Date" value={collateral.registrationDate || '—'} icon={Calendar} />
+                    <DetailRow
+                      label="Perfection Deadline"
+                      value={
+                        collateral.perfectionDeadline ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={isOverdue ? 'text-red-600 font-500' : isApproaching ? 'text-amber-600 font-500' : 'text-foreground'}>
+                              {collateral.perfectionDeadline}
+                            </span>
+                            {collateral.daysToDeadline !== null && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-500 ${isOverdue ? 'bg-red-100 text-red-700' : isApproaching ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                {isOverdue ? `${Math.abs(collateral.daysToDeadline)}d overdue` : `${collateral.daysToDeadline}d remaining`}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Not required</span>
+                        )
+                      }
+                      icon={Clock}
+                    />
+                    <DetailRow
+                      label="Requires Perfection"
+                      value={
+                        collateral.requiresPerfection ? (
+                          <span className="flex items-center gap-1 text-foreground"><CheckCircle2 size={13} className="text-green-600" /> Yes</span>
+                        ) : (
+                          <span className="text-muted-foreground">No (Guarantee / FDR)</span>
+                        )
+                      }
+                      icon={Shield}
+                    />
+                    <DetailRow label="Created" value={collateral.createdAt ? new Date(collateral.createdAt).toLocaleString() : '—'} icon={Calendar} />
+                    <DetailRow label="Last Updated" value={collateral.updatedAt ? new Date(collateral.updatedAt).toLocaleString() : '—'} icon={Calendar} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Geomapping */}
+            <GeoSection collateral={collateral} />
+
+            {/* Documents */}
+            <DocumentsSection collateral={collateral} />
+
+            {/* Audit Trail */}
+            <AuditTrailSection collateral={collateral} />
+          </div>
+
+          {/* Right column — intelligence panels */}
+          <div className="space-y-6">
+            {/* Fraud Alerts */}
+            <FraudAlertsSection collateral={collateral} />
+
+            {/* Workflow */}
+            <WorkflowSection collateral={collateral} />
+
+            {/* Quick Links */}
+            <div className="bg-white rounded-xl border border-border shadow-card p-5">
+              <SectionHeader title="Quick Links" icon={ExternalLink} />
+              <div className="space-y-2">
+                {[
+                  { label: 'Collateral Documents', href: '/collateral-documents', icon: Files },
+                  { label: 'Perfection Workflow', href: '/perfection-workflow', icon: Activity },
+                  { label: 'Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert },
+                  { label: 'Security & Compliance Trail', href: '/audit-trail', icon: History },
+                  { label: 'Geomapping', href: '/geomapping', icon: MapPin },
+                ].map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      {link.icon && <link.icon size={13} className="text-primary" />}
+                    </div>
+                    <span className="text-sm text-foreground group-hover:text-primary transition-colors">{link.label}</span>
+                    <ChevronRight size={13} className="ml-auto text-muted-foreground group-hover:text-primary transition-colors" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Utilization & Charges ── */}
+      {activeTab === 'utilization' && (
+        <CollateralUtilizationTab collateral={collateral} />
+      )}
 
       {/* Edit Modal */}
       <AddEditCollateralModal

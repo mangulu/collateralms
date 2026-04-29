@@ -1,11 +1,12 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileBarChart2, Download, RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, FileText, Sheet, TrendingUp, TrendingDown, Shield, Building2, Filter, Target, Award,  } from 'lucide-react';
+import { Download, RefreshCw, CheckCircle2, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, FileText, Sheet, TrendingUp, TrendingDown, Shield, Building2, Filter, Target, Award, PieChart as PieChartIcon, Layers } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, PieChart, Pie, Cell, AreaChart, Area,  } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { type CollateralRecord } from '@/lib/supabase/collateralService';
 import { mockCollateral } from '@/app/collateral-management/components/collateralData';
 import Icon from '@/components/ui/AppIcon';
+import { collateralLinkService } from '@/lib/supabase/collateralLinkService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,6 +43,20 @@ interface KPISummary {
   overdue: number;
   perfectionRate: string;
   totalValueTSh: string;
+}
+
+// ─── Utilization Report Types ─────────────────────────────────────────────────
+
+interface UtilizationReportRow {
+  collateralId: string;
+  collateralRecordId: string;
+  valuationAmount: number;
+  maxSecurableAmount: number;
+  totalSecuredAmount: number;
+  availableEquity: number;
+  utilizationPercentage: number;
+  utilizationStatus: string;
+  linkedLoanCount: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -332,11 +347,14 @@ export default function ReportsContent() {
   const [loading, setLoading] = useState(true);
   const [kpi, setKpi] = useState<KPISummary>({ total: 0, compliant: 0, nonCompliant: 0, pending: 0, overdue: 0, perfectionRate: '0%', totalValueTSh: '0' });
   const [deadlineEvents, setDeadlineEvents] = useState<DeadlineEvent[]>([]);
+  const [utilizationRows, setUtilizationRows] = useState<UtilizationReportRow[]>([]);
+  const [utilizationLoading, setUtilizationLoading] = useState(false);
 
   // Filters
   const [complianceFilter, setComplianceFilter] = useState<string>('All');
   const [registryFilter, setRegistryFilter] = useState<string>('All');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'summary' | 'calendar' | 'deadlines'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'summary' | 'calendar' | 'deadlines' | 'utilization'>('dashboard');
+  const [utilizationFilter, setUtilizationFilter] = useState<string>('All');
 
   // Calendar state
   const now = new Date();
@@ -437,6 +455,32 @@ export default function ReportsContent() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const loadUtilizationReport = useCallback(async () => {
+    setUtilizationLoading(true);
+    try {
+      const data = await collateralLinkService.getAllUtilizationReport();
+      setUtilizationRows(data.map(u => ({
+        collateralId: u.collateralId,
+        collateralRecordId: u.collateralRecordId,
+        valuationAmount: u.valuationAmount,
+        maxSecurableAmount: u.maxSecurableAmount,
+        totalSecuredAmount: u.totalSecuredAmount,
+        availableEquity: u.availableEquity,
+        utilizationPercentage: u.utilizationPercentage,
+        utilizationStatus: u.utilizationStatus,
+        linkedLoanCount: u.linkedLoans.filter(l => l.status === 'ACTIVE').length,
+      })));
+    } catch {
+      setUtilizationRows([]);
+    } finally {
+      setUtilizationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'utilization') loadUtilizationReport();
+  }, [activeTab, loadUtilizationReport]);
 
   // Filtered rows
   const filteredRows = records.filter(r => {
@@ -546,70 +590,47 @@ export default function ReportsContent() {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="px-6 lg:px-8 xl:px-10 py-6 max-w-screen-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FileBarChart2 size={18} className="text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-foreground leading-tight">Reports</h1>
-            <p className="text-xs text-muted-foreground">Stakeholder dashboard · Compliance summaries · Deadline calendars</p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-700 text-foreground">Reports</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Compliance summaries, deadline tracking, and collateral utilization</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={loadData}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-          <button
-            onClick={() => downloadCSV(filteredRows, `compliance-report-${new Date().toISOString().slice(0,10)}.csv`)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Sheet size={13} />
-            Export CSV
-          </button>
-          <button
-            onClick={() => printPDF('Collateral Compliance Report', 'compliance-table')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary rounded-lg hover:bg-primary/5 transition-colors"
-          >
-            <FileText size={13} />
-            Export PDF
-          </button>
-        </div>
+        <button
+          onClick={loadData}
+          className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
+        >
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          Refresh
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-        {/* KPI Row */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KPICard label="Total Collateral" value={kpi.total} sub="All registered items" icon={FileBarChart2} />
-          <KPICard label="Compliant" value={kpi.compliant} sub="Perfected / Monitoring" icon={CheckCircle2} variant="success" />
-          <KPICard label="Non-Compliant" value={kpi.nonCompliant} sub="Overdue / Rejected" icon={XCircle} variant="danger" />
-          <KPICard label="Pending Review" value={kpi.pending} sub="Draft / Submitted" icon={Clock} variant="warning" />
-          <KPICard label="Perfection Rate" value={kpi.perfectionRate} sub="Compliant / Total" icon={TrendingUp} variant={parseInt(kpi.perfectionRate) >= 70 ? 'success' : 'warning'} />
-          <KPICard label="Portfolio Value" value={`TSh ${kpi.totalValueTSh}`} sub="Aggregate collateral" icon={Shield} />
-        </div>
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 mb-6 border-b border-border overflow-x-auto">
+        {[
+          { key: 'dashboard', label: 'Analytics Dashboard', icon: TrendingUp },
+          { key: 'summary', label: 'Compliance Summary', icon: Shield },
+          { key: 'calendar', label: 'Deadline Calendar', icon: CalendarDays },
+          { key: 'deadlines', label: 'Upcoming Deadlines', icon: AlertTriangle },
+          { key: 'utilization', label: 'Collateral Utilization', icon: PieChartIcon },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as typeof activeTab)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px whitespace-nowrap ${
+              activeTab === tab.key
+                ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <tab.icon size={13} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
-          {(['dashboard', 'summary', 'calendar', 'deadlines'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-all capitalize ${
-                activeTab === tab ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab === 'dashboard' ? 'Analytics Dashboard' : tab === 'summary' ? 'Compliance Summary' : tab === 'calendar' ? 'Deadline Calendar' : 'Upcoming Deadlines'}
-            </button>
-          ))}
-        </div>
-
-        {/* ── TAB: Analytics Dashboard ── */}
+      <div>
+        {/* ── TAB: Dashboard ── */}
         {activeTab === 'dashboard' && (
           <div className="space-y-5">
             {/* Row 1: Aging + Perfection Trend */}
@@ -1136,6 +1157,178 @@ export default function ReportsContent() {
                 <FileText size={12} />
                 Export PDF
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB: Collateral Utilization ── */}
+        {activeTab === 'utilization' && (
+          <div className="space-y-5">
+            {/* KPI summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                {
+                  label: 'Total Collaterals',
+                  value: utilizationRows.length,
+                  sub: 'with valuation data',
+                  icon: Layers,
+                  variant: 'default' as const,
+                },
+                {
+                  label: 'Fully Utilized',
+                  value: utilizationRows.filter(r => r.utilizationStatus === 'RED').length,
+                  sub: '>90% utilization',
+                  icon: AlertTriangle,
+                  variant: 'danger' as const,
+                },
+                {
+                  label: 'Near Limit',
+                  value: utilizationRows.filter(r => r.utilizationStatus === 'YELLOW').length,
+                  sub: '70–90% utilization',
+                  icon: TrendingUp,
+                  variant: 'warning' as const,
+                },
+                {
+                  label: 'On Track',
+                  value: utilizationRows.filter(r => r.utilizationStatus === 'GREEN').length,
+                  sub: '<70% utilization',
+                  icon: CheckCircle2,
+                  variant: 'success' as const,
+                },
+              ].map(card => (
+                <KPICard key={card.label} label={card.label} value={card.value} sub={card.sub} icon={card.icon} variant={card.variant} />
+              ))}
+            </div>
+
+            {/* Filter + Export */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Filter size={13} className="text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Filter:</span>
+                {(['All', 'GREEN', 'YELLOW', 'RED'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setUtilizationFilter(f)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-500 transition-colors ${
+                      utilizationFilter === f
+                        ? f === 'GREEN' ? 'bg-green-100 text-green-700' : f === 'YELLOW' ? 'bg-amber-100 text-amber-700' : f === 'RED' ? 'bg-red-100 text-red-700' : 'bg-primary/10 text-primary' :'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    {f === 'All' ? 'All' : f === 'GREEN' ? '● On Track' : f === 'YELLOW' ? '● Near Limit' : '● Critical'}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  const filtered = utilizationRows.filter(r => utilizationFilter === 'All' || r.utilizationStatus === utilizationFilter);
+                  const headers = ['Collateral ID', 'Valuation (TSh)', 'Max Securable (TSh)', 'Total Secured (TSh)', 'Available Equity (TSh)', 'Utilization %', 'Active Loans', 'Status'];
+                  const lines = [
+                    headers.join(','),
+                    ...filtered.map(r => [
+                      r.collateralId,
+                      r.valuationAmount,
+                      r.maxSecurableAmount,
+                      r.totalSecuredAmount,
+                      r.availableEquity,
+                      r.utilizationPercentage,
+                      r.linkedLoanCount,
+                      r.utilizationStatus,
+                    ].join(',')),
+                  ];
+                  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `collateral-utilization-${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-500 text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Sheet size={12} /> Export CSV
+              </button>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+              {utilizationLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <RefreshCw size={18} className="animate-spin text-primary mr-2" />
+                  <span className="text-sm text-muted-foreground">Loading utilization data…</span>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/40 border-b border-border">
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Collateral ID</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Valuation</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Max Securable</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Total Secured</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Available Equity</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Utilization</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Active Loans</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {utilizationRows
+                        .filter(r => utilizationFilter === 'All' || r.utilizationStatus === utilizationFilter)
+                        .length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                            {utilizationRows.length === 0 ? 'No collaterals with valuation data found.' : 'No records match the selected filter.'}
+                          </td>
+                        </tr>
+                      ) : utilizationRows
+                          .filter(r => utilizationFilter === 'All' || r.utilizationStatus === utilizationFilter)
+                          .sort((a, b) => b.utilizationPercentage - a.utilizationPercentage)
+                          .map((r, i) => (
+                            <tr
+                              key={r.collateralRecordId}
+                              className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${r.utilizationStatus === 'RED' ? 'bg-red-50/30' : r.utilizationStatus === 'YELLOW' ? 'bg-amber-50/30' : ''}`}
+                            >
+                              <td className="px-4 py-3 font-mono text-xs font-600 text-primary">{r.collateralId}</td>
+                              <td className="px-4 py-3 text-xs text-foreground font-mono">TSh {(r.valuationAmount / 1e6).toFixed(1)}M</td>
+                              <td className="px-4 py-3 text-xs text-foreground font-mono">TSh {(r.maxSecurableAmount / 1e6).toFixed(1)}M</td>
+                              <td className="px-4 py-3 text-xs font-600 text-foreground font-mono">TSh {(r.totalSecuredAmount / 1e6).toFixed(1)}M</td>
+                              <td className="px-4 py-3 text-xs font-mono">
+                                <span className={r.utilizationStatus === 'RED' ? 'text-red-600 font-600' : r.utilizationStatus === 'YELLOW' ? 'text-amber-600 font-600' : 'text-green-600 font-600'}>
+                                  TSh {(r.availableEquity / 1e6).toFixed(1)}M
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${r.utilizationStatus === 'RED' ? 'bg-red-500' : r.utilizationStatus === 'YELLOW' ? 'bg-amber-500' : 'bg-green-500'}`}
+                                      style={{ width: `${Math.min(100, r.utilizationPercentage)}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-xs font-700 ${r.utilizationStatus === 'RED' ? 'text-red-600' : r.utilizationStatus === 'YELLOW' ? 'text-amber-600' : 'text-green-600'}`}>
+                                    {r.utilizationPercentage}%
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-center text-foreground">{r.linkedLoanCount}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-[10px] font-700 px-2 py-0.5 rounded-full ${r.utilizationStatus === 'RED' ? 'bg-red-100 text-red-700' : r.utilizationStatus === 'YELLOW' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                  {r.utilizationStatus === 'GREEN' ? '● On Track' : r.utilizationStatus === 'YELLOW' ? '● Near Limit' : '● Critical'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-6 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> On Track (&lt;70%)</div>
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Near Limit (70–90%)</div>
+              <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Critical (&gt;90%)</div>
             </div>
           </div>
         )}
