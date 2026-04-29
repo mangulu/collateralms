@@ -26,6 +26,13 @@ const navGroups = [
         badge: null,
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
+      {
+        label: 'Portfolio Monitoring',
+        icon: Activity,
+        href: '/portfolio-monitoring',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
     ],
   },
   {
@@ -60,16 +67,16 @@ const navGroups = [
         permission: PERMISSIONS.COLLATERAL_EDIT,
       },
       {
-        label: 'Scheduled Jobs',
-        icon: CalendarClock,
-        href: '/scheduled-jobs',
+        label: 'Bulk Upload',
+        icon: Upload,
+        href: '/bulk-upload',
         badge: null,
         permission: PERMISSIONS.COLLATERAL_EDIT,
       },
       {
-        label: 'Bulk Upload',
-        icon: Upload,
-        href: '/bulk-upload',
+        label: 'Scheduled Jobs',
+        icon: CalendarClock,
+        href: '/scheduled-jobs',
         badge: null,
         permission: PERMISSIONS.COLLATERAL_EDIT,
       },
@@ -92,13 +99,6 @@ const navGroups = [
         href: '/risk-assessment',
         badge: null,
         permission: PERMISSIONS.COMPLIANCE_VIEW,
-      },
-      {
-        label: 'Portfolio Monitoring',
-        icon: Activity,
-        href: '/portfolio-monitoring',
-        badge: null,
-        permission: PERMISSIONS.DASHBOARD_VIEW,
       },
       {
         label: 'Fast Track',
@@ -124,7 +124,7 @@ const navGroups = [
     ],
   },
   {
-    label: 'Compliance',
+    label: 'Alerts & Notifications',
     items: [
       {
         label: 'Notifications Hub',
@@ -147,6 +147,11 @@ const navGroups = [
         badge: null,
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
+    ],
+  },
+  {
+    label: 'Audit & Reports',
+    items: [
       {
         label: 'Security & Compliance Trail',
         icon: ClipboardList,
