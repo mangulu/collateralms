@@ -228,10 +228,6 @@ export default function BulkUploadContent() {
   const [dbDuplicateChecked, setDbDuplicateChecked] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!hasPermission(PERMISSIONS.COLLATERAL_EDIT)) {
-    return <AccessDenied />;
-  }
-
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const processFile = useCallback(async (file: File) => {
@@ -308,6 +304,10 @@ export default function BulkUploadContent() {
     const file = e.dataTransfer.files[0];
     if (file) processFile(file);
   }, [processFile]);
+
+  if (!hasPermission(PERMISSIONS.COLLATERAL_EDIT)) {
+    return <AccessDenied />;
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
