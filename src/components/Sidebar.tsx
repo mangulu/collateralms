@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -63,6 +63,13 @@ const navGroups = [
         href: '/fraud-prevention',
         badge: '3',
         badgeVariant: 'danger' as const,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+      {
+        label: 'AI Risk Assessment',
+        icon: ScanSearch,
+        href: '/risk-assessment',
+        badge: null,
         permission: PERMISSIONS.COMPLIANCE_VIEW,
       },
       {
