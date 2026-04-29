@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import CollateralTable from './CollateralTable';
 import CollateralFilters from './CollateralFilters';
 import AddEditCollateralModal from './AddEditCollateralModal';
-import CollateralDetailModal from './CollateralDetailModal';
 
 export interface FilterState {
   search: string;
@@ -33,7 +32,6 @@ export default function CollateralManagementContent() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<CollateralRecord | null>(null);
-  const [detailItem, setDetailItem] = useState<CollateralRecord | null>(null);
   const [collateralData, setCollateralData] = useState<CollateralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -333,7 +331,7 @@ export default function CollateralManagementContent() {
           onSelectChange={setSelectedIds}
           allIds={filtered.map((c) => c.id)}
           onEdit={(item) => setEditItem(item)}
-          onView={(item) => setDetailItem(item)}
+          onView={() => {}}
           onStatusChange={handleStatusChange}
           currentPage={currentPage}
           totalPages={totalPages}
@@ -356,18 +354,6 @@ export default function CollateralManagementContent() {
           setEditItem(null);
         }}
         onSave={handleSave}
-      />
-
-      {/* Detail Modal */}
-      <CollateralDetailModal
-        open={detailItem !== null}
-        item={detailItem}
-        onClose={() => setDetailItem(null)}
-        onEdit={(item) => {
-          setDetailItem(null);
-          setEditItem(item);
-        }}
-        onStatusChange={handleStatusChange}
       />
     </div>
   );
