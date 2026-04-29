@@ -9,6 +9,12 @@ export interface FieldChange {
   new_value: string;
 }
 
+export interface BatchSummaryItem {
+  label: string;
+  value: string | number;
+  highlight?: boolean;
+}
+
 export interface AuditLogEntry {
   id: string;
   collateralRecordId?: string;
@@ -23,6 +29,7 @@ export interface AuditLogEntry {
   sessionId?: string;
   eventCategory?: string;
   fieldChanges: FieldChange[] | null;
+  batchSummary?: BatchSummaryItem[];
   createdAt: string;
 }
 
@@ -35,6 +42,23 @@ export interface AuditLogFilters {
   dateTo?: string;
   performedBy?: string;
 }
+
+// Multi-collateral event categories
+export const MULTI_COLLATERAL_CATEGORIES = [
+  'multi_collateral',
+  'charge_registry',
+  'batch_operation',
+] as const;
+
+// Multi-collateral action types
+export const MULTI_COLLATERAL_ACTIONS = [
+  'loan_linked',
+  'loan_released',
+  'charge_rank_changed',
+  'equity_recalculated',
+  'discharge_recorded',
+  'batch_release',
+] as const;
 
 function rowToEntry(row: any): AuditLogEntry {
   return {
@@ -51,6 +75,7 @@ function rowToEntry(row: any): AuditLogEntry {
     sessionId: row.session_id ?? undefined,
     eventCategory: row.event_category ?? 'collateral_change',
     fieldChanges: Array.isArray(row.field_changes) ? row.field_changes : null,
+    batchSummary: Array.isArray(row.batch_summary) ? row.batch_summary : undefined,
     createdAt: row.created_at,
   };
 }
@@ -134,5 +159,45 @@ export const auditLogService = {
       new Set((data ?? []).map((r: any) => r.event_category as string).filter(Boolean))
     );
     return unique;
+  },
+
+  /**
+   * Log a multi-collateral event (charge ranking change, equity recalculation,
+   * discharge date, or batch operation summary).
+   */
+  async logMultiCollateralEvent(params: {
+    collateralId?: string;
+    entityType: 'collateral_link' | 'charge_registry' | 'batch_operation';
+    action: typeof MULTI_COLLATERAL_ACTIONS[number];
+    message: string;
+    detail?: string;
+    performedBy?: string;
+    performedByName?: string;
+    fieldChanges?: FieldChange[];
+    batchSummary?: BatchSummaryItem[];
+  }): Promise<boolean> {
+    const supabase = createClient();
+    try {
+      const categoryMap: Record<string, string> = {
+        collateral_link: 'multi_collateral',
+        charge_registry: 'charge_registry',
+        batch_operation: 'batch_operation',
+      };
+      const { error } = await supabase.from('audit_logs').insert({
+        collateral_id: params.collateralId ?? null,
+        entity_type: params.entityType,
+        action: params.action,
+        message: params.message,
+        detail: params.detail ?? '',
+        performed_by: params.performedBy ?? null,
+        performed_by_name: params.performedByName ?? 'System',
+        event_category: categoryMap[params.entityType] ?? 'multi_collateral',
+        field_changes: params.fieldChanges ?? null,
+        batch_summary: params.batchSummary ?? null,
+      });
+      return !error;
+    } catch {
+      return false;
+    }
   },
 };
