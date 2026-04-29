@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
-import { Scale, Plus, Edit2, Trash2, CheckCircle2, XCircle, AlertTriangle, Shield, Clock, ToggleLeft, ToggleRight, Save, X, Search, Info,  } from 'lucide-react';
+import { Scale, Plus, Edit2, Trash2, CheckCircle2, XCircle, AlertTriangle, Shield, Clock, ToggleLeft, ToggleRight, Save, X, Search, Info, Send, MessageSquare, Loader2 } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
+import { smsAlertService } from '@/lib/supabase/smsAlertService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -158,18 +159,167 @@ const defaultForm: RuleFormData = {
   message: '',
 };
 
+// ─── SMS Notify Modal ─────────────────────────────────────────────────────────
+
+interface SmsNotifyModalProps {
+  rule: ComplianceRule;
+  onClose: () => void;
+}
+
+function SmsNotifyModal({ rule, onClose }: SmsNotifyModalProps) {
+  const [phone, setPhone] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [collateralId, setCollateralId] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const buildMessage = (): string => {
+    if (rule.ruleType === 'DEADLINE') {
+      const isBrela = rule.condition.field.includes('brela');
+      if (isBrela) {
+        const daysLeft = Number(rule.condition.value);
+        return smsAlertService.buildBrelaMessage(collateralId || 'N/A', daysLeft, appUrl);
+      }
+      return smsAlertService.buildOverdueMessage(collateralId || 'N/A', 0, appUrl);
+    }
+    return `[CollateralMS ALERT] Rule "${rule.ruleName}" triggered for ${collateralId || 'N/A'}. Action required: ${appUrl}/compliance-rules`;
+  };
+
+  const alertType = (): 'BRELA_DEADLINE' | 'OVERDUE_COLLATERAL' | 'CUSTODY_DISCREPANCY' => {
+    if (rule.condition.field.includes('brela')) return 'BRELA_DEADLINE';
+    if (rule.ruleType === 'DEADLINE') return 'OVERDUE_COLLATERAL';
+    return 'OVERDUE_COLLATERAL';
+  };
+
+  const handleSend = async () => {
+    if (!phone.trim()) return;
+    setSending(true);
+    setResult(null);
+    const res = await smsAlertService.sendAlertViaApi({
+      to: phone.trim(),
+      recipientName: recipientName.trim() || undefined,
+      alertType: alertType(),
+      collateralId: collateralId.trim() || undefined,
+      message: buildMessage(),
+      actionUrl: `${appUrl}/compliance-audit`,
+    });
+    setSending(false);
+    setResult({
+      success: res.success,
+      message: res.success
+        ? `SMS sent successfully${res.messageSid ? ` (SID: ${res.messageSid})` : ''}`
+        : `Failed: ${res.error}`,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={16} className="text-emerald-600" />
+            <h2 className="text-base font-700 text-foreground">Notify Officer via SMS</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Rule summary */}
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-xs font-600 text-amber-800 uppercase tracking-wide mb-0.5">Triggering Rule</p>
+            <p className="text-sm font-600 text-amber-900">{rule.ruleName}</p>
+            <p className="text-xs text-amber-700 mt-0.5">{rule.message}</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">Officer Phone Number <span className="text-red-500">*</span></label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+255712345678"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Include country code (e.g. +255 for Tanzania)</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">Officer Name (optional)</label>
+            <input
+              type="text"
+              value={recipientName}
+              onChange={(e) => setRecipientName(e.target.value)}
+              placeholder="e.g. John Mwangi"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">Collateral ID (optional)</label>
+            <input
+              type="text"
+              value={collateralId}
+              onChange={(e) => setCollateralId(e.target.value)}
+              placeholder="e.g. COL-2024-001"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          {/* Message preview */}
+          <div>
+            <label className="block text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">Message Preview</label>
+            <div className="p-3 bg-muted/30 rounded-lg border border-border">
+              <p className="text-xs font-mono text-foreground/80 leading-relaxed break-words">{buildMessage()}</p>
+            </div>
+          </div>
+
+          {result && (
+            <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${result.success ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+              {result.success ? <CheckCircle2 size={15} className="shrink-0 mt-0.5" /> : <XCircle size={15} className="shrink-0 mt-0.5" />}
+              <span>{result.message}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/20">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors">
+            {result?.success ? 'Close' : 'Cancel'}
+          </button>
+          {!result?.success && (
+            <button
+              onClick={handleSend}
+              disabled={!phone.trim() || sending}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-600 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              {sending ? 'Sending…' : 'Send SMS Alert'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Rule Card ────────────────────────────────────────────────────────────────
 
-function RuleCard({ rule, onToggle, onEdit, onDelete }: {
+function RuleCard({ rule, onToggle, onEdit, onDelete, onNotify }: {
   rule: ComplianceRule;
   onToggle: (id: string) => void;
   onEdit: (rule: ComplianceRule) => void;
   onDelete: (id: string) => void;
+  onNotify: (rule: ComplianceRule) => void;
 }) {
   const typeConf = ruleTypeConfig[rule.ruleType];
   const actionConf = actionConfig[rule.action];
   const TypeIcon = typeConf.icon;
   const ActionIcon = actionConf.icon;
+
+  const canNotify = rule.ruleType === 'DEADLINE' && rule.isActive;
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-card transition-opacity ${!rule.isActive ? 'opacity-60' : ''}`}>
@@ -190,6 +340,15 @@ function RuleCard({ rule, onToggle, onEdit, onDelete }: {
               <p className="text-xs text-muted-foreground mt-0.5">{rule.id} · {ruleTypeConfig[rule.ruleType].label} · Triggered {rule.triggeredCount}×</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              {canNotify && (
+                <button
+                  onClick={() => onNotify(rule)}
+                  className="p-1.5 rounded-lg hover:bg-emerald-50 transition-colors text-muted-foreground hover:text-emerald-600"
+                  title="Send SMS alert to officer"
+                >
+                  <MessageSquare size={14} />
+                </button>
+              )}
               <button onClick={() => onToggle(rule.id)} className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                 {rule.isActive ? <ToggleRight size={16} className="text-green-600" /> : <ToggleLeft size={16} />}
               </button>
@@ -343,6 +502,7 @@ export default function ComplianceRulesContent() {
   const [editingRule, setEditingRule] = useState<ComplianceRule | null>(null);
   const [form, setForm] = useState<RuleFormData>(defaultForm);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [notifyRule, setNotifyRule] = useState<ComplianceRule | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -476,6 +636,17 @@ export default function ComplianceRulesContent() {
         })}
       </div>
 
+      {/* SMS Alert Banner */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+        <MessageSquare size={15} className="text-emerald-600 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-600 text-emerald-800">SMS Notifications Active</p>
+          <p className="text-xs text-emerald-700 mt-0.5">
+            Deadline rules (BRELA overdue, custody discrepancies) can instantly notify responsible officers via SMS. Click the <MessageSquare size={11} className="inline" /> icon on any active Deadline rule to send an alert.
+          </p>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
@@ -512,7 +683,14 @@ export default function ComplianceRulesContent() {
           </div>
         ) : (
           filtered.map((rule) => (
-            <RuleCard key={rule.id} rule={rule} onToggle={handleToggle} onEdit={handleEdit} onDelete={handleDelete} />
+            <RuleCard
+              key={rule.id}
+              rule={rule}
+              onToggle={handleToggle}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onNotify={setNotifyRule}
+            />
           ))
         )}
       </div>
@@ -538,6 +716,14 @@ export default function ComplianceRulesContent() {
           onSave={handleSave}
           onClose={handleCloseForm}
           isEdit={!!editingRule}
+        />
+      )}
+
+      {/* SMS Notify Modal */}
+      {notifyRule && (
+        <SmsNotifyModal
+          rule={notifyRule}
+          onClose={() => setNotifyRule(null)}
         />
       )}
     </div>

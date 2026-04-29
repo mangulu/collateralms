@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 
-export type SmsAlertType = 'FRAUD_DETECTION' | 'BRELA_DEADLINE' | 'APPROVAL_REQUEST' | 'OVERDUE_COLLATERAL';
+export type SmsAlertType = 'FRAUD_DETECTION' | 'BRELA_DEADLINE' | 'APPROVAL_REQUEST' | 'OVERDUE_COLLATERAL' | 'CUSTODY_DISCREPANCY';
 export type SmsAlertStatus = 'PENDING' | 'SENT' | 'FAILED' | 'DELIVERED';
 
 export interface SmsAlert {
@@ -112,6 +112,34 @@ export const smsAlertService = {
   },
 
   /**
+   * Send an SMS alert via the Next.js API route (server-side Twilio)
+   * Use this for alert-rule-triggered notifications from client components.
+   */
+  async sendAlertViaApi(payload: SendSmsPayload): Promise<{ success: boolean; messageSid?: string; error?: string }> {
+    try {
+      const res = await fetch('/api/sms/send-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: payload.to,
+          message: payload.message,
+          alertType: payload.alertType,
+          collateralId: payload.collateralId,
+          recipientName: payload.recipientName,
+          actionUrl: payload.actionUrl,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error ?? 'Failed to send SMS' };
+      }
+      return { success: true, messageSid: data.messageSid };
+    } catch (err: any) {
+      return { success: false, error: err?.message ?? 'Network error' };
+    }
+  },
+
+  /**
    * Fetch recent SMS alert logs
    */
   async fetchAlerts(limit = 50): Promise<SmsAlert[]> {
@@ -157,5 +185,12 @@ export const smsAlertService = {
    */
   buildOverdueMessage(collateralId: string, daysOverdue: number, appUrl: string): string {
     return `[CollateralMS OVERDUE] Collateral ${collateralId} is ${daysOverdue} days past perfection deadline. Immediate action required: ${appUrl}/collateral-management`;
+  },
+
+  /**
+   * Build custody discrepancy SMS message
+   */
+  buildCustodyMessage(collateralId: string, discrepancyDetail: string, appUrl: string): string {
+    return `[CollateralMS CUSTODY ALERT] Discrepancy detected for ${collateralId}: ${discrepancyDetail}. Review security pocket: ${appUrl}/collateral-documents`;
   },
 };

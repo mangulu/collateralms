@@ -1,12 +1,13 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapPin, User, Edit2, Save, X, Plus, RefreshCw, AlertTriangle, CheckCircle, Clock, ChevronDown, Package, Calendar, ArrowDownCircle, ArrowUpCircle, FileWarning,  } from 'lucide-react';
+import { MapPin, User, Edit2, Save, X, Plus, RefreshCw, AlertTriangle, CheckCircle, Clock, ChevronDown, Package, Calendar, ArrowDownCircle, ArrowUpCircle, FileWarning, MessageSquare, Send, Loader2 } from 'lucide-react';
 import {
   securityPocketService,
   SecurityPocket,
   PocketCheckoutLog,
 } from '@/lib/supabase/securityPocketService';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
+import { smsAlertService } from '@/lib/supabase/smsAlertService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -359,6 +360,10 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
   const [showLog, setShowLog] = useState(false);
   const [checkoutModal, setCheckoutModal] = useState(false);
   const [checkinModal, setCheckinModal] = useState<PocketCheckoutLog | null>(null);
+  const [smsPhone, setSmsPhone] = useState('');
+  const [showSmsPrompt, setShowSmsPrompt] = useState(false);
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsResult, setSmsResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const activeCheckout = checkoutLog.find((l) => l.checkoutStatus === 'checked_out') ?? null;
 
@@ -375,10 +380,42 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
 
   useEffect(() => { fetchPocket(); }, [fetchPocket]);
 
-  const handleSaved = (saved: SecurityPocket) => {
+  const handleSaved = async (saved: SecurityPocket) => {
     setPocket(saved);
     setEditing(false);
     fetchPocket();
+    // If a discrepancy was just flagged, prompt to send SMS
+    if (saved.hasDiscrepancy) {
+      setShowSmsPrompt(true);
+      setSmsResult(null);
+    }
+  };
+
+  const handleSendDiscrepancySms = async () => {
+    if (!smsPhone.trim()) return;
+    setSmsSending(true);
+    setSmsResult(null);
+    const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const detail = pocket?.discrepancyNotes || 'Physical copy not confirmed';
+    const message = smsAlertService.buildCustodyMessage(
+      collateralRecord.collateralId,
+      detail,
+      appUrl
+    );
+    const res = await smsAlertService.sendAlertViaApi({
+      to: smsPhone.trim(),
+      alertType: 'CUSTODY_DISCREPANCY',
+      collateralId: collateralRecord.collateralId,
+      message,
+      actionUrl: `${appUrl}/collateral-documents`,
+    });
+    setSmsSending(false);
+    setSmsResult({
+      success: res.success,
+      message: res.success
+        ? `SMS sent to ${smsPhone.trim()}`
+        : `Failed: ${res.error}`,
+    });
   };
 
   // ─── Loading ────────────────────────────────────────────────────────────────
@@ -539,14 +576,54 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
 
           {/* Discrepancy alert */}
           {pocket!.hasDiscrepancy && (
-            <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
-              <AlertTriangle size={15} className="text-amber-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-amber-800">Discrepancy Flagged</p>
-                {pocket!.discrepancyNotes && (
-                  <p className="text-xs text-amber-700 mt-0.5">{pocket!.discrepancyNotes}</p>
-                )}
+            <div className="space-y-2">
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                <AlertTriangle size={15} className="text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-amber-800">Discrepancy Flagged</p>
+                  {pocket!.discrepancyNotes && (
+                    <p className="text-xs text-amber-700 mt-0.5">{pocket!.discrepancyNotes}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setShowSmsPrompt((v) => !v); setSmsResult(null); }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors shrink-0"
+                  title="Notify officer via SMS"
+                >
+                  <MessageSquare size={11} /> Notify
+                </button>
               </div>
+
+              {/* SMS prompt */}
+              {showSmsPrompt && (
+                <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50 space-y-2">
+                  <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
+                    <MessageSquare size={12} /> Send Custody Discrepancy SMS
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={smsPhone}
+                      onChange={(e) => setSmsPhone(e.target.value)}
+                      placeholder="+255712345678"
+                      className="flex-1 px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    />
+                    <button
+                      onClick={handleSendDiscrepancySms}
+                      disabled={!smsPhone.trim() || smsSending}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                    >
+                      {smsSending ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
+                      {smsSending ? 'Sending…' : 'Send'}
+                    </button>
+                  </div>
+                  {smsResult && (
+                    <p className={`text-xs font-medium ${smsResult.success ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {smsResult.message}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
