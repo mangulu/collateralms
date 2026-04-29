@@ -34,7 +34,7 @@ import { perfectionService, PerfectionRequest } from '@/lib/supabase/perfectionS
 import AddEditCollateralModal from '@/app/collateral-management/components/AddEditCollateralModal';
 import { collateralService } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
-import Icon from '@/components/ui/AppIcon';
+
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────

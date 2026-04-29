@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Plus, Filter, FolderOpen, File, FileImage, FileType2,  } from 'lucide-react';
+import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2,  } from 'lucide-react';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -233,6 +233,176 @@ function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName }
   );
 }
 
+// ─── Upload Version Modal ─────────────────────────────────────────────────────
+
+interface UploadVersionModalProps {
+  collateralRecord: CollateralRecord;
+  existingDoc: CollateralDocument;
+  onClose: () => void;
+  onUploaded: () => void;
+  userId: string;
+  userName: string;
+}
+
+function UploadVersionModal({ collateralRecord, existingDoc, onClose, onUploaded, userId, userName }: UploadVersionModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [notes, setNotes] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+
+  const ALLOWED_TYPES = [
+    'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
+    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  ];
+
+  const handleFile = (file: File) => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError('Unsupported file type. Allowed: PDF, JPEG, PNG, WEBP, DOC, DOCX');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File exceeds 10 MB limit.');
+      return;
+    }
+    setError('');
+    setSelectedFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedFile) { setError('Please select a file.'); return; }
+    setUploading(true);
+    setError('');
+    const result = await documentService.upload(
+      selectedFile,
+      collateralRecord.id,
+      collateralRecord.collateralId,
+      existingDoc.documentType,
+      notes,
+      userId,
+      userName,
+    );
+    setUploading(false);
+    if (!result) {
+      setError('Upload failed. Please try again.');
+      return;
+    }
+    onUploaded();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Upload Newer Version</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Replacing: <span className="font-medium text-foreground">{existingDoc.fileName}</span>{' '}
+              <span className="text-primary">v{existingDoc.version} → v{existingDoc.version + 1}</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Drop zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+              dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/40'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            />
+            {selectedFile ? (
+              <div className="flex items-center justify-center gap-3">
+                {getFileIcon(selectedFile.type)}
+                <div className="text-left">
+                  <p className="text-sm font-medium text-foreground truncate max-w-[260px]">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground">{documentService.formatFileSize(selectedFile.size)}</p>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                  className="ml-auto p-1 rounded hover:bg-muted"
+                >
+                  <X size={14} className="text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Upload size={24} className="mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-foreground">Drop new version here or click to browse</p>
+                <p className="text-xs text-muted-foreground mt-1">PDF, JPEG, PNG, WEBP, DOC, DOCX · Max 10 MB</p>
+              </>
+            )}
+          </div>
+
+          {/* Document type (read-only) */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
+            <div className="w-full border border-border rounded-lg px-3 py-2 text-sm text-muted-foreground bg-muted/30">
+              {existingDoc.documentType}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Version Notes <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Describe what changed in this version…"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={uploading || !selectedFile}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {uploading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+            {uploading ? 'Uploading…' : 'Upload New Version'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Version History Modal ────────────────────────────────────────────────────
 
 interface VersionHistoryModalProps {
@@ -414,7 +584,7 @@ function DocumentRow({
         )}
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1">
           <button
             onClick={onDownload}
             className="p-1.5 rounded-md hover:bg-muted transition-colors"
@@ -431,10 +601,10 @@ function DocumentRow({
           </button>
           <button
             onClick={onUploadVersion}
-            className="p-1.5 rounded-md hover:bg-muted transition-colors"
-            title="Upload new version"
+            className="p-1.5 rounded-md hover:bg-primary/10 transition-colors"
+            title="Upload newer version"
           >
-            <Plus size={14} className="text-muted-foreground" />
+            <Upload size={14} className="text-primary" />
           </button>
           {canDelete && (
             <button
@@ -475,6 +645,7 @@ export default function CollateralDocumentsContent() {
 
   // Modal state
   const [uploadModal, setUploadModal] = useState<CollateralRecord | null>(null);
+  const [uploadVersionModal, setUploadVersionModal] = useState<{ record: CollateralRecord; doc: CollateralDocument } | null>(null);
   const [versionModal, setVersionModal] = useState<{ docs: CollateralDocument[]; fileName: string } | null>(null);
   const [deleteModal, setDeleteModal] = useState<CollateralDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -566,6 +737,7 @@ export default function CollateralDocumentsContent() {
     return (versionMap[key]?.length ?? 0) > 1;
   }).length;
   const linkedCollaterals = new Set(documents.map((d) => d.collateralRecordId)).size;
+  const brelaReceipts = documents.filter((d) => d.documentType === 'BRELA Confirmation').length;
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -645,12 +817,13 @@ export default function CollateralDocumentsContent() {
       </div>
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-4 gap-px bg-border border-b border-border shrink-0">
+      <div className="grid grid-cols-5 gap-px bg-border border-b border-border shrink-0">
         {[
           { label: 'Total Versions', value: totalDocs, icon: FileText, color: 'text-primary' },
           { label: 'Unique Files', value: uniqueFiles, icon: FolderOpen, color: 'text-amber-600' },
           { label: 'Versioned Files', value: versioned, icon: GitBranch, color: 'text-purple-600' },
           { label: 'Linked Collaterals', value: linkedCollaterals, icon: Link2, color: 'text-emerald-600' },
+          { label: 'BRELA Receipts', value: brelaReceipts, icon: FileType2, color: 'text-cyan-600' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white px-5 py-3 flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0`}>
@@ -792,7 +965,7 @@ export default function CollateralDocumentsContent() {
                     versionCount={versions.length}
                     onUploadVersion={() => {
                       const rec = collateralRecords.find((r) => r.id === doc.collateralRecordId);
-                      if (rec) setUploadModal(rec);
+                      if (rec) setUploadVersionModal({ record: rec, doc });
                     }}
                     onViewVersions={() => handleViewVersions(doc)}
                     onDownload={() => handleDownload(doc)}
@@ -811,6 +984,17 @@ export default function CollateralDocumentsContent() {
         <UploadModal
           collateralRecord={uploadModal}
           onClose={() => setUploadModal(null)}
+          onUploaded={fetchData}
+          userId={userId}
+          userName={userName}
+        />
+      )}
+
+      {uploadVersionModal && (
+        <UploadVersionModal
+          collateralRecord={uploadVersionModal.record}
+          existingDoc={uploadVersionModal.doc}
+          onClose={() => setUploadVersionModal(null)}
           onUploaded={fetchData}
           userId={userId}
           userName={userName}
