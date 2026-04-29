@@ -385,7 +385,7 @@ export default function AuditLogContent() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <History size={20} className="text-primary" />
-              <h1 className="text-xl font-bold text-foreground">Audit Log</h1>
+              <h1 className="text-xl font-bold text-foreground">Change History</h1>
             </div>
             <p className="text-sm text-muted-foreground">
               Complete change history for collateral records and workflow actions — compliance documentation

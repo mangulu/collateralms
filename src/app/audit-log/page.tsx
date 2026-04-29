@@ -17,7 +17,7 @@ export default function AuditLogPage() {
           </div>
           <h3 className="text-base font-600 text-foreground mb-1">Access Restricted</h3>
           <p className="text-sm text-muted-foreground max-w-xs">
-            You do not have permission to view the Audit Log.
+            You do not have permission to view the Change History.
           </p>
         </div>
       ) : (

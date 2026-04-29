@@ -98,7 +98,7 @@ function SectionHeader({ title, icon: IconComponent }: { title: string; icon: Re
   return (
     <div className="flex items-center gap-2 mb-4">
       <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-        <IconComponent size={14} className="text-primary" />
+        {IconComponent && <IconComponent size={14} className="text-primary" />}
       </div>
       <h2 className="text-sm font-700 text-foreground uppercase tracking-wider">{title}</h2>
     </div>
@@ -110,7 +110,7 @@ function DetailRow({ label, value, icon: RowIcon }: { label: string; value: Reac
     <div className="flex items-start gap-3 py-2.5 border-b border-border/60 last:border-0">
       {RowIcon && (
         <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center shrink-0 mt-0.5">
-          <RowIcon size={13} className="text-muted-foreground" />
+          {<RowIcon size={13} className="text-muted-foreground" />}
         </div>
       )}
       <div className="flex-1 min-w-0">
@@ -367,7 +367,7 @@ function AuditTrailSection({ collateral }: { collateral: CollateralRecord }) {
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <SectionHeader title="Audit Trail" icon={History} />
+        <SectionHeader title="Security & Compliance Trail" icon={History} />
         <Link href="/audit-trail" className="text-xs text-primary hover:underline flex items-center gap-1">
           View All <ChevronRight size={11} />
         </Link>
@@ -818,7 +818,7 @@ export default function CollateralDetailContent({
                 { label: 'Collateral Documents', href: '/collateral-documents', icon: Files },
                 { label: 'Perfection Workflow', href: '/perfection-workflow', icon: Activity },
                 { label: 'Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert },
-                { label: 'Audit Trail', href: '/audit-trail', icon: History },
+                { label: 'Security & Compliance Trail', href: '/audit-trail', icon: History },
                 { label: 'Geomapping', href: '/geomapping', icon: MapPin },
               ].map((link) => (
                 <Link
@@ -827,7 +827,7 @@ export default function CollateralDetailContent({
                   className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
                 >
                   <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <link.icon size={13} className="text-primary" />
+                    {link.icon && <link.icon size={13} className="text-primary" />}
                   </div>
                   <span className="text-sm text-foreground group-hover:text-primary transition-colors">{link.label}</span>
                   <ChevronRight size={13} className="ml-auto text-muted-foreground group-hover:text-primary transition-colors" />

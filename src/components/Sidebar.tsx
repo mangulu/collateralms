@@ -128,14 +128,14 @@ const navGroups = [
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
       {
-        label: 'Audit Trail',
+        label: 'Security & Compliance Trail',
         icon: ClipboardList,
         href: '/audit-trail',
         badge: null,
         permission: PERMISSIONS.AUDIT_LOG_VIEW,
       },
       {
-        label: 'Audit Log',
+        label: 'Change History',
         icon: ScrollText,
         href: '/audit-log',
         badge: null,

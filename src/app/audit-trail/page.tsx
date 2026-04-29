@@ -17,7 +17,7 @@ export default function AuditTrailPage() {
           </div>
           <h3 className="text-base font-semibold text-foreground mb-1">Access Restricted</h3>
           <p className="text-sm text-muted-foreground max-w-xs">
-            You do not have permission to view the Audit Trail. Contact your system administrator.
+            You do not have permission to view the Security &amp; Compliance Trail. Contact your system administrator.
           </p>
         </div>
       ) : (

@@ -343,7 +343,7 @@ export default function AuditTrailContent() {
       setDistinctUsers(users);
       setLastRefreshed(new Date());
     } catch {
-      setFetchError('Failed to load audit trail. Please refresh to try again.');
+      setFetchError('Failed to load security & compliance trail. Please refresh to try again.');
       setEntries([]);
       setDistinctActions([]);
       setDistinctUsers([]);
@@ -426,7 +426,7 @@ export default function AuditTrailContent() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheck size={20} className="text-primary" />
-              <h1 className="text-xl font-bold text-foreground">Audit Trail</h1>
+              <h1 className="text-xl font-bold text-foreground">Security &amp; Compliance Trail</h1>
               <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                 Regulatory Compliance
               </span>
@@ -607,7 +607,7 @@ export default function AuditTrailContent() {
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-6">
               <AlertCircle size={32} className="text-red-400 mb-3" />
-              <p className="text-sm font-semibold text-red-600">Failed to load audit trail</p>
+              <p className="text-sm font-semibold text-red-600">Failed to load security &amp; compliance trail</p>
               <p className="text-xs text-muted-foreground mt-1 mb-4">{fetchError}</p>
               <button
                 onClick={loadData}
@@ -738,7 +738,7 @@ export default function AuditTrailContent() {
         <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <ShieldCheck size={14} className="text-amber-600 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            <span className="font-semibold">Regulatory Notice:</span> This audit trail is an immutable record of all system actions. Records are retained for compliance with Bank of Tanzania and BRELA regulatory requirements. Export this log periodically for offline archival.
+            <span className="font-semibold">Regulatory Notice:</span> This security &amp; compliance trail is an immutable record of all system actions. Records are retained for compliance with Bank of Tanzania and BRELA regulatory requirements. Export this log periodically for offline archival.
           </p>
         </div>
       </div>
