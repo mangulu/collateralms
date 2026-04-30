@@ -26,22 +26,29 @@ export default function CollateralDashboardPage() {
           </p>
         </div>
       ) : (
-        <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto">
+        <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto space-y-5">
+          {/* Header */}
           <DashboardHeader />
+
+          {/* Row 1: KPI Cards — 6 equal columns */}
           <KPIBentoGrid />
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-5">
-            <div className="xl:col-span-2">
+
+          {/* Row 2: Charts — Trend (wider) + Type breakdown (narrower) */}
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
+            <div className="xl:col-span-3">
               <PerfectionTrendChart />
             </div>
-            <div>
+            <div className="xl:col-span-2">
               <CollateralTypeChart />
             </div>
           </div>
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mt-5">
+
+          {/* Row 3: Overdue table (full width) + Activity feed side-by-side */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <div className="xl:col-span-2">
               <OverdueAlertsPanel />
             </div>
-            <div>
+            <div className="xl:col-span-1">
               <RecentActivityFeed />
             </div>
           </div>
