@@ -7,6 +7,8 @@ import PerfectionTrendChart from './components/PerfectionTrendChart';
 import CollateralTypeChart from './components/CollateralTypeChart';
 import OverdueAlertsPanel from './components/OverdueAlertsPanel';
 import RecentActivityFeed from './components/RecentActivityFeed';
+import PortfolioHealthBar from './components/PortfolioHealthBar';
+import QuickActionsPanel from './components/QuickActionsPanel';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { Lock } from 'lucide-react';
 
@@ -33,17 +35,27 @@ export default function CollateralDashboardPage() {
           {/* Row 1: KPI Cards — 6 equal columns */}
           <KPIBentoGrid />
 
-          {/* Row 2: Charts — Trend (wider) + Type breakdown (narrower) */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-            <div className="xl:col-span-3">
+          {/* Row 2: Portfolio Health Bar + Quick Actions */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+            <div className="xl:col-span-2">
+              <PortfolioHealthBar />
+            </div>
+            <div className="xl:col-span-1">
+              <QuickActionsPanel />
+            </div>
+          </div>
+
+          {/* Row 3: Charts — Trend (wider) + Type breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-5 gap-5">
+            <div className="lg:col-span-1 xl:col-span-3">
               <PerfectionTrendChart />
             </div>
-            <div className="xl:col-span-2">
+            <div className="lg:col-span-1 xl:col-span-2">
               <CollateralTypeChart />
             </div>
           </div>
 
-          {/* Row 3: Overdue table (full width) + Activity feed side-by-side */}
+          {/* Row 4: Overdue table + Activity feed */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <div className="xl:col-span-2">
               <OverdueAlertsPanel />
