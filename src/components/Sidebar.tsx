@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -191,6 +191,13 @@ const navGroups = [
         label: 'Reports',
         icon: BarChart2,
         href: '/reports',
+        badge: null,
+        permission: PERMISSIONS.REPORTS_VIEW,
+      },
+      {
+        label: 'Regulatory Reports',
+        icon: LayoutGrid,
+        href: '/reports-dashboard',
         badge: null,
         permission: PERMISSIONS.REPORTS_VIEW,
       },
