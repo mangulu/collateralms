@@ -21,7 +21,6 @@ interface KPICardProps {
   trend?: { direction: 'up' | 'down' | 'neutral'; label: string };
   icon: React.ElementType;
   variant?: 'default' | 'alert' | 'warning' | 'success';
-  colSpan?: string;
 }
 
 function KPICard({
@@ -31,7 +30,6 @@ function KPICard({
   trend,
   icon: Icon,
   variant = 'default',
-  colSpan = '',
 }: KPICardProps) {
   const variantStyles = {
     default: 'bg-white border-border',
@@ -53,7 +51,7 @@ function KPICard({
   };
 
   return (
-    <div className={`rounded-xl p-5 shadow-card border ${variantStyles[variant]} ${colSpan}`}>
+    <div className={`rounded-xl p-5 shadow-card border ${variantStyles[variant]}`}>
       <div className="flex items-start justify-between mb-3">
         <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider leading-tight pr-2">
           {label}
@@ -97,20 +95,38 @@ export default function KPIBentoGrid() {
     perfectionRate: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     dashboardService.getKPIStats().then((data) => {
       setStats(data);
       setIsLoading(false);
-    }).catch(() => setIsLoading(false));
+    }).catch(() => {
+      setError('Failed to load KPI statistics. Please refresh to try again.');
+      setIsLoading(false);
+    });
   }, []);
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={`kpi-skel-${i}`} className="rounded-xl p-5 shadow-card border bg-white animate-pulse h-28" />
         ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+          <AlertTriangle size={18} className="text-red-600" />
+        </div>
+        <div>
+          <p className="text-sm font-600 text-red-700">Unable to load KPI data</p>
+          <p className="text-xs text-red-600 mt-0.5">{error}</p>
+        </div>
       </div>
     );
   }
@@ -123,56 +139,54 @@ export default function KPIBentoGrid() {
   const rate = stats?.perfectionRate ?? '0.0';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
       <KPICard
-        label="Total Collateral Value"
-        value={`${total} items`}
-        subtext={`${perfected} perfected · ${overdue} overdue`}
-        trend={{ direction: 'up', label: 'Live from database' }}
+        label="Total Collateral Items"
+        value={String(total)}
+        subtext="Active items in portfolio"
+        trend={{ direction: 'up', label: 'Live' }}
         icon={Banknote}
         variant="success"
-        colSpan="xl:col-span-2"
       />
       <KPICard
-        label="Portfolio Perfection Rate"
+        label="Perfection Rate"
         value={`${rate}%`}
-        subtext={`${perfected} of ${total} items fully perfected`}
-        trend={{ direction: 'up', label: 'Live data' }}
+        subtext={`${perfected} of ${total} perfected`}
+        trend={{ direction: 'up', label: 'Live' }}
         icon={Shield}
         variant="default"
       />
       <KPICard
-        label="Overdue Perfection Actions"
+        label="Perfected Items"
+        value={String(perfected)}
+        subtext="Fully registered & perfected"
+        trend={{ direction: 'up', label: 'Completed' }}
+        icon={Scale}
+        variant="success"
+      />
+      <KPICard
+        label="Overdue Actions"
         value={String(overdue)}
-        subtext="Past BRELA/registry submission deadline"
-        trend={{ direction: 'down', label: 'Requires immediate action' }}
+        subtext="Past registry deadline"
+        trend={{ direction: 'down', label: 'Action needed' }}
         icon={AlertTriangle}
         variant="alert"
       />
       <KPICard
-        label="Approaching 42-Day Deadline"
+        label="Approaching Deadline"
         value={String(approaching)}
-        subtext="BRELA submissions due within 7 days"
-        trend={{ direction: 'neutral', label: 'Monitor closely' }}
+        subtext="Due within 7 days"
+        trend={{ direction: 'neutral', label: 'Monitor' }}
         icon={Clock}
         variant="warning"
       />
       <KPICard
-        label="Collateral Coverage"
-        value={`${total} total`}
-        subtext="Active collateral items in registry"
-        trend={{ direction: 'up', label: 'Live count' }}
-        icon={Scale}
-        variant="default"
-      />
-      <KPICard
         label="Pending Legal Review"
         value={String(pending)}
-        subtext="Awaiting Legal Officer approval"
-        trend={{ direction: 'neutral', label: 'Under Review + Submitted' }}
+        subtext="Awaiting Legal Officer"
+        trend={{ direction: 'neutral', label: 'Under review' }}
         icon={FileCheck}
         variant="warning"
-        colSpan="xl:col-span-2"
       />
     </div>
   );

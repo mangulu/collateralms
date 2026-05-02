@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, FileText, Shield, AlertTriangle, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -26,6 +26,13 @@ const navGroups = [
         badge: null,
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
+      {
+        label: 'Portfolio Monitoring',
+        icon: Activity,
+        href: '/portfolio-monitoring',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
     ],
   },
   {
@@ -39,13 +46,6 @@ const navGroups = [
         permission: PERMISSIONS.COLLATERAL_VIEW,
       },
       {
-        label: 'Perfection Actions',
-        icon: Shield,
-        href: '/collateral-management',
-        badge: '7',
-        permission: PERMISSIONS.COLLATERAL_VIEW,
-      },
-      {
         label: 'Approval Workflow',
         icon: GitBranch,
         href: '/perfection-workflow',
@@ -53,16 +53,78 @@ const navGroups = [
         permission: PERMISSIONS.PERFECTION_VIEW,
       },
       {
-        label: 'Documents',
-        icon: FileText,
-        href: '/document-management',
+        label: 'Collateral Documents',
+        icon: Files,
+        href: '/collateral-documents',
         badge: null,
         permission: PERMISSIONS.COLLATERAL_VIEW,
+      },
+      {
+        label: 'Batch Release',
+        icon: Unlock,
+        href: '/batch-release',
+        badge: null,
+        permission: PERMISSIONS.COLLATERAL_EDIT,
+      },
+      {
+        label: 'Bulk Upload',
+        icon: Upload,
+        href: '/bulk-upload',
+        badge: null,
+        permission: PERMISSIONS.COLLATERAL_EDIT,
+      },
+      {
+        label: 'Scheduled Jobs',
+        icon: CalendarClock,
+        href: '/scheduled-jobs',
+        badge: null,
+        permission: PERMISSIONS.COLLATERAL_EDIT,
       },
     ],
   },
   {
-    label: 'Compliance',
+    label: 'Intelligence',
+    items: [
+      {
+        label: 'AI Fraud Prevention',
+        icon: ShieldAlert,
+        href: '/fraud-prevention',
+        badge: '3',
+        badgeVariant: 'danger' as const,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+      {
+        label: 'AI Risk Assessment',
+        icon: ScanSearch,
+        href: '/risk-assessment',
+        badge: null,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+      {
+        label: 'Fast Track',
+        icon: Zap,
+        href: '/fast-track',
+        badge: null,
+        permission: PERMISSIONS.COLLATERAL_VIEW,
+      },
+      {
+        label: 'Geomapping',
+        icon: Map,
+        href: '/geomapping',
+        badge: null,
+        permission: PERMISSIONS.COLLATERAL_VIEW,
+      },
+      {
+        label: 'Compliance Rules',
+        icon: Scale,
+        href: '/compliance-rules',
+        badge: null,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+    ],
+  },
+  {
+    label: 'Alerts & Notifications',
     items: [
       {
         label: 'Notifications Hub',
@@ -72,24 +134,56 @@ const navGroups = [
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
       {
-        label: 'Overdue Alerts',
-        icon: AlertTriangle,
-        href: '/collateral-dashboard',
-        badge: '5',
-        badgeVariant: 'danger' as const,
+        label: 'Alerts Inbox',
+        icon: Inbox,
+        href: '/alerts-inbox',
+        badge: null,
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
       {
-        label: 'Audit Trail',
+        label: 'Alert Delivery Log',
+        icon: SendHorizonal,
+        href: '/alerts-delivery',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
+    ],
+  },
+  {
+    label: 'Audit & Reports',
+    items: [
+      {
+        label: 'Live Activity Stream',
+        icon: Radio,
+        href: '/live-activity',
+        badge: null,
+        permission: PERMISSIONS.AUDIT_LOG_VIEW,
+      },
+      {
+        label: 'Security & Compliance Trail',
         icon: ClipboardList,
         href: '/audit-trail',
         badge: null,
         permission: PERMISSIONS.AUDIT_LOG_VIEW,
       },
       {
-        label: 'Audit Log',
+        label: 'Change History',
         icon: ScrollText,
         href: '/audit-log',
+        badge: null,
+        permission: PERMISSIONS.AUDIT_LOG_VIEW,
+      },
+      {
+        label: 'Activity Log',
+        icon: UserCheck,
+        href: '/activity-log',
+        badge: null,
+        permission: PERMISSIONS.AUDIT_LOG_VIEW,
+      },
+      {
+        label: 'Audit Report',
+        icon: BookOpen,
+        href: '/audit-report',
         badge: null,
         permission: PERMISSIONS.AUDIT_LOG_VIEW,
       },
@@ -97,6 +191,20 @@ const navGroups = [
         label: 'Reports',
         icon: BarChart2,
         href: '/reports',
+        badge: null,
+        permission: PERMISSIONS.REPORTS_VIEW,
+      },
+      {
+        label: 'Regulatory Reports',
+        icon: LayoutGrid,
+        href: '/reports-dashboard',
+        badge: null,
+        permission: PERMISSIONS.REPORTS_VIEW,
+      },
+      {
+        label: 'Utilization Report',
+        icon: PieChart,
+        href: '/reports?tab=utilization',
         badge: null,
         permission: PERMISSIONS.REPORTS_VIEW,
       },
@@ -113,6 +221,13 @@ const navGroups = [
     label: 'Administration',
     items: [
       {
+        label: 'Admin Console',
+        icon: ShieldCheck,
+        href: '/admin',
+        badge: null,
+        permission: PERMISSIONS.USER_MANAGEMENT_VIEW,
+      },
+      {
         label: 'User Management',
         icon: Users,
         href: '/user-management',
@@ -125,6 +240,13 @@ const navGroups = [
         href: '/settings',
         badge: null,
         permission: PERMISSIONS.SETTINGS_VIEW,
+      },
+      {
+        label: 'User Guide',
+        icon: BookOpen,
+        href: '/user-guide',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
       },
     ],
   },

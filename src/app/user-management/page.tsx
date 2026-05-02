@@ -3,11 +3,12 @@ import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import UserManagementContent from './components/UserManagementContent';
 import RoleManagementContent from './components/RoleManagementContent';
+import ScreenAccessContent from './components/ScreenAccessContent';
 import { usePathname } from 'next/navigation';
-import { Users, Shield, Lock } from 'lucide-react';
+import { Users, Shield, Lock, Monitor } from 'lucide-react';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 
-type Tab = 'users' | 'roles';
+type Tab = 'users' | 'roles' | 'screen_access';
 
 export default function UserManagementPage() {
   const pathname = usePathname();
@@ -49,6 +50,17 @@ export default function UserManagementPage() {
               Roles &amp; Permissions
             </button>
           )}
+          {!loading && canManageRoles && (
+            <button
+              onClick={() => setActiveTab('screen_access')}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === 'screen_access' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+            >
+              <Monitor size={15} />
+              Screen Access
+            </button>
+          )}
         </div>
 
         {/* Tab Content */}
@@ -65,6 +77,21 @@ export default function UserManagementPage() {
                 <h3 className="text-base font-600 text-foreground mb-1">Access Restricted</h3>
                 <p className="text-sm text-muted-foreground max-w-xs">
                   You do not have permission to manage roles. Contact a System Admin.
+                </p>
+              </div>
+            )
+          )}
+          {activeTab === 'screen_access' && (
+            canManageRoles ? (
+              <ScreenAccessContent />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Lock size={24} className="text-muted-foreground" />
+                </div>
+                <h3 className="text-base font-600 text-foreground mb-1">Access Restricted</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  You do not have permission to manage screen access rules. Contact a System Admin.
                 </p>
               </div>
             )

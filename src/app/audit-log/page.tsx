@@ -1,9 +1,27 @@
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AppLayout from '@/components/AppLayout';
-import AuditLogContent from './components/AuditLogContent';
+import { ChartSkeleton, TableRowSkeleton } from '@/components/ui/LoadingSkeleton';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { Lock } from 'lucide-react';
+
+const AuditLogContent = dynamic(() => import('./components/AuditLogContent'), { ssr: false });
+
+function AuditLogFallback() {
+  return (
+    <div className="p-6 space-y-4">
+      <ChartSkeleton height={56} />
+      <div className="overflow-hidden rounded-xl border border-border">
+        <table className="w-full">
+          <tbody>
+            {Array.from({ length: 10 })?.map((_, i) => <TableRowSkeleton key={i} cols={7} />)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function AuditLogPage() {
   const { hasPermission, loading } = usePermissions();
@@ -17,11 +35,13 @@ export default function AuditLogPage() {
           </div>
           <h3 className="text-base font-600 text-foreground mb-1">Access Restricted</h3>
           <p className="text-sm text-muted-foreground max-w-xs">
-            You do not have permission to view the Audit Log.
+            You do not have permission to view the Change History.
           </p>
         </div>
       ) : (
-        <AuditLogContent />
+        <Suspense fallback={<AuditLogFallback />}>
+          <AuditLogContent />
+        </Suspense>
       )}
     </AppLayout>
   );

@@ -33,12 +33,16 @@ function timeAgo(dateStr: string): string {
 export default function RecentActivityFeed() {
   const [activities, setActivities] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     auditService.getRecent(8).then((data) => {
       setActivities(data);
       setIsLoading(false);
-    }).catch(() => setIsLoading(false));
+    }).catch(() => {
+      setError('Failed to load recent activity.');
+      setIsLoading(false);
+    });
   }, []);
 
   return (
@@ -60,6 +64,12 @@ export default function RecentActivityFeed() {
               </div>
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="px-5 py-8 flex flex-col items-center gap-2 text-center">
+          <AlertCircle size={24} className="text-red-400" />
+          <p className="text-sm font-500 text-red-600">Could not load activity</p>
+          <p className="text-xs text-muted-foreground">{error}</p>
         </div>
       ) : (
         <div className="divide-y divide-border">

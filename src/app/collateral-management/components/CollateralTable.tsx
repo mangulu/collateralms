@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock,  } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
@@ -73,6 +74,7 @@ export default function CollateralTable({
   onPageChange,
   onItemsPerPageChange,
 }: CollateralTableProps) {
+  const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>('id');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [statusDropdown, setStatusDropdown] = useState<string | null>(null);
@@ -304,7 +306,7 @@ export default function CollateralTable({
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="relative group/btn">
                           <button
-                            onClick={() => onView(item)}
+                            onClick={() => router.push(`/collateral-detail/${item.id}`)}
                             className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                             aria-label="View collateral details"
                           >

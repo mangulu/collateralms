@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --primary: 213 82% 23%;
+    --primary: 0 100% 65%;
     --primary-foreground: 0 0% 100%;
     --accent: 158 100% 33%;
     --accent-foreground: 0 0% 100%;
@@ -20,7 +20,8 @@
     --warning: 38 92% 50%;
     --success: 158 64% 40%;
     --foreground: 215 25% 15%;
-    --ring: 213 82% 23%;
+    --ring: 0 100% 65%;
+    --field-bg: 0 100% 95%;
   }
 
   * {
@@ -30,6 +31,20 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'DM Sans', sans-serif;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    background-color: #ffe5e5;
+  }
+
+  input:disabled,
+  textarea:disabled,
+  select:disabled,
+  [disabled] {
+    background-color: #ffe5e5 !important;
+    opacity: 0.6;
   }
 
   .font-mono {
