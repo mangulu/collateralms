@@ -1,9 +1,27 @@
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AppLayout from '@/components/AppLayout';
-import AuditTrailContent from './components/AuditTrailContent';
+import { ChartSkeleton, TableRowSkeleton } from '@/components/ui/LoadingSkeleton';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { Lock } from 'lucide-react';
+
+const AuditTrailContent = dynamic(() => import('./components/AuditTrailContent'), { ssr: false });
+
+function AuditFallback() {
+  return (
+    <div className="p-6 space-y-4">
+      <ChartSkeleton height={56} />
+      <div className="overflow-hidden rounded-xl border border-border">
+        <table className="w-full">
+          <tbody>
+            {Array.from({ length: 10 })?.map((_, i) => <TableRowSkeleton key={i} cols={7} />)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function AuditTrailPage() {
   const { hasPermission, loading } = usePermissions();
@@ -21,7 +39,9 @@ export default function AuditTrailPage() {
           </p>
         </div>
       ) : (
-        <AuditTrailContent />
+        <Suspense fallback={<AuditFallback />}>
+          <AuditTrailContent />
+        </Suspense>
       )}
     </AppLayout>
   );

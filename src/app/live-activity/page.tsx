@@ -1,12 +1,17 @@
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AppLayout from '@/components/AppLayout';
-import LiveActivityContent from './components/LiveActivityContent';
+import { ChartSkeleton } from '@/components/ui/LoadingSkeleton';
+
+const LiveActivityContent = dynamic(() => import('./components/LiveActivityContent'), { ssr: false });
 
 export default function LiveActivityPage() {
   return (
     <AppLayout>
-      <LiveActivityContent />
+      <Suspense fallback={<div className="p-6 space-y-4"><ChartSkeleton height={200} /><ChartSkeleton height={320} /></div>}>
+        <LiveActivityContent />
+      </Suspense>
     </AppLayout>
   );
 }

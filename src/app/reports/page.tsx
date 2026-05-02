@@ -1,9 +1,28 @@
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AppLayout from '@/components/AppLayout';
-import ReportsContent from './components/ReportsContent';
+import { ChartSkeleton, TableRowSkeleton } from '@/components/ui/LoadingSkeleton';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { Lock } from 'lucide-react';
+
+const ReportsContent = dynamic(() => import('./components/ReportsContent'), { ssr: false });
+
+function ReportsFallback() {
+  return (
+    <div className="p-6 space-y-4">
+      <ChartSkeleton height={56} />
+      <ChartSkeleton height={280} />
+      <div className="overflow-hidden rounded-xl border border-border">
+        <table className="w-full">
+          <tbody>
+            {Array.from({ length: 6 })?.map((_, i) => <TableRowSkeleton key={i} cols={6} />)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function ReportsPage() {
   const { hasPermission, loading } = usePermissions();
@@ -21,7 +40,9 @@ export default function ReportsPage() {
           </p>
         </div>
       ) : (
-        <ReportsContent />
+        <Suspense fallback={<ReportsFallback />}>
+          <ReportsContent />
+        </Suspense>
       )}
     </AppLayout>
   );

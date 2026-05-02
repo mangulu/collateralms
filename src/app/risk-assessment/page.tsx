@@ -1,15 +1,17 @@
+'use client';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AppLayout from '@/components/AppLayout';
-import RiskAssessmentContent from './components/RiskAssessmentContent';
+import { ChartSkeleton } from '@/components/ui/LoadingSkeleton';
 
-export const metadata = {
-  title: 'AI Risk Assessment | CollateralMS',
-  description: 'OpenAI-powered collateral risk assessment for perfection risk, BRELA deadline risk, and fraud indicators',
-};
+const RiskAssessmentContent = dynamic(() => import('./components/RiskAssessmentContent'), { ssr: false });
 
 export default function RiskAssessmentPage() {
   return (
     <AppLayout currentPath="/risk-assessment">
-      <RiskAssessmentContent />
+      <Suspense fallback={<div className="p-6 space-y-4"><ChartSkeleton height={200} /><ChartSkeleton height={320} /></div>}>
+        <RiskAssessmentContent />
+      </Suspense>
     </AppLayout>
   );
 }

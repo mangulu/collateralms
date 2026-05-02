@@ -1,12 +1,17 @@
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AppLayout from '@/components/AppLayout';
-import BulkUploadContent from './components/BulkUploadContent';
+import { ChartSkeleton } from '@/components/ui/LoadingSkeleton';
+
+const BulkUploadContent = dynamic(() => import('./components/BulkUploadContent'), { ssr: false });
 
 export default function BulkUploadPage() {
   return (
     <AppLayout currentPath="/bulk-upload">
-      <BulkUploadContent />
+      <Suspense fallback={<div className="p-6 space-y-4"><ChartSkeleton height={200} /><ChartSkeleton height={200} /></div>}>
+        <BulkUploadContent />
+      </Suspense>
     </AppLayout>
   );
 }

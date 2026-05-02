@@ -1,9 +1,12 @@
 'use client';
-import React from 'react';
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import AppLayout from '@/components/AppLayout';
-import ReportsDashboardContent from './components/ReportsDashboardContent';
+import { ChartSkeleton } from '@/components/ui/LoadingSkeleton';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { Lock } from 'lucide-react';
+
+const ReportsDashboardContent = dynamic(() => import('./components/ReportsDashboardContent'), { ssr: false });
 
 export default function ReportsDashboardPage() {
   const { hasPermission, loading } = usePermissions();
@@ -21,7 +24,9 @@ export default function ReportsDashboardPage() {
           </p>
         </div>
       ) : (
-        <ReportsDashboardContent />
+        <Suspense fallback={<div className="p-6 space-y-4"><ChartSkeleton height={200} /><ChartSkeleton height={320} /></div>}>
+          <ReportsDashboardContent />
+        </Suspense>
       )}
     </AppLayout>
   );
