@@ -76,6 +76,20 @@ BEGIN
   END IF;
 END $$;
 
+-- Ensure collateral_type column exists (guard for DROP TYPE ... CASCADE on partial prior runs)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'collateral_records'
+      AND column_name = 'collateral_type'
+  ) THEN
+    ALTER TABLE public.collateral_records
+      ADD COLUMN collateral_type public.collateral_type NOT NULL DEFAULT 'Mortgage'::public.collateral_type;
+  END IF;
+END $$;
+
 -- audit_logs
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

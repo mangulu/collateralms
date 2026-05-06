@@ -7,6 +7,8 @@ import { useChat } from '@/lib/hooks/useChat';
 import toast from 'react-hot-toast';
 import { saveFraudAlert, fetchFraudAlerts, updateFraudAlertStatus, type FraudAlertRow } from '@/lib/supabase/fraudAlertService';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
+import Icon from '@/components/ui/AppIcon';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
