@@ -62,8 +62,9 @@ export default function LoginForm() {
       router.push('/collateral-dashboard');
       router.refresh();
     } catch (err: any) {
-      setIsLoading(false);
       toast.error(err?.message ?? 'Invalid credentials — please try again');
+    } finally {
+      setIsLoading(false);
     }
   };
 
