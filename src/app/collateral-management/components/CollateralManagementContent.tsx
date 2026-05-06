@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Download, Filter, Search, X } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
@@ -38,6 +38,9 @@ export default function CollateralManagementContent() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -56,6 +59,17 @@ export default function CollateralManagementContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const filtered = useMemo(() => {
     return collateralData.filter((c) => {
@@ -174,6 +188,72 @@ export default function CollateralManagementContent() {
     ([k, v]) => k !== 'search' && v !== ''
   ).length;
 
+  function exportRegistryCSV() {
+    const headers = ['Collateral ID', 'Obligor', 'Obligor ID', 'Type', 'Description', 'Value (TSh)', 'Facility ID', 'Status', 'Registry', 'Registration Date', 'Perfection Deadline', 'Days to Deadline', 'Assigned Officer'];
+    const rows = filtered.map((c) => [
+      c.collateralId,
+      c.obligor,
+      c.obligorId,
+      c.type,
+      c.description,
+      c.valueTSh,
+      c.facilityId,
+      c.status,
+      c.registry,
+      c.registrationDate,
+      c.perfectionDeadline,
+      c.daysToDeadline ?? '',
+      c.assignedOfficer,
+    ]);
+    const csv = [headers, ...rows]
+      .map((r) => r.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `collateral_registry_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportMenuOpen(false);
+  }
+
+  async function exportRegistryPDF() {
+    setIsExportingPdf(true);
+    setExportMenuOpen(false);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportType: 'collateral_registry',
+          dateFrom: '',
+          dateTo: today,
+          registries: filters.registry ? [filters.registry] : [],
+          statuses: filters.status ? [filters.status] : [],
+          collateralTypes: filters.type ? [filters.type] : [],
+          includeCharts: false,
+          includeSummary: true,
+          includeDetails: true,
+          stakeholderMode: false,
+        }),
+      });
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `collateral_registry_${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }
+
   return (
     <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto">
       {/* Page Header */}
@@ -186,13 +266,35 @@ export default function CollateralManagementContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => toast.info('Export CSV — generating report...')}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
-          >
-            <Download size={14} />
-            Export
-          </button>
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              onClick={() => setExportMenuOpen((v) => !v)}
+              disabled={filtered.length === 0 || isExportingPdf}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <Download size={14} />
+              {isExportingPdf ? 'Generating…' : 'Export'}
+              <ChevronDown size={12} className={`transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {exportMenuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-border rounded-lg shadow-lg z-20 overflow-hidden">
+                <button
+                  onClick={exportRegistryCSV}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  <FileText size={14} className="text-green-600" />
+                  Export CSV
+                </button>
+                <button
+                  onClick={exportRegistryPDF}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors border-t border-border"
+                >
+                  <FileDown size={14} className="text-red-500" />
+                  Export PDF
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setAddModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-md text-sm font-600 hover:bg-primary/90 transition-all active:scale-95"

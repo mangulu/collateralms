@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { ClipboardList, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight, User, Clock, FileText, ArrowRight, X, Calendar, AlertCircle, Link2, Stamp, Layers, BarChart2, SlidersHorizontal, Database,  } from 'lucide-react';
+import { ClipboardList, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight, User, Clock, FileText, ArrowRight, X, Calendar, AlertCircle, Link2, Stamp, Layers, BarChart2, SlidersHorizontal, Database, FileDown } from 'lucide-react';
 import { auditLogService, AuditLogEntry, FieldChange } from '@/lib/supabase/auditLogService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ function KpiCard({ label, value, icon: IconComp, color }: { label: string; value
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-        {IconComp && <IconComp size={18} className="" />}
+        {IconComp && <IconComp size={18} />}
       </div>
       <div className="min-w-0">
         <p className="text-2xl font-bold tabular-nums text-foreground font-mono">{value}</p>
@@ -317,6 +317,7 @@ export default function AuditLogContent() {
 
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [page, setPage] = useState(1);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -406,6 +407,38 @@ export default function AuditLogContent() {
     URL.revokeObjectURL(url);
   }
 
+  async function exportPDF() {
+    setIsExportingPdf(true);
+    try {
+      const res = await fetch('/api/export/audit-log-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          search,
+          action: actionFilter,
+          entityType: entityFilter,
+          eventCategory: categoryFilter,
+          dateFrom,
+          dateTo,
+          performedBy: userFilter,
+          collateralId: collateralFilter,
+        }),
+      });
+      if (!res.ok) throw new Error('PDF generation failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit_log_compliance_${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-background">
 
@@ -441,10 +474,18 @@ export default function AuditLogContent() {
             <button
               onClick={exportCSV}
               disabled={entries.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
             >
               <Download size={14} />
-              Export CSV
+              CSV
+            </button>
+            <button
+              onClick={exportPDF}
+              disabled={entries.length === 0 || isExportingPdf}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              <FileDown size={14} className={isExportingPdf ? 'animate-pulse' : ''} />
+              {isExportingPdf ? 'Generating…' : 'Export PDF'}
             </button>
           </div>
         </div>
