@@ -36,7 +36,7 @@ interface ScreenDefinition {
   actions: ScreenAction[];
 }
 
-const SCREEN_ACTIONS: Record<string, ScreenAction[]> = {
+const SCREEN_ACTIONS: Record<string, ScreenAction> = {
   view: { key: 'view', label: 'View', icon: Eye },
   create: { key: 'create', label: 'Create', icon: Plus },
   edit: { key: 'edit', label: 'Edit', icon: Edit2 },
@@ -120,10 +120,12 @@ export default function ScreenAccessContent() {
     else setRefreshing(true);
 
     try {
-      const [rolesData, { data: accessRows, error }] = await Promise.all([
+      const [rolesData, accessResult] = await Promise.all([
         fetchRoles(),
         supabase.from('screen_access_rules').select('*'),
       ]);
+
+      const { data: accessRows, error } = accessResult;
 
       setRoles(rolesData);
 

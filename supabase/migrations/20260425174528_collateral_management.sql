@@ -62,6 +62,20 @@ CREATE TABLE IF NOT EXISTS public.collateral_records (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure status column exists (guard for partial prior runs)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'collateral_records'
+      AND column_name = 'status'
+  ) THEN
+    ALTER TABLE public.collateral_records
+      ADD COLUMN status public.collateral_status DEFAULT 'Draft'::public.collateral_status;
+  END IF;
+END $$;
+
 -- audit_logs
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
