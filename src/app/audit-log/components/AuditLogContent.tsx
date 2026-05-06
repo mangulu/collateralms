@@ -247,7 +247,7 @@ function KpiCard({ label, value, icon: IconComp, color }: { label: string; value
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-        {IconComp && <IconComp size={18} className="" />}
+        {IconComp && <IconComp size={18} />}
       </div>
       <div className="min-w-0">
         <p className="text-2xl font-bold tabular-nums text-foreground font-mono">{value}</p>

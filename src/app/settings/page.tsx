@@ -7,56 +7,28 @@ import DocumentTypesSettingsContent from './components/DocumentTypesSettingsCont
 import CollateralTypesSettingsContent from './components/CollateralTypesSettingsContent';
 import NotificationSettingsContent from './components/NotificationSettingsContent';
 import EmailProviderSettingsContent from './components/EmailProviderSettingsContent';
-import UserManagementContent from '@/app/user-management/components/UserManagementContent';
-import RoleManagementContent from '@/app/user-management/components/RoleManagementContent';
-import ScreenAccessContent from '@/app/user-management/components/ScreenAccessContent';
 import { usePathname } from 'next/navigation';
-import { Settings, Bell, Mail, Lock, Building2, FileText, Layers, Link2, Users, Shield, Monitor } from 'lucide-react';
+import { Settings, Bell, Mail, Lock, Building2, FileText, Layers, Link2 } from 'lucide-react';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 
-type Tab =
-  | 'notifications'
-  | 'email-provider' |'document-types' |'registries' |'collateral-types' |'registry-integrations' |'users' |'roles' |'screen-access';
+type Tab = 'notifications' | 'email-provider' | 'document-types' | 'registries' | 'collateral-types' | 'registry-integrations';
 
 export default function SettingsPage() {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<Tab>('document-types');
   const { hasPermission, loading } = usePermissions();
 
-  const canViewUsers = hasPermission(PERMISSIONS.USER_MANAGEMENT_VIEW);
-  const canViewRoles = hasPermission(PERMISSIONS.ROLES_VIEW);
-
-  const configTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'document-types', label: 'Document Types', icon: <FileText size={15} /> },
-    { id: 'registries', label: 'Registries', icon: <Building2 size={15} /> },
-    { id: 'collateral-types', label: 'Collateral Types', icon: <Layers size={15} /> },
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; group: string }[] = [
+    { id: 'document-types', label: 'Document Types', icon: <FileText size={15} />, group: 'Configuration' },
+    { id: 'registries', label: 'Registries', icon: <Building2 size={15} />, group: 'Configuration' },
+    { id: 'collateral-types', label: 'Collateral Types', icon: <Layers size={15} />, group: 'Configuration' },
+    { id: 'notifications', label: 'Notifications', icon: <Bell size={15} />, group: 'System' },
+    { id: 'email-provider', label: 'Email Provider', icon: <Mail size={15} />, group: 'System' },
+    { id: 'registry-integrations', label: 'Registry Integrations', icon: <Link2 size={15} />, group: 'System' },
   ];
 
-  const systemTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'notifications', label: 'Notifications', icon: <Bell size={15} /> },
-    { id: 'email-provider', label: 'Email Provider', icon: <Mail size={15} /> },
-    { id: 'registry-integrations', label: 'Registry Integrations', icon: <Link2 size={15} /> },
-  ];
-
-  const usersTabs: { id: Tab; label: string; icon: React.ReactNode; requiresRoles?: boolean }[] = [
-    { id: 'users', label: 'Users', icon: <Users size={15} /> },
-    { id: 'roles', label: 'Roles & Permissions', icon: <Shield size={15} />, requiresRoles: true },
-    { id: 'screen-access', label: 'Screen Access', icon: <Monitor size={15} />, requiresRoles: true },
-  ];
-
-  const renderTabButton = (tab: { id: Tab; label: string; icon: React.ReactNode }) => (
-    <button
-      key={tab.id}
-      onClick={() => setActiveTab(tab.id)}
-      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-        activeTab === tab.id
-          ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-      }`}
-    >
-      {tab.icon}
-      {tab.label}
-    </button>
-  );
+  const configTabs = tabs.filter((t) => t.group === 'Configuration');
+  const systemTabs = tabs.filter((t) => t.group === 'System');
 
   return (
     <AppLayout currentPath={pathname}>
@@ -74,38 +46,41 @@ export default function SettingsPage() {
         <div className="space-y-5">
           {/* Tab Bar */}
           <div className="flex flex-wrap items-end gap-0 border-b border-border">
-            {/* Configuration group */}
+            {/* Configuration group label */}
             <div className="flex items-center">
-              <span className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">
-                Configuration
-              </span>
-              {configTabs.map(renderTabButton)}
+              <span className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">Configuration</span>
+              {configTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                    activeTab === tab.id
+                      ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
             </div>
-
             <div className="w-px h-6 bg-border mx-1 self-center" />
-
-            {/* System group */}
+            {/* System group label */}
             <div className="flex items-center">
-              <span className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">
-                System
-              </span>
-              {systemTabs.map(renderTabButton)}
+              <span className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">System</span>
+              {systemTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                    activeTab === tab.id
+                      ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
             </div>
-
-            {/* Users & Roles group — visible only if user has USER_MANAGEMENT_VIEW */}
-            {!loading && canViewUsers && (
-              <>
-                <div className="w-px h-6 bg-border mx-1 self-center" />
-                <div className="flex items-center">
-                  <span className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">
-                    Users &amp; Roles
-                  </span>
-                  {usersTabs
-                    .filter((t) => !t.requiresRoles || canViewRoles)
-                    .map(renderTabButton)}
-                </div>
-              </>
-            )}
           </div>
 
           {/* Tab Content */}
@@ -126,42 +101,6 @@ export default function SettingsPage() {
             )
           )}
           {activeTab === 'registry-integrations' && <RegistrySettingsContent />}
-          {activeTab === 'users' && (
-            canViewUsers ? (
-              <UserManagementContent />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Lock size={20} className="text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  You do not have permission to view users.
-                </p>
-              </div>
-            )
-          )}
-          {activeTab === 'roles' && (
-            canViewRoles ? (
-              <RoleManagementContent />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Lock size={20} className="text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  You do not have permission to manage roles and permissions.
-                </p>
-              </div>
-            )
-          )}
-          {activeTab === 'screen-access' && (
-            canViewRoles ? (
-              <ScreenAccessContent />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Lock size={20} className="text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  You do not have permission to manage screen access rules.
-                </p>
-              </div>
-            )
-          )}
         </div>
       )}
     </AppLayout>

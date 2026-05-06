@@ -43,10 +43,12 @@ export default function RoleManagementContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
+  // Expanded role for permission view
   const [expandedRole, setExpandedRole] = useState<string | null>(null);
   const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>({});
   const [loadingPerms, setLoadingPerms] = useState<string | null>(null);
 
+  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleDefinition | null>(null);
   const [formName, setFormName] = useState('');
@@ -57,6 +59,7 @@ export default function RoleManagementContent() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<RoleDefinition | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -86,7 +89,7 @@ export default function RoleManagementContent() {
     setTimeout(() => setToast(null), 4000);
   }
 
-  // ─── Expand role ──────────────────────────────────────────────────────────
+  // ─── Expand role to show permissions ──────────────────────────────────────
 
   async function toggleExpand(roleName: string) {
     if (expandedRole === roleName) {
@@ -127,6 +130,7 @@ export default function RoleManagementContent() {
     setFormDescription(role.description);
     setFormColor(role.color);
     setFormError(null);
+    // Load current permissions
     try {
       const perms = await fetchRolePermissions(role.name);
       setFormPermissions(perms);
@@ -159,6 +163,7 @@ export default function RoleManagementContent() {
     }
 
     if (!editingRole) {
+      // Validate name
       if (!formName.trim()) {
         setFormError('Role name (identifier) is required.');
         return;
@@ -178,6 +183,7 @@ export default function RoleManagementContent() {
       if (editingRole) {
         await updateRolePermissions(editingRole.name, formPermissions);
         showToast(`Permissions for "${editingRole.label}" updated.`, 'success');
+        // Invalidate cached permissions for this role
         setRolePermissions((prev) => {
           const next = { ...prev };
           delete next[editingRole.name];
@@ -247,9 +253,9 @@ export default function RoleManagementContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-700 text-foreground">Roles &amp; Permissions</h1>
+          <h2 className="text-lg font-700 text-foreground">Role Management</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Define roles and control which permissions each role has.
+            Define roles and their permissions. System roles cannot be deleted.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -272,137 +278,175 @@ export default function RoleManagementContent() {
       </div>
 
       {/* Roles List */}
-      {loading ? (
-        <div className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {roles.map((role) => {
-            const colors = getRoleColorClasses(role.color);
-            const isExpanded = expandedRole === role.name;
-            const perms = rolePermissions[role.name] ?? [];
+      <div className="space-y-3">
+        {loading
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white border border-border rounded-xl p-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-muted" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-4 w-32 bg-muted rounded" />
+                    <div className="h-3 w-48 bg-muted rounded" />
+                  </div>
+                </div>
+              </div>
+            ))
+          : roles.map((role) => {
+              const colors = getRoleColorClasses(role.color);
+              const isExpanded = expandedRole === role.name;
+              const perms = rolePermissions[role.name] || [];
 
-            return (
-              <div key={role.name} className="border border-border rounded-xl overflow-hidden bg-white">
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg ${colors.bg} flex items-center justify-center shrink-0`}>
-                      <Shield size={15} className={colors.text} />
+              return (
+                <div
+                  key={role.id}
+                  className="bg-white border border-border rounded-xl overflow-hidden"
+                >
+                  {/* Role Header Row */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div
+                      className={`w-9 h-9 rounded-lg ${colors.bg} flex items-center justify-center shrink-0`}
+                    >
+                      <Shield size={16} className={colors.text} />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-600 text-foreground">{role.label}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-600 text-foreground text-sm">{role.label}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-500 ${colors.bg} ${colors.text}`}
+                        >
+                          {role.name}
+                        </span>
                         {role.isSystem && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
-                            <Lock size={9} /> System
+                          <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                            <Lock size={10} />
+                            System
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{role.description}</p>
+                      {role.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {role.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => toggleExpand(role.name)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"
+                      >
+                        Permissions
+                        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      </button>
+                      <button
+                        onClick={() => openEditModal(role)}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit permissions"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      {!role.isSystem && (
+                        <button
+                          onClick={() => setDeleteTarget(role)}
+                          className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                          title="Delete role"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => openEditModal(role)}
-                      className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      title="Edit permissions"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    {!role.isSystem && (
-                      <button
-                        onClick={() => setDeleteTarget(role)}
-                        className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
-                        title="Delete role"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => toggleExpand(role.name)}
-                      className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
-                    >
-                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                  </div>
-                </div>
 
-                {isExpanded && (
-                  <div className="border-t border-border px-4 py-3 bg-muted/20">
-                    {loadingPerms === role.name ? (
-                      <div className="h-8 bg-muted rounded animate-pulse w-48" />
-                    ) : perms.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">No permissions assigned.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {perms.map((key) => {
-                          const pDef = permissions.find((p) => p.key === key);
-                          return (
-                            <span
-                              key={key}
-                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-500"
-                            >
-                              {pDef?.label ?? key}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  {/* Expanded Permissions */}
+                  {isExpanded && (
+                    <div className="border-t border-border px-4 py-3 bg-muted/20">
+                      {loadingPerms === role.name ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <RefreshCw size={13} className="animate-spin" />
+                          Loading permissions…
+                        </div>
+                      ) : perms.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No permissions assigned.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {perms.map((pk) => {
+                            const pDef = permissions.find((p) => p.key === pk);
+                            return (
+                              <span
+                                key={pk}
+                                className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-500"
+                              >
+                                {pDef?.label ?? pk}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+      </div>
 
       {/* Create / Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
           <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg z-10 max-h-[90vh] flex flex-col">
+            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
               <h2 className="text-base font-700 text-foreground">
                 {editingRole ? `Edit Permissions — ${editingRole.label}` : 'Create New Role'}
               </h2>
-              <button onClick={closeModal} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors">
+              <button
+                onClick={closeModal}
+                className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+              >
                 <X size={16} />
               </button>
             </div>
 
+            {/* Body */}
             <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+              {/* Name + Label (create only) */}
               {!editingRole && (
                 <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-600 text-foreground mb-1.5">
+                        Role Name (ID) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                        placeholder="e.g. branch_manager"
+                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Lowercase, underscores only
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-600 text-foreground mb-1.5">
+                        Display Label <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formLabel}
+                        onChange={(e) => setFormLabel(e.target.value)}
+                        placeholder="e.g. Branch Manager"
+                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-600 text-foreground mb-1.5">
-                      Role Identifier <span className="text-red-500">*</span>
+                      Description
                     </label>
-                    <input
-                      type="text"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      placeholder="e.g. branch_manager"
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Lowercase letters, numbers, underscores only.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-600 text-foreground mb-1.5">
-                      Display Label <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formLabel}
-                      onChange={(e) => setFormLabel(e.target.value)}
-                      placeholder="e.g. Branch Manager"
-                      className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-600 text-foreground mb-1.5">Description</label>
                     <input
                       type="text"
                       value={formDescription}
@@ -411,48 +455,61 @@ export default function RoleManagementContent() {
                       className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
+
+                  {/* Color */}
                   <div>
-                    <label className="block text-xs font-600 text-foreground mb-1.5">Color</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {(ROLE_COLOR_OPTIONS || []).map((opt: { value: string; label: string }) => {
-                        const c = getRoleColorClasses(opt.value);
-                        return (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setFormColor(opt.value)}
-                            className={`px-3 py-1 rounded-full text-xs font-600 border-2 transition-all ${c.bg} ${c.text} ${
-                              formColor === opt.value ? 'border-primary' : 'border-transparent'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        );
-                      })}
+                    <label className="block text-xs font-600 text-foreground mb-1.5">
+                      Badge Color
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {ROLE_COLOR_OPTIONS.map((c) => (
+                        <button
+                          key={c.value}
+                          type="button"
+                          onClick={() => setFormColor(c.value)}
+                          className={`w-7 h-7 rounded-full ${c.bg} border-2 transition-all ${
+                            formColor === c.value
+                              ? 'border-foreground scale-110'
+                              : 'border-transparent hover:scale-105'
+                          }`}
+                          title={c.value}
+                        />
+                      ))}
                     </div>
                   </div>
                 </>
               )}
 
-              {/* Permissions */}
+              {/* Permissions by module */}
               <div>
-                <label className="block text-xs font-600 text-foreground mb-2">Permissions</label>
+                <label className="block text-xs font-600 text-foreground mb-2">
+                  Permissions
+                </label>
                 <div className="space-y-3">
                   {Object.entries(permissionsByModule).map(([module, perms]) => (
-                    <div key={module}>
-                      <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-1.5">{module}</p>
-                      <div className="space-y-1">
-                        {perms.map((p) => (
-                          <label key={p.key} className="flex items-start gap-2.5 cursor-pointer group">
+                    <div key={module} className="border border-border rounded-lg overflow-hidden">
+                      <div className="px-3 py-2 bg-muted/40 text-xs font-600 text-muted-foreground uppercase tracking-wide">
+                        {module}
+                      </div>
+                      <div className="p-3 grid grid-cols-1 gap-2">
+                        {perms.map((perm) => (
+                          <label
+                            key={perm.key}
+                            className="flex items-start gap-2.5 cursor-pointer group"
+                          >
                             <input
                               type="checkbox"
-                              checked={formPermissions.includes(p.key)}
-                              onChange={() => toggleFormPermission(p.key)}
-                              className="mt-0.5 w-3.5 h-3.5 accent-primary rounded"
+                              checked={formPermissions.includes(perm.key)}
+                              onChange={() => toggleFormPermission(perm.key)}
+                              className="mt-0.5 rounded border-border text-primary focus:ring-primary/20"
                             />
                             <div>
-                              <p className="text-xs font-500 text-foreground group-hover:text-primary transition-colors">{p.label}</p>
-                              <p className="text-[10px] text-muted-foreground">{p.description}</p>
+                              <span className="text-sm font-500 text-foreground group-hover:text-primary transition-colors">
+                                {perm.label}
+                              </span>
+                              {perm.description && (
+                                <p className="text-xs text-muted-foreground">{perm.description}</p>
+                              )}
                             </div>
                           </label>
                         ))}
@@ -470,6 +527,7 @@ export default function RoleManagementContent() {
               )}
             </div>
 
+            {/* Footer */}
             <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border shrink-0">
               <button
                 onClick={closeModal}
@@ -490,22 +548,16 @@ export default function RoleManagementContent() {
         </div>
       )}
 
-      {/* Delete Confirm */}
+      {/* Delete Confirm Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteTarget(null)} />
-          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm z-10 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <Trash2 size={18} className="text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm font-700 text-foreground">Delete Role</p>
-                <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
-              </div>
-            </div>
-            <p className="text-sm text-foreground mb-5">
-              Are you sure you want to delete the <strong>{deleteTarget.label}</strong> role? All associated permissions will be removed.
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm z-10 p-5">
+            <h3 className="text-base font-700 text-foreground mb-2">Delete Role</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Are you sure you want to delete the{' '}
+              <span className="font-600 text-foreground">{deleteTarget.label}</span> role? Users
+              assigned this role will lose their permissions.
             </p>
             <div className="flex items-center justify-end gap-2">
               <button

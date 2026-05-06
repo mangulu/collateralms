@@ -17,15 +17,11 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
-import {
-  getUsers,
-  createUser,
-  updateUser,
-  UserRole,
-  LocalUser,
-} from '@/lib/localUserStore';
+import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type UserRole = 'credit_officer' | 'legal_officer' | 'system_admin';
 
 interface UserProfile {
   id: string;
@@ -96,24 +92,11 @@ interface ToastState {
   type: 'success' | 'error';
 }
 
-// ─── Mapper ───────────────────────────────────────────────────────────────────
-
-function mapUser(u: LocalUser): UserProfile {
-  return {
-    id: u.id,
-    email: u.email,
-    fullName: u.fullName,
-    role: u.role,
-    initials: u.initials || getInitials(u.fullName || u.email),
-    isActive: u.isActive,
-    createdAt: u.createdAt,
-    updatedAt: u.updatedAt,
-  };
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function UserManagementContent() {
+  const supabase = createClient();
+
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,14 +119,35 @@ export default function UserManagementContent() {
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
 
-  const fetchUsers = useCallback((silent = false) => {
+  const fetchUsers = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
+
     try {
-      const data = getUsers();
-      setUsers(data.map(mapUser));
-    } catch {
-      showToast('Failed to load users', 'error');
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showToast('Failed to load users: ' + error.message, 'error');
+        return;
+      }
+
+      const mapped: UserProfile[] = (data || []).map((row) => ({
+        id: row.id,
+        email: row.email,
+        fullName: row.full_name,
+        role: row.role as UserRole,
+        initials: row.initials || getInitials(row.full_name || row.email),
+        isActive: row.is_active ?? true,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+
+      setUsers(mapped);
+    } catch (err: any) {
+      showToast('Unexpected error loading users', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -185,7 +189,7 @@ export default function UserManagementContent() {
 
   // ─── Save User ──────────────────────────────────────────────────────────────
 
-  function handleSave() {
+  async function handleSave() {
     setFormError(null);
 
     if (!formData.fullName.trim()) {
@@ -208,34 +212,58 @@ export default function UserManagementContent() {
     setSaving(true);
     try {
       if (editingUser) {
+        // Update existing profile
         const initials = getInitials(formData.fullName);
-        updateUser(editingUser.id, {
-          fullName: formData.fullName.trim(),
-          role: formData.role,
-          initials,
-        });
-        showToast('User updated successfully.', 'success');
-      } else {
-        // Check for duplicate email
-        const existing = getUsers().find(
-          (u) => u.email.toLowerCase() === formData.email.trim().toLowerCase()
-        );
-        if (existing) {
-          setFormError('A user with this email already exists.');
-          setSaving(false);
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            full_name: formData.fullName.trim(),
+            role: formData.role,
+            initials,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', editingUser.id);
+
+        if (error) {
+          setFormError('Failed to update user: ' + error.message);
           return;
         }
-        const initials = getInitials(formData.fullName);
-        createUser({
+        showToast('User updated successfully.', 'success');
+      } else {
+        // Create new auth user via Supabase Admin — use signUp for now
+        // The user_profiles row is created by DB trigger on auth.users insert
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email.trim(),
-          fullName: formData.fullName.trim(),
-          role: formData.role,
-          initials,
-          isActive: true,
           password: formData.password,
+          options: {
+            data: {
+              full_name: formData.fullName.trim(),
+            },
+          },
         });
+
+        if (signUpError) {
+          setFormError('Failed to create user: ' + signUpError.message);
+          return;
+        }
+
+        const newUserId = signUpData?.user?.id;
+        if (newUserId) {
+          const initials = getInitials(formData.fullName);
+          // Upsert profile with role
+          await supabase.from('user_profiles').upsert({
+            id: newUserId,
+            email: formData.email.trim(),
+            full_name: formData.fullName.trim(),
+            role: formData.role,
+            initials,
+            is_active: true,
+          }, { onConflict: 'id' });
+        }
+
         showToast('User created successfully.', 'success');
       }
+
       closeModal();
       fetchUsers(true);
     } catch (err: any) {
@@ -247,10 +275,19 @@ export default function UserManagementContent() {
 
   // ─── Toggle Status ──────────────────────────────────────────────────────────
 
-  function handleToggleStatus(user: UserProfile) {
+  async function handleToggleStatus(user: UserProfile) {
     const newStatus = !user.isActive;
     try {
-      updateUser(user.id, { isActive: newStatus });
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ is_active: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+
+      if (error) {
+        showToast('Failed to update status: ' + error.message, 'error');
+        return;
+      }
+
       setUsers((prev) =>
         prev.map((u) => (u.id === user.id ? { ...u, isActive: newStatus } : u))
       );
@@ -258,7 +295,7 @@ export default function UserManagementContent() {
         `${user.fullName} has been ${newStatus ? 'activated' : 'deactivated'}.`,
         'success'
       );
-    } catch {
+    } catch (err: any) {
       showToast('Unexpected error updating status', 'error');
     }
   }
@@ -357,6 +394,7 @@ export default function UserManagementContent() {
       {/* Filters */}
       <div className="bg-white border border-border rounded-xl p-4">
         <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search */}
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -367,6 +405,8 @@ export default function UserManagementContent() {
               className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
+
+          {/* Role Filter */}
           <div className="relative">
             <select
               value={roleFilter}
@@ -380,6 +420,8 @@ export default function UserManagementContent() {
             </select>
             <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           </div>
+
+          {/* Status Filter */}
           <div className="relative">
             <select
               value={statusFilter}
@@ -439,6 +481,7 @@ export default function UserManagementContent() {
                   const rc = roleConfig[user.role];
                   return (
                     <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      {/* User */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -447,17 +490,22 @@ export default function UserManagementContent() {
                           <span className="font-500 text-foreground">{user.fullName || '—'}</span>
                         </div>
                       </td>
+                      {/* Role */}
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-600 ${rc.bg} ${rc.color}`}>
                           {rc.label}
                         </span>
                       </td>
+                      {/* Email */}
                       <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{user.email}</td>
+                      {/* Created */}
                       <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{formatDate(user.createdAt)}</td>
+                      {/* Status */}
                       <td className="px-4 py-3 text-center">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-600 ${
-                            user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            user.isActive
+                              ? 'bg-green-100 text-green-700' :'bg-red-100 text-red-700'
                           }`}
                         >
                           {user.isActive ? (
@@ -467,6 +515,7 @@ export default function UserManagementContent() {
                           )}
                         </span>
                       </td>
+                      {/* Actions */}
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
@@ -496,6 +545,8 @@ export default function UserManagementContent() {
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer */}
         {!loading && filteredUsers.length > 0 && (
           <div className="px-4 py-3 border-t border-border bg-muted/20 text-xs text-muted-foreground">
             Showing {filteredUsers.length} of {users.length} users
@@ -508,6 +559,7 @@ export default function UserManagementContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
           <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md z-10">
+            {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h2 className="text-base font-700 text-foreground">
                 {editingUser ? 'Edit User' : 'Add New User'}
@@ -519,7 +571,10 @@ export default function UserManagementContent() {
                 <X size={16} />
               </button>
             </div>
+
+            {/* Modal Body */}
             <div className="px-5 py-4 space-y-4">
+              {/* Full Name */}
               <div>
                 <label className="block text-xs font-600 text-foreground mb-1.5">
                   Full Name <span className="text-red-500">*</span>
@@ -532,6 +587,8 @@ export default function UserManagementContent() {
                   className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
+
+              {/* Email */}
               <div>
                 <label className="block text-xs font-600 text-foreground mb-1.5">
                   Email Address <span className="text-red-500">*</span>
@@ -548,6 +605,8 @@ export default function UserManagementContent() {
                   <p className="text-xs text-muted-foreground mt-1">Email cannot be changed after account creation.</p>
                 )}
               </div>
+
+              {/* Role */}
               <div>
                 <label className="block text-xs font-600 text-foreground mb-1.5">
                   Role <span className="text-red-500">*</span>
@@ -565,6 +624,8 @@ export default function UserManagementContent() {
                   <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
               </div>
+
+              {/* Password (create only) */}
               {!editingUser && (
                 <div>
                   <label className="block text-xs font-600 text-foreground mb-1.5">
@@ -578,10 +639,12 @@ export default function UserManagementContent() {
                     className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    The user will use this password to sign in.
+                    The user will be able to change their password after first login.
                   </p>
                 </div>
               )}
+
+              {/* Error */}
               {formError && (
                 <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                   <AlertCircle size={15} className="shrink-0 mt-0.5" />
@@ -589,6 +652,8 @@ export default function UserManagementContent() {
                 </div>
               )}
             </div>
+
+            {/* Modal Footer */}
             <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border">
               <button
                 onClick={closeModal}

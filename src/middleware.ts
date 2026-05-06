@@ -1,6 +1,20 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Map routes to required permission keys
+function getProjectRef(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  return url.match(/https:\/\/([^.]+)\./)?.[1] ?? '';
+}
+
+function injectTokenFromHeader(request: NextRequest): void {
+  const token = request.headers.get('x-sb-token');
+  if (!token) return;
+  const hasCookie = request.cookies.getAll().some((c) => c.name.includes('auth-token'));
+  if (hasCookie) return;
+  request.cookies.set(`sb-${getProjectRef()}-auth-token`, token);
+}
+
+// Map routes to required permission keys (matches role_permissions seed data)
 const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/collateral-dashboard': ['dashboard.view'],
   '/portfolio-monitoring': ['dashboard.view'],
@@ -33,61 +47,40 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/settings': ['settings.view'],
 };
 
-// Permissions seeded per role (mirrors localUserStore SEED_ROLE_PERMISSIONS)
-const ROLE_PERMISSIONS: Record<string, string[]> = {
-  credit_officer: [
-    'dashboard.view',
-    'collateral.view',
-    'collateral.create',
-    'collateral.edit',
-    'perfection.view',
-    'perfection.submit',
-    'compliance.view',
-    'reports.view',
-    'settings.view',
-  ],
-  legal_officer: [
-    'dashboard.view',
-    'collateral.view',
-    'collateral.edit',
-    'collateral.delete',
-    'perfection.view',
-    'perfection.review',
-    'compliance.view',
-    'audit_log.view',
-    'reports.view',
-    'settings.view',
-  ],
-  system_admin: [
-    'dashboard.view',
-    'collateral.view',
-    'collateral.create',
-    'collateral.edit',
-    'collateral.delete',
-    'perfection.view',
-    'perfection.submit',
-    'perfection.review',
-    'compliance.view',
-    'audit_log.view',
-    'reports.view',
-    'user_management.view',
-    'user_management.manage',
-    'settings.view',
-    'settings.manage',
-    'roles.view',
-    'roles.manage',
-  ],
-};
-
 // Public routes that never require auth
 const PUBLIC_ROUTES = ['/sign-up-login-screen', '/auth/callback'];
 
 export async function middleware(request: NextRequest) {
+  injectTokenFromHeader(request);
+  let supabaseResponse = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            supabaseResponse.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const pathname = request.nextUrl.pathname;
 
   // Skip public routes
   if (PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) {
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
   // Skip API routes and static files
@@ -96,28 +89,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/_next/') ||
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)
   ) {
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
-  // Read local session cookie
-  const sessionCookie = request.cookies.get('cms_local_session_cookie');
-  if (!sessionCookie?.value) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/sign-up-login-screen';
-    return NextResponse.redirect(url);
-  }
-
-  let role: string | null = null;
-  try {
-    const session = JSON.parse(sessionCookie.value);
-    role = session?.role ?? null;
-  } catch {
-    const url = request.nextUrl.clone();
-    url.pathname = '/sign-up-login-screen';
-    return NextResponse.redirect(url);
-  }
-
-  if (!role) {
+  // Redirect unauthenticated users to login
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = '/sign-up-login-screen';
     return NextResponse.redirect(url);
@@ -129,21 +105,47 @@ export async function middleware(request: NextRequest) {
   );
 
   if (!matchedRoute) {
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
   const requiredPermissions = ROUTE_PERMISSIONS[matchedRoute];
-  const userPermissions = new Set<string>(ROLE_PERMISSIONS[role] ?? []);
 
-  const hasAccess = requiredPermissions.some((perm) => userPermissions.has(perm));
+  // Fetch user role from user_profiles
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/sign-up-login-screen';
+    return NextResponse.redirect(url);
+  }
+
+  const userRole = profile.role as string;
+
+  // Fetch user's permissions for their role
+  const { data: rolePerms } = await supabase
+    .from('role_permissions')
+    .select('permission_key')
+    .eq('role_name', userRole);
+
+  const permSet = new Set<string>(
+    (rolePerms || []).map((rp: { permission_key: string }) => rp.permission_key)
+  );
+
+  // Check if user has at least one of the required permissions
+  const hasAccess = requiredPermissions.some((perm) => permSet.has(perm));
 
   if (!hasAccess) {
+    // Redirect to dashboard (or the first accessible page)
     const url = request.nextUrl.clone();
     url.pathname = '/collateral-dashboard';
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {

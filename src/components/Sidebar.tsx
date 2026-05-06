@@ -235,13 +235,6 @@ const navGroups = [
         permission: PERMISSIONS.USER_MANAGEMENT_VIEW,
       },
       {
-        label: 'Users, Roles & Permissions',
-        icon: ShieldCheck,
-        href: '/settings',
-        badge: null,
-        permission: PERMISSIONS.USER_MANAGEMENT_VIEW,
-      },
-      {
         label: 'System Settings',
         icon: Settings,
         href: '/settings',
@@ -271,11 +264,11 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
   const { hasPermission, loading: permsLoading } = usePermissions();
 
   const initials = userProfile?.initials ||
-    (userProfile?.fullName
-      ? userProfile.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    (userProfile?.full_name
+      ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
       : 'U');
 
-  const displayName = userProfile?.fullName || userProfile?.email || 'User';
+  const displayName = userProfile?.full_name || userProfile?.email || 'User';
   const displayRole = userProfile?.role
     ? userProfile.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
     : '';
