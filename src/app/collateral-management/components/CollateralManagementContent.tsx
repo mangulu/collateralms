@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Download, Filter, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus } from '@/lib/supabase/collateralService';
+import { documentService } from '@/lib/supabase/documentService';
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralTable from './CollateralTable';
 import CollateralFilters from './CollateralFilters';
@@ -112,7 +113,7 @@ export default function CollateralManagementContent() {
     }
   };
 
-  const handleSave = async (data: Partial<CollateralRecord>) => {
+  const handleSave = async (data: Partial<CollateralRecord>, pendingFiles?: { file: File; docType: string; notes: string }[]) => {
     if (editItem) {
       const updated = await collateralService.update(editItem.id, data);
       if (updated) {
@@ -134,6 +135,23 @@ export default function CollateralManagementContent() {
     } else {
       const created = await collateralService.create(data, user?.id ?? '');
       if (created) {
+        // Upload any pending files now that we have the record ID
+        if (pendingFiles && pendingFiles.length > 0 && user) {
+          const userName = user.email || 'Unknown';
+          await Promise.all(
+            pendingFiles.map((pf) =>
+              documentService.upload(
+                pf.file,
+                created.id,
+                created.collateralId,
+                pf.docType as any,
+                pf.notes,
+                user.id,
+                userName
+              )
+            )
+          );
+        }
         await auditService.log({
           collateralRecordId: created.id,
           collateralId: created.collateralId,
