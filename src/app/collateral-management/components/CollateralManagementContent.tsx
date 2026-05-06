@@ -113,42 +113,42 @@ export default function CollateralManagementContent() {
   };
 
   const handleSave = async (data: Partial<CollateralRecord>) => {
-    try {
-      if (editItem) {
-        const updated = await collateralService.update(editItem.id, data);
-        if (updated) {
-          await auditService.log({
-            collateralRecordId: editItem.id,
-            collateralId: editItem.collateralId,
-            action: 'updated',
-            message: `Collateral ${editItem.collateralId} updated`,
-            detail: `${editItem.obligor} · ${editItem.type}`,
-            performedBy: user?.id,
-            performedByName: user?.email ?? '',
-          });
-          toast.success('Collateral record updated');
-          setEditItem(null);
-          fetchData();
-        }
+    if (editItem) {
+      const updated = await collateralService.update(editItem.id, data);
+      if (updated) {
+        await auditService.log({
+          collateralRecordId: editItem.id,
+          collateralId: editItem.collateralId,
+          action: 'updated',
+          message: `Collateral ${editItem.collateralId} updated`,
+          detail: `${editItem.obligor} · ${editItem.type}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        });
+        toast.success('Collateral record updated');
+        setEditItem(null);
+        fetchData();
       } else {
-        const created = await collateralService.create(data, user?.id ?? '');
-        if (created) {
-          await auditService.log({
-            collateralRecordId: created.id,
-            collateralId: created.collateralId,
-            action: 'created',
-            message: `New collateral registered: ${created.collateralId}`,
-            detail: `${created.obligor} · ${created.type} · TSh ${created.valueTSh}`,
-            performedBy: user?.id,
-            performedByName: user?.email ?? '',
-          });
-          toast.success('Collateral record created');
-          setAddModalOpen(false);
-          fetchData();
-        }
+        throw new Error('Update failed. Please try again.');
       }
-    } catch {
-      toast.error('Failed to save collateral record');
+    } else {
+      const created = await collateralService.create(data, user?.id ?? '');
+      if (created) {
+        await auditService.log({
+          collateralRecordId: created.id,
+          collateralId: created.collateralId,
+          action: 'created',
+          message: `New collateral registered: ${created.collateralId}`,
+          detail: `${created.obligor} · ${created.type} · TSh ${created.valueTSh}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        });
+        toast.success('Collateral record created');
+        setAddModalOpen(false);
+        fetchData();
+      } else {
+        throw new Error('Failed to create record. Please try again.');
+      }
     }
   };
 

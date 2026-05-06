@@ -25,7 +25,7 @@ interface AddEditCollateralModalProps {
   open: boolean;
   editItem: Collateral | null;
   onClose: () => void;
-  onSave: (data: Partial<Collateral>) => void;
+  onSave: (data: Partial<Collateral>) => Promise<void>;
 }
 
 const collateralTypes = [
@@ -59,6 +59,7 @@ export default function AddEditCollateralModal({
     }
   }, [user]);
   const [activeTab, setActiveTab] = useState<ActiveTab>('details');
+  const [brelaError, setBrelaError] = useState<string | null>(null);
 
   // Document state
   const [documents, setDocuments] = useState<CollateralDocument[]>([]);
@@ -74,10 +75,36 @@ export default function AddEditCollateralModal({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
   const requiresPerfection = watch('requiresPerfection');
+  const registryValue = watch('registry');
+  const registrationDateValue = watch('registrationDate');
+
+  // Auto-calculate BRELA 42-day perfection deadline when execution date or registry changes
+  useEffect(() => {
+    if (
+      requiresPerfection &&
+      registryValue === 'BRELA' &&
+      registrationDateValue
+    ) {
+      try {
+        const execDate = new Date(registrationDateValue);
+        if (!isNaN(execDate.getTime())) {
+          const deadline = new Date(execDate);
+          deadline.setDate(deadline.getDate() + 42);
+          const yyyy = deadline.getFullYear();
+          const mm = String(deadline.getMonth() + 1).padStart(2, '0');
+          const dd = String(deadline.getDate()).padStart(2, '0');
+          setValue('perfectionDeadline', `${yyyy}-${mm}-${dd}`, { shouldValidate: false });
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, [registryValue, registrationDateValue, requiresPerfection, setValue]);
 
   // Load documents when editing
   useEffect(() => {
@@ -97,6 +124,7 @@ export default function AddEditCollateralModal({
       setActiveTab('details');
       setPendingFiles([]);
       setUploadError(null);
+      setBrelaError(null);
     }
   }, [open]);
 
@@ -199,7 +227,6 @@ export default function AddEditCollateralModal({
   };
 
   const onSubmit = async (data: FormData) => {
-    await new Promise((r) => setTimeout(r, 300));
     const savedData: Partial<Collateral> = {
       obligor: data.obligor,
       obligorId: data.obligorId,
@@ -219,7 +246,18 @@ export default function AddEditCollateralModal({
       await uploadPendingFiles(editItem.id, editItem.collateralId);
     }
 
-    onSave(savedData);
+    try {
+      await onSave(savedData);
+    } catch (err: any) {
+      // Surface DB-level BRELA validation errors in the form
+      const msg: string = err?.message ?? '';
+      const brelaMatch = msg.match(/BRELA_VALIDATION:\s*(.+)/);
+      if (brelaMatch) {
+        setBrelaError(brelaMatch[1].trim());
+      } else {
+        setBrelaError('Failed to save collateral record. Please check your inputs and try again.');
+      }
+    }
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -250,6 +288,20 @@ export default function AddEditCollateralModal({
       }
       size="xl"
     >
+      {/* BRELA / DB Validation Error Banner */}
+      {brelaError && (
+        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+          <AlertCircle size={15} className="text-destructive mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-600 text-destructive">Validation Error</p>
+            <p className="text-xs text-destructive mt-0.5">{brelaError}</p>
+          </div>
+          <button type="button" onClick={() => setBrelaError(null)} className="text-destructive/60 hover:text-destructive">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex border-b border-border mb-6 -mt-1">
         <button
