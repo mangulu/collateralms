@@ -1,16 +1,16 @@
 /**
  * RBAC — Role-Based Access Control
  *
- * Permissions are seeded in the DB (roles / permissions / role_permissions tables).
+ * Permissions are managed locally (localUserStore).
  * This file provides:
  *  - Static permission key constants
  *  - Screen-to-permission mapping for UI guards
- *  - A hook to load the current user's permissions from Supabase
+ *  - A hook to load the current user's permissions from the local session
  *  - Helper functions used by UI components
  */
 
-import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, useCallback } from 'react';
+import { getLocalSession, getPermissionsForRole, getRoles, getPermissions, createLocalRole, deleteLocalRole, setRolePermissions, LocalRole, LocalPermission,  } from '@/lib/localUserStore';
 
 // ─── Permission Keys ──────────────────────────────────────────────────────────
 
@@ -137,48 +137,22 @@ export function usePermissions(): UsePermissionsResult {
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
-  const loadPermissions = useCallback(async () => {
+  const loadPermissions = useCallback(() => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
+      const session = getLocalSession();
+      if (!session) {
         setPermissions(new Set());
         setRole(null);
         setLoading(false);
         return;
       }
-
-      // Fetch user role from user_profiles
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile) {
-        setLoading(false);
-        return;
-      }
-
-      const userRole = profile.role as string;
+      const userRole = session.role;
       setRole(userRole);
-
-      // Fetch permissions for this role
-      const { data: rolePerms } = await supabase
-        .from('role_permissions')
-        .select('permission_key')
-        .eq('role_name', userRole);
-
-      const permSet = new Set<string>(
-        (rolePerms || []).map((rp: { permission_key: string }) => rp.permission_key)
-      );
-      setPermissions(permSet);
+      const permKeys = getPermissionsForRole(userRole);
+      setPermissions(new Set(permKeys));
     } catch {
-      // Silently fail — no permissions
+      // Silently fail
     } finally {
       setLoading(false);
     }
@@ -186,12 +160,6 @@ export function usePermissions(): UsePermissionsResult {
 
   useEffect(() => {
     loadPermissions();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadPermissions();
-    });
-
-    return () => subscription.unsubscribe();
   }, [loadPermissions]);
 
   const isSystemAdmin = role === 'system_admin';
@@ -206,47 +174,28 @@ export function usePermissions(): UsePermissionsResult {
     isSystemAdmin,
     isCreditOfficer,
     isLegalOfficer,
-    // Derived convenience flags
     canDelete: isSystemAdmin || isLegalOfficer,
     canReviewPerfection: isSystemAdmin || isLegalOfficer,
     canSubmitPerfection: isSystemAdmin || isCreditOfficer,
   };
 }
 
-// ─── Role Service ─────────────────────────────────────────────────────────────
+// ─── Role Service (local) ─────────────────────────────────────────────────────
 
 export async function fetchRoles(): Promise<RoleDefinition[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('roles')
-    .select('*')
-    .order('is_system', { ascending: false })
-    .order('created_at', { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((r) => ({
+  return getRoles().map((r: LocalRole) => ({
     id: r.id,
     name: r.name,
     label: r.label,
     description: r.description,
-    isSystem: r.is_system,
+    isSystem: r.isSystem,
     color: r.color,
-    createdAt: r.created_at,
+    createdAt: r.createdAt,
   }));
 }
 
 export async function fetchPermissions(): Promise<PermissionDefinition[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('permissions')
-    .select('*')
-    .order('module', { ascending: true })
-    .order('label', { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((p) => ({
+  return getPermissions().map((p: LocalPermission) => ({
     id: p.id,
     key: p.key,
     label: p.label,
@@ -256,14 +205,7 @@ export async function fetchPermissions(): Promise<PermissionDefinition[]> {
 }
 
 export async function fetchRolePermissions(roleName: string): Promise<string[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('role_permissions')
-    .select('permission_key')
-    .eq('role_name', roleName);
-
-  if (error) throw error;
-  return (data || []).map((rp) => rp.permission_key);
+  return getPermissionsForRole(roleName);
 }
 
 export async function createRole(
@@ -273,21 +215,9 @@ export async function createRole(
   color: string,
   permissionKeys: string[]
 ): Promise<void> {
-  const supabase = createClient();
-
-  const { error: roleError } = await supabase.from('roles').insert({
-    name,
-    label,
-    description,
-    color,
-    is_system: false,
-  });
-  if (roleError) throw roleError;
-
+  createLocalRole({ name, label, description, color, isSystem: false });
   if (permissionKeys.length > 0) {
-    const rows = permissionKeys.map((key) => ({ role_name: name, permission_key: key }));
-    const { error: permError } = await supabase.from('role_permissions').insert(rows);
-    if (permError) throw permError;
+    setRolePermissions(name, permissionKeys);
   }
 }
 
@@ -295,27 +225,11 @@ export async function updateRolePermissions(
   roleName: string,
   permissionKeys: string[]
 ): Promise<void> {
-  const supabase = createClient();
-
-  // Delete existing
-  const { error: delError } = await supabase
-    .from('role_permissions')
-    .delete()
-    .eq('role_name', roleName);
-  if (delError) throw delError;
-
-  // Insert new
-  if (permissionKeys.length > 0) {
-    const rows = permissionKeys.map((key) => ({ role_name: roleName, permission_key: key }));
-    const { error: insError } = await supabase.from('role_permissions').insert(rows);
-    if (insError) throw insError;
-  }
+  setRolePermissions(roleName, permissionKeys);
 }
 
 export async function deleteRole(roleName: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.from('roles').delete().eq('name', roleName);
-  if (error) throw error;
+  deleteLocalRole(roleName);
 }
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -332,13 +246,23 @@ export function getRoleColorClass(color: string): string {
   return map[color] ?? 'bg-gray-100 text-gray-700';
 }
 
-function getRoleColorClasses(...args: any[]): any {
-  // eslint-disable-next-line no-console
-  console.warn('Placeholder: getRoleColorClasses is not implemented yet.', args);
-  return null;
+export function getRoleColorClasses(color: string): { bg: string; text: string } {
+  const map: Record<string, { bg: string; text: string }> = {
+    blue: { bg: 'bg-blue-100', text: 'text-blue-700' },
+    purple: { bg: 'bg-purple-100', text: 'text-purple-700' },
+    amber: { bg: 'bg-amber-100', text: 'text-amber-700' },
+    green: { bg: 'bg-green-100', text: 'text-green-700' },
+    red: { bg: 'bg-red-100', text: 'text-red-700' },
+    gray: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  };
+  return map[color] ?? { bg: 'bg-gray-100', text: 'text-gray-700' };
 }
 
-export { getRoleColorClasses };
-const ROLE_COLOR_OPTIONS: any = null;
-
-export { ROLE_COLOR_OPTIONS };
+export const ROLE_COLOR_OPTIONS = [
+  { value: 'blue', label: 'Blue' },
+  { value: 'purple', label: 'Purple' },
+  { value: 'amber', label: 'Amber' },
+  { value: 'green', label: 'Green' },
+  { value: 'red', label: 'Red' },
+  { value: 'gray', label: 'Gray' },
+];

@@ -18,7 +18,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { fetchRoles, getRoleColorClasses, RoleDefinition } from '@/lib/rbac';
-import { createClient } from '@/lib/supabase/client';
+import { getScreenAccessMatrix, saveScreenAccessMatrix } from '@/lib/localUserStore';
 
 // ─── Screen Definitions ───────────────────────────────────────────────────────
 
@@ -101,8 +101,6 @@ function matrixKey(screenId: string, roleName: string, actionKey: string): strin
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ScreenAccessContent() {
-  const supabase = createClient();
-
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [matrix, setMatrix] = useState<AccessMatrix>({});
   const [originalMatrix, setOriginalMatrix] = useState<AccessMatrix>({});
@@ -120,30 +118,12 @@ export default function ScreenAccessContent() {
     else setRefreshing(true);
 
     try {
-      const [rolesData, accessResult] = await Promise.all([
-        fetchRoles(),
-        supabase.from('screen_access_rules').select('*'),
-      ]);
-
-      const { data: accessRows, error } = accessResult;
-
+      const rolesData = await fetchRoles();
       setRoles(rolesData);
 
-      if (error) {
-        // Table may not exist yet — start with empty matrix
-        const emptyMatrix: AccessMatrix = {};
-        setMatrix(emptyMatrix);
-        setOriginalMatrix(emptyMatrix);
-        return;
-      }
-
-      const built: AccessMatrix = {};
-      for (const row of accessRows || []) {
-        const key = matrixKey(row.screen_id, row.role_name, row.action_key);
-        built[key] = row.is_allowed;
-      }
-      setMatrix(built);
-      setOriginalMatrix(built);
+      const stored = getScreenAccessMatrix();
+      setMatrix(stored);
+      setOriginalMatrix(stored);
     } catch (err: any) {
       showToast('Failed to load access rules: ' + err.message, 'error');
     } finally {
@@ -203,32 +183,10 @@ export default function ScreenAccessContent() {
 
   // ─── Save ──────────────────────────────────────────────────────────────────
 
-  async function handleSave() {
+  function handleSave() {
     setSaving(true);
     try {
-      // Build upsert rows for all defined cells
-      const rows: { screen_id: string; role_name: string; action_key: string; is_allowed: boolean }[] = [];
-
-      for (const screen of ALL_SCREENS) {
-        for (const role of roles) {
-          for (const action of screen.actions) {
-            const key = matrixKey(screen.id, role.name, action.key);
-            rows.push({
-              screen_id: screen.id,
-              role_name: role.name,
-              action_key: action.key,
-              is_allowed: matrix[key] ?? false,
-            });
-          }
-        }
-      }
-
-      const { error } = await supabase
-        .from('screen_access_rules')
-        .upsert(rows, { onConflict: 'screen_id,role_name,action_key' });
-
-      if (error) throw error;
-
+      saveScreenAccessMatrix(matrix);
       setOriginalMatrix({ ...matrix });
       setHasChanges(false);
       showToast('Screen access rules saved successfully.', 'success');
@@ -368,7 +326,7 @@ export default function ScreenAccessContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {groupScreens.map((screen, si) => (
+                    {groupScreens.map((screen, si) =>
                       screen.actions.map((action, ai) => {
                         const ActionIcon = action.icon;
                         const isFirstRow = ai === 0;
@@ -424,7 +382,7 @@ export default function ScreenAccessContent() {
                           </tr>
                         );
                       })
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>

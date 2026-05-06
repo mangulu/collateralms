@@ -1,8 +1,16 @@
-
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import {
+  authenticateUser,
+  getLocalSession,
+  setLocalSession,
+  clearLocalSession,
+  getUserById,
+  LocalUser,
+  LocalSession,
+  initLocalStore,
+} from '@/lib/localUserStore';
 
 const AuthContext = createContext<any>({});
 
@@ -15,111 +23,70 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
-  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<LocalUser | null>(null);
+  const [session, setSession] = useState<LocalSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const supabase = createClient();
+  const [userProfile, setUserProfile] = useState<LocalUser | null>(null);
 
-  // Load user profile including role
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      setUserProfile(data ?? null);
-    } catch {
-      setUserProfile(null);
-    }
-  };
-
+  // Restore session from localStorage on mount
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserProfile(session.user.id).finally(() => setLoading(false));
+    initLocalStore();
+    const stored = getLocalSession();
+    if (stored) {
+      const fullUser = getUserById(stored.userId);
+      if (fullUser && fullUser.isActive) {
+        setSession(stored);
+        setUser(fullUser);
+        setUserProfile(fullUser);
       } else {
-        setLoading(false);
+        // Session references a deleted/inactive user — clear it
+        clearLocalSession();
       }
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserProfile(session.user.id).finally(() => setLoading(false));
-      } else {
-        setUserProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    }
+    setLoading(false);
   }, []);
 
-  // Email/Password Sign Up
-  const signUp = async (email: string, password: string, metadata = {}) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: (metadata as any)?.fullName || '',
-          avatar_url: (metadata as any)?.avatarUrl || ''
-        },
-        emailRedirectTo: `${window.location.origin}/auth/callback`
-      }
-    });
-    if (error) throw error;
-    return data;
+  // Sign In — validates against local user store
+  const signIn = async (email: string, password: string) => {
+    const matched = authenticateUser(email, password);
+    if (!matched) {
+      throw new Error('Invalid email or password.');
+    }
+    setLocalSession(matched);
+    const newSession = getLocalSession()!;
+    setSession(newSession);
+    setUser(matched);
+    setUserProfile(matched);
+    return matched;
   };
 
-  // Email/Password Sign In
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) throw error;
-    return data;
+  // Sign Up — not used in local mode; kept for API compatibility
+  const signUp = async (
+    _email: string,
+    _password: string,
+    _metadata = {}
+  ): Promise<void> => {
+    throw new Error(
+      'Self-registration is disabled. Contact your system administrator to create an account.'
+    );
   };
 
   // Sign Out
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    clearLocalSession();
+    setSession(null);
+    setUser(null);
+    setUserProfile(null);
   };
 
   // Get Current User
-  const getCurrentUser = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    return user;
-  };
+  const getCurrentUser = async () => user;
 
-  // Check if Email is Verified
-  const isEmailVerified = () => {
-    return user?.email_confirmed_at !== null;
-  };
+  // Email verification — always true in local mode
+  const isEmailVerified = () => true;
 
-  // Get User Profile from Database
-  const getUserProfile = async () => {
-    if (!user) return null;
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    if (error) throw error;
-    return data;
-  };
+  // Get User Profile
+  const getUserProfile = async () => userProfile;
 
   // Convenience: current user's role
   const userRole: string | null = userProfile?.role ?? null;
@@ -139,7 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signOut,
     getCurrentUser,
     isEmailVerified,
-    getUserProfile
+    getUserProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
