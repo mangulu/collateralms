@@ -44,6 +44,7 @@ export interface AuditLogFilters {
   dateFrom?: string;
   dateTo?: string;
   performedBy?: string;
+  collateralId?: string;
 }
 
 // ─── Action type constants ────────────────────────────────────────────────────
@@ -210,6 +211,12 @@ export const auditLogService = {
       end.setDate(end.getDate() + 1);
       query = query.lt('created_at', end.toISOString());
     }
+    if (filters?.performedBy && filters.performedBy !== 'All') {
+      query = query.eq('performed_by_name', filters.performedBy);
+    }
+    if (filters?.collateralId && filters.collateralId !== 'All') {
+      query = query.eq('collateral_id', filters.collateralId);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
@@ -260,6 +267,18 @@ export const auditLogService = {
       .order('event_category');
     return Array.from(
       new Set((data ?? []).map((r: any) => r.event_category as string).filter(Boolean))
+    );
+  },
+
+  async getDistinctCollateralIds(): Promise<string[]> {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('audit_logs')
+      .select('collateral_id')
+      .not('collateral_id', 'is', null)
+      .order('collateral_id');
+    return Array.from(
+      new Set((data ?? []).map((r: any) => r.collateral_id as string).filter(Boolean))
     );
   },
 
