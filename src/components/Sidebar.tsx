@@ -239,7 +239,7 @@ const navGroups = [
         icon: ShieldCheck,
         href: '/settings',
         badge: null,
-        permission: PERMISSIONS.ROLES_VIEW,
+        permission: PERMISSIONS.USER_MANAGEMENT_VIEW,
       },
       {
         label: 'System Settings',
