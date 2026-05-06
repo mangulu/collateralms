@@ -134,8 +134,8 @@ BEGIN
     -- Insert loan links for collateral 1
     INSERT INTO public.collateral_loan_links (id, collateral_id, loan_account_id, beneficiary_id, beneficiary_name, charge_rank, allocated_amount, start_date, status, created_by)
     VALUES
-      (link1_id, col1_id, 'LN-2024-001234', 'CUST-56789', 'John Doe', 1, 200000000, '2024-01-01', 'ACTIVE', existing_user_id),
-      (link2_id, col1_id, 'LN-2024-005678', 'CUST-90123', 'Jane Smith', 2, 100000000, '2024-02-01', 'ACTIVE', existing_user_id)
+      (link1_id, col1_id, 'LN-2024-001234', 'CUST-56789', 'Lisa Alkado', 1, 200000000, '2024-01-01', 'ACTIVE', existing_user_id),
+      (link2_id, col1_id, 'LN-2024-005678', 'CUST-90123', 'Cornel Mangulu', 2, 100000000, '2024-02-01', 'ACTIVE', existing_user_id)
     ON CONFLICT (id) DO NOTHING;
 
     -- Insert charge registry entries for collateral 1
