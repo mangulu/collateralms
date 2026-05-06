@@ -60,7 +60,8 @@ const ACTION_STYLES: Record<string, { bg: string; text: string; dot: string; lab
 } satisfies Record<string, { bg: string; text: string; dot: string; label: string }>;
 
 function getActionStyle(action: string): { bg: string; text: string; dot: string; label: string } {
-  return (ACTION_STYLES as Record<string, { bg: string; text: string; dot: string; label: string }>)[action] ?? { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400', label: action.replace(/_/g, ' ') };
+  const safeAction = action ?? '';
+  return (ACTION_STYLES as Record<string, { bg: string; text: string; dot: string; label: string }>)[safeAction] ?? { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400', label: safeAction.replace(/_/g, ' ') };
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
