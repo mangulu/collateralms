@@ -365,7 +365,7 @@ export function getLocalSession(): LocalSession | null {
   }
 }
 
-export function setLocalSession(user: LocalUser): void {
+export function setLocalSession(user: LocalUser, rememberMe = false): void {
   const session: LocalSession = {
     userId: user.id,
     email: user.email,
@@ -377,7 +377,8 @@ export function setLocalSession(user: LocalUser): void {
   save(SESSION_KEY, session);
   // Also write a cookie so the middleware (server-side) can read the session
   if (isBrowser()) {
-    document.cookie = `${SESSION_COOKIE}=${encodeURIComponent(JSON.stringify(session))}; path=/; SameSite=Lax`;
+    const maxAge = rememberMe ? '; Max-Age=28800' : ''; // 8 hours if rememberMe
+    document.cookie = `${SESSION_COOKIE}=${encodeURIComponent(JSON.stringify(session))}; path=/; SameSite=Lax${maxAge}`;
   }
 }
 

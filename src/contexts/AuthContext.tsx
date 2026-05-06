@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   authenticateUser,
   getLocalSession,
@@ -23,6 +24,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const router = useRouter();
   const [user, setUser] = useState<LocalUser | null>(null);
   const [session, setSession] = useState<LocalSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,12 +49,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // Sign In — validates against local user store
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     const matched = authenticateUser(email, password);
     if (!matched) {
       throw new Error('Invalid email or password.');
     }
-    setLocalSession(matched);
+    setLocalSession(matched, rememberMe);
     const newSession = getLocalSession()!;
     setSession(newSession);
     setUser(matched);
@@ -77,6 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSession(null);
     setUser(null);
     setUserProfile(null);
+    router.push('/sign-up-login-screen');
   };
 
   // Get Current User

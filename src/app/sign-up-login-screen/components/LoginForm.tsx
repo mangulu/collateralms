@@ -56,11 +56,10 @@ export default function LoginForm() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await signIn(data.email, data.password);
+      await signIn(data.email, data.password, data.rememberMe);
       const cred = mockCredentials.find((c) => c.email === data.email);
       toast.success(`Welcome back${cred ? ` — signed in as ${cred.role}` : ''}`);
       router.push('/collateral-dashboard');
-      router.refresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Invalid credentials — please try again');
     } finally {
