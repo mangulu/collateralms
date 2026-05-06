@@ -401,4 +401,48 @@ export const dashboardService = {
       throw err;
     }
   },
+
+  async getPerfectionTrend(): Promise<{ month: string; perfected: number; submitted: number; overdue: number }[]> {
+    const supabase = createClient();
+    try {
+      // Build last 6 months array
+      const months: { key: string; label: string; start: string; end: string }[] = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+        const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
+        const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+        months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label, start, end });
+      }
+
+      const earliest = months[0].start;
+
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('action, created_at')
+        .in('action', ['perfected', 'submitted', 'overdue'])
+        .gte('created_at', earliest)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return months.map((m) => ({ month: m.label, perfected: 0, submitted: 0, overdue: 0 }));
+      }
+
+      const rows = data ?? [];
+
+      return months.map((m) => {
+        const inMonth = rows.filter((r) => r.created_at >= m.start && r.created_at < m.end);
+        return {
+          month: m.label,
+          perfected: inMonth.filter((r) => r.action === 'perfected').length,
+          submitted: inMonth.filter((r) => r.action === 'submitted').length,
+          overdue: inMonth.filter((r) => r.action === 'overdue').length,
+        };
+      });
+    } catch (err: any) {
+      throw err;
+    }
+  },
 };
