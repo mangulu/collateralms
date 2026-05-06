@@ -90,6 +90,20 @@ BEGIN
   END IF;
 END $$;
 
+-- Ensure registry column exists (guard for partial prior runs)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'collateral_records'
+      AND column_name = 'registry'
+  ) THEN
+    ALTER TABLE public.collateral_records
+      ADD COLUMN registry public.registry_type DEFAULT 'N/A'::public.registry_type;
+  END IF;
+END $$;
+
 -- audit_logs
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
