@@ -45,6 +45,35 @@ const registryLinks: Record<string, string> = {
   TASAC: 'https://www.tasac.go.tz',
 };
 
+const statusOrder: CollateralStatus[] = [
+  'Draft', 'Submitted', 'Under Review', 'Perfected',
+];
+
+function getPerfectionTimeline(status: CollateralStatus) {
+  const steps = [
+    { step: 'Security Document Executed', statuses: ['Draft', 'Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released', 'Overdue', 'Rejected'] },
+    { step: 'Collateral Registered in CMS', statuses: ['Draft', 'Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released', 'Overdue', 'Rejected'] },
+    { step: 'Legal Review & Approval', statuses: ['Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released'] },
+    { step: 'Registry Submission Filed', statuses: ['Under Review', 'Perfected', 'Monitoring', 'Released'] },
+    { step: 'Registry Confirmation Received', statuses: ['Perfected', 'Monitoring', 'Released'] },
+    { step: 'Perfection Confirmed', statuses: ['Perfected', 'Monitoring', 'Released'] },
+  ];
+  return steps.map((s) => ({ step: s.step, done: s.statuses.includes(status) }));
+}
+
+function formatDateTime(iso?: string): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 interface DetailRowProps {
   label: string;
   value: React.ReactNode;
@@ -69,15 +98,6 @@ function DetailRow({ label, value, icon: Icon }: DetailRowProps) {
   );
 }
 
-const perfectionTimeline = [
-  { step: 'Security Document Executed', done: true },
-  { step: 'Collateral Registered in CMS', done: true },
-  { step: 'Legal Review & Approval', done: true },
-  { step: 'Registry Submission Filed', done: false },
-  { step: 'Registry Confirmation Received', done: false },
-  { step: 'Perfection Confirmed', done: false },
-];
-
 export default function CollateralDetailModal({
   open,
   item,
@@ -96,6 +116,7 @@ export default function CollateralDetailModal({
     item.daysToDeadline <= 7;
 
   const registryUrl = registryLinks[item.registry];
+  const perfectionTimeline = getPerfectionTimeline(item.status);
 
   return (
     <Modal
@@ -309,7 +330,11 @@ export default function CollateralDetailModal({
       {/* Footer Actions */}
       <div className="flex items-center justify-between pt-5 mt-5 border-t border-border">
         <p className="text-xs text-muted-foreground">
-          Last modified: 25 Apr 2026, 10:14 AM · by A. Mwangi
+          {item.updatedAt
+            ? `Last modified: ${formatDateTime(item.updatedAt)}`
+            : item.createdAt
+            ? `Created: ${formatDateTime(item.createdAt)}`
+            : 'No modification date available'}
         </p>
         <div className="flex items-center gap-2">
           <button
