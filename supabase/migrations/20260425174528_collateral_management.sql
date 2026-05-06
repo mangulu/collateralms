@@ -40,6 +40,20 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure role column exists on user_profiles (guard for DROP TYPE public.user_role CASCADE on partial prior runs)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'user_profiles'
+      AND column_name = 'role'
+  ) THEN
+    ALTER TABLE public.user_profiles
+      ADD COLUMN role public.user_role DEFAULT 'credit_officer'::public.user_role;
+  END IF;
+END $$;
+
 -- collateral_records
 CREATE TABLE IF NOT EXISTS public.collateral_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
