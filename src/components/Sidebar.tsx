@@ -235,6 +235,13 @@ const navGroups = [
         permission: PERMISSIONS.USER_MANAGEMENT_VIEW,
       },
       {
+        label: 'Users, Roles & Permissions',
+        icon: ShieldCheck,
+        href: '/settings',
+        badge: null,
+        permission: PERMISSIONS.ROLES_VIEW,
+      },
+      {
         label: 'System Settings',
         icon: Settings,
         href: '/settings',
