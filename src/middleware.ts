@@ -72,9 +72,14 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: any = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data?.user ?? null;
+  } catch {
+    // Network error (fetch failed / status 0) — treat as unauthenticated
+    user = null;
+  }
 
   const pathname = request.nextUrl.pathname;
 
@@ -111,11 +116,17 @@ export async function middleware(request: NextRequest) {
   const requiredPermissions = ROUTE_PERMISSIONS[matchedRoute];
 
   // Fetch user role from user_profiles
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+  let profile: any = null;
+  try {
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    profile = data ?? null;
+  } catch {
+    profile = null;
+  }
 
   if (!profile) {
     const url = request.nextUrl.clone();
@@ -126,13 +137,19 @@ export async function middleware(request: NextRequest) {
   const userRole = profile.role as string;
 
   // Fetch user's permissions for their role
-  const { data: rolePerms } = await supabase
-    .from('role_permissions')
-    .select('permission_key')
-    .eq('role_name', userRole);
+  let rolePerms: any[] = [];
+  try {
+    const { data } = await supabase
+      .from('role_permissions')
+      .select('permission_key')
+      .eq('role_name', userRole);
+    rolePerms = data ?? [];
+  } catch {
+    rolePerms = [];
+  }
 
   const permSet = new Set<string>(
-    (rolePerms || []).map((rp: { permission_key: string }) => rp.permission_key)
+    rolePerms.map((rp: { permission_key: string }) => rp.permission_key)
   );
 
   // Check if user has at least one of the required permissions
