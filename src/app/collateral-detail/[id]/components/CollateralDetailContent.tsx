@@ -392,7 +392,7 @@ function AuditTrailSection({ collateral }: { collateral: CollateralRecord }) {
           {entries.map((entry) => (
             <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-muted/20">
               <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded shrink-0 mt-0.5 ${actionColors[entry.action] ?? 'bg-gray-100 text-gray-600'}`}>
-                {entry.action.replace(/_/g, ' ').toUpperCase()}
+                {(entry.action ?? '').replace(/_/g, ' ').toUpperCase()}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-500 text-foreground">{entry.message}</p>
