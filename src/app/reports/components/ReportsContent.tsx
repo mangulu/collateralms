@@ -4,7 +4,6 @@ import { Download, RefreshCw, CheckCircle2, AlertTriangle, CalendarDays, Chevron
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, PieChart, Pie, Cell, AreaChart, Area,  } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { type CollateralRecord } from '@/lib/supabase/collateralService';
-import { mockCollateral } from '@/app/collateral-management/components/collateralData';
 import Icon from '@/components/ui/AppIcon';
 import { collateralLinkService } from '@/lib/supabase/collateralLinkService';
 
@@ -92,7 +91,7 @@ function urgencyFromDays(days: number | null): 'overdue' | 'critical' | 'warning
   return 'ok';
 }
 
-function complianceFromRecord(r: CollateralRecord | typeof mockCollateral[0]): ComplianceSummaryRow['complianceStatus'] {
+function complianceFromRecord(r: CollateralRecord): ComplianceSummaryRow['complianceStatus'] {
   const s = (r as any).status as string;
   if (s === 'Perfected' || s === 'Monitoring' || s === 'Released') return 'Compliant';
   if (s === 'Overdue' || s === 'Rejected') return 'Non-Compliant';
@@ -370,25 +369,22 @@ export default function ReportsContent() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      let source: any[] = [];
-      if (!error && data && data.length > 0) {
-        source = data.map((row: any) => ({
-          id: row.id,
-          collateralId: row.collateral_id,
-          obligor: row.obligor,
-          type: row.collateral_type,
-          registry: row.registry,
-          status: row.status,
-          valueTSh: row.value_tsh,
-          facilityId: row.facility_id,
-          perfectionDeadline: row.perfection_deadline ?? '',
-          daysToDeadline: row.days_to_deadline ?? null,
-          assignedOfficer: row.assigned_officer ?? '—',
-          requiresPerfection: row.requires_perfection ?? false,
-        }));
-      } else {
-        source = mockCollateral;
-      }
+      if (error) throw error;
+
+      const source = (data ?? []).map((row: any) => ({
+        id: row.id,
+        collateralId: row.collateral_id,
+        obligor: row.obligor,
+        type: row.collateral_type,
+        registry: row.registry,
+        status: row.status,
+        valueTSh: row.value_tsh,
+        facilityId: row.facility_id,
+        perfectionDeadline: row.perfection_deadline ?? '',
+        daysToDeadline: row.days_to_deadline ?? null,
+        assignedOfficer: row.assigned_officer ?? '—',
+        requiresPerfection: row.requires_perfection ?? false,
+      }));
 
       const rows: ComplianceSummaryRow[] = source.map((r: any) => ({
         id: r.id,
@@ -434,21 +430,9 @@ export default function ReportsContent() {
         }))
         .filter(e => e.date !== '');
       setDeadlineEvents(events);
-    } catch {
-      const rows: ComplianceSummaryRow[] = mockCollateral.map((r: any) => ({
-        id: r.id,
-        collateralId: r.id,
-        obligor: r.obligor,
-        type: r.type,
-        registry: r.registry,
-        status: r.status,
-        valueTSh: r.valueTSh,
-        perfectionDeadline: r.perfectionDeadline ?? '',
-        daysToDeadline: r.daysToDeadline ?? null,
-        assignedOfficer: r.assignedOfficer,
-        complianceStatus: complianceFromRecord(r),
-      }));
-      setRecords(rows);
+    } catch (err: any) {
+      console.error('Failed to load reports data:', err?.message);
+      setRecords([]);
     } finally {
       setLoading(false);
     }

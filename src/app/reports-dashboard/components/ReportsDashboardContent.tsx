@@ -4,7 +4,6 @@ import { RefreshCw, FileText, Shield, TrendingUp, Users, Clock, ChevronDown, Che
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line,  } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { auditLogService, type AuditLogEntry } from '@/lib/supabase/auditLogService';
-import { mockCollateral } from '@/app/collateral-management/components/collateralData';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -210,48 +209,24 @@ export default function ReportsDashboardContent() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      let source: any[] = [];
-      if (!error && data && data.length > 0) {
-        source = data.map((row: any) => ({
-          id: row.id,
-          collateralId: row.collateral_id,
-          obligor: row.obligor,
-          type: row.collateral_type,
-          registry: row.registry,
-          status: row.status,
-          valueTSh: row.value_tsh,
-          perfectionDeadline: row.perfection_deadline ?? '',
-          daysToDeadline: row.days_to_deadline ?? null,
-          assignedOfficer: row.assigned_officer ?? '—',
-        }));
-      } else {
-        source = mockCollateral.map((r: any) => ({
-          id: r.id,
-          collateralId: r.collateralId ?? r.id,
-          obligor: r.obligor,
-          type: r.type,
-          registry: r.registry,
-          status: r.status,
-          valueTSh: r.valueTSh ?? '0',
-          perfectionDeadline: r.perfectionDeadline ?? '',
-          daysToDeadline: r.daysToDeadline ?? null,
-          assignedOfficer: r.assignedOfficer ?? '—',
-        }));
-      }
+      if (error) throw error;
+
+      const source = (data ?? []).map((row: any) => ({
+        id: row.id,
+        collateralId: row.collateral_id,
+        obligor: row.obligor,
+        type: row.collateral_type,
+        registry: row.registry,
+        status: row.status,
+        valueTSh: row.value_tsh,
+        perfectionDeadline: row.perfection_deadline ?? '',
+        daysToDeadline: row.days_to_deadline ?? null,
+        assignedOfficer: row.assigned_officer ?? '—',
+      }));
       setCollateral(source);
-    } catch {
-      setCollateral(mockCollateral.map((r: any) => ({
-        id: r.id,
-        collateralId: r.collateralId ?? r.id,
-        obligor: r.obligor,
-        type: r.type,
-        registry: r.registry,
-        status: r.status,
-        valueTSh: r.valueTSh ?? '0',
-        perfectionDeadline: r.perfectionDeadline ?? '',
-        daysToDeadline: r.daysToDeadline ?? null,
-        assignedOfficer: r.assignedOfficer ?? '—',
-      })));
+    } catch (err: any) {
+      console.error('Failed to load collateral for reports dashboard:', err?.message);
+      setCollateral([]);
     } finally {
       setLoading(false);
     }

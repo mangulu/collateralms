@@ -7,6 +7,7 @@ import { CollateralRecord as Collateral, CollateralWriteError } from '@/lib/supa
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { documentTypeSettingsService, DocumentTypeSetting } from '@/lib/supabase/documentTypeSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 interface FormData {
   obligor: string;
@@ -33,7 +34,6 @@ const collateralTypes = [
   'Mortgage', 'Debenture', 'Motor Vehicle', 'Shares (DSE)', 'FDR', 'Guarantee', 'Ship/Vessel',
 ];
 const registries = ['BRELA', 'Lands Registry', 'TRA', 'DSE', 'TASAC', 'N/A'];
-const officers = ['J. Kamau', 'A. Mwangi', 'P. Ochieng', 'S. Ndege'];
 
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -75,6 +75,33 @@ export default function AddEditCollateralModal({
   const [docTypeSettings, setDocTypeSettings] = useState<DocumentTypeSetting[]>([]);
   const [docTypeNames, setDocTypeNames] = useState<string[]>([]);
   const [requiredDocTypes, setRequiredDocTypes] = useState<DocumentTypeSetting[]>([]);
+
+  // Officers loaded from Supabase user_profiles
+  const [officers, setOfficers] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      const supabase = createClient();
+      supabase
+        .from('user_profiles')
+        .select('full_name')
+        .eq('is_active', true)
+        .order('full_name', { ascending: true })
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const names = data
+              .map((u: any) => u.full_name)
+              .filter((n: string) => n && n.trim().length > 0);
+            setOfficers(names.length > 0 ? names : ['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
+          } else {
+            setOfficers(['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
+          }
+        })
+        .catch(() => {
+          setOfficers(['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
+        });
+    }
+  }, [open]);
 
   const {
     register,
@@ -544,7 +571,6 @@ export default function AddEditCollateralModal({
                   {...register('assignedOfficer', { required: 'Assigned officer is required' })}
                 >
                   <option value="">Select officer...</option>
-                  {officers.map((o) => <option key={`officer-opt-${o}`} value={o}>{o}</option>)}
                 </select>
                 {errors.assignedOfficer && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{errors.assignedOfficer.message}</p>}
               </div>

@@ -1,11 +1,7 @@
 'use client';
-import React, { useState, useCallback } from 'react';
-import {
-  Download, FileText, Sheet, FileSpreadsheet, Filter, Calendar,
-  CheckCircle2, AlertTriangle, Clock, RefreshCw, ChevronDown, X,
-  BarChart2, Shield, ClipboardList, FolderOpen, TrendingUp, Building2,
-} from 'lucide-react';
-import { mockCollateral } from '@/app/collateral-management/components/collateralData';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Download, FileText, Sheet, FileSpreadsheet, Filter, Calendar, CheckCircle2, Clock, RefreshCw, ChevronDown, X, BarChart2, Shield, ClipboardList, FolderOpen, TrendingUp,  } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -27,6 +23,18 @@ interface ExportConfig {
   includeSummary: boolean;
   includeDetails: boolean;
   stakeholderMode: boolean;
+}
+
+interface CollateralRow {
+  id: string;
+  obligor: string;
+  type: string;
+  registry: string;
+  status: string;
+  valueTSh: string;
+  perfectionDeadline: string;
+  daysToDeadline: number | null;
+  assignedOfficer: string;
 }
 
 interface ReportOption {
@@ -113,8 +121,8 @@ function sixMonthsAgo(): string {
   return d.toISOString().slice(0, 10);
 }
 
-function generateCSV(config: ExportConfig): string {
-  const rows = mockCollateral.filter((c) => {
+function generateCSV(rows: CollateralRow[], config: ExportConfig): string {
+  const filtered = rows.filter((c) => {
     if (config.registries.length && !config.registries.includes(c.registry)) return false;
     if (config.statuses.length && !config.statuses.includes(c.status)) return false;
     if (config.collateralTypes.length && !config.collateralTypes.includes(c.type)) return false;
@@ -124,7 +132,7 @@ function generateCSV(config: ExportConfig): string {
   const headers = ['ID', 'Obligor', 'Type', 'Registry', 'Status', 'Value (TSh)', 'Perfection Deadline', 'Days to Deadline', 'Assigned Officer'];
   const lines = [
     headers.join(','),
-    ...rows.map((r) =>
+    ...filtered.map((r) =>
       [r.id, `"${r.obligor}"`, r.type, r.registry, r.status, r.valueTSh, r.perfectionDeadline, r.daysToDeadline ?? '', `"${r.assignedOfficer}"`].join(',')
     ),
   ];
@@ -205,8 +213,8 @@ function MultiSelect({
 
 // ─── Preview Stats ────────────────────────────────────────────────────────────
 
-function PreviewStats({ config }: { config: ExportConfig }) {
-  const filtered = mockCollateral.filter((c) => {
+function PreviewStats({ config, allRows }: { config: ExportConfig; allRows: CollateralRow[] }) {
+  const filtered = allRows.filter((c) => {
     if (config.registries.length && !config.registries.includes(c.registry)) return false;
     if (config.statuses.length && !config.statuses.includes(c.status)) return false;
     if (config.collateralTypes.length && !config.collateralTypes.includes(c.type)) return false;
@@ -216,7 +224,7 @@ function PreviewStats({ config }: { config: ExportConfig }) {
   const compliant = filtered.filter((c) => c.status === 'Perfected').length;
   const overdue = filtered.filter((c) => c.status === 'Overdue').length;
   const pending = filtered.filter((c) => ['Draft', 'Submitted', 'Under Review'].includes(c.status)).length;
-  const totalValue = filtered.reduce((sum, c) => sum + parseInt(c.valueTSh.replace(/,/g, ''), 10), 0);
+  const totalValue = filtered.reduce((sum, c) => sum + parseInt((c.valueTSh ?? '0').replace(/,/g, ''), 10), 0);
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -263,6 +271,34 @@ export default function ExportContent() {
 
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState<string | null>(null);
+  const [allRows, setAllRows] = useState<CollateralRow[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Load live collateral data from Supabase
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('collateral_records')
+      .select('collateral_id, obligor, collateral_type, registry, status, value_tsh, perfection_deadline, days_to_deadline, assigned_officer')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setAllRows(data.map((row: any) => ({
+            id: row.collateral_id,
+            obligor: row.obligor ?? '',
+            type: row.collateral_type ?? '',
+            registry: row.registry ?? '',
+            status: row.status ?? '',
+            valueTSh: row.value_tsh ?? '0',
+            perfectionDeadline: row.perfection_deadline ?? '',
+            daysToDeadline: row.days_to_deadline ?? null,
+            assignedOfficer: row.assigned_officer ?? '',
+          })));
+        }
+        setDataLoading(false);
+      })
+      .catch(() => setDataLoading(false));
+  }, []);
 
   const set = useCallback(<K extends keyof ExportConfig>(key: K, value: ExportConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
@@ -278,12 +314,12 @@ export default function ExportContent() {
     try {
       if (config.format === 'csv') {
         await new Promise((r) => setTimeout(r, 400));
-        const csv = generateCSV(config);
+        const csv = generateCSV(allRows, config);
         downloadBlob(csv, filename, 'text/csv');
         setExported(filename);
       } else if (config.format === 'excel') {
         await new Promise((r) => setTimeout(r, 400));
-        const csv = generateCSV(config).replace(/,/g, '\t');
+        const csv = generateCSV(allRows, config).replace(/,/g, '\t');
         downloadBlob(csv, filename, 'application/vnd.ms-excel');
         setExported(filename);
       } else {
@@ -321,13 +357,12 @@ export default function ExportContent() {
       }
     } catch (err: any) {
       console.error('Export failed:', err);
-      // Fallback: show error in banner area
       setExported(null);
       alert(`Export failed: ${err.message ?? 'Unknown error'}. Please try again.`);
     } finally {
       setExporting(false);
     }
-  }, [config]);
+  }, [config, allRows]);
 
   const selectedReport = REPORT_OPTIONS.find((r) => r.id === config.reportType)!;
   const selectedFormat = FORMAT_OPTIONS.find((f) => f.id === config.format)!;
@@ -344,7 +379,7 @@ export default function ExportContent() {
         </div>
         <button
           onClick={handleExport}
-          disabled={exporting}
+          disabled={exporting || dataLoading}
           className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-600 hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
         >
           {exporting ? (
@@ -448,51 +483,25 @@ export default function ExportContent() {
                 <Calendar size={15} className="text-primary" />
                 Date Range
               </h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-600 text-muted-foreground mb-1.5">From</label>
+                  <label className="block text-xs font-500 text-muted-foreground mb-1">From</label>
                   <input
                     type="date"
                     value={config.dateFrom}
-                    max={config.dateTo}
                     onChange={(e) => set('dateFrom', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-colors"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-600 text-muted-foreground mb-1.5">To</label>
+                  <label className="block text-xs font-500 text-muted-foreground mb-1">To</label>
                   <input
                     type="date"
                     value={config.dateTo}
-                    min={config.dateFrom}
-                    max={today()}
                     onChange={(e) => set('dateTo', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-white text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-colors"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
                 </div>
-              </div>
-              {/* Quick ranges */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {[
-                  { label: 'Last 30 days', days: 30 },
-                  { label: 'Last 90 days', days: 90 },
-                  { label: 'Last 6 months', days: 180 },
-                  { label: 'This year', days: 365 },
-                ].map(({ label, days }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => {
-                      const from = new Date();
-                      from.setDate(from.getDate() - days);
-                      set('dateFrom', from.toISOString().slice(0, 10));
-                      set('dateTo', today());
-                    }}
-                    className="px-2.5 py-1 rounded-md border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-colors"
-                  >
-                    {label}
-                  </button>
-                ))}
               </div>
             </section>
 
@@ -501,183 +510,76 @@ export default function ExportContent() {
               <h2 className="text-sm font-700 text-foreground mb-3 flex items-center gap-2">
                 <Filter size={15} className="text-primary" />
                 Filters
-                {(config.registries.length + config.statuses.length + config.collateralTypes.length) > 0 && (
-                  <span className="ml-auto text-xs text-primary font-600 bg-primary/10 px-2 py-0.5 rounded-full">
-                    {config.registries.length + config.statuses.length + config.collateralTypes.length} active
-                  </span>
-                )}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-600 text-muted-foreground mb-1.5">Registry</label>
-                  <MultiSelect
-                    label="Registries"
-                    options={REGISTRIES}
-                    selected={config.registries}
-                    onChange={(v) => set('registries', v)}
-                  />
+                  <label className="block text-xs font-500 text-muted-foreground mb-1">Registries</label>
+                  <MultiSelect label="Registries" options={REGISTRIES} selected={config.registries} onChange={(v) => set('registries', v)} />
                 </div>
                 <div>
-                  <label className="block text-xs font-600 text-muted-foreground mb-1.5">Status</label>
-                  <MultiSelect
-                    label="Statuses"
-                    options={STATUSES}
-                    selected={config.statuses}
-                    onChange={(v) => set('statuses', v)}
-                  />
+                  <label className="block text-xs font-500 text-muted-foreground mb-1">Statuses</label>
+                  <MultiSelect label="Statuses" options={STATUSES} selected={config.statuses} onChange={(v) => set('statuses', v)} />
                 </div>
                 <div>
-                  <label className="block text-xs font-600 text-muted-foreground mb-1.5">Collateral Type</label>
-                  <MultiSelect
-                    label="Types"
-                    options={COLLATERAL_TYPES}
-                    selected={config.collateralTypes}
-                    onChange={(v) => set('collateralTypes', v)}
-                  />
+                  <label className="block text-xs font-500 text-muted-foreground mb-1">Collateral Types</label>
+                  <MultiSelect label="Types" options={COLLATERAL_TYPES} selected={config.collateralTypes} onChange={(v) => set('collateralTypes', v)} />
                 </div>
               </div>
-              {(config.registries.length + config.statuses.length + config.collateralTypes.length) > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    set('registries', []);
-                    set('statuses', []);
-                    set('collateralTypes', []);
-                  }}
-                  className="mt-3 text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
-                >
-                  <X size={12} /> Clear all filters
-                </button>
-              )}
             </section>
 
-            {/* Content Options */}
+            {/* Options */}
             <section className="bg-white rounded-xl border border-border p-5">
               <h2 className="text-sm font-700 text-foreground mb-3 flex items-center gap-2">
-                <Building2 size={15} className="text-primary" />
-                Content Options
+                <Shield size={15} className="text-primary" />
+                Report Options
               </h2>
-              <div className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { key: 'stakeholderMode' as const, label: 'Stakeholder Mode', desc: 'Clean formatting with executive summary, logos, and cover page' },
-                  { key: 'includeSummary' as const, label: 'Include Summary Section', desc: 'KPI totals, perfection rate, and key metrics at the top' },
-                  { key: 'includeCharts' as const, label: 'Include Charts & Visuals', desc: 'Bar charts, trend lines, and compliance gauges (PDF only)' },
-                  { key: 'includeDetails' as const, label: 'Include Detail Records', desc: 'Full row-level data table for all matching collateral' },
-                ].map(({ key, label, desc }) => (
-                  <label key={key} className="flex items-start gap-3 cursor-pointer group">
-                    <div className="relative mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={config[key] as boolean}
-                        onChange={(e) => set(key, e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div
-                        className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                          config[key] ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50'
-                        }`}
-                      >
-                        {config[key] && (
-                          <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-                            <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-500 text-foreground leading-tight">{label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-                    </div>
+                  { key: 'includeCharts' as const, label: 'Include Charts' },
+                  { key: 'includeSummary' as const, label: 'Include Summary' },
+                  { key: 'includeDetails' as const, label: 'Include Details' },
+                  { key: 'stakeholderMode' as const, label: 'Stakeholder Mode' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={config[key] as boolean}
+                      onChange={(e) => set(key, e.target.checked)}
+                      className="accent-primary w-4 h-4"
+                    />
+                    <span className="text-sm text-foreground group-hover:text-primary transition-colors">{label}</span>
                   </label>
                 ))}
               </div>
             </section>
           </div>
 
-          {/* Right: Preview panel */}
+          {/* Right: Preview */}
           <div className="flex flex-col gap-5">
-            {/* Export Summary Card */}
-            <div className="bg-white rounded-xl border border-border p-5 sticky top-0">
-              <h2 className="text-sm font-700 text-foreground mb-4">Export Preview</h2>
-
-              {/* Selected report */}
-              <div className={`flex items-center gap-3 p-3 rounded-lg ${selectedReport.bg} mb-4`}>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${selectedReport.bg}`}>
-                  <selectedReport.icon size={18} className={selectedReport.color} />
+            <section className="bg-white rounded-xl border border-border p-5 sticky top-0">
+              <h2 className="text-sm font-700 text-foreground mb-3 flex items-center gap-2">
+                <TrendingUp size={15} className="text-primary" />
+                Preview
+              </h2>
+              {dataLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="h-14 bg-muted animate-pulse rounded-lg" />
+                  ))}
                 </div>
-                <div>
-                  <p className={`text-sm font-600 ${selectedReport.color}`}>{selectedReport.label}</p>
-                  <p className="text-xs text-muted-foreground">{selectedReport.description}</p>
-                </div>
-              </div>
-
-              {/* Format badge */}
-              <div className="flex items-center gap-2 mb-4">
-                <selectedFormat.icon size={14} className="text-muted-foreground" />
-                <span className="text-sm text-foreground font-500">{selectedFormat.label}</span>
-                <span className="text-xs text-muted-foreground">{selectedFormat.ext}</span>
-                <span className="ml-auto text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                  {config.stakeholderMode ? 'Stakeholder' : 'Standard'}
-                </span>
-              </div>
-
-              {/* Date range */}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 bg-muted/50 rounded-lg px-3 py-2">
-                <Calendar size={12} />
-                <span>{config.dateFrom}</span>
-                <span>→</span>
-                <span>{config.dateTo}</span>
-              </div>
-
-              {/* Active filters */}
-              {(config.registries.length + config.statuses.length + config.collateralTypes.length) > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs font-600 text-muted-foreground mb-2">Active Filters</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[...config.registries, ...config.statuses, ...config.collateralTypes].map((f) => (
-                      <span key={f} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-500">
-                        {f}
-                      </span>
-                    ))}
+              ) : (
+                <PreviewStats config={config} allRows={allRows} />
+              )}
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+                    {React.createElement(selectedReport.icon, { size: 13, className: 'text-primary' })}
                   </div>
+                  <p className="text-xs font-600 text-foreground">{selectedReport.label}</p>
                 </div>
-              )}
-
-              {/* Data preview stats */}
-              <div className="mb-5">
-                <p className="text-xs font-600 text-muted-foreground mb-2">Data Preview</p>
-                <PreviewStats config={config} />
+                <p className="text-xs text-muted-foreground">{selectedReport.description}</p>
               </div>
-
-              {/* Export button */}
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg text-sm font-600 hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-              >
-                {exporting ? (
-                  <RefreshCw size={15} className="animate-spin" />
-                ) : (
-                  <Download size={15} />
-                )}
-                {exporting ? 'Generating…' : `Export as ${selectedFormat.label}`}
-              </button>
-
-              {exported && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-emerald-700">
-                  <CheckCircle2 size={13} />
-                  <span className="truncate">{exported}</span>
-                </div>
-              )}
-
-              {/* Tip */}
-              <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <AlertTriangle size={13} className="text-blue-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-800 leading-snug">
-                  PDF reports are generated server-side with live Supabase data and downloaded directly to your device.
-                </p>
-              </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>
