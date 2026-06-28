@@ -178,9 +178,10 @@ function DetailPanel({ request, comments, history, userRole, userId, userName, o
   const statusCfg = STATUS_CONFIG[request.requestStatus] ?? STATUS_CONFIG.Draft;
   const priorityCfg = PRIORITY_CONFIG[request.priority] ?? PRIORITY_CONFIG.Normal;
 
-  const canSubmit = userRole === 'credit_officer' && request.requestStatus === 'Draft';
-  const canReview = userRole === 'legal_officer' && request.requestStatus === 'Submitted';
-  const canDecide = userRole === 'legal_officer' && request.requestStatus === 'Under Review';
+  const isAdmin = userRole === 'system_admin';
+  const canSubmit = (userRole === 'credit_officer' || isAdmin) && (request.requestStatus === 'Draft' || request.requestStatus === 'Returned');
+  const canReview = (userRole === 'legal_officer' || isAdmin) && request.requestStatus === 'Submitted';
+  const canDecide = (userRole === 'legal_officer' || isAdmin) && request.requestStatus === 'Under Review';
   const canComment = ['credit_officer', 'legal_officer', 'system_admin'].includes(userRole);
 
   async function handleAction(type: 'submit' | 'review' | 'perfected' | 'reject' | 'return' | 'comment') {
@@ -425,7 +426,7 @@ function DetailPanel({ request, comments, history, userRole, userId, userName, o
         )}
 
         {/* Add Comment (all roles) */}
-        {canComment && !canSubmit && !canDecide && (
+        {canComment && !canSubmit && !canReview && !canDecide && (
           <div className="space-y-2">
             <textarea
               value={commentText}
@@ -676,14 +677,13 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
 
 // ─── Main Content ──────────────────────────────────────────────────────────────
 export default function PerfectionWorkflowContent() {
-  const { user, getUserProfile } = useAuth();
+  const { user, userRole: authUserRole, userProfile: authUserProfile } = useAuth();
   const [requests, setRequests] = useState<PerfectionRequest[]>([]);
   const [comments, setComments] = useState<PerfectionComment[]>([]);
   const [statusHistory, setStatusHistory] = useState<PerfectionStatusHistory[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<PerfectionRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -717,12 +717,6 @@ export default function PerfectionWorkflowContent() {
     fetchRequests();
   }, [fetchRequests]);
 
-  useEffect(() => {
-    if (user) {
-      getUserProfile().then(setUserProfile).catch(() => {});
-    }
-  }, [user, getUserProfile]);
-
   async function handleSelectRequest(req: PerfectionRequest) {
     setSelectedRequest(req);
     await fetchComments(req.id);
@@ -739,9 +733,9 @@ export default function PerfectionWorkflowContent() {
     }
   }
 
-  const userRole = userProfile?.role ?? 'credit_officer';
+  const userRole = authUserRole ?? 'credit_officer';
   const userId = user?.id ?? '';
-  const userName = userProfile?.full_name ?? user?.email ?? 'Unknown';
+  const userName = authUserProfile?.full_name ?? user?.email ?? 'Unknown';
 
   const filtered = requests.filter((r) => {
     const matchStatus = !statusFilter || r.requestStatus === statusFilter;
