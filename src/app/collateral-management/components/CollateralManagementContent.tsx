@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { collateralService, auditService, CollateralRecord, CollateralStatus } from '@/lib/supabase/collateralService';
+import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralTable from './CollateralTable';
@@ -18,6 +18,7 @@ export interface FilterState {
 }
 
 // Re-export Collateral type alias for backward compatibility
+// ... Remove this block or line ...
 export type { CollateralRecord as Collateral } from '@/lib/supabase/collateralService';
 
 export default function CollateralManagementContent() {
@@ -129,8 +130,20 @@ export default function CollateralManagementContent() {
 
   const handleSave = async (data: Partial<CollateralRecord>, pendingFiles?: { file: File; docType: string; notes: string }[]) => {
     if (editItem) {
-      const updated = await collateralService.update(editItem.id, data);
-      if (updated) {
+      let updated: CollateralRecord;
+      try {
+        updated = await collateralService.update(editItem.id, data);
+      } catch (err: any) {
+        const userMsg = err?.userMessage ?? err?.message ?? 'Update failed. Please try again.';
+        if (err instanceof CollateralWriteError && err.kind !== 'network' && err.kind !== 'unknown') {
+          toast.error(userMsg);
+        } else {
+          toast.error('Failed to update collateral record');
+        }
+        throw err;
+      }
+
+      try {
         await auditService.log({
           collateralRecordId: editItem.id,
           collateralId: editItem.collateralId,
@@ -140,18 +153,31 @@ export default function CollateralManagementContent() {
           performedBy: user?.id,
           performedByName: user?.email ?? '',
         });
-        toast.success('Collateral record updated');
-        setEditItem(null);
-        fetchData();
-      } else {
-        throw new Error('Update failed. Please try again.');
+      } catch {
+        // audit log failure is non-blocking
       }
+
+      toast.success('Collateral record updated');
+      setEditItem(null);
+      fetchData();
     } else {
-      const created = await collateralService.create(data, user?.id ?? '');
-      if (created) {
-        // Upload any pending files now that we have the record ID
-        if (pendingFiles && pendingFiles.length > 0 && user) {
-          const userName = user.email || 'Unknown';
+      let created: CollateralRecord;
+      try {
+        created = await collateralService.create(data, user?.id ?? '');
+      } catch (err: any) {
+        const userMsg = err?.userMessage ?? err?.message ?? 'Failed to create record. Please try again.';
+        if (err instanceof CollateralWriteError && err.kind !== 'network' && err.kind !== 'unknown') {
+          toast.error(userMsg);
+        } else {
+          toast.error('Failed to create collateral record');
+        }
+        throw err;
+      }
+
+      // Upload any pending files now that we have the record ID
+      if (pendingFiles && pendingFiles.length > 0 && user) {
+        const userName = user.email || 'Unknown';
+        try {
           await Promise.all(
             pendingFiles.map((pf) =>
               documentService.upload(
@@ -165,7 +191,13 @@ export default function CollateralManagementContent() {
               )
             )
           );
+        } catch {
+          // document upload failure is non-blocking — record was created
+          toast.error('Collateral created, but some documents failed to upload. Please retry uploading from the edit view.');
         }
+      }
+
+      try {
         await auditService.log({
           collateralRecordId: created.id,
           collateralId: created.collateralId,
@@ -175,12 +207,13 @@ export default function CollateralManagementContent() {
           performedBy: user?.id,
           performedByName: user?.email ?? '',
         });
-        toast.success('Collateral record created');
-        setAddModalOpen(false);
-        fetchData();
-      } else {
-        throw new Error('Failed to create record. Please try again.');
+      } catch {
+        // audit log failure is non-blocking
       }
+
+      toast.success('Collateral record created');
+      setAddModalOpen(false);
+      fetchData();
     }
   };
 

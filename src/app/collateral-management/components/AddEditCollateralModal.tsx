@@ -1,9 +1,9 @@
 'use client';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
-import { CollateralRecord as Collateral } from '@/lib/supabase/collateralService';
+import { CollateralRecord as Collateral, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { documentTypeSettingsService, DocumentTypeSetting } from '@/lib/supabase/documentTypeSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,6 +58,9 @@ export default function AddEditCollateralModal({
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('details');
   const [brelaError, setBrelaError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<{ kind: CollateralWriteError['kind']; message: string } | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const lastSubmitDataRef = useRef<{ data: Partial<Collateral>; pendingFiles?: { file: File; docType: string; notes: string }[] } | null>(null);
 
   // Document state
   const [documents, setDocuments] = useState<CollateralDocument[]>([]);
@@ -144,6 +147,9 @@ export default function AddEditCollateralModal({
       setPendingFiles([]);
       setUploadError(null);
       setBrelaError(null);
+      setSaveError(null);
+      setRetryCount(0);
+      lastSubmitDataRef.current = null;
     }
   }, [open]);
 
@@ -267,24 +273,69 @@ export default function AddEditCollateralModal({
       requiresPerfection: data.requiresPerfection,
     };
 
+    setSaveError(null);
+    setBrelaError(null);
+
+    // Store for retry
+    lastSubmitDataRef.current = {
+      data: savedData,
+      pendingFiles: editItem?.id ? undefined : pendingFiles,
+    };
+
     try {
       if (editItem?.id) {
-        // Edit mode: upload pending files then save
         if (pendingFiles.length > 0) {
           await uploadPendingFiles(editItem.id, editItem.collateralId);
         }
         await onSave(savedData);
       } else {
-        // New record: pass pending files to parent — it will upload after creating the record
         await onSave(savedData, pendingFiles);
       }
     } catch (err: any) {
       const msg: string = err?.message ?? '';
-      const brelaMatch = msg.match(/BRELA_VALIDATION:\s*(.+)/);
-      if (brelaMatch) {
-        setBrelaError(brelaMatch[1].trim());
+      const userMsg: string = err?.userMessage ?? msg;
+
+      if (err instanceof CollateralWriteError) {
+        const brelaMatch = userMsg.match(/BRELA_VALIDATION:\s*(.+)/);
+        if (brelaMatch) {
+          setBrelaError(brelaMatch[1].trim());
+        } else if (err.kind === 'validation') {
+          setBrelaError(userMsg);
+        } else {
+          setSaveError({ kind: err.kind, message: userMsg });
+        }
       } else {
-        setBrelaError('Failed to save collateral record. Please check your inputs and try again.');
+        const brelaMatch = msg.match(/BRELA_VALIDATION:\s*(.+)/);
+        if (brelaMatch) {
+          setBrelaError(brelaMatch[1].trim());
+        } else {
+          setSaveError({ kind: 'unknown', message: userMsg || 'Failed to save collateral record. Please check your inputs and try again.' });
+        }
+      }
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!lastSubmitDataRef.current) return;
+    setSaveError(null);
+    setBrelaError(null);
+    setRetryCount((c) => c + 1);
+    try {
+      const { data, pendingFiles: pf } = lastSubmitDataRef.current;
+      await onSave(data, pf);
+    } catch (err: any) {
+      const userMsg: string = err?.userMessage ?? err?.message ?? 'Failed to save. Please try again.';
+      if (err instanceof CollateralWriteError) {
+        const brelaMatch = userMsg.match(/BRELA_VALIDATION:\s*(.+)/);
+        if (brelaMatch) {
+          setBrelaError(brelaMatch[1].trim());
+        } else if (err.kind === 'validation') {
+          setBrelaError(userMsg);
+        } else {
+          setSaveError({ kind: err.kind, message: userMsg });
+        }
+      } else {
+        setSaveError({ kind: 'unknown', message: userMsg });
       }
     }
   };
@@ -318,7 +369,7 @@ export default function AddEditCollateralModal({
       }
       size="xl"
     >
-      {/* BRELA / DB Validation Error Banner */}
+      {/* BRELA / Validation Error Banner */}
       {brelaError && (
         <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
           <AlertCircle size={15} className="text-destructive mt-0.5 shrink-0" />
@@ -329,6 +380,69 @@ export default function AddEditCollateralModal({
           <button type="button" onClick={() => setBrelaError(null)} className="text-destructive/60 hover:text-destructive">
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {/* Save / Write Error Banner */}
+      {saveError && (
+        <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${
+          saveError.kind === 'network' ?'bg-amber-50 border-amber-300'
+            : saveError.kind === 'auth' ?'bg-red-50 border-red-300'
+            : saveError.kind === 'constraint' ?'bg-orange-50 border-orange-300' :'bg-destructive/10 border-destructive/30'
+        }`}>
+          {saveError.kind === 'network' ? (
+            <WifiOff size={15} className="text-amber-600 mt-0.5 shrink-0" />
+          ) : saveError.kind === 'auth' ? (
+            <ShieldAlert size={15} className="text-red-600 mt-0.5 shrink-0" />
+          ) : saveError.kind === 'constraint' ? (
+            <Database size={15} className="text-orange-600 mt-0.5 shrink-0" />
+          ) : (
+            <AlertCircle size={15} className="text-destructive mt-0.5 shrink-0" />
+          )}
+          <div className="flex-1">
+            <p className={`text-sm font-600 ${
+              saveError.kind === 'network' ? 'text-amber-800'
+              : saveError.kind === 'auth' ? 'text-red-800'
+              : saveError.kind === 'constraint'? 'text-orange-800' :'text-destructive'
+            }`}>
+              {saveError.kind === 'network' ? 'Network Error'
+                : saveError.kind === 'auth' ? 'Permission Denied'
+                : saveError.kind === 'constraint' ? 'Data Conflict'
+                : saveError.kind === 'schema'? 'Configuration Error' :'Save Failed'}
+            </p>
+            <p className={`text-xs mt-0.5 ${
+              saveError.kind === 'network' ? 'text-amber-700'
+              : saveError.kind === 'auth' ? 'text-red-700'
+              : saveError.kind === 'constraint'? 'text-orange-700' :'text-destructive'
+            }`}>
+              {saveError.message}
+            </p>
+            {retryCount > 0 && (
+              <p className="text-xs mt-1 text-muted-foreground">
+                Retry attempt {retryCount} failed.
+                {retryCount >= 3 ? ' Please contact support if the issue persists.' : ''}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {(saveError.kind === 'network' || saveError.kind === 'unknown') && retryCount < 3 && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-600 bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors border border-amber-300"
+              >
+                <RefreshCw size={11} />
+                Retry
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSaveError(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -839,6 +953,11 @@ export default function AddEditCollateralModal({
                 <>
                   <Loader2 size={14} className="animate-spin" />
                   {uploading ? 'Uploading...' : 'Saving...'}
+                </>
+              ) : saveError ? (
+                <>
+                  <RefreshCw size={14} />
+                  Try Again
                 </>
               ) : editItem ? (
                 pendingFiles.length > 0 ? `Save & Upload (${pendingFiles.length})` : 'Update Collateral'
