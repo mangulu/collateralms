@@ -69,7 +69,6 @@ const WORKFLOW_STAGES: PerfectionRequestStatus[] = ['Submitted', 'Under Review',
 function WorkflowStageBar({ status }: { status: PerfectionRequestStatus }) {
   const isRejected = status === 'Rejected' || status === 'Returned';
   const currentIdx = WORKFLOW_STAGES.indexOf(status);
-  // Approved maps to Perfected visually
   const effectiveIdx = status === 'Approved' ? 2 : currentIdx;
 
   return (
@@ -81,25 +80,25 @@ function WorkflowStageBar({ status }: { status: PerfectionRequestStatus }) {
           return (
             <React.Fragment key={step}>
               <div className="flex flex-col items-center gap-1 flex-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  isDone ? 'bg-emerald-500 text-white' : isCurrent ?'bg-primary text-white': 'bg-muted text-muted-foreground'
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                  isDone ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
                 }`}>
                   {isDone ? '✓' : i + 1}
                 </div>
-                <span className={`text-[10px] text-center leading-tight ${isCurrent || isDone ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                <span className={`text-xs text-center leading-tight ${isCurrent || isDone ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                   {step}
                 </span>
               </div>
               {i < WORKFLOW_STAGES.length - 1 && (
-                <div className={`h-px flex-1 mb-4 ${isDone ? 'bg-emerald-400' : 'bg-border'}`} />
+                <div className={`h-px flex-1 mb-5 ${isDone ? 'bg-emerald-400' : 'bg-border'}`} />
               )}
             </React.Fragment>
           );
         })}
       </div>
       {isRejected && (
-        <div className={`mt-2 text-xs px-3 py-1.5 rounded-md ${
-          status === 'Rejected' ?'bg-red-50 text-red-700 border border-red-200' :'bg-orange-50 text-orange-700 border border-orange-200'
+        <div className={`mt-3 text-xs px-3 py-2 rounded-md ${
+          status === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
         }`}>
           {status === 'Rejected' ? '✗ Rejected' : '↩ Returned for Revision'}
         </div>
@@ -111,7 +110,7 @@ function WorkflowStageBar({ status }: { status: PerfectionRequestStatus }) {
 // ─── Status History Panel ──────────────────────────────────────────────────────
 function StatusHistoryPanel({ history }: { history: PerfectionStatusHistory[] }) {
   if (history.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-4">No status history yet.</p>;
+    return <p className="text-sm text-muted-foreground text-center py-8">No status history yet.</p>;
   }
   return (
     <div className="space-y-2">
@@ -120,32 +119,32 @@ function StatusHistoryPanel({ history }: { history: PerfectionStatusHistory[] })
         return (
           <div key={h.id} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${dotColor}`} />
+              <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${dotColor}`} />
               <div className="w-px flex-1 bg-border mt-1" />
             </div>
-            <div className="pb-3 flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className="text-xs font-semibold text-foreground">{h.changedByName || 'System'}</span>
+            <div className="pb-4 flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="text-sm font-semibold text-foreground">{h.changedByName || 'System'}</span>
                 {h.changedByRole && (
-                  <span className="text-xs text-muted-foreground capitalize">{h.changedByRole.replace('_', ' ')}</span>
+                  <span className="text-xs text-muted-foreground capitalize bg-muted px-1.5 py-0.5 rounded">{h.changedByRole.replace('_', ' ')}</span>
                 )}
                 <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(h.createdAt)}</span>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 {h.fromStatus && (
                   <>
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${STAGE_STATUS_COLORS[h.fromStatus] ?? 'bg-gray-400'} text-white`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${STAGE_STATUS_COLORS[h.fromStatus] ?? 'bg-gray-400'} text-white`}>
                       {h.fromStatus}
                     </span>
-                    <span className="text-xs text-muted-foreground">→</span>
+                    <span className="text-sm text-muted-foreground">→</span>
                   </>
                 )}
-                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${dotColor} text-white`}>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded ${dotColor} text-white`}>
                   {h.toStatus}
                 </span>
               </div>
               {h.reason && (
-                <p className="text-xs text-foreground/70 mt-1 italic">{h.reason}</p>
+                <p className="text-sm text-foreground/70 mt-1.5 italic bg-muted/40 px-3 py-2 rounded-md">{h.reason}</p>
               )}
             </div>
           </div>
@@ -155,8 +154,8 @@ function StatusHistoryPanel({ history }: { history: PerfectionStatusHistory[] })
   );
 }
 
-// ─── Detail Panel ──────────────────────────────────────────────────────────────
-interface DetailPanelProps {
+// ─── Detail Modal ──────────────────────────────────────────────────────────────
+interface DetailModalProps {
   request: PerfectionRequest;
   comments: PerfectionComment[];
   history: PerfectionStatusHistory[];
@@ -167,7 +166,7 @@ interface DetailPanelProps {
   onRefresh: () => void;
 }
 
-function DetailPanel({ request, comments, history, userRole, userId, userName, onClose, onRefresh }: DetailPanelProps) {
+function DetailModal({ request, comments, history, userRole, userId, userName, onClose, onRefresh }: DetailModalProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [decisionNotes, setDecisionNotes] = useState('');
@@ -221,239 +220,275 @@ function DetailPanel({ request, comments, history, userRole, userId, userName, o
     }
   }
 
+  const hasActions = canSubmit || canReview || canDecide || (canComment && !canSubmit && !canReview && !canDecide);
+  const showSmsButton = request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review';
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-start justify-between p-5 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono text-muted-foreground">{request.collateralId}</span>
-            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${statusCfg.bg} ${statusCfg.color}`}>
-              {statusCfg.icon}{statusCfg.label}
-            </span>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${priorityCfg.bg} ${priorityCfg.color}`}>
-              {request.priority}
-            </span>
-          </div>
-          <h3 className="text-base font-semibold text-foreground">{request.obligor}</h3>
-          <p className="text-sm text-muted-foreground">{request.collateralType} · {request.registry}</p>
-        </div>
-        <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors">
-          <X size={16} />
-        </button>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-border">
 
-      {/* Workflow Stage Bar */}
-      <div className="px-5 py-4 border-b border-border">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Workflow Stages</p>
-        <WorkflowStageBar status={request.requestStatus} />
-        {request.decisionNotes && (request.requestStatus === 'Rejected' || request.requestStatus === 'Returned' || request.requestStatus === 'Perfected') && (
-          <div className={`mt-2 text-xs px-3 py-1.5 rounded-md ${
-            request.requestStatus === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
-            request.requestStatus === 'Returned'? 'bg-orange-50 text-orange-700 border border-orange-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-          }`}>
-            <span className="font-medium">Reason: </span>{request.decisionNotes}
-          </div>
-        )}
-      </div>
-
-      {/* Details */}
-      <div className="px-5 py-4 border-b border-border grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Submitted By</p>
-          <p className="font-medium text-foreground">{request.submittedByName || '—'}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Submitted At</p>
-          <p className="font-medium text-foreground">{formatDate(request.submittedAt)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Reviewed By</p>
-          <p className="font-medium text-foreground">{request.reviewedByName || '—'}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">Perfection Deadline</p>
-          <p className="font-medium text-foreground">{request.perfectionDeadline || '—'}</p>
-        </div>
-      </div>
-
-      {/* Tabs: Activity / Status History */}
-      <div className="flex border-b border-border shrink-0">
-        <button
-          onClick={() => setActiveTab('activity')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
-            activeTab === 'activity' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <MessageSquare size={13} /> Activity
-        </button>
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
-            activeTab === 'history' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <History size={13} /> Status History
-          {history.length > 0 && (
-            <span className="ml-1 bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full">{history.length}</span>
-          )}
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        {activeTab === 'activity' ? (
-          <>
-            {comments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No activity yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {comments.map((c) => (
-                  <div key={c.id} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${ACTION_COLORS[c.action] ?? 'bg-gray-400'}`} />
-                      <div className="w-px flex-1 bg-border mt-1" />
-                    </div>
-                    <div className="pb-3 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-semibold text-foreground">{c.performedByName}</span>
-                        <span className="text-xs text-muted-foreground capitalize">{c.performedByRole?.replace('_', ' ')}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(c.createdAt)}</span>
-                      </div>
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${ACTION_COLORS[c.action] ?? 'bg-gray-400'} text-white`}>
-                        {ACTION_LABELS[c.action] ?? c.action}
-                      </span>
-                      {c.comment && <p className="text-sm text-foreground/80 mt-1">{c.comment}</p>}
-                    </div>
-                  </div>
-                ))}
+        {/* Modal Header */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-border bg-white shrink-0">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+              <Award size={20} className="text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="text-sm font-mono text-muted-foreground">{request.collateralId}</span>
+                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${statusCfg.bg} ${statusCfg.color}`}>
+                  {statusCfg.icon}{statusCfg.label}
+                </span>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${priorityCfg.bg} ${priorityCfg.color}`}>
+                  {request.priority} Priority
+                </span>
               </div>
-            )}
-          </>
-        ) : (
-          <StatusHistoryPanel history={history} />
-        )}
-      </div>
-
-      {/* Action Area */}
-      <div className="border-t border-border p-4 space-y-3">
-        {/* Credit Officer: Submit */}
-        {canSubmit && (
-          <div className="space-y-2">
-            <textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Add a note for the Legal Officer (optional)..."
-              rows={2}
-              className="w-full text-sm border border-border rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <button
-              onClick={() => handleAction('submit')}
-              disabled={actionLoading}
-              className="w-full flex items-center justify-center gap-2 bg-primary text-white text-sm font-medium py-2 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
-            >
-              <Send size={14} /> {actionLoading ? 'Submitting...' : 'Submit to Legal Officer'}
-            </button>
+              <h2 className="text-lg font-semibold text-foreground">{request.obligor}</h2>
+              <p className="text-sm text-muted-foreground">{request.collateralType} · {request.registry}</p>
+            </div>
           </div>
-        )}
-
-        {/* Legal Officer: Start Review */}
-        {canReview && (
-          <button
-            onClick={() => handleAction('review')}
-            disabled={actionLoading}
-            className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white text-sm font-medium py-2 rounded-md hover:bg-amber-700 disabled:opacity-50 transition-colors"
-          >
-            <Eye size={14} /> {actionLoading ? 'Starting...' : 'Start Review'}
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors shrink-0">
+            <X size={18} />
           </button>
-        )}
+        </div>
 
-        {/* Legal Officer: Perfect / Reject / Return */}
-        {canDecide && (
-          <div className="space-y-2">
-            {activeAction && (
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-foreground">
-                  {activeAction === 'perfected' ? 'Perfection Notes *' :
-                   activeAction === 'reject'? 'Rejection Reason *' : 'Revision Instructions *'}
-                </label>
-                <textarea
-                  value={decisionNotes}
-                  onChange={(e) => setDecisionNotes(e.target.value)}
-                  placeholder={
-                    activeAction === 'perfected' ? 'Describe how the collateral was perfected...' :
-                    activeAction === 'reject' ? 'Provide reason for rejection (required)...' :
-                    'Provide revision instructions (required)...'
-                  }
-                  rows={3}
-                  className="w-full text-sm border border-border rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleAction(activeAction)}
-                    disabled={actionLoading}
-                    className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-md disabled:opacity-50 transition-colors text-white ${
-                      activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                      activeAction === 'reject'? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
-                    }`}
-                  >
-                    {actionLoading ? 'Processing...' :
-                      activeAction === 'perfected' ? <><Award size={14} /> Confirm Perfected</> :
-                      activeAction === 'reject' ? <><XCircle size={14} /> Confirm Rejection</> :
-                      <><RotateCcw size={14} /> Confirm Return</>
-                    }
-                  </button>
-                  <button onClick={() => { setActiveAction(null); setDecisionNotes(''); }} className="px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">
-                    Cancel
-                  </button>
+        {/* Modal Body — two columns */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+
+          {/* Left Column — Details & Workflow */}
+          <div className="w-80 shrink-0 border-r border-border flex flex-col overflow-y-auto bg-muted/20">
+
+            {/* Workflow Stage */}
+            <div className="px-5 py-5 border-b border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Workflow Progress</p>
+              <WorkflowStageBar status={request.requestStatus} />
+              {request.decisionNotes && (request.requestStatus === 'Rejected' || request.requestStatus === 'Returned' || request.requestStatus === 'Perfected') && (
+                <div className={`mt-3 text-xs px-3 py-2 rounded-md ${
+                  request.requestStatus === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
+                  request.requestStatus === 'Returned'? 'bg-orange-50 text-orange-700 border border-orange-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <span className="font-semibold">Reason: </span>{request.decisionNotes}
+                </div>
+              )}
+            </div>
+
+            {/* Metadata */}
+            <div className="px-5 py-5 space-y-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Request Details</p>
+              <div className="grid grid-cols-1 gap-3">
+                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-xs text-muted-foreground mb-0.5">Submitted By</p>
+                  <p className="text-sm font-medium text-foreground">{request.submittedByName || '—'}</p>
+                </div>
+                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-xs text-muted-foreground mb-0.5">Submitted At</p>
+                  <p className="text-sm font-medium text-foreground">{formatDate(request.submittedAt)}</p>
+                </div>
+                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-xs text-muted-foreground mb-0.5">Reviewed By</p>
+                  <p className="text-sm font-medium text-foreground">{request.reviewedByName || '—'}</p>
+                </div>
+                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
+                  <p className="text-xs text-muted-foreground mb-0.5">Perfection Deadline</p>
+                  <p className="text-sm font-medium text-foreground">{request.perfectionDeadline || '—'}</p>
                 </div>
               </div>
-            )}
-            {!activeAction && (
-              <div className="flex gap-2">
-                <button onClick={() => setActiveAction('perfected')} className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-sm font-medium py-2 rounded-md hover:bg-emerald-700 transition-colors">
-                  <Award size={14} /> Perfect
-                </button>
-                <button onClick={() => setActiveAction('return')} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 text-white text-sm font-medium py-2 rounded-md hover:bg-orange-600 transition-colors">
-                  <RotateCcw size={14} /> Return
-                </button>
-                <button onClick={() => setActiveAction('reject')} className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 text-white text-sm font-medium py-2 rounded-md hover:bg-red-700 transition-colors">
-                  <XCircle size={14} /> Reject
-                </button>
+            </div>
+          </div>
+
+          {/* Right Column — Tabs + Actions */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+            {/* Tabs */}
+            <div className="flex border-b border-border shrink-0 bg-white">
+              <button
+                onClick={() => setActiveTab('activity')}
+                className={`flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <MessageSquare size={15} /> Activity
+                {comments.length > 0 && (
+                  <span className="ml-1 bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">{comments.length}</span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <History size={15} /> Status History
+                {history.length > 0 && (
+                  <span className="ml-1 bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">{history.length}</span>
+                )}
+              </button>
+            </div>
+
+            {/* Tab Content — scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {activeTab === 'activity' ? (
+                <>
+                  {comments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <MessageSquare size={36} className="text-muted-foreground/40 mb-3" />
+                      <p className="text-sm font-medium text-foreground">No activity yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Actions and comments will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {comments.map((c) => (
+                        <div key={c.id} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${ACTION_COLORS[c.action] ?? 'bg-gray-400'}`} />
+                            <div className="w-px flex-1 bg-border mt-1" />
+                          </div>
+                          <div className="pb-4 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-sm font-semibold text-foreground">{c.performedByName}</span>
+                              <span className="text-xs text-muted-foreground capitalize bg-muted px-1.5 py-0.5 rounded">{c.performedByRole?.replace('_', ' ')}</span>
+                              <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(c.createdAt)}</span>
+                            </div>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${ACTION_COLORS[c.action] ?? 'bg-gray-400'} text-white`}>
+                              {ACTION_LABELS[c.action] ?? c.action}
+                            </span>
+                            {c.comment && <p className="text-sm text-foreground/80 mt-2 bg-muted/40 px-3 py-2 rounded-md">{c.comment}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <StatusHistoryPanel history={history} />
+              )}
+            </div>
+
+            {/* Action Footer */}
+            {(hasActions || showSmsButton) && (
+              <div className="border-t border-border px-6 py-4 bg-white shrink-0 space-y-3">
+
+                {/* Credit Officer: Submit */}
+                {canSubmit && (
+                  <div className="space-y-2">
+                    <textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Add a note for the Legal Officer (optional)..."
+                      rows={2}
+                      className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <button
+                      onClick={() => handleAction('submit')}
+                      disabled={actionLoading}
+                      className="w-full flex items-center justify-center gap-2 bg-primary text-white text-sm font-medium py-2.5 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      <Send size={14} /> {actionLoading ? 'Submitting...' : 'Submit to Legal Officer'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Legal Officer: Start Review */}
+                {canReview && (
+                  <button
+                    onClick={() => handleAction('review')}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                  >
+                    <Eye size={14} /> {actionLoading ? 'Starting...' : 'Start Review'}
+                  </button>
+                )}
+
+                {/* Legal Officer: Perfect / Reject / Return */}
+                {canDecide && (
+                  <div className="space-y-2">
+                    {activeAction && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-foreground">
+                          {activeAction === 'perfected' ? 'Perfection Notes *' :
+                           activeAction === 'reject' ? 'Rejection Reason *' : 'Revision Instructions *'}
+                        </label>
+                        <textarea
+                          value={decisionNotes}
+                          onChange={(e) => setDecisionNotes(e.target.value)}
+                          placeholder={
+                            activeAction === 'perfected' ? 'Describe how the collateral was perfected...' :
+                            activeAction === 'reject' ? 'Provide reason for rejection (required)...' :
+                            'Provide revision instructions (required)...'
+                          }
+                          rows={3}
+                          className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAction(activeAction)}
+                            disabled={actionLoading}
+                            className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2.5 rounded-lg disabled:opacity-50 transition-colors text-white ${
+                              activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                              activeAction === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
+                            }`}
+                          >
+                            {actionLoading ? 'Processing...' :
+                              activeAction === 'perfected' ? <><Award size={14} /> Confirm Perfected</> :
+                              activeAction === 'reject' ? <><XCircle size={14} /> Confirm Rejection</> :
+                              <><RotateCcw size={14} /> Confirm Return</>
+                            }
+                          </button>
+                          <button onClick={() => { setActiveAction(null); setDecisionNotes(''); }} className="px-4 py-2.5 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {!activeAction && (
+                      <div className="flex gap-2">
+                        <button onClick={() => setActiveAction('perfected')} className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-emerald-700 transition-colors">
+                          <Award size={14} /> Perfect
+                        </button>
+                        <button onClick={() => setActiveAction('return')} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors">
+                          <RotateCcw size={14} /> Return
+                        </button>
+                        <button onClick={() => setActiveAction('reject')} className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-red-700 transition-colors">
+                          <XCircle size={14} /> Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Add Comment (all roles, when no primary action) */}
+                {canComment && !canSubmit && !canReview && !canDecide && (
+                  <div className="space-y-2">
+                    <textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Add a comment..."
+                      rows={2}
+                      className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <button
+                      onClick={() => handleAction('comment')}
+                      disabled={actionLoading || !commentText.trim()}
+                      className="w-full flex items-center justify-center gap-2 bg-muted text-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-muted/80 disabled:opacity-50 transition-colors border border-border"
+                    >
+                      <MessageSquare size={14} /> {actionLoading ? 'Adding...' : 'Add Comment'}
+                    </button>
+                  </div>
+                )}
+
+                {/* SMS Approval Request */}
+                {showSmsButton && (
+                  <button
+                    onClick={() => setShowSmsModal(true)}
+                    className="w-full flex items-center justify-center gap-2 bg-violet-50 text-violet-700 border border-violet-200 text-sm font-medium py-2.5 rounded-lg hover:bg-violet-100 transition-colors"
+                  >
+                    <MessageSquare size={14} /> Send Approval Request SMS
+                  </button>
+                )}
               </div>
             )}
           </div>
-        )}
-
-        {/* Add Comment (all roles) */}
-        {canComment && !canSubmit && !canReview && !canDecide && (
-          <div className="space-y-2">
-            <textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Add a comment..."
-              rows={2}
-              className="w-full text-sm border border-border rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <button
-              onClick={() => handleAction('comment')}
-              disabled={actionLoading || !commentText.trim()}
-              className="w-full flex items-center justify-center gap-2 bg-muted text-foreground text-sm font-medium py-2 rounded-md hover:bg-muted/80 disabled:opacity-50 transition-colors border border-border"
-            >
-              <MessageSquare size={14} /> {actionLoading ? 'Adding...' : 'Add Comment'}
-            </button>
-          </div>
-        )}
-
-        {/* SMS Approval Request Button — always visible for submitted/under review */}
-        {(request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review') && (
-          <button
-            onClick={() => setShowSmsModal(true)}
-            className="w-full flex items-center justify-center gap-2 bg-violet-50 text-violet-700 border border-violet-200 text-sm font-medium py-2 rounded-md hover:bg-violet-100 transition-colors"
-          >
-            <MessageSquare size={14} /> Send Approval Request SMS
-          </button>
-        )}
+        </div>
       </div>
       {showSmsModal && <SmsApprovalModal request={request} onClose={() => setShowSmsModal(false)} />}
     </div>
@@ -503,7 +538,7 @@ function SmsApprovalModal({ request, onClose }: SmsApprovalModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-border">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
@@ -511,7 +546,7 @@ function SmsApprovalModal({ request, onClose }: SmsApprovalModalProps) {
               <MessageSquare size={16} className="text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-sm font-700 text-foreground">Send Approval Request SMS</h3>
+              <h3 className="text-sm font-semibold text-foreground">Send Approval Request SMS</h3>
               <p className="text-xs text-muted-foreground">{request.collateralId} · {request.obligor}</p>
             </div>
           </div>
@@ -521,7 +556,7 @@ function SmsApprovalModal({ request, onClose }: SmsApprovalModalProps) {
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-600 text-muted-foreground mb-1">Recipient Name (optional)</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Recipient Name (optional)</label>
             <input
               type="text"
               placeholder="e.g. Legal Officer"
@@ -531,7 +566,7 @@ function SmsApprovalModal({ request, onClose }: SmsApprovalModalProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-600 text-muted-foreground mb-1">Phone Number *</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Phone Number *</label>
             <input
               type="tel"
               placeholder="+255712345678"
@@ -541,7 +576,7 @@ function SmsApprovalModal({ request, onClose }: SmsApprovalModalProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-600 text-muted-foreground mb-1">Message Preview</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Message Preview</label>
             <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 border border-border rounded-lg leading-relaxed">
               {message}
             </div>
@@ -561,12 +596,12 @@ function SmsApprovalModal({ request, onClose }: SmsApprovalModalProps) {
           <button
             onClick={handleSend}
             disabled={sending || sent}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-lg transition-colors"
           >
             {sending ? <Loader2 size={14} className="animate-spin" /> : sent ? <CheckCircle2 size={14} /> : <MessageSquare size={14} />}
             {sending ? 'Sending...' : sent ? 'Sent!' : 'Send SMS Alert'}
           </button>
-          <button onClick={onClose} className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border hover:bg-muted rounded-lg transition-colors">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-muted-foreground bg-white border border-border hover:bg-muted rounded-lg transition-colors">
             Cancel
           </button>
         </div>
@@ -799,110 +834,104 @@ export default function PerfectionWorkflowContent() {
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex flex-1 min-h-0">
-        {/* Request List */}
-        <div className={`flex flex-col border-r border-border bg-white transition-all ${selectedRequest ? 'w-[420px] shrink-0' : 'flex-1'}`}>
-          {/* Search & Filter */}
-          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by obligor or ID..."
-                className="w-full text-sm pl-8 pr-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-sm border border-border rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">All Status</option>
-              {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+      {/* Body — full-width list */}
+      <div className="flex flex-col flex-1 min-h-0 bg-white">
+        {/* Search & Filter */}
+        <div className="px-4 py-3 border-b border-border flex items-center gap-2 shrink-0">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by obligor or ID..."
+              className="w-full text-sm pl-8 pr-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
           </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-sm border border-border rounded-md px-2 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="">All Status</option>
+            {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          {statusFilter && (
+            <button onClick={() => setStatusFilter('')} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-2 border border-border rounded-md hover:bg-muted transition-colors">
+              <X size={12} /> Clear
+            </button>
+          )}
+        </div>
 
-          {/* List */}
-          <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="space-y-2 p-4">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <AlertCircle size={32} className="text-muted-foreground mb-3" />
-                <p className="text-sm font-medium text-foreground">No requests found</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {statusFilter || searchQuery ? 'Try adjusting your filters' : 'Create a new perfection request to get started'}
-                </p>
-              </div>
-            ) : (
-              filtered.map((req) => {
+        {/* List */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="space-y-2 p-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+              <AlertCircle size={36} className="text-muted-foreground mb-3" />
+              <p className="text-sm font-medium text-foreground">No requests found</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {statusFilter || searchQuery ? 'Try adjusting your filters' : 'Create a new perfection request to get started'}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {filtered.map((req) => {
                 const cfg = STATUS_CONFIG[req.requestStatus] ?? STATUS_CONFIG.Draft;
                 const priorityCfg = PRIORITY_CONFIG[req.priority] ?? PRIORITY_CONFIG.Normal;
-                const isSelected = selectedRequest?.id === req.id;
                 return (
                   <button
                     key={req.id}
                     onClick={() => handleSelectRequest(req)}
-                    className={`w-full text-left px-4 py-3.5 border-b border-border transition-colors ${
-                      isSelected ? 'bg-primary/5 border-l-2 border-l-primary' : 'hover:bg-muted/40'
-                    }`}
+                    className="w-full text-left px-5 py-4 hover:bg-muted/30 transition-colors group"
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-xs font-mono text-muted-foreground shrink-0">{req.collateralId}</span>
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${cfg.bg} ${cfg.color}`}>
-                          {cfg.icon}{cfg.label}
-                        </span>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="text-xs font-mono text-muted-foreground">{req.collateralId}</span>
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
+                            {cfg.icon}{cfg.label}
+                          </span>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${priorityCfg.bg} ${priorityCfg.color}`}>
+                            {req.priority}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">{req.obligor}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{req.collateralType} · {req.registry}</p>
                       </div>
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${priorityCfg.bg} ${priorityCfg.color}`}>
-                        {req.priority}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground truncate">{req.obligor}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{req.collateralType} · {req.registry}</p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-xs text-muted-foreground">By {req.submittedByName || '—'}</span>
-                      {req.perfectionDeadline && (
-                        <span className="text-xs text-muted-foreground">Due {req.perfectionDeadline}</span>
-                      )}
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-muted-foreground">By {req.submittedByName || '—'}</p>
+                        {req.perfectionDeadline && (
+                          <p className="text-xs text-muted-foreground mt-0.5">Due {req.perfectionDeadline}</p>
+                        )}
+                        <ChevronRight size={14} className="text-muted-foreground mt-1 ml-auto group-hover:text-primary transition-colors" />
+                      </div>
                     </div>
                   </button>
                 );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Detail Panel */}
-        {selectedRequest ? (
-          <div className="flex-1 min-w-0 bg-white overflow-hidden flex flex-col">
-            <DetailPanel
-              request={selectedRequest}
-              comments={comments}
-              history={statusHistory}
-              userRole={userRole}
-              userId={userId}
-              userName={userName}
-              onClose={() => setSelectedRequest(null)}
-              onRefresh={handleRefresh}
-            />
-          </div>
-        ) : (
-          <div className="flex-1 hidden lg:flex items-center justify-center bg-muted/20">
-            <div className="text-center">
-              <ChevronRight size={40} className="text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground">Select a request</p>
-              <p className="text-xs text-muted-foreground mt-1">Click any request to view details and take action</p>
+              })}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Detail Modal */}
+      {selectedRequest && (
+        <DetailModal
+          request={selectedRequest}
+          comments={comments}
+          history={statusHistory}
+          userRole={userRole}
+          userId={userId}
+          userName={userName}
+          onClose={() => setSelectedRequest(null)}
+          onRefresh={handleRefresh}
+        />
+      )}
 
       {showNewModal && (
         <NewRequestModal
