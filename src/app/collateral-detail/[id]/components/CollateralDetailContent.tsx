@@ -242,7 +242,15 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
         <SectionHeader title="Related Documents" icon={Files} />
-        <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
+          <Link
+            href={`/collateral-library/${collateral.id}`}
+            className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+          >
+            Open Library <ChevronRight size={11} />
+          </Link>
+        </div>
       </div>
 
       {/* Upload row */}
