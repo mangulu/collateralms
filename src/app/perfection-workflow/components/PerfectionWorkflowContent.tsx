@@ -162,11 +162,12 @@ interface DetailModalProps {
   userRole: string;
   userId: string;
   userName: string;
+  isRoleResolved: boolean;
   onClose: () => void;
   onRefresh: () => void;
 }
 
-function DetailModal({ request, comments, history, userRole, userId, userName, onClose, onRefresh }: DetailModalProps) {
+function DetailModal({ request, comments, history, userRole, userId, userName, onClose, onRefresh, isRoleResolved }: DetailModalProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [decisionNotes, setDecisionNotes] = useState('');
@@ -365,7 +366,12 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
             </div>
 
             {/* Action Footer */}
-            {(hasActions || showSmsButton) && (
+            {!isRoleResolved && (request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review' || request.requestStatus === 'Draft' || request.requestStatus === 'Returned') && (
+              <div className="border-t border-border px-6 py-4 bg-white shrink-0 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 size={14} className="animate-spin" /> Loading actions...
+              </div>
+            )}
+            {(hasActions || showSmsButton) && isRoleResolved && (
               <div className="border-t border-border px-6 py-4 bg-white shrink-0 space-y-3">
 
                 {/* Credit Officer: Submit */}
@@ -768,7 +774,7 @@ export default function PerfectionWorkflowContent() {
     }
   }
 
-  const userRole = authUserRole ?? 'credit_officer';
+  const userRole = authUserRole ?? '';
   const userId = user?.id ?? '';
   const userName = authUserProfile?.full_name ?? user?.email ?? 'Unknown';
 
@@ -930,6 +936,7 @@ export default function PerfectionWorkflowContent() {
           userName={userName}
           onClose={() => setSelectedRequest(null)}
           onRefresh={handleRefresh}
+          isRoleResolved={!!userRole}
         />
       )}
 
