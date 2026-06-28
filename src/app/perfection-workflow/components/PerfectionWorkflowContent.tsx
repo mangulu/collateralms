@@ -323,6 +323,10 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
       setDecisionNotes('');
       setActiveAction(null);
       onRefresh();
+      // Close the modal for all status-changing actions so the list updates visibly
+      if (type !== 'comment') {
+        onClose();
+      }
     } catch (err: any) {
       toast.error(err.message || 'Action failed');
     } finally {
