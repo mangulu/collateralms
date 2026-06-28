@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap } from 'lucide-react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus, PerfectionStatusHistory } from '@/lib/supabase/perfectionService';
@@ -63,13 +63,112 @@ function formatDateTime(iso: string | null): string {
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// ─── Role Guidance Banner ──────────────────────────────────────────────────────
+function RoleGuidanceBanner({ userRole }: { userRole: string }) {
+  if (!userRole) return null;
+
+  const config: Record<string, { icon: React.ReactNode; title: string; steps: string[]; color: string; bg: string; border: string }> = {
+    credit_officer: {
+      icon: <Send size={16} />,
+      title: 'You are a Credit Officer',
+      steps: [
+        'Create a new perfection request using "New Request"',
+        'Open a Draft or Returned request and click "Submit to Legal Officer"',
+        'Monitor progress — you\'ll see updates as Legal reviews your request',
+      ],
+      color: 'text-blue-800',
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+    },
+    legal_officer: {
+      icon: <UserCheck size={16} />,
+      title: 'You are a Legal Officer',
+      steps: [
+        'Open any "Submitted" request and click "Start Review" to begin',
+        'Once reviewing, open the "Under Review" request and choose: Perfect, Return, or Reject',
+        'Add notes when perfecting or rejecting — they are required',
+      ],
+      color: 'text-amber-800',
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
+    },
+    system_admin: {
+      icon: <Zap size={16} />,
+      title: 'You are a System Admin',
+      steps: [
+        'You can perform all Credit Officer and Legal Officer actions',
+        'Create, submit, review, perfect, return, or reject any request',
+      ],
+      color: 'text-purple-800',
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+    },
+  };
+
+  const cfg = config[userRole];
+  if (!cfg) return null;
+
+  return (
+    <div className={`mx-6 mt-4 mb-1 rounded-xl border ${cfg.border} ${cfg.bg} px-4 py-3`}>
+      <div className={`flex items-center gap-2 font-semibold text-sm mb-2 ${cfg.color}`}>
+        {cfg.icon}
+        {cfg.title} — How this workflow works for you:
+      </div>
+      <ol className="space-y-1">
+        {cfg.steps.map((step, i) => (
+          <li key={i} className={`flex items-start gap-2 text-xs ${cfg.color}`}>
+            <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5 ${cfg.color} border ${cfg.border} bg-white`}>
+              {i + 1}
+            </span>
+            {step}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 // ─── Workflow Stage Bar ────────────────────────────────────────────────────────
 const WORKFLOW_STAGES: PerfectionRequestStatus[] = ['Submitted', 'Under Review', 'Perfected'];
 
-function WorkflowStageBar({ status }: { status: PerfectionRequestStatus }) {
+const STAGE_DESCRIPTIONS: Record<PerfectionRequestStatus, string> = {
+  Submitted: 'Waiting for Legal Officer to start review',
+  'Under Review': 'Legal Officer is reviewing this request',
+  Perfected: 'Collateral has been successfully perfected',
+  Draft: 'Not yet submitted',
+  Approved: 'Approved',
+  Rejected: 'Request was rejected',
+  Returned: 'Returned to Credit Officer for revision',
+};
+
+function WorkflowStageBar({ status, userRole }: { status: PerfectionRequestStatus; userRole: string }) {
   const isRejected = status === 'Rejected' || status === 'Returned';
   const currentIdx = WORKFLOW_STAGES.indexOf(status);
   const effectiveIdx = status === 'Approved' ? 2 : currentIdx;
+
+  // Next action hint
+  const nextActionHint: Partial<Record<PerfectionRequestStatus, Record<string, string>>> = {
+    Draft: {
+      credit_officer: '👉 Your turn: Open this request and click "Submit to Legal Officer"',
+      system_admin: '👉 Submit this request to move it forward',
+    },
+    Submitted: {
+      legal_officer: '👉 Your turn: Click "Start Review" to begin reviewing',
+      system_admin: '👉 Click "Start Review" to begin reviewing',
+      credit_officer: '⏳ Waiting for Legal Officer to start review',
+    },
+    'Under Review': {
+      legal_officer: '👉 Your turn: Choose Perfect, Return, or Reject',
+      system_admin: '👉 Choose Perfect, Return, or Reject to complete review',
+      credit_officer: '⏳ Legal Officer is reviewing — no action needed',
+    },
+    Returned: {
+      credit_officer: '👉 Your turn: Review the feedback and resubmit',
+      system_admin: '👉 Review the feedback and resubmit',
+    },
+  };
+
+  const hint = nextActionHint[status]?.[userRole];
 
   return (
     <div>
@@ -81,16 +180,19 @@ function WorkflowStageBar({ status }: { status: PerfectionRequestStatus }) {
             <React.Fragment key={step}>
               <div className="flex flex-col items-center gap-1 flex-1">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                  isDone ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                  isDone ? 'bg-emerald-500 text-white' : isCurrent ? 'bg-primary text-white ring-4 ring-primary/20' : 'bg-muted text-muted-foreground'
                 }`}>
                   {isDone ? '✓' : i + 1}
                 </div>
-                <span className={`text-xs text-center leading-tight ${isCurrent || isDone ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                <span className={`text-xs text-center leading-tight ${isCurrent ? 'text-foreground font-semibold' : isDone ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                   {step}
                 </span>
+                {isCurrent && (
+                  <span className="text-[10px] text-primary font-medium">← Current</span>
+                )}
               </div>
               {i < WORKFLOW_STAGES.length - 1 && (
-                <div className={`h-px flex-1 mb-5 ${isDone ? 'bg-emerald-400' : 'bg-border'}`} />
+                <div className={`h-px flex-1 mb-7 ${isDone ? 'bg-emerald-400' : 'bg-border'}`} />
               )}
             </React.Fragment>
           );
@@ -100,7 +202,14 @@ function WorkflowStageBar({ status }: { status: PerfectionRequestStatus }) {
         <div className={`mt-3 text-xs px-3 py-2 rounded-md ${
           status === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-orange-50 text-orange-700 border border-orange-200'
         }`}>
-          {status === 'Rejected' ? '✗ Rejected' : '↩ Returned for Revision'}
+          {status === 'Rejected' ? '✗ Rejected — this request is closed' : '↩ Returned for Revision — Credit Officer must resubmit'}
+        </div>
+      )}
+      {hint && (
+        <div className={`mt-3 text-xs px-3 py-2 rounded-md font-medium ${
+          hint.startsWith('👉') ? 'bg-primary/5 text-primary border border-primary/20' : 'bg-muted text-muted-foreground border border-border'
+        }`}>
+          {hint}
         </div>
       )}
     </div>
@@ -224,6 +333,15 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   const hasActions = canSubmit || canReview || canDecide || (canComment && !canSubmit && !canReview && !canDecide);
   const showSmsButton = request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review';
 
+  // Action footer header label
+  const actionHeaderLabel = canSubmit
+    ? { icon: <Send size={14} />, text: 'Submit this request to Legal Officer', color: 'text-blue-700 bg-blue-50 border-blue-200' }
+    : canReview
+    ? { icon: <Eye size={14} />, text: 'Start your review of this request', color: 'text-amber-700 bg-amber-50 border-amber-200' }
+    : canDecide
+    ? { icon: <Award size={14} />, text: 'Make your decision on this request', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
+    : null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-border">
@@ -262,7 +380,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
             {/* Workflow Stage */}
             <div className="px-5 py-5 border-b border-border">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Workflow Progress</p>
-              <WorkflowStageBar status={request.requestStatus} />
+              <WorkflowStageBar status={request.requestStatus} userRole={userRole} />
               {request.decisionNotes && (request.requestStatus === 'Rejected' || request.requestStatus === 'Returned' || request.requestStatus === 'Perfected') && (
                 <div className={`mt-3 text-xs px-3 py-2 rounded-md ${
                   request.requestStatus === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
@@ -372,125 +490,143 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
               </div>
             )}
             {(hasActions || showSmsButton) && isRoleResolved && (
-              <div className="border-t border-border px-6 py-4 bg-white shrink-0 space-y-3">
+              <div className="border-t-2 border-primary/20 bg-white shrink-0">
+                {/* Action header label */}
+                {actionHeaderLabel && (
+                  <div className={`flex items-center gap-2 px-6 py-2.5 text-xs font-semibold border-b ${actionHeaderLabel.color}`}>
+                    {actionHeaderLabel.icon}
+                    <span>Your action required:</span>
+                    <span className="font-normal">{actionHeaderLabel.text}</span>
+                  </div>
+                )}
 
-                {/* Credit Officer: Submit */}
-                {canSubmit && (
-                  <div className="space-y-2">
-                    <textarea
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="Add a note for the Legal Officer (optional)..."
-                      rows={2}
-                      className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
+                <div className="px-6 py-4 space-y-3">
+                  {/* Credit Officer: Submit */}
+                  {canSubmit && (
+                    <div className="space-y-2">
+                      <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Add a note for the Legal Officer (optional)..."
+                        rows={2}
+                        className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <button
+                        onClick={() => handleAction('submit')}
+                        disabled={actionLoading}
+                        className="w-full flex items-center justify-center gap-2 bg-primary text-white text-sm font-semibold py-3 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
+                      >
+                        <Send size={15} /> {actionLoading ? 'Submitting...' : 'Submit to Legal Officer'}
+                        {!actionLoading && <ArrowRight size={14} className="ml-auto" />}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Legal Officer: Start Review */}
+                  {canReview && (
                     <button
-                      onClick={() => handleAction('submit')}
+                      onClick={() => handleAction('review')}
                       disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 bg-primary text-white text-sm font-medium py-2.5 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white text-sm font-semibold py-3 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors shadow-sm"
                     >
-                      <Send size={14} /> {actionLoading ? 'Submitting...' : 'Submit to Legal Officer'}
+                      <Eye size={15} /> {actionLoading ? 'Starting...' : 'Start Review'}
+                      {!actionLoading && <ArrowRight size={14} className="ml-auto" />}
                     </button>
-                  </div>
-                )}
+                  )}
 
-                {/* Legal Officer: Start Review */}
-                {canReview && (
-                  <button
-                    onClick={() => handleAction('review')}
-                    disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
-                  >
-                    <Eye size={14} /> {actionLoading ? 'Starting...' : 'Start Review'}
-                  </button>
-                )}
-
-                {/* Legal Officer: Perfect / Reject / Return */}
-                {canDecide && (
-                  <div className="space-y-2">
-                    {activeAction && (
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-foreground">
-                          {activeAction === 'perfected' ? 'Perfection Notes *' :
-                           activeAction === 'reject' ? 'Rejection Reason *' : 'Revision Instructions *'}
-                        </label>
-                        <textarea
-                          value={decisionNotes}
-                          onChange={(e) => setDecisionNotes(e.target.value)}
-                          placeholder={
-                            activeAction === 'perfected' ? 'Describe how the collateral was perfected...' :
-                            activeAction === 'reject' ? 'Provide reason for rejection (required)...' :
-                            'Provide revision instructions (required)...'
-                          }
-                          rows={3}
-                          className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleAction(activeAction)}
-                            disabled={actionLoading}
-                            className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-medium py-2.5 rounded-lg disabled:opacity-50 transition-colors text-white ${
-                              activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                              activeAction === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
-                            }`}
-                          >
-                            {actionLoading ? 'Processing...' :
-                              activeAction === 'perfected' ? <><Award size={14} /> Confirm Perfected</> :
-                              activeAction === 'reject' ? <><XCircle size={14} /> Confirm Rejection</> :
-                              <><RotateCcw size={14} /> Confirm Return</>
+                  {/* Legal Officer: Perfect / Reject / Return */}
+                  {canDecide && (
+                    <div className="space-y-3">
+                      {activeAction && (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-foreground">
+                            {activeAction === 'perfected' ? '✅ Perfection Notes (required)' :
+                             activeAction === 'reject' ? '❌ Rejection Reason (required)' : '↩ Revision Instructions (required)'}
+                          </label>
+                          <textarea
+                            value={decisionNotes}
+                            onChange={(e) => setDecisionNotes(e.target.value)}
+                            placeholder={
+                              activeAction === 'perfected' ? 'Describe how the collateral was perfected...' :
+                              activeAction === 'reject' ? 'Provide reason for rejection (required)...' :
+                              'Provide revision instructions (required)...'
                             }
-                          </button>
-                          <button onClick={() => { setActiveAction(null); setDecisionNotes(''); }} className="px-4 py-2.5 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
-                            Cancel
-                          </button>
+                            rows={3}
+                            className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleAction(activeAction)}
+                              disabled={actionLoading}
+                              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 rounded-lg disabled:opacity-50 transition-colors text-white shadow-sm ${
+                                activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                activeAction === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
+                              }`}
+                            >
+                              {actionLoading ? 'Processing...' :
+                                activeAction === 'perfected' ? <><Award size={14} /> Confirm Perfected</> :
+                                activeAction === 'reject' ? <><XCircle size={14} /> Confirm Rejection</> :
+                                <><RotateCcw size={14} /> Confirm Return</>
+                              }
+                            </button>
+                            <button onClick={() => { setActiveAction(null); setDecisionNotes(''); }} className="px-4 py-3 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {!activeAction && (
-                      <div className="flex gap-2">
-                        <button onClick={() => setActiveAction('perfected')} className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-emerald-700 transition-colors">
-                          <Award size={14} /> Perfect
-                        </button>
-                        <button onClick={() => setActiveAction('return')} className="flex-1 flex items-center justify-center gap-1.5 bg-orange-500 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-orange-600 transition-colors">
-                          <RotateCcw size={14} /> Return
-                        </button>
-                        <button onClick={() => setActiveAction('reject')} className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg hover:bg-red-700 transition-colors">
-                          <XCircle size={14} /> Reject
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                      {!activeAction && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground font-medium">Choose your decision:</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => setActiveAction('perfected')} className="flex-1 flex flex-col items-center gap-1 bg-emerald-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                              <Award size={16} />
+                              <span>Mark Perfected</span>
+                            </button>
+                            <button onClick={() => setActiveAction('return')} className="flex-1 flex flex-col items-center gap-1 bg-orange-500 text-white text-xs font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">
+                              <RotateCcw size={16} />
+                              <span>Return for Revision</span>
+                            </button>
+                            <button onClick={() => setActiveAction('reject')} className="flex-1 flex flex-col items-center gap-1 bg-red-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors shadow-sm">
+                              <XCircle size={16} />
+                              <span>Reject</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                {/* Add Comment (all roles, when no primary action) */}
-                {canComment && !canSubmit && !canReview && !canDecide && (
-                  <div className="space-y-2">
-                    <textarea
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="Add a comment..."
-                      rows={2}
-                      className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
+                  {/* Add Comment (all roles, when no primary action) */}
+                  {canComment && !canSubmit && !canReview && !canDecide && (
+                    <div className="space-y-2">
+                      <textarea
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        placeholder="Add a comment..."
+                        rows={2}
+                        className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <button
+                        onClick={() => handleAction('comment')}
+                        disabled={actionLoading || !commentText.trim()}
+                        className="w-full flex items-center justify-center gap-2 bg-muted text-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-muted/80 disabled:opacity-50 transition-colors border border-border"
+                      >
+                        <MessageSquare size={14} /> {actionLoading ? 'Adding...' : 'Add Comment'}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* SMS Approval Request */}
+                  {showSmsButton && (
                     <button
-                      onClick={() => handleAction('comment')}
-                      disabled={actionLoading || !commentText.trim()}
-                      className="w-full flex items-center justify-center gap-2 bg-muted text-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-muted/80 disabled:opacity-50 transition-colors border border-border"
+                      onClick={() => setShowSmsModal(true)}
+                      className="w-full flex items-center justify-center gap-2 bg-violet-50 text-violet-700 border border-violet-200 text-sm font-medium py-2.5 rounded-lg hover:bg-violet-100 transition-colors"
                     >
-                      <MessageSquare size={14} /> {actionLoading ? 'Adding...' : 'Add Comment'}
+                      <MessageSquare size={14} /> Send Approval Request SMS
                     </button>
-                  </div>
-                )}
-
-                {/* SMS Approval Request */}
-                {showSmsButton && (
-                  <button
-                    onClick={() => setShowSmsModal(true)}
-                    className="w-full flex items-center justify-center gap-2 bg-violet-50 text-violet-700 border border-violet-200 text-sm font-medium py-2.5 rounded-lg hover:bg-violet-100 transition-colors"
-                  >
-                    <MessageSquare size={14} /> Send Approval Request SMS
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -795,6 +931,22 @@ export default function PerfectionWorkflowContent() {
     rejected: requests.filter(r => r.requestStatus === 'Rejected').length,
   };
 
+  // Determine if a list item needs action from current user
+  function getActionRequired(req: PerfectionRequest): { label: string; color: string } | null {
+    if (!userRole) return null;
+    const isAdmin = userRole === 'system_admin';
+    if ((userRole === 'credit_officer' || isAdmin) && (req.requestStatus === 'Draft' || req.requestStatus === 'Returned')) {
+      return { label: req.requestStatus === 'Returned' ? 'Needs Resubmission' : 'Ready to Submit', color: 'bg-blue-100 text-blue-700' };
+    }
+    if ((userRole === 'legal_officer' || isAdmin) && req.requestStatus === 'Submitted') {
+      return { label: 'Needs Review', color: 'bg-amber-100 text-amber-700' };
+    }
+    if ((userRole === 'legal_officer' || isAdmin) && req.requestStatus === 'Under Review') {
+      return { label: 'Awaiting Decision', color: 'bg-orange-100 text-orange-700' };
+    }
+    return null;
+  }
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
@@ -840,8 +992,11 @@ export default function PerfectionWorkflowContent() {
         </div>
       </div>
 
+      {/* Role Guidance Banner */}
+      {userRole && <RoleGuidanceBanner userRole={userRole} />}
+
       {/* Body — full-width list */}
-      <div className="flex flex-col flex-1 min-h-0 bg-white">
+      <div className="flex flex-col flex-1 min-h-0 bg-white mt-3">
         {/* Search & Filter */}
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 shrink-0">
           <div className="relative flex-1 max-w-sm">
@@ -889,11 +1044,12 @@ export default function PerfectionWorkflowContent() {
               {filtered.map((req) => {
                 const cfg = STATUS_CONFIG[req.requestStatus] ?? STATUS_CONFIG.Draft;
                 const priorityCfg = PRIORITY_CONFIG[req.priority] ?? PRIORITY_CONFIG.Normal;
+                const actionRequired = getActionRequired(req);
                 return (
                   <button
                     key={req.id}
                     onClick={() => handleSelectRequest(req)}
-                    className="w-full text-left px-5 py-4 hover:bg-muted/30 transition-colors group"
+                    className={`w-full text-left px-5 py-4 hover:bg-muted/30 transition-colors group ${actionRequired ? 'border-l-4 border-l-primary' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -905,16 +1061,27 @@ export default function PerfectionWorkflowContent() {
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${priorityCfg.bg} ${priorityCfg.color}`}>
                             {req.priority}
                           </span>
+                          {actionRequired && (
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${actionRequired.color}`}>
+                              <Zap size={10} /> {actionRequired.label}
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm font-semibold text-foreground">{req.obligor}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">{req.collateralType} · {req.registry}</p>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1">
                         <p className="text-xs text-muted-foreground">By {req.submittedByName || '—'}</p>
                         {req.perfectionDeadline && (
-                          <p className="text-xs text-muted-foreground mt-0.5">Due {req.perfectionDeadline}</p>
+                          <p className="text-xs text-muted-foreground">Due {req.perfectionDeadline}</p>
                         )}
-                        <ChevronRight size={14} className="text-muted-foreground mt-1 ml-auto group-hover:text-primary transition-colors" />
+                        {actionRequired ? (
+                          <span className="flex items-center gap-1 text-xs text-primary font-medium mt-1">
+                            Open to act <ArrowRight size={12} />
+                          </span>
+                        ) : (
+                          <ChevronRight size={14} className="text-muted-foreground mt-1 group-hover:text-primary transition-colors" />
+                        )}
                       </div>
                     </div>
                   </button>
