@@ -18,8 +18,7 @@ export interface FilterState {
 }
 
 // Re-export Collateral type alias for backward compatibility
-// ... Remove this block or line ...
-export type { CollateralRecord as Collateral } from '@/lib/supabase/collateralService';
+// Remove this block or line ...
 
 export default function CollateralManagementContent() {
   const { user } = useAuth();
