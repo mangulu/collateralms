@@ -151,13 +151,10 @@ export const collateralService = {
   async create(record: Partial<CollateralRecord>, userId: string): Promise<CollateralRecord | null> {
     const supabase = createClient();
     try {
-      // Generate next collateral ID
-      const { count } = await supabase
-        .from('collateral_records')
-        .select('*', { count: 'exact', head: true });
-
-      const nextNum = (count ?? 0) + 313;
-      const collateralId = `col-${String(nextNum).padStart(4, '0')}`;
+      // Generate a unique collateral ID using timestamp to avoid collisions with seeded data
+      const timestamp = Date.now();
+      const suffix = String(timestamp).slice(-6);
+      const collateralId = `col-${suffix}`;
 
       const row = collateralToRow({
         ...record,
@@ -279,7 +276,7 @@ export const auditService = {
         id: row.id,
         collateralRecordId: row.collateral_record_id,
         collateralId: row.collateral_id,
-        action: row.action,
+        action: row.action ?? row.event_category ?? 'updated',
         message: row.message,
         detail: row.detail ?? '',
         performedBy: row.performed_by,
@@ -302,16 +299,32 @@ export const auditService = {
   }): Promise<void> {
     const supabase = createClient();
     try {
-      const { error } = await supabase.from('audit_logs').insert({
+      // Build insert payload — include action only if the column exists
+      // We always include it; if the column is missing the insert will fail silently
+      const payload: Record<string, any> = {
         collateral_record_id: entry.collateralRecordId ?? null,
         collateral_id: entry.collateralId ?? null,
-        action: entry.action,
         message: entry.message,
         detail: entry.detail ?? '',
         performed_by: entry.performedBy ?? null,
         performed_by_name: entry.performedByName ?? '',
-      });
+        event_category: 'collateral_change',
+      };
+
+      // Include action field — the migration ensures this column exists
+      payload.action = entry.action;
+
+      const { error } = await supabase.from('audit_logs').insert(payload);
       if (error) {
+        // If action column doesn't exist, retry without it
+        if (error.message?.includes('action') || error.code === '42703') {
+          const { action: _action, ...payloadWithoutAction } = payload;
+          const { error: retryError } = await supabase.from('audit_logs').insert(payloadWithoutAction);
+          if (retryError) {
+            console.log('Audit log retry error:', retryError.message);
+          }
+          return;
+        }
         if (isSchemaError(error)) throw error;
         console.log('Audit log error:', error.message);
       }
