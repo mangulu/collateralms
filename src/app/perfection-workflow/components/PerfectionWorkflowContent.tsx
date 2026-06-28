@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers } from 'lucide-react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus, PerfectionStatusHistory } from '@/lib/supabase/perfectionService';
@@ -146,7 +146,6 @@ function WorkflowStageBar({ status, userRole }: { status: PerfectionRequestStatu
   const currentIdx = WORKFLOW_STAGES.indexOf(status);
   const effectiveIdx = status === 'Approved' ? 2 : currentIdx;
 
-  // Next action hint
   const nextActionHint: Partial<Record<PerfectionRequestStatus, Record<string, string>>> = {
     Draft: {
       credit_officer: '👉 Your turn: Open this request and click "Submit to Legal Officer"',
@@ -263,6 +262,211 @@ function StatusHistoryPanel({ history }: { history: PerfectionStatusHistory[] })
   );
 }
 
+// ─── Batch Action Panel ────────────────────────────────────────────────────────
+type BatchAction = 'submit' | 'review' | 'perfected' | 'reject' | 'return';
+
+interface BatchActionPanelProps {
+  selectedIds: Set<string>;
+  selectedRequests: PerfectionRequest[];
+  userRole: string;
+  userId: string;
+  userName: string;
+  onClearSelection: () => void;
+  onBatchComplete: () => void;
+}
+
+function BatchActionPanel({ selectedIds, selectedRequests, userRole, userId, userName, onClearSelection, onBatchComplete }: BatchActionPanelProps) {
+  const [batchAction, setBatchAction] = useState<BatchAction | ''>('');
+  const [batchComment, setBatchComment] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [results, setResults] = useState<{ id: string; success: boolean; error?: string }[]>([]);
+  const [showResults, setShowResults] = useState(false);
+
+  const isAdmin = userRole === 'system_admin';
+  const isCreditOfficer = userRole === 'credit_officer' || isAdmin;
+  const isLegalOfficer = userRole === 'legal_officer' || isAdmin;
+
+  // Determine which actions are available based on selected items' statuses
+  const selectedStatuses = new Set(selectedRequests.map(r => r.requestStatus));
+
+  const availableActions: { value: BatchAction; label: string; color: string; icon: React.ReactNode; requiresComment: boolean }[] = [];
+
+  if (isCreditOfficer && (selectedStatuses.has('Draft') || selectedStatuses.has('Returned'))) {
+    availableActions.push({ value: 'submit', label: 'Submit to Legal Officer', color: 'bg-blue-600 hover:bg-blue-700', icon: <Send size={14} />, requiresComment: false });
+  }
+  if (isLegalOfficer && selectedStatuses.has('Submitted')) {
+    availableActions.push({ value: 'review', label: 'Start Review', color: 'bg-amber-600 hover:bg-amber-700', icon: <Eye size={14} />, requiresComment: false });
+  }
+  if (isLegalOfficer && selectedStatuses.has('Under Review')) {
+    availableActions.push({ value: 'perfected', label: 'Mark as Perfected', color: 'bg-emerald-600 hover:bg-emerald-700', icon: <Award size={14} />, requiresComment: true });
+    availableActions.push({ value: 'return', label: 'Return for Revision', color: 'bg-orange-500 hover:bg-orange-600', icon: <RotateCcw size={14} />, requiresComment: true });
+    availableActions.push({ value: 'reject', label: 'Reject', color: 'bg-red-600 hover:bg-red-700', icon: <XCircle size={14} />, requiresComment: true });
+  }
+
+  const selectedActionConfig = availableActions.find(a => a.value === batchAction);
+
+  // Filter requests that are eligible for the chosen action
+  function getEligibleRequests(action: BatchAction): PerfectionRequest[] {
+    return selectedRequests.filter(r => {
+      if (action === 'submit') return r.requestStatus === 'Draft' || r.requestStatus === 'Returned';
+      if (action === 'review') return r.requestStatus === 'Submitted';
+      if (action === 'perfected' || action === 'return' || action === 'reject') return r.requestStatus === 'Under Review';
+      return false;
+    });
+  }
+
+  async function handleBatchProcess() {
+    if (!batchAction) { toast.error('Please select an action'); return; }
+    if (selectedActionConfig?.requiresComment && !batchComment.trim()) {
+      toast.error('A shared comment/reason is required for this action');
+      return;
+    }
+
+    const eligible = getEligibleRequests(batchAction);
+    if (eligible.length === 0) {
+      toast.error('None of the selected records are eligible for this action');
+      return;
+    }
+
+    setProcessing(true);
+    setResults([]);
+
+    const settled = await Promise.allSettled(
+      eligible.map(async (req) => {
+        try {
+          if (batchAction === 'submit') {
+            await perfectionService.submit(req.id, userId, userName, batchComment || 'Batch submitted.', userRole);
+          } else if (batchAction === 'review') {
+            await perfectionService.startReview(req.id, userId, userName, batchComment || 'Batch review started.', userRole);
+          } else if (batchAction === 'perfected') {
+            await perfectionService.perfected(req.id, userId, userName, batchComment, userRole);
+          } else if (batchAction === 'reject') {
+            await perfectionService.reject(req.id, userId, userName, batchComment, userRole);
+          } else if (batchAction === 'return') {
+            await perfectionService.returnForRevision(req.id, userId, userName, batchComment, userRole);
+          }
+          return { id: req.id, success: true };
+        } catch (err: any) {
+          return { id: req.id, success: false, error: err.message || 'Failed' };
+        }
+      })
+    );
+
+    const resultList = settled.map((s, i) =>
+      s.status === 'fulfilled' ? s.value : { id: eligible[i].id, success: false, error: 'Unexpected error' }
+    );
+
+    setResults(resultList);
+    setShowResults(true);
+    setProcessing(false);
+
+    const successCount = resultList.filter(r => r.success).length;
+    const failCount = resultList.filter(r => !r.success).length;
+
+    if (successCount > 0) toast.success(`${successCount} record${successCount > 1 ? 's' : ''} updated successfully`);
+    if (failCount > 0) toast.error(`${failCount} record${failCount > 1 ? 's' : ''} failed`);
+
+    onBatchComplete();
+    if (failCount === 0) {
+      setTimeout(() => {
+        onClearSelection();
+        setBatchAction('');
+        setBatchComment('');
+        setShowResults(false);
+        setResults([]);
+      }, 1500);
+    }
+  }
+
+  const eligibleCount = batchAction ? getEligibleRequests(batchAction).length : selectedIds.size;
+
+  return (
+    <div className="border-t-2 border-primary bg-primary/5 px-4 py-3 shrink-0">
+      <div className="flex items-start gap-3 flex-wrap">
+        {/* Selection summary */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-primary text-white text-xs font-bold px-2.5 py-1.5 rounded-lg">
+            <Layers size={13} />
+            {selectedIds.size} selected
+          </div>
+          <button
+            onClick={onClearSelection}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1.5 border border-border rounded-md hover:bg-white transition-colors bg-white"
+          >
+            <X size={11} /> Clear
+          </button>
+        </div>
+
+        {/* Action selector */}
+        {availableActions.length > 0 ? (
+          <div className="flex items-start gap-2 flex-1 flex-wrap">
+            <select
+              value={batchAction}
+              onChange={(e) => { setBatchAction(e.target.value as BatchAction | ''); setShowResults(false); }}
+              className="text-sm border border-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-w-[200px]"
+            >
+              <option value="">— Choose batch action —</option>
+              {availableActions.map(a => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </select>
+
+            {batchAction && (
+              <div className="flex items-start gap-2 flex-1 flex-wrap">
+                <textarea
+                  value={batchComment}
+                  onChange={(e) => setBatchComment(e.target.value)}
+                  placeholder={
+                    selectedActionConfig?.requiresComment
+                      ? 'Shared comment/reason (required for all selected records)...'
+                      : 'Shared comment (optional)...'
+                  }
+                  rows={1}
+                  className="flex-1 min-w-[200px] text-sm border border-border rounded-md px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                />
+                <button
+                  onClick={handleBatchProcess}
+                  disabled={processing || (selectedActionConfig?.requiresComment && !batchComment.trim())}
+                  className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-md text-white disabled:opacity-50 transition-colors shrink-0 ${selectedActionConfig?.color ?? 'bg-primary hover:bg-primary/90'}`}
+                >
+                  {processing ? (
+                    <><Loader2 size={13} className="animate-spin" /> Processing {eligibleCount}...</>
+                  ) : (
+                    <>{selectedActionConfig?.icon} Apply to {eligibleCount} record{eligibleCount !== 1 ? 's' : ''}</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground py-1.5">No batch actions available for the selected records and your role.</p>
+        )}
+      </div>
+
+      {/* Results summary */}
+      {showResults && results.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {results.map(r => {
+            const req = selectedRequests.find(req => req.id === r.id);
+            return (
+              <span
+                key={r.id}
+                className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
+                  r.success ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                }`}
+              >
+                {r.success ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
+                {req?.collateralId ?? r.id.slice(0, 8)}
+                {!r.success && r.error ? ` — ${r.error}` : ''}
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Detail Modal ──────────────────────────────────────────────────────────────
 interface DetailModalProps {
   request: PerfectionRequest;
@@ -323,7 +527,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
       setDecisionNotes('');
       setActiveAction(null);
       onRefresh();
-      // Close the modal for all status-changing actions so the list updates visibly
       if (type !== 'comment') {
         onClose();
       }
@@ -337,7 +540,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   const hasActions = canSubmit || canReview || canDecide || (canComment && !canSubmit && !canReview && !canDecide);
   const showSmsButton = request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review';
 
-  // Action footer header label
   const actionHeaderLabel = canSubmit
     ? { icon: <Send size={14} />, text: 'Submit this request to Legal Officer', color: 'text-blue-700 bg-blue-50 border-blue-200' }
     : canReview
@@ -495,7 +697,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
             )}
             {(hasActions || showSmsButton) && isRoleResolved && (
               <div className="border-t-2 border-primary/20 bg-white shrink-0">
-                {/* Action header label */}
                 {actionHeaderLabel && (
                   <div className={`flex items-center gap-2 px-6 py-2.5 text-xs font-semibold border-b ${actionHeaderLabel.color}`}>
                     {actionHeaderLabel.icon}
@@ -505,7 +706,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                 )}
 
                 <div className="px-6 py-4 space-y-3">
-                  {/* Credit Officer: Submit */}
                   {canSubmit && (
                     <div className="space-y-2">
                       <textarea
@@ -526,7 +726,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                     </div>
                   )}
 
-                  {/* Legal Officer: Start Review */}
                   {canReview && (
                     <button
                       onClick={() => handleAction('review')}
@@ -538,7 +737,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                     </button>
                   )}
 
-                  {/* Legal Officer: Perfect / Reject / Return */}
                   {canDecide && (
                     <div className="space-y-3">
                       {activeAction && (
@@ -601,7 +799,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                     </div>
                   )}
 
-                  {/* Add Comment (all roles, when no primary action) */}
                   {canComment && !canSubmit && !canReview && !canDecide && (
                     <div className="space-y-2">
                       <textarea
@@ -621,7 +818,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                     </div>
                   )}
 
-                  {/* SMS Approval Request */}
                   {showSmsButton && (
                     <button
                       onClick={() => setShowSmsModal(true)}
@@ -868,6 +1064,10 @@ export default function PerfectionWorkflowContent() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchMode, setBatchMode] = useState(false);
+
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -899,6 +1099,7 @@ export default function PerfectionWorkflowContent() {
   }, [fetchRequests]);
 
   async function handleSelectRequest(req: PerfectionRequest) {
+    if (batchMode) return; // don't open modal in batch mode
     setSelectedRequest(req);
     await fetchComments(req.id);
   }
@@ -935,7 +1136,6 @@ export default function PerfectionWorkflowContent() {
     rejected: requests.filter(r => r.requestStatus === 'Rejected').length,
   };
 
-  // Determine if a list item needs action from current user
   function getActionRequired(req: PerfectionRequest): { label: string; color: string } | null {
     if (!userRole) return null;
     const isAdmin = userRole === 'system_admin';
@@ -951,6 +1151,41 @@ export default function PerfectionWorkflowContent() {
     return null;
   }
 
+  // Batch selection helpers
+  const allFilteredIds = filtered.map(r => r.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.has(id));
+  const someSelected = allFilteredIds.some(id => selectedIds.has(id));
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allFilteredIds));
+    }
+  }
+
+  function toggleSelectOne(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  }
+
+  function enterBatchMode() {
+    setBatchMode(true);
+    setSelectedIds(new Set());
+  }
+
+  const selectedRequests = filtered.filter(r => selectedIds.has(r.id));
+
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
@@ -962,14 +1197,31 @@ export default function PerfectionWorkflowContent() {
               Manage collateral perfection requests between Credit and Legal Officers
             </p>
           </div>
-          {(userRole === 'credit_officer' || userRole === 'system_admin') && (
-            <button
-              onClick={() => setShowNewModal(true)}
-              className="flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <Plus size={15} /> New Request
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!batchMode ? (
+              <button
+                onClick={enterBatchMode}
+                className="flex items-center gap-2 bg-white border border-border text-foreground text-sm font-medium px-4 py-2 rounded-lg hover:bg-muted transition-colors"
+              >
+                <Layers size={15} /> Batch Actions
+              </button>
+            ) : (
+              <button
+                onClick={clearSelection}
+                className="flex items-center gap-2 bg-muted border border-border text-foreground text-sm font-medium px-4 py-2 rounded-lg hover:bg-muted/80 transition-colors"
+              >
+                <X size={15} /> Exit Batch Mode
+              </button>
+            )}
+            {(userRole === 'credit_officer' || userRole === 'system_admin') && (
+              <button
+                onClick={() => setShowNewModal(true)}
+                className="flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Plus size={15} /> New Request
+              </button>
+            )}
+          </div>
         </div>
 
         {/* KPI Strip */}
@@ -997,12 +1249,39 @@ export default function PerfectionWorkflowContent() {
       </div>
 
       {/* Role Guidance Banner */}
-      {userRole && <RoleGuidanceBanner userRole={userRole} />}
+      {userRole && !batchMode && <RoleGuidanceBanner userRole={userRole} />}
+
+      {/* Batch mode hint */}
+      {batchMode && (
+        <div className="mx-6 mt-4 mb-1 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 flex items-center gap-3">
+          <Layers size={16} className="text-primary shrink-0" />
+          <p className="text-sm text-primary font-medium">
+            Batch mode active — check the boxes next to records, then use the action bar at the bottom to apply a status change to all selected records at once.
+          </p>
+        </div>
+      )}
 
       {/* Body — full-width list */}
       <div className="flex flex-col flex-1 min-h-0 bg-white mt-3">
         {/* Search & Filter */}
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 shrink-0">
+          {/* Select-all checkbox (batch mode only) */}
+          {batchMode && (
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground shrink-0 px-1"
+              title={allSelected ? 'Deselect all' : 'Select all'}
+            >
+              {allSelected ? (
+                <CheckSquare size={16} className="text-primary" />
+              ) : someSelected ? (
+                <CheckSquare size={16} className="text-primary/50" />
+              ) : (
+                <Square size={16} />
+              )}
+              <span className="text-xs">{allSelected ? 'Deselect all' : 'Select all'}</span>
+            </button>
+          )}
           <div className="relative flex-1 max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -1049,13 +1328,30 @@ export default function PerfectionWorkflowContent() {
                 const cfg = STATUS_CONFIG[req.requestStatus] ?? STATUS_CONFIG.Draft;
                 const priorityCfg = PRIORITY_CONFIG[req.priority] ?? PRIORITY_CONFIG.Normal;
                 const actionRequired = getActionRequired(req);
+                const isChecked = selectedIds.has(req.id);
                 return (
-                  <button
+                  <div
                     key={req.id}
-                    onClick={() => handleSelectRequest(req)}
-                    className={`w-full text-left px-5 py-4 hover:bg-muted/30 transition-colors group ${actionRequired ? 'border-l-4 border-l-primary' : ''}`}
+                    onClick={() => batchMode ? toggleSelectOne(req.id, { stopPropagation: () => {} } as React.MouseEvent) : handleSelectRequest(req)}
+                    className={`w-full text-left px-5 py-4 transition-colors group flex items-start gap-3 cursor-pointer ${
+                      isChecked ? 'bg-primary/5 border-l-4 border-l-primary' : actionRequired && !batchMode ? 'border-l-4 border-l-primary hover:bg-muted/30' : 'hover:bg-muted/30'
+                    }`}
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    {/* Checkbox (batch mode) */}
+                    {batchMode && (
+                      <button
+                        onClick={(e) => toggleSelectOne(req.id, e)}
+                        className="mt-1 shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {isChecked ? (
+                          <CheckSquare size={18} className="text-primary" />
+                        ) : (
+                          <Square size={18} />
+                        )}
+                      </button>
+                    )}
+
+                    <div className="flex items-start justify-between gap-4 flex-1 min-w-0">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                           <span className="text-xs font-mono text-muted-foreground">{req.collateralId}</span>
@@ -1065,7 +1361,7 @@ export default function PerfectionWorkflowContent() {
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${priorityCfg.bg} ${priorityCfg.color}`}>
                             {req.priority}
                           </span>
-                          {actionRequired && (
+                          {actionRequired && !batchMode && (
                             <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${actionRequired.color}`}>
                               <Zap size={10} /> {actionRequired.label}
                             </span>
@@ -1079,25 +1375,38 @@ export default function PerfectionWorkflowContent() {
                         {req.perfectionDeadline && (
                           <p className="text-xs text-muted-foreground">Due {req.perfectionDeadline}</p>
                         )}
-                        {actionRequired ? (
+                        {!batchMode && (actionRequired ? (
                           <span className="flex items-center gap-1 text-xs text-primary font-medium mt-1">
                             Open to act <ArrowRight size={12} />
                           </span>
                         ) : (
                           <ChevronRight size={14} className="text-muted-foreground mt-1 group-hover:text-primary transition-colors" />
-                        )}
+                        ))}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
           )}
         </div>
+
+        {/* Batch Action Panel — shown when items are selected */}
+        {batchMode && selectedIds.size > 0 && (
+          <BatchActionPanel
+            selectedIds={selectedIds}
+            selectedRequests={selectedRequests}
+            userRole={userRole}
+            userId={userId}
+            userName={userName}
+            onClearSelection={clearSelection}
+            onBatchComplete={fetchRequests}
+          />
+        )}
       </div>
 
       {/* Detail Modal */}
-      {selectedRequest && (
+      {selectedRequest && !batchMode && (
         <DetailModal
           request={selectedRequest}
           comments={comments}
