@@ -24,6 +24,9 @@ import {
   ChevronRight,
   Activity,
   PieChart,
+  BookOpen,
+  TrendingUp,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Badge from '@/components/ui/Badge';
@@ -85,14 +88,19 @@ const fraudStatusColors: Record<string, string> = {
   RESOLVED: 'bg-green-100 text-green-700',
 };
 
-const perfectionTimeline = [
-  { step: 'Security Document Executed', done: true },
-  { step: 'Collateral Registered in CMS', done: true },
-  { step: 'Legal Review & Approval', done: true },
-  { step: 'Registry Submission Filed', done: false },
-  { step: 'Registry Confirmation Received', done: false },
-  { step: 'Perfection Confirmed', done: false },
-];
+// ─── Dynamic Perfection Timeline ──────────────────────────────────────────────
+
+function getPerfectionTimeline(status: CollateralStatus) {
+  const steps = [
+    { step: 'Security Document Executed', statuses: ['Draft', 'Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released', 'Overdue', 'Rejected'] },
+    { step: 'Collateral Registered in CMS', statuses: ['Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released', 'Overdue', 'Rejected'] },
+    { step: 'Legal Review & Approval', statuses: ['Under Review', 'Perfected', 'Monitoring', 'Released'] },
+    { step: 'Registry Submission Filed', statuses: ['Perfected', 'Monitoring', 'Released'] },
+    { step: 'Registry Confirmation Received', statuses: ['Perfected', 'Monitoring', 'Released'] },
+    { step: 'Perfection Confirmed', statuses: ['Perfected', 'Released'] },
+  ];
+  return steps.map(s => ({ step: s.step, done: s.statuses.includes(status) }));
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -119,6 +127,71 @@ function DetailRow({ label, value, icon: RowIcon }: { label: string; value: Reac
         <p className="text-xs font-500 text-muted-foreground uppercase tracking-wide mb-0.5">{label}</p>
         <div className="text-sm text-foreground">{value}</div>
       </div>
+    </div>
+  );
+}
+
+// ─── KPI Strip ────────────────────────────────────────────────────────────────
+
+function KPIStrip({ collateral }: { collateral: CollateralRecord }) {
+  const isOverdue = collateral.status === 'Overdue' || (collateral.daysToDeadline !== null && collateral.daysToDeadline < 0);
+  const isApproaching = collateral.daysToDeadline !== null && collateral.daysToDeadline >= 0 && collateral.daysToDeadline <= 7;
+
+  const deadlineLabel = collateral.daysToDeadline === null
+    ? 'N/A'
+    : isOverdue
+      ? `${Math.abs(collateral.daysToDeadline)}d overdue`
+      : `${collateral.daysToDeadline}d left`;
+
+  const deadlineColor = isOverdue
+    ? 'text-red-600'
+    : isApproaching
+      ? 'text-amber-600' :'text-green-600';
+
+  const kpis = [
+    {
+      label: 'Collateral Value',
+      value: collateral.valueTSh ? `TSh ${collateral.valueTSh}` : '—',
+      icon: TrendingUp,
+      color: 'text-primary',
+      bg: 'bg-primary/5',
+    },
+    {
+      label: 'Utilization',
+      value: (collateral as any).utilization_pct != null ? `${Number((collateral as any).utilization_pct).toFixed(1)}%` : '—',
+      icon: PieChart,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+    },
+    {
+      label: 'Active Charges',
+      value: (collateral as any).active_charges != null ? String((collateral as any).active_charges) : '—',
+      icon: Layers,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+    },
+    {
+      label: 'Days to Deadline',
+      value: deadlineLabel,
+      icon: Clock,
+      color: deadlineColor,
+      bg: isOverdue ? 'bg-red-50' : isApproaching ? 'bg-amber-50' : 'bg-green-50',
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      {kpis.map((kpi) => (
+        <div key={kpi.label} className={`flex items-center gap-3 p-4 rounded-xl border border-border ${kpi.bg}`}>
+          <div className={`w-9 h-9 rounded-lg bg-white/70 flex items-center justify-center shrink-0 shadow-sm`}>
+            <kpi.icon size={16} className={kpi.color} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide">{kpi.label}</p>
+            <p className={`text-sm font-700 truncate ${kpi.color}`}>{kpi.value}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -242,15 +315,7 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
         <SectionHeader title="Related Documents" icon={Files} />
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
-          <Link
-            href={`/collateral-library/${collateral.id}`}
-            className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
-          >
-            Open Library <ChevronRight size={11} />
-          </Link>
-        </div>
+        <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
       </div>
 
       {/* Upload row */}
@@ -396,7 +461,7 @@ function AuditTrailSection({ collateral }: { collateral: CollateralRecord }) {
           <p className="text-sm text-muted-foreground">No audit entries found for this collateral</p>
         </div>
       ) : (
-        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
           {entries.map((entry) => (
             <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-muted/20">
               <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded shrink-0 mt-0.5 ${actionColors[entry.action] ?? 'bg-gray-100 text-gray-600'}`}>
@@ -425,11 +490,18 @@ function AuditTrailSection({ collateral }: { collateral: CollateralRecord }) {
   );
 }
 
-// ─── Fraud Alerts Section ─────────────────────────────────────────────────────
+// ─── Risk & Compliance Sidebar Card (merged Fraud + Workflow) ─────────────────
 
-function FraudAlertsSection({ collateral }: { collateral: CollateralRecord }) {
+function RiskComplianceSidebarCard({ collateral }: { collateral: CollateralRecord }) {
+  const [activePanel, setActivePanel] = useState<'fraud' | 'workflow'>('fraud');
+
+  // Fraud state
   const [alerts, setAlerts] = useState<FraudAlertRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fraudLoading, setFraudLoading] = useState(true);
+
+  // Workflow state
+  const [requests, setRequests] = useState<PerfectionRequest[]>([]);
+  const [workflowLoading, setWorkflowLoading] = useState(true);
 
   useEffect(() => {
     fetchFraudAlerts()
@@ -440,60 +512,8 @@ function FraudAlertsSection({ collateral }: { collateral: CollateralRecord }) {
         setAlerts(filtered);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setFraudLoading(false));
   }, [collateral.id, collateral.collateralId]);
-
-  return (
-    <div className="bg-white rounded-xl border border-border shadow-card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <SectionHeader title="Fraud Alerts" icon={ShieldAlert} />
-        <Link href="/fraud-prevention" className="text-xs text-primary hover:underline flex items-center gap-1">
-          View All <ChevronRight size={11} />
-        </Link>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-6">
-          <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-        </div>
-      ) : alerts.length === 0 ? (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
-          <CheckCircle2 size={16} className="text-green-600 shrink-0" />
-          <p className="text-sm text-green-700 font-500">No fraud alerts detected for this collateral</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {alerts.map((alert) => (
-            <div key={alert.id} className="p-3 rounded-lg border border-red-200 bg-red-50">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-600 text-red-700">{fraudAlertTypeLabels[alert.alert_type] ?? alert.alert_type}</span>
-                <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded ${fraudStatusColors[alert.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {alert.status.replace(/_/g, ' ')}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-red-600">Risk Score: <strong>{alert.risk_score}</strong></span>
-                <span className="text-muted-foreground/40">·</span>
-                <span className="text-xs text-red-600">Confidence: <strong>{alert.confidence}%</strong></span>
-                <span className="text-muted-foreground/40">·</span>
-                <span className="text-xs text-muted-foreground">{new Date(alert.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Perfection Workflow Section ──────────────────────────────────────────────
-
-function WorkflowSection({ collateral }: { collateral: CollateralRecord }) {
-  const [requests, setRequests] = useState<PerfectionRequest[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     perfectionService
@@ -505,10 +525,12 @@ function WorkflowSection({ collateral }: { collateral: CollateralRecord }) {
         setRequests(filtered);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setWorkflowLoading(false));
   }, [collateral.id, collateral.collateralId]);
 
-  const statusColors: Record<string, string> = {
+  const timeline = getPerfectionTimeline(collateral.status);
+
+  const workflowStatusColors: Record<string, string> = {
     Draft: 'bg-gray-100 text-gray-600',
     Submitted: 'bg-blue-100 text-blue-700',
     'Under Review': 'bg-amber-100 text-amber-700',
@@ -519,52 +541,137 @@ function WorkflowSection({ collateral }: { collateral: CollateralRecord }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-border shadow-card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <SectionHeader title="Perfection Workflow" icon={Activity} />
-        <Link href="/perfection-workflow" className="text-xs text-primary hover:underline flex items-center gap-1">
-          View All <ChevronRight size={11} />
-        </Link>
-      </div>
-
-      {/* Static timeline */}
-      <div className="space-y-2 mb-5">
-        {perfectionTimeline.map((step, idx) => (
-          <div key={`step-${idx}`} className="flex items-center gap-2.5">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step.done ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
-              {step.done ? <CheckCircle2 size={12} /> : <span className="text-[10px] font-700">{idx + 1}</span>}
-            </div>
-            <p className={`text-xs ${step.done ? 'text-foreground font-500' : 'text-muted-foreground'}`}>{step.step}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Live requests */}
-      {loading ? (
-        <div className="flex items-center justify-center py-4">
-          <svg className="animate-spin w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
+    <div className="bg-white rounded-xl border border-border shadow-card overflow-hidden">
+      {/* Card header */}
+      <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Shield size={14} className="text-primary" />
         </div>
-      ) : requests.length > 0 ? (
-        <div className="space-y-2 border-t border-border pt-4">
-          <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-2">Perfection Requests</p>
-          {requests.map((req) => (
-            <div key={req.id} className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-muted/20">
-              <div>
-                <p className="text-xs font-500 text-foreground">{req.collateralId}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {req.submittedByName} · {new Date(req.createdAt).toLocaleDateString()}
-                </p>
+        <h2 className="text-sm font-700 text-foreground uppercase tracking-wider">Risk &amp; Compliance</h2>
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex border-b border-border mx-5">
+        <button
+          onClick={() => setActivePanel('fraud')}
+          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 border-b-2 transition-colors -mb-px ${
+            activePanel === 'fraud' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <ShieldAlert size={12} />
+          Fraud
+          {alerts.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-700">{alerts.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setActivePanel('workflow')}
+          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 border-b-2 transition-colors -mb-px ${
+            activePanel === 'workflow' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Activity size={12} />
+          Workflow
+        </button>
+      </div>
+
+      <div className="p-5">
+        {/* ── Fraud Panel ── */}
+        {activePanel === 'fraud' && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground">AI-detected fraud signals</p>
+              <Link href="/fraud-prevention" className="text-xs text-primary hover:underline flex items-center gap-1">
+                View All <ChevronRight size={11} />
+              </Link>
+            </div>
+            {fraudLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
               </div>
-              <span className={`text-[10px] font-600 px-2 py-0.5 rounded ${statusColors[req.requestStatus] ?? 'bg-gray-100 text-gray-600'}`}>
-                {req.requestStatus}
-              </span>
+            ) : alerts.length === 0 ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+                <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                <p className="text-sm text-green-700 font-500">No fraud alerts detected</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="p-3 rounded-lg border border-red-200 bg-red-50">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-600 text-red-700">{fraudAlertTypeLabels[alert.alert_type] ?? alert.alert_type}</span>
+                      <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded ${fraudStatusColors[alert.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {alert.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-red-600">Risk: <strong>{alert.risk_score}</strong></span>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="text-xs text-red-600">Conf: <strong>{alert.confidence}%</strong></span>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="text-xs text-muted-foreground">{new Date(alert.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Workflow Panel ── */}
+        {activePanel === 'workflow' && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground">Perfection progress</p>
+              <Link href="/perfection-workflow" className="text-xs text-primary hover:underline flex items-center gap-1">
+                View All <ChevronRight size={11} />
+              </Link>
             </div>
-          ))}
-        </div>
-      ) : null}
+
+            {/* Dynamic timeline */}
+            <div className="space-y-2 mb-5">
+              {timeline.map((step, idx) => (
+                <div key={`step-${idx}`} className="flex items-center gap-2.5">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step.done ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                    {step.done ? <CheckCircle2 size={12} /> : <span className="text-[10px] font-700">{idx + 1}</span>}
+                  </div>
+                  <p className={`text-xs ${step.done ? 'text-foreground font-500' : 'text-muted-foreground'}`}>{step.step}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Live requests */}
+            {workflowLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <svg className="animate-spin w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            ) : requests.length > 0 ? (
+              <div className="space-y-2 border-t border-border pt-4">
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-2">Perfection Requests</p>
+                {requests.map((req) => (
+                  <div key={req.id} className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-muted/20">
+                    <div>
+                      <p className="text-xs font-500 text-foreground">{req.collateralId}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {req.submittedByName} · {new Date(req.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-600 px-2 py-0.5 rounded ${workflowStatusColors[req.requestStatus] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {req.requestStatus}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -581,7 +688,7 @@ export default function CollateralDetailContent({
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'utilization'>('overview');
+  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents'>('profile');
 
   const handleSave = async (data: Partial<CollateralRecord>) => {
     if (!collateral) return;
@@ -656,7 +763,7 @@ export default function CollateralDetailContent({
   return (
     <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto">
       {/* Breadcrumb + Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
         <div>
           <button
             onClick={onBack}
@@ -672,7 +779,14 @@ export default function CollateralDetailContent({
             {collateral.obligor} · {collateral.type} · {collateral.registry}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <Link
+            href={`/collateral-library/${collateral.id}`}
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <BookOpen size={13} />
+            View in Library
+          </Link>
           <button
             onClick={onRefresh}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
@@ -692,7 +806,7 @@ export default function CollateralDetailContent({
 
       {/* Status Banners */}
       {isOverdue && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-5">
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
           <AlertTriangle size={15} className="text-red-600 shrink-0" />
           <p className="text-sm text-red-700 font-500">
             This collateral is overdue for perfection — {collateral.daysToDeadline !== null && Math.abs(collateral.daysToDeadline)} days past the submission deadline. Immediate action required.
@@ -700,7 +814,7 @@ export default function CollateralDetailContent({
         </div>
       )}
       {isApproaching && !isOverdue && (
-        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-5">
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
           <Clock size={15} className="text-amber-600 shrink-0" />
           <p className="text-sm text-amber-700 font-500">
             Perfection deadline approaching — {collateral.daysToDeadline} days remaining to submit to {collateral.registry}.
@@ -708,15 +822,19 @@ export default function CollateralDetailContent({
         </div>
       )}
 
+      {/* ── KPI Strip ── */}
+      <KPIStrip collateral={collateral} />
+
       {/* ── Tab Navigation ── */}
       <div className="flex items-center gap-1 mb-6 border-b border-border">
         {[
-          { key: 'overview', label: 'Overview', icon: Shield },
-          { key: 'utilization', label: 'Utilization & Charges', icon: PieChart },
+          { key: 'profile', label: 'Profile', icon: Shield },
+          { key: 'charges', label: 'Charges & Loans', icon: PieChart },
+          { key: 'documents', label: 'Documents & History', icon: Files },
         ].map(tab => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as 'overview' | 'utilization')}
+            onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents')}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${
               activeTab === tab.key
                 ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
@@ -728,8 +846,8 @@ export default function CollateralDetailContent({
         ))}
       </div>
 
-      {/* ── Tab: Overview ── */}
-      {activeTab === 'overview' && (
+      {/* ── Tab: Profile ── */}
+      {activeTab === 'profile' && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left column — core details */}
           <div className="xl:col-span-2 space-y-6">
@@ -826,21 +944,12 @@ export default function CollateralDetailContent({
 
             {/* Geomapping */}
             <GeoSection collateral={collateral} />
-
-            {/* Documents */}
-            <DocumentsSection collateral={collateral} />
-
-            {/* Audit Trail */}
-            <AuditTrailSection collateral={collateral} />
           </div>
 
-          {/* Right column — intelligence panels */}
+          {/* Right column — Risk & Compliance + Quick Links */}
           <div className="space-y-6">
-            {/* Fraud Alerts */}
-            <FraudAlertsSection collateral={collateral} />
-
-            {/* Workflow */}
-            <WorkflowSection collateral={collateral} />
+            {/* Merged Risk & Compliance card */}
+            <RiskComplianceSidebarCard collateral={collateral} />
 
             {/* Quick Links */}
             <div className="bg-white rounded-xl border border-border shadow-card p-5">
@@ -871,9 +980,17 @@ export default function CollateralDetailContent({
         </div>
       )}
 
-      {/* ── Tab: Utilization & Charges ── */}
-      {activeTab === 'utilization' && (
+      {/* ── Tab: Charges & Loans ── */}
+      {activeTab === 'charges' && (
         <CollateralUtilizationTab collateral={collateral} />
+      )}
+
+      {/* ── Tab: Documents & History ── */}
+      {activeTab === 'documents' && (
+        <div className="space-y-6">
+          <DocumentsSection collateral={collateral} />
+          <AuditTrailSection collateral={collateral} />
+        </div>
       )}
 
       {/* Edit Modal */}
