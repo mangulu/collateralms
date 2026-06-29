@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid, GitMerge, TrendingUp, Target, AlarmClock, DatabaseZap } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid, GitMerge, TrendingUp, Target, AlarmClock, DatabaseZap, LineChart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -37,6 +37,13 @@ const navGroups = [
         label: 'Portfolio Monitoring',
         icon: Activity,
         href: '/portfolio-monitoring',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
+      {
+        label: 'Cohort Analytics',
+        icon: LineChart,
+        href: '/cohort-analytics',
         badge: null,
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
