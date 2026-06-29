@@ -23,6 +23,7 @@ import { createClient } from '@/lib/supabase/client';
 import { collateralService, type AuditLog, type CollateralRecord } from '@/lib/supabase/collateralService';
 import Icon from '@/components/ui/AppIcon';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
+import { buildDeadlineMessage, getAuthorityBadge } from '@/lib/perfectionAuthorities';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -144,7 +145,7 @@ function SmsDeadlineModal({ record, onClose }: SmsDeadlineModalProps) {
 
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://collateral8511.builtwithrocket.new';
   const daysLeft = record.daysToDeadline ?? 0;
-  const message = smsAlertService.buildBrelaMessage(record.collateralId, daysLeft, appUrl);
+  const message = buildDeadlineMessage(record.collateralId, record.registry, daysLeft, appUrl);
 
   const handleSend = async () => {
     if (!phone.trim()) { setError('Phone number is required'); return; }
@@ -179,7 +180,7 @@ function SmsDeadlineModal({ record, onClose }: SmsDeadlineModalProps) {
               <MessageSquare size={16} className="text-blue-600" />
             </div>
             <div>
-              <h3 className="text-sm font-700 text-foreground">Send BRELA Deadline SMS</h3>
+              <h3 className="text-sm font-700 text-foreground">Send {record.registry} Deadline SMS</h3>
               <p className="text-xs text-muted-foreground">{record.collateralId} · {record.obligor}</p>
             </div>
           </div>
@@ -188,8 +189,13 @@ function SmsDeadlineModal({ record, onClose }: SmsDeadlineModalProps) {
           </button>
         </div>
         <div className="p-5 space-y-4">
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-700 ${urgencyColor}`}>
-            <AlertTriangle size={12} /> {urgency} — {daysLeft < 0 ? `${Math.abs(daysLeft)} days overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft} days remaining`}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-700 ${urgencyColor}`}>
+              <AlertTriangle size={12} /> {urgency} — {daysLeft < 0 ? `${Math.abs(daysLeft)} days overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft} days remaining`}
+            </div>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getAuthorityBadge(record.registry)}`}>
+              {record.registry}
+            </span>
           </div>
           <div>
             <label className="block text-xs font-600 text-muted-foreground mb-1">Recipient Name (optional)</label>
@@ -403,7 +409,7 @@ export default function ComplianceAuditContent() {
             <h1 className="text-xl font-bold text-foreground">Compliance & Audit Trail</h1>
           </div>
           <p className="text-sm text-muted-foreground ml-10.5">
-            Legal officer review · Regulatory submission records · BRELA / Registry deadline enforcement
+            Legal officer review · Regulatory submission records · Multi-authority perfection deadline enforcement
           </p>
           {lastRefreshed && (
             <p className="text-xs text-muted-foreground ml-10.5 mt-1">
@@ -436,7 +442,7 @@ export default function ComplianceAuditContent() {
         <SummaryCard label="Compliant (Perfected)" value={summary?.compliant ?? 0} sub={`${summary?.perfectionRate ?? '0.0'}% perfection rate`} icon={CheckCircle2} variant="success" />
         <SummaryCard label="Non-Compliant" value={summary?.nonCompliant ?? 0} sub="Overdue or rejected items" icon={XCircle} variant="danger" />
         <SummaryCard label="Pending Legal Review" value={summary?.pendingReview ?? 0} sub="Submitted or under review" icon={Clock} variant="warning" />
-        <SummaryCard label="Overdue Deadlines" value={summary?.overdueDeadlines ?? 0} sub="Past BRELA/registry deadline" icon={AlertTriangle} variant="danger" />
+        <SummaryCard label="Overdue Deadlines" value={summary?.overdueDeadlines ?? 0} sub="Past perfection deadline" icon={AlertTriangle} variant="danger" />
         <SummaryCard label="Audit Log Entries" value={auditLogs.length} sub="Total recorded actions" icon={FileText} variant="default" />
       </div>
 

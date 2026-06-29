@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Scale, Plus, Edit2, Trash2, CheckCircle2, XCircle, AlertTriangle, Shield, Clock, ToggleLeft, ToggleRight, Save, X, Search, Info, Send, MessageSquare, Loader2 } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
+import { buildDeadlineMessage, PERFECTION_AUTHORITIES } from '@/lib/perfectionAuthorities';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -116,6 +117,39 @@ const initialRules: ComplianceRule[] = [
     createdAt: '2024-03-10',
     triggeredCount: 41,
   },
+  {
+    id: 'RULE-008',
+    ruleName: 'TRA Deadline Warning',
+    ruleType: 'DEADLINE',
+    condition: { field: 'days_to_tra_deadline', operator: '<=', value: 7 },
+    action: 'WARN',
+    message: 'TRA submission deadline is within 7 days. Ensure tax clearance is in order.',
+    isActive: true,
+    createdAt: '2024-04-01',
+    triggeredCount: 18,
+  },
+  {
+    id: 'RULE-009',
+    ruleName: 'DSE Securities Deadline',
+    ruleType: 'DEADLINE',
+    condition: { field: 'days_to_dse_deadline', operator: '<=', value: 5 },
+    action: 'WARN',
+    message: 'DSE pledge registration deadline approaching. Contact DSE registrar immediately.',
+    isActive: true,
+    createdAt: '2024-04-15',
+    triggeredCount: 7,
+  },
+  {
+    id: 'RULE-010',
+    ruleName: 'TASAC Vessel Mortgage Overdue',
+    ruleType: 'DEADLINE',
+    condition: { field: 'days_to_tasac_deadline', operator: '<', value: 0 },
+    action: 'BLOCK',
+    message: 'TASAC vessel mortgage registration is overdue. Escalate to legal team immediately.',
+    isActive: true,
+    createdAt: '2024-05-01',
+    triggeredCount: 2,
+  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -135,7 +169,10 @@ const actionConfig: Record<RuleAction, { label: string; color: string; bg: strin
 const fieldOptions = [
   { value: 'ltv_ratio', label: 'LTV Ratio' },
   { value: 'days_to_brela_deadline', label: 'Days to BRELA Deadline' },
-  { value: 'days_to_lands_deadline', label: 'Days to Lands Deadline' },
+  { value: 'days_to_lands_deadline', label: 'Days to Lands Registry Deadline' },
+  { value: 'days_to_tra_deadline', label: 'Days to TRA Deadline' },
+  { value: 'days_to_dse_deadline', label: 'Days to DSE Deadline' },
+  { value: 'days_to_tasac_deadline', label: 'Days to TASAC Deadline' },
   { value: 'customer_relationship_years', label: 'Customer Relationship Years' },
   { value: 'valuation_age_months', label: 'Valuation Age (months)' },
   { value: 'collateral_utilization', label: 'Collateral Utilization %' },
@@ -177,19 +214,21 @@ function SmsNotifyModal({ rule, onClose }: SmsNotifyModalProps) {
 
   const buildMessage = (): string => {
     if (rule.ruleType === 'DEADLINE') {
-      const isBrela = rule.condition.field.includes('brela');
-      if (isBrela) {
+      const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      // Detect which authority the field belongs to
+      const authority = PERFECTION_AUTHORITIES.find(a => a.deadlineField === rule.condition.field);
+      if (authority && authority.code !== 'N/A') {
         const daysLeft = Number(rule.condition.value);
-        return smsAlertService.buildBrelaMessage(collateralId || 'N/A', daysLeft, appUrl);
+        return buildDeadlineMessage(collateralId || 'N/A', authority.code, daysLeft, appUrl);
       }
       return smsAlertService.buildOverdueMessage(collateralId || 'N/A', 0, appUrl);
     }
+    const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
     return `[CollateralMS ALERT] Rule "${rule.ruleName}" triggered for ${collateralId || 'N/A'}. Action required: ${appUrl}/compliance-rules`;
   };
 
   const alertType = (): 'BRELA_DEADLINE' | 'OVERDUE_COLLATERAL' | 'CUSTODY_DISCREPANCY' => {
-    if (rule.condition.field.includes('brela')) return 'BRELA_DEADLINE';
-    if (rule.ruleType === 'DEADLINE') return 'OVERDUE_COLLATERAL';
+    if (rule.ruleType === 'DEADLINE') return 'BRELA_DEADLINE';
     return 'OVERDUE_COLLATERAL';
   };
 
@@ -642,7 +681,7 @@ export default function ComplianceRulesContent() {
         <div>
           <p className="text-sm font-600 text-emerald-800">SMS Notifications Active</p>
           <p className="text-xs text-emerald-700 mt-0.5">
-            Deadline rules (BRELA overdue, custody discrepancies) can instantly notify responsible officers via SMS. Click the <MessageSquare size={11} className="inline" /> icon on any active Deadline rule to send an alert.
+            Deadline rules (BRELA, Lands Registry, TRA, DSE, TASAC overdue) can instantly notify responsible officers via SMS. Click the <MessageSquare size={11} className="inline" /> icon on any active Deadline rule to send an alert.
           </p>
         </div>
       </div>

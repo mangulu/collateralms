@@ -22,6 +22,7 @@ import { auditLogService } from '@/lib/supabase/auditLogService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+
 // ─── Sign-Off Modal (self-contained for the panel) ────────────────────────────
 
 interface SignOffModalProps {
@@ -210,7 +211,7 @@ export default function QuickActionsPanel({ collateral, onSignOffComplete }: Qui
   // ── Deadline info ──
   const isOverdue = collateral.status === 'Overdue' || (collateral.daysToDeadline !== null && collateral.daysToDeadline < 0);
   const isApproaching = collateral.daysToDeadline !== null && collateral.daysToDeadline >= 0 && collateral.daysToDeadline <= 7;
-  const isBRELA = collateral.registry === 'BRELA';
+  const hasRegistry = collateral.registry && collateral.registry !== 'N/A';
 
   const deadlineLabel = collateral.daysToDeadline === null
     ? 'No deadline set'
@@ -272,20 +273,20 @@ export default function QuickActionsPanel({ collateral, onSignOffComplete }: Qui
           </div>
 
           <div className="p-4 space-y-3">
-            {/* ── BRELA Deadline ── */}
-            <div className={`rounded-lg border p-3 ${isBRELA ? deadlineBg : 'bg-muted/30 border-border'}`}>
+            {/* ── Registry Deadline ── */}
+            <div className={`rounded-lg border p-3 ${hasRegistry ? deadlineBg : 'bg-muted/30 border-border'}`}>
               <div className="flex items-center gap-2 mb-1.5">
-                {isBRELA ? deadlineIcon : <Calendar size={14} className="text-muted-foreground shrink-0" />}
+                {hasRegistry ? deadlineIcon : <Calendar size={14} className="text-muted-foreground shrink-0" />}
                 <span className="text-[10px] font-600 text-muted-foreground uppercase tracking-wide">
-                  {isBRELA ? 'BRELA Deadline' : 'Registry Deadline'}
+                  {hasRegistry ? `${collateral.registry} Deadline` : 'Registry Deadline'}
                 </span>
               </div>
               <div className="pl-5">
                 {collateral.perfectionDeadline ? (
                   <>
                     <p className="text-sm font-600 text-foreground">{collateral.perfectionDeadline}</p>
-                    <p className={`text-xs font-500 mt-0.5 ${isBRELA ? deadlineColor : 'text-muted-foreground'}`}>
-                      {isBRELA ? deadlineLabel : `${collateral.registry} · ${deadlineLabel}`}
+                    <p className={`text-xs font-500 mt-0.5 ${hasRegistry ? deadlineColor : 'text-muted-foreground'}`}>
+                      {hasRegistry ? deadlineLabel : `${collateral.registry} · ${deadlineLabel}`}
                     </p>
                   </>
                 ) : (

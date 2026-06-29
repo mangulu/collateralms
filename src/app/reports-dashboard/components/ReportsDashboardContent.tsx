@@ -5,6 +5,7 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { createClient } from '@/lib/supabase/client';
 import { auditLogService, type AuditLogEntry } from '@/lib/supabase/auditLogService';
 import Icon from '@/components/ui/AppIcon';
+import { ACTIVE_REGISTRIES, getAuthorityBadge } from '@/lib/perfectionAuthorities';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,10 +32,11 @@ interface OfficerWorkload {
   perfectionRate: number;
 }
 
-interface BRELAItem {
+interface RegistryItem {
   collateralId: string;
   obligor: string;
   type: string;
+  registry: string;
   status: string;
   valueTSh: string;
   perfectionDeadline: string;
@@ -66,7 +68,7 @@ function fmtDateTime(iso: string): string {
   return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function complianceStatus(r: CollateralRow): BRELAItem['complianceStatus'] {
+function complianceStatus(r: CollateralRow): RegistryItem['complianceStatus'] {
   const s = r.status;
   if (s === 'Perfected' || s === 'Monitoring' || s === 'Released') return 'Compliant';
   if (s === 'Overdue' || s === 'Rejected') return 'Non-Compliant';
@@ -189,7 +191,8 @@ export default function ReportsDashboardContent() {
   const [auditLoading, setAuditLoading] = useState(true);
 
   // Filters
-  const [brelaFilter, setBrelaFilter] = useState<string>('All');
+  const [registryFilter, setRegistryFilter] = useState<string>('All');
+  const [authorityFilter, setAuthorityFilter] = useState<string>('All');
   const [auditDateFrom, setAuditDateFrom] = useState('');
   const [auditDateTo, setAuditDateTo] = useState('');
   const [auditAction, setAuditAction] = useState('All');
@@ -256,14 +259,15 @@ export default function ReportsDashboardContent() {
     loadAuditLogs();
   }, [loadCollateral, loadAuditLogs]);
 
-  // ── Derived: BRELA items ──────────────────────────────────────────────────
+  // ── Derived: Registry compliance items (all authorities) ──────────────────
 
-  const brelaItems: BRELAItem[] = collateral
-    .filter(r => r.registry === 'BRELA')
+  const allRegistryItems: RegistryItem[] = collateral
+    .filter(r => r.registry && r.registry !== 'N/A')
     .map(r => ({
       collateralId: r.collateralId,
       obligor: r.obligor,
       type: r.type,
+      registry: r.registry,
       status: r.status,
       valueTSh: r.valueTSh,
       perfectionDeadline: r.perfectionDeadline,
@@ -271,16 +275,39 @@ export default function ReportsDashboardContent() {
       complianceStatus: complianceStatus(r),
     }));
 
-  const filteredBrela = brelaFilter === 'All'
-    ? brelaItems
-    : brelaItems.filter(b => b.complianceStatus === brelaFilter);
+  const filteredRegistryItems = allRegistryItems.filter(b => {
+    const matchAuthority = authorityFilter === 'All' || b.registry === authorityFilter;
+    const matchStatus = registryFilter === 'All' || b.complianceStatus === registryFilter;
+    return matchAuthority && matchStatus;
+  });
+
+  // Per-authority KPI breakdown
+  const authorityKPIs = ACTIVE_REGISTRIES.map(code => {
+    const items = allRegistryItems.filter(b => b.registry === code);
+    const compliant = items.filter(b => b.complianceStatus === 'Compliant').length;
+    const overdue = items.filter(b => b.complianceStatus === 'Overdue' || b.complianceStatus === 'Non-Compliant').length;
+    const pending = items.filter(b => b.complianceStatus === 'Pending').length;
+    const rate = items.length > 0 ? Math.round((compliant / items.length) * 100) : 0;
+    return { code, total: items.length, compliant, overdue, pending, rate };
+  }).filter(a => a.total > 0);
+
+  // Overall registry compliance KPI (all non-N/A)
+  const registryKPI = {
+    total: allRegistryItems.length,
+    compliant: allRegistryItems.filter(b => b.complianceStatus === 'Compliant').length,
+    overdue: allRegistryItems.filter(b => b.complianceStatus === 'Overdue' || b.complianceStatus === 'Non-Compliant').length,
+    pending: allRegistryItems.filter(b => b.complianceStatus === 'Pending').length,
+  };
+  const registryRate = registryKPI.total > 0 ? Math.round((registryKPI.compliant / registryKPI.total) * 100) : 0;
+
+  const filteredBrela = allRegistryItems.filter(b => b.registry === 'BRELA');
 
   const brelaKPI = {
-    total: brelaItems.length,
-    compliant: brelaItems.filter(b => b.complianceStatus === 'Compliant').length,
-    overdue: brelaItems.filter(b => b.complianceStatus === 'Overdue' || b.complianceStatus === 'Non-Compliant').length,
-    pending: brelaItems.filter(b => b.complianceStatus === 'Pending').length,
-    totalValue: fmtVal(brelaItems.reduce((acc, b) => acc + parseVal(b.valueTSh), 0)),
+    total: filteredBrela.length,
+    compliant: filteredBrela.filter(b => b.complianceStatus === 'Compliant').length,
+    overdue: filteredBrela.filter(b => b.complianceStatus === 'Overdue' || b.complianceStatus === 'Non-Compliant').length,
+    pending: filteredBrela.filter(b => b.complianceStatus === 'Pending').length,
+    totalValue: fmtVal(filteredBrela.reduce((acc, b) => acc + parseVal(b.valueTSh), 0)),
   };
   const brelaRate = brelaKPI.total > 0 ? Math.round((brelaKPI.compliant / brelaKPI.total) * 100) : 0;
 
@@ -371,14 +398,14 @@ export default function ReportsDashboardContent() {
 
   // ── Export handlers ───────────────────────────────────────────────────────
 
-  function exportBrelaCSV() {
+  function exportRegistryCSV() {
     downloadCSV(
-      ['Collateral ID', 'Obligor', 'Type', 'Status', 'Compliance', 'Value (TSh)', 'Perfection Deadline', 'Days to Deadline'],
-      filteredBrela.map(b => [
-        b.collateralId, `"${b.obligor}"`, b.type, b.status, b.complianceStatus,
+      ['Collateral ID', 'Obligor', 'Type', 'Registry', 'Status', 'Compliance', 'Value (TSh)', 'Perfection Deadline', 'Days to Deadline'],
+      filteredRegistryItems.map(b => [
+        b.collateralId, `"${b.obligor}"`, b.type, b.registry, b.status, b.complianceStatus,
         b.valueTSh, b.perfectionDeadline || '—', b.daysToDeadline !== null ? String(b.daysToDeadline) : '—',
       ]),
-      `BRELA_Compliance_${new Date().toISOString().slice(0, 10)}.csv`
+      `Registry_Compliance_${new Date().toISOString().slice(0, 10)}.csv`
     );
   }
 
@@ -414,7 +441,7 @@ export default function ReportsDashboardContent() {
         <div>
           <h1 className="text-2xl font-700 text-foreground">Regulatory Reports Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            BRELA compliance status · Perfection trend analysis · Officer workload · Audit trail exports
+            Registry compliance status · Perfection trend analysis · Officer workload · Audit trail exports
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -445,10 +472,10 @@ export default function ReportsDashboardContent() {
           color={perfectionRateNum >= 80 ? 'success' : perfectionRateNum >= 60 ? 'warning' : 'danger'}
         />
         <KPITile
-          label="BRELA Compliance"
-          value={loading ? '—' : `${brelaRate}%`}
-          sub={`${brelaKPI.compliant} of ${brelaKPI.total} items`}
-          color={brelaRate >= 80 ? 'success' : brelaRate >= 60 ? 'warning' : 'danger'}
+          label="Registry Compliance"
+          value={loading ? '—' : `${registryRate}%`}
+          sub={`${registryKPI.compliant} of ${registryKPI.total} items`}
+          color={registryRate >= 80 ? 'success' : registryRate >= 60 ? 'warning' : 'danger'}
         />
         <KPITile
           label="Overdue Items"
@@ -459,23 +486,23 @@ export default function ReportsDashboardContent() {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          SECTION 1: BRELA Compliance Status
+          SECTION 1: Registry Compliance Status (All Authorities)
       ══════════════════════════════════════════════════════════════════════ */}
       <SectionCard
-        title="BRELA Compliance Status"
-        subtitle="Business Registrations and Licensing Agency — registered collateral compliance"
+        title="Registry Compliance Status"
+        subtitle="BRELA · Lands Registry · TRA · DSE · TASAC — perfection compliance by authority"
         icon={Shield}
         action={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => printSection('BRELA Compliance Status', 'brela-table')}
+              onClick={() => printSection('Registry Compliance Status', 'registry-table')}
               className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
             >
               <Printer size={12} />
               Print
             </button>
             <button
-              onClick={exportBrelaCSV}
+              onClick={exportRegistryCSV}
               className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary text-white rounded-md text-xs hover:bg-primary/90 transition-colors"
             >
               <FileDown size={12} />
@@ -484,33 +511,34 @@ export default function ReportsDashboardContent() {
           </div>
         }
       >
-        {/* BRELA KPI row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-          {[
-            { label: 'Total BRELA', value: brelaKPI.total, color: 'bg-blue-50 border-blue-200 text-blue-700' },
-            { label: 'Compliant', value: brelaKPI.compliant, color: 'bg-green-50 border-green-200 text-green-700' },
-            { label: 'Overdue / Non-Compliant', value: brelaKPI.overdue, color: 'bg-red-50 border-red-200 text-red-700' },
-            { label: 'Pending', value: brelaKPI.pending, color: 'bg-amber-50 border-amber-200 text-amber-700' },
-            { label: 'Compliance Rate', value: `${brelaRate}%`, color: brelaRate >= 80 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700' },
-          ].map(k => (
-            <div key={k.label} className={`rounded-lg p-3 border ${k.color}`}>
-              <p className="text-xs font-semibold opacity-70 mb-0.5">{k.label}</p>
-              <p className="text-xl font-black">{loading ? '—' : k.value}</p>
-            </div>
-          ))}
-        </div>
+        {/* Per-authority KPI cards */}
+        {!loading && authorityKPIs.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+            {authorityKPIs.map(a => (
+              <button
+                key={a.code}
+                onClick={() => setAuthorityFilter(authorityFilter === a.code ? 'All' : a.code)}
+                className={`rounded-lg p-3 border text-left transition-all ${authorityFilter === a.code ? 'ring-2 ring-primary' : ''} ${getAuthorityBadge(a.code)}`}
+              >
+                <p className="text-xs font-bold mb-0.5">{a.code}</p>
+                <p className="text-xl font-black">{a.total}</p>
+                <p className="text-[10px] opacity-80 mt-0.5">{a.rate}% compliant</p>
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Compliance progress bar */}
-        {!loading && brelaKPI.total > 0 && (
+        {/* Overall compliance progress bar */}
+        {!loading && registryKPI.total > 0 && (
           <div className="mb-5">
             <div className="flex items-center justify-between mb-1.5 text-xs text-muted-foreground">
-              <span>Compliance Distribution</span>
-              <span>{brelaRate}% compliant</span>
+              <span>Overall Compliance Distribution</span>
+              <span>{registryRate}% compliant</span>
             </div>
             <div className="h-3 bg-muted rounded-full overflow-hidden flex">
-              <div className="bg-green-500 h-full transition-all" style={{ width: `${(brelaKPI.compliant / brelaKPI.total) * 100}%` }} />
-              <div className="bg-amber-400 h-full transition-all" style={{ width: `${(brelaKPI.pending / brelaKPI.total) * 100}%` }} />
-              <div className="bg-red-500 h-full transition-all" style={{ width: `${(brelaKPI.overdue / brelaKPI.total) * 100}%` }} />
+              <div className="bg-green-500 h-full transition-all" style={{ width: `${(registryKPI.compliant / registryKPI.total) * 100}%` }} />
+              <div className="bg-amber-400 h-full transition-all" style={{ width: `${(registryKPI.pending / registryKPI.total) * 100}%` }} />
+              <div className="bg-red-500 h-full transition-all" style={{ width: `${(registryKPI.overdue / registryKPI.total) * 100}%` }} />
             </div>
             <div className="flex items-center gap-4 mt-1.5">
               {[
@@ -527,49 +555,72 @@ export default function ReportsDashboardContent() {
           </div>
         )}
 
-        {/* Filter */}
-        <div className="flex items-center gap-3 mb-3">
+        {/* Filters */}
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
           <Filter size={13} className="text-muted-foreground" />
+          <label className="text-xs text-muted-foreground font-medium">Authority:</label>
+          <select
+            value={authorityFilter}
+            onChange={e => setAuthorityFilter(e.target.value)}
+            className="text-xs border border-border rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            {['All', ...ACTIVE_REGISTRIES].map(o => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
           <label className="text-xs text-muted-foreground font-medium">Status:</label>
           <select
-            value={brelaFilter}
-            onChange={e => setBrelaFilter(e.target.value)}
+            value={registryFilter}
+            onChange={e => setRegistryFilter(e.target.value)}
             className="text-xs border border-border rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-primary"
           >
             {['All', 'Compliant', 'Non-Compliant', 'Pending', 'Overdue'].map(o => (
               <option key={o}>{o}</option>
             ))}
           </select>
-          <span className="text-xs text-muted-foreground ml-auto">{filteredBrela.length} items</span>
+          {(authorityFilter !== 'All' || registryFilter !== 'All') && (
+            <button
+              onClick={() => { setAuthorityFilter('All'); setRegistryFilter('All'); }}
+              className="text-xs text-muted-foreground hover:text-foreground underline"
+            >
+              Clear
+            </button>
+          )}
+          <span className="text-xs text-muted-foreground ml-auto">{filteredRegistryItems.length} items</span>
         </div>
 
-        {/* BRELA Table */}
+        {/* Registry Table */}
         {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-10 bg-muted/30 rounded animate-pulse" />
             ))}
           </div>
-        ) : filteredBrela.length === 0 ? (
+        ) : filteredRegistryItems.length === 0 ? (
           <div className="text-center py-10 text-sm text-muted-foreground">
-            {brelaItems.length === 0 ? 'No BRELA-registered collateral found.' : 'No items match the selected filter.'}
+            {allRegistryItems.length === 0 ? 'No registry-perfected collateral found.' : 'No items match the selected filters.'}
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border">
-            <table id="brela-table" className="w-full text-xs">
+            <table id="registry-table" className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/40 border-b border-border">
-                  {['Collateral ID', 'Obligor', 'Type', 'Status', 'Compliance', 'Value (TSh)', 'Perfection Deadline', 'Days Left'].map(h => (
+                  {['Collateral ID', 'Obligor', 'Type', 'Registry', 'Status', 'Compliance', 'Value (TSh)', 'Perfection Deadline', 'Days Left'].map(h => (
                     <th key={h} className="text-left px-3 py-2.5 font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredBrela.map((b, i) => (
+                {filteredRegistryItems.map((b, i) => (
                   <tr key={`${b.collateralId}-${i}`} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="px-3 py-2.5 font-mono font-medium text-primary">{b.collateralId}</td>
                     <td className="px-3 py-2.5 text-foreground font-medium">{b.obligor}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{b.type}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getAuthorityBadge(b.registry)}`}>
+                        {b.registry}
+                      </span>
+                    </td>
                     <td className="px-3 py-2.5">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-foreground">{b.status}</span>
                     </td>

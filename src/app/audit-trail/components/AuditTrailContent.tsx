@@ -219,7 +219,7 @@ function buildPrintableHTML(entries: AuditLogEntry[], filters: {
     <tbody>${rows}</tbody>
   </table>
   <div class="compliance-notice">
-    <strong>Regulatory Notice:</strong> This audit trail is an immutable record of all system actions, retained in compliance with Bank of Tanzania and BRELA regulatory requirements. This document is generated for official compliance and archival purposes. Any alteration of this record is prohibited.
+    <strong>Regulatory Notice:</strong> This audit trail is an immutable record of all system actions, retained in compliance with Bank of Tanzania regulatory requirements and applicable perfection authority rules (BRELA, Lands Registry, TRA, DSE, TASAC). This document is generated for official compliance and archival purposes. Any alteration of this record is prohibited.
   </div>
   <div class="footer">
     <span>Collateral Management System — Confidential</span>
@@ -769,7 +769,7 @@ export default function AuditTrailContent() {
         <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <ShieldCheck size={14} className="text-amber-600 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            <span className="font-semibold">Regulatory Notice:</span> This security &amp; compliance trail is an immutable record of all system actions. Records are retained for compliance with Bank of Tanzania and BRELA regulatory requirements. Use the Export button to download CSV or PDF for offline archival and regulatory submissions.
+            <span className="font-semibold">Regulatory Notice:</span> This security &amp; compliance trail is an immutable record of all system actions. Records are retained for compliance with Bank of Tanzania regulatory requirements and applicable perfection authority rules (BRELA, Lands Registry, TRA, DSE, TASAC). Use the Export button to download CSV or PDF for offline archival and regulatory submissions.
           </p>
         </div>
       </div>
