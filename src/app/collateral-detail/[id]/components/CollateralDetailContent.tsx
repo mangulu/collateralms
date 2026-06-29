@@ -27,6 +27,13 @@ import {
   BookOpen,
   TrendingUp,
   Layers,
+  Plus,
+  X,
+  AlertCircle,
+  ChevronDown,
+  FileImage,
+  FileType2,
+  File,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Badge from '@/components/ui/Badge';
@@ -247,16 +254,220 @@ function GeoSection({ collateral }: { collateral: CollateralRecord }) {
   );
 }
 
+// ─── Upload Document Modal ────────────────────────────────────────────────────
+
+interface UploadDocumentModalProps {
+  collateral: CollateralRecord;
+  userId: string;
+  userName: string;
+  onClose: () => void;
+  onUploaded: () => void;
+}
+
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+const DOC_TYPE_OPTIONS: DocumentType[] = [
+  'Title Deed',
+  'Charge Certificate',
+  'Valuation Report',
+  'BRELA Confirmation',
+  'Insurance Certificate',
+  'Board Resolution',
+  'Other',
+];
+
+function getFileIconDetail(mimeType: string) {
+  if (mimeType?.includes('pdf')) return <FileType2 size={18} className="text-red-500" />;
+  if (mimeType?.includes('image')) return <FileImage size={18} className="text-blue-500" />;
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={18} className="text-indigo-500" />;
+  return <FileText size={18} className="text-slate-500" />;
+}
+
+function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded }: UploadDocumentModalProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [docType, setDocType] = useState<DocumentType>('Other');
+  const [notes, setNotes] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFile = (file: File) => {
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setError('Unsupported file type. Allowed: PDF, JPEG, PNG, WEBP, DOC, DOCX');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File exceeds 10 MB limit.');
+      return;
+    }
+    setError('');
+    setSelectedFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedFile) { setError('Please select a file.'); return; }
+    setUploading(true);
+    setError('');
+    const result = await documentService.upload(
+      selectedFile,
+      collateral.id,
+      collateral.collateralId,
+      docType,
+      notes,
+      userId,
+      userName,
+    );
+    setUploading(false);
+    if (!result) {
+      setError('Upload failed. Please try again.');
+      return;
+    }
+    onUploaded();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Upload Document</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Linked to:{' '}
+              <span className="font-medium text-foreground">
+                {collateral.collateralId} — {collateral.obligor}
+              </span>
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Drop zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+              dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/40'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            />
+            {selectedFile ? (
+              <div className="flex items-center justify-center gap-3">
+                {getFileIconDetail(selectedFile.type)}
+                <div className="text-left">
+                  <p className="text-sm font-medium text-foreground truncate max-w-[260px]">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground">{documentService.formatFileSize(selectedFile.size)}</p>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setError(''); }}
+                  className="ml-auto p-1 rounded hover:bg-muted"
+                >
+                  <X size={14} className="text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Upload size={24} className="mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-foreground">Drop file here or click to browse</p>
+                <p className="text-xs text-muted-foreground mt-1">PDF, JPEG, PNG, WEBP, DOC, DOCX · Max 10 MB</p>
+              </>
+            )}
+          </div>
+
+          {/* Document type */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
+            <div className="relative">
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value as DocumentType)}
+                className="w-full appearance-none border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              >
+                {DOC_TYPE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Notes <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Add context or version notes…"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={uploading || !selectedFile}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {uploading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+            {uploading ? 'Uploading…' : 'Upload Document'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Documents Section ────────────────────────────────────────────────────────
 
 function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
   const { user } = useAuth();
   const [docs, setDocs] = useState<CollateralDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [docType, setDocType] = useState<DocumentType>('Title Deed');
-  const [notes, setNotes] = useState('');
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -266,35 +477,6 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
   }, [collateral.id]);
 
   useEffect(() => { loadDocs(); }, [loadDocs]);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
-    try {
-      const result = await documentService.upload(
-        file,
-        collateral.id,
-        collateral.collateralId,
-        docType,
-        notes,
-        user.id,
-        user.email ?? 'Unknown'
-      );
-      if (result) {
-        toast.success('Document uploaded successfully');
-        setNotes('');
-        loadDocs();
-      } else {
-        toast.error('Upload failed');
-      }
-    } catch {
-      toast.error('Upload failed');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   const handleDelete = async (doc: CollateralDocument) => {
     const ok = await documentService.delete(doc);
@@ -306,45 +488,22 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
     }
   };
 
-  const docTypeOptions: DocumentType[] = [
-    'Title Deed', 'Charge Certificate', 'Valuation Report', 'BRELA Confirmation',
-    'Insurance Certificate', 'Board Resolution', 'Other',
-  ];
-
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
         <SectionHeader title="Related Documents" icon={Files} />
-        <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
-      </div>
-
-      {/* Upload row */}
-      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-muted/30 rounded-lg border border-border/60">
-        <select
-          value={docType}
-          onChange={(e) => setDocType(e.target.value as DocumentType)}
-          className="text-xs border border-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          {docTypeOptions.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Notes (optional)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="flex-1 min-w-[120px] text-xs border border-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-md text-xs font-600 hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-60"
-        >
-          <Upload size={12} />
-          {uploading ? 'Uploading…' : 'Upload'}
-        </button>
-        <input ref={fileInputRef} type="file" className="hidden" onChange={handleUpload} />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
+          {user && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={13} />
+              Upload
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -358,7 +517,16 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <Files size={28} className="text-muted-foreground/40 mb-2" />
           <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Upload title deeds, charge certificates, and other supporting documents above.</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">Upload title deeds, charge certificates, and other supporting documents.</p>
+          {user && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
+            >
+              <Upload size={13} />
+              Upload First Document
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -403,6 +571,16 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
             </div>
           ))}
         </div>
+      )}
+
+      {showUploadModal && user && (
+        <UploadDocumentModal
+          collateral={collateral}
+          userId={user.id}
+          userName={user.email ?? 'Unknown'}
+          onClose={() => setShowUploadModal(false)}
+          onUploaded={() => { loadDocs(); toast.success('Document uploaded successfully'); }}
+        />
       )}
     </div>
   );
