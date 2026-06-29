@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid, GitMerge } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid, GitMerge, TrendingUp, Target, AlarmClock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -19,6 +19,13 @@ const navGroups = [
   {
     label: 'Overview',
     items: [
+      {
+        label: 'Executive Dashboard',
+        icon: TrendingUp,
+        href: '/executive-dashboard',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
       {
         label: 'Dashboard',
         icon: LayoutDashboard,
@@ -108,6 +115,13 @@ const navGroups = [
         permission: PERMISSIONS.COMPLIANCE_VIEW,
       },
       {
+        label: 'Deadline Predictions',
+        icon: Target,
+        href: '/deadline-predictions',
+        badge: null,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+      {
         label: 'Fast Track',
         icon: Zap,
         href: '/fast-track',
@@ -137,6 +151,13 @@ const navGroups = [
         label: 'Alerts Inbox',
         icon: Inbox,
         href: '/alerts-inbox',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
+      {
+        label: 'Deadline Reminders',
+        icon: AlarmClock,
+        href: '/deadline-reminders',
         badge: null,
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },

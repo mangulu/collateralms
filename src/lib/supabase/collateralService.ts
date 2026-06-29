@@ -624,3 +624,5 @@ export const dashboardService = {
     }
   },
 };
+
+export { createClient };
