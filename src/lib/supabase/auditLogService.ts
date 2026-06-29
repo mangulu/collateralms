@@ -692,4 +692,29 @@ export const auditLogService = {
       batch_summary:     params.batchSummary ?? null,
     });
   },
+
+  /** Log legal sign-off on a perfected collateral record */
+  async logLegalSignOff(params: {
+    collateralRecordId: string;
+    collateralId: string;
+    performedBy?: string;
+    performedByName?: string;
+    notes?: string;
+    ipAddress?: string;
+  }): Promise<boolean> {
+    return insertAuditLog({
+      collateral_record_id: params.collateralRecordId,
+      collateral_id:        params.collateralId,
+      entity_type:          'collateral',
+      action:               'legal_signoff',
+      message:              `Legal sign-off recorded for ${params.collateralId}`,
+      detail:               params.notes ? `Notes: ${params.notes}` : 'Digital sign-off applied by legal officer',
+      reason:               null,
+      performed_by:         params.performedBy ?? null,
+      performed_by_name:    params.performedByName ?? 'Legal Officer',
+      ip_address:           params.ipAddress ?? null,
+      event_category:       EVENT_CATEGORIES.STATUS_TRANSITION,
+      field_changes:        null,
+    });
+  },
 };
