@@ -423,29 +423,27 @@ export default function GeomappingContent() {
                         icon={getMarkerIcon(pin, selectedPin?.id === pin.id)}
                         onClick={() => setSelectedPin(pin)}
                         title={`${pin.collateralId} — ${pin.obligor}`}
-                      />
-                    ))}
-
-                    {/* InfoWindow for selected pin */}
-                    {selectedPin && (
-                      <InfoWindow
-                        position={{ lat: selectedPin.lat, lng: selectedPin.lng }}
-                        onCloseClick={() => setSelectedPin(null)}
                       >
-                        <div className="text-xs min-w-[160px]">
-                          <p className="font-700 text-sm text-gray-900 mb-1">{selectedPin.collateralId}</p>
-                          <p className="text-gray-600 mb-0.5">{selectedPin.obligor}</p>
-                          <p className="text-gray-500 mb-1">{selectedPin.address}</p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`px-1.5 py-0.5 rounded-full text-xs font-600 ${statusColors[selectedPin.status]}`}>{selectedPin.status}</span>
-                            <span className="px-1.5 py-0.5 rounded-full text-xs font-600" style={{ backgroundColor: riskZoneConfig[selectedPin.riskZone].markerColor + '20', color: riskZoneConfig[selectedPin.riskZone].markerColor }}>
-                              {selectedPin.riskZone} Risk
-                            </span>
-                          </div>
-                          <p className="text-gray-500 mt-1 font-mono text-xs">{selectedPin.lat.toFixed(4)}, {selectedPin.lng.toFixed(4)}</p>
-                        </div>
-                      </InfoWindow>
-                    )}
+                        {selectedPin?.id === pin.id && (
+                          <InfoWindow
+                            onCloseClick={() => setSelectedPin(null)}
+                          >
+                            <div className="text-xs min-w-[160px]">
+                              <p className="font-700 text-sm text-gray-900 mb-1">{pin.collateralId}</p>
+                              <p className="text-gray-600 mb-0.5">{pin.obligor}</p>
+                              <p className="text-gray-500 mb-1">{pin.address}</p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`px-1.5 py-0.5 rounded-full text-xs font-600 ${statusColors[pin.status]}`}>{pin.status}</span>
+                                <span className="px-1.5 py-0.5 rounded-full text-xs font-600" style={{ backgroundColor: riskZoneConfig[pin.riskZone].markerColor + '20', color: riskZoneConfig[pin.riskZone].markerColor }}>
+                                  {pin.riskZone} Risk
+                                </span>
+                              </div>
+                              <p className="text-gray-500 mt-1 font-mono text-xs">{pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}</p>
+                            </div>
+                          </InfoWindow>
+                        )}
+                      </Marker>
+                    ))}
 
                     {/* Geocode result marker */}
                     {geocodeResult && (
