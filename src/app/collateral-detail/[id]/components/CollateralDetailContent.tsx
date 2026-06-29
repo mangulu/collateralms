@@ -51,6 +51,7 @@ import { collateralService } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralUtilizationTab from './CollateralUtilizationTab';
 import { legalSignOffService, LegalSignOff } from '@/lib/supabase/legalSignOffService';
+import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
 
 
 
@@ -145,7 +146,7 @@ function DetailRow({ label, value, icon: RowIcon }: { label: string; value: Reac
 
 // ─── KPI Strip ────────────────────────────────────────────────────────────────
 
-function KPIStrip({ collateral }: { collateral: CollateralRecord }) {
+function KPIStrip({ collateral, utilization }: { collateral: CollateralRecord; utilization: CollateralUtilization | null }) {
   const isOverdue = collateral.status === 'Overdue' || (collateral.daysToDeadline !== null && collateral.daysToDeadline < 0);
   const isApproaching = collateral.daysToDeadline !== null && collateral.daysToDeadline >= 0 && collateral.daysToDeadline <= 7;
 
@@ -160,6 +161,9 @@ function KPIStrip({ collateral }: { collateral: CollateralRecord }) {
     : isApproaching
       ? 'text-amber-600' :'text-green-600';
 
+  const activeCharges = utilization ? utilization.linkedLoans.filter(l => l.status === 'ACTIVE').length : null;
+  const utilizationPct = utilization ? utilization.utilizationPercentage : null;
+
   const kpis = [
     {
       label: 'Collateral Value',
@@ -170,14 +174,14 @@ function KPIStrip({ collateral }: { collateral: CollateralRecord }) {
     },
     {
       label: 'Utilization',
-      value: (collateral as any).utilization_pct != null ? `${Number((collateral as any).utilization_pct).toFixed(1)}%` : '—',
+      value: utilizationPct != null ? `${utilizationPct.toFixed(1)}%` : '—',
       icon: PieChart,
       color: 'text-blue-600',
       bg: 'bg-blue-50',
     },
     {
       label: 'Active Charges',
-      value: (collateral as any).active_charges != null ? String((collateral as any).active_charges) : '—',
+      value: activeCharges != null ? String(activeCharges) : '—',
       icon: Layers,
       color: 'text-purple-600',
       bg: 'bg-purple-50',
@@ -1247,6 +1251,12 @@ export default function CollateralDetailContent({
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents'>('profile');
+  const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
+
+  useEffect(() => {
+    if (!collateral?.id) return;
+    collateralLinkService.getUtilization(collateral.id).then(setUtilization).catch(() => {});
+  }, [collateral?.id]);
 
   const handleSave = async (data: Partial<CollateralRecord>) => {
     if (!collateral) return;
@@ -1381,7 +1391,7 @@ export default function CollateralDetailContent({
       )}
 
       {/* ── KPI Strip ── */}
-      <KPIStrip collateral={collateral} />
+      <KPIStrip collateral={collateral} utilization={utilization} />
 
       {/* ── Tab Navigation ── */}
       <div className="flex items-center gap-1 mb-6 border-b border-border">
