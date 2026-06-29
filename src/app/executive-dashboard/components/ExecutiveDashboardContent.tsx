@@ -68,7 +68,7 @@ function KPICard({
           <Icon size={16} />
         </div>
       </div>
-      <p className={`text-2xl font-bold tabular-nums mb-1 font-mono ${s.val}`}>{value}</p>
+      <p className={`text-xl font-bold tabular-nums mb-1 font-mono leading-tight break-all ${s.val}`}>{value}</p>
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-xs text-muted-foreground">{subtext}</p>
         {trend && (
