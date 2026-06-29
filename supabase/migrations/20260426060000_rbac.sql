@@ -177,7 +177,8 @@ BEGIN
     ('credit_officer', 'perfection.submit'),
     ('credit_officer', 'compliance.view'),
     ('credit_officer', 'audit_log.view'),
-    ('credit_officer', 'reports.view')
+    ('credit_officer', 'reports.view'),
+    ('credit_officer', 'settings.view')
   ON CONFLICT (role_name, permission_key) DO NOTHING;
 
   -- ── Seed role_permissions for legal_officer ──────────────────────────────

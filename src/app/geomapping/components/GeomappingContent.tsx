@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { geocodeAddress, validateAddressPair } from '@/lib/googleMaps/geocodingService';
 
+declare const google: any;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type RiskZone = 'LOW' | 'MEDIUM' | 'HIGH';

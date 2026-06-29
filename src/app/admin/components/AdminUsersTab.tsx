@@ -707,7 +707,7 @@ export default function AdminUsersTab() {
                   type="text"
                   value={formData.fullName}
                   onChange={(e) => setFormData((p) => ({ ...p, fullName: e.target.value }))}
-                  placeholder="e.g. Amina Mwangi"
+                  placeholder="e.g. Lisa Alkado"
                   className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>

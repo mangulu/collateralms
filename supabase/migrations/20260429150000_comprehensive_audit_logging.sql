@@ -324,7 +324,7 @@ BEGIN
     ) VALUES (
       gen_random_uuid(), 'user', 'user_created',
       'New user account created',
-      'User: J. Mwangi (credit_officer) onboarded',
+      'User: Lisa Alkado (credit_officer) onboarded',
       'New hire onboarding — Dar es Salaam branch',
       v_user_id, COALESCE(v_user_name, 'System'),
       'user_management',
@@ -343,7 +343,7 @@ BEGIN
     ) VALUES (
       gen_random_uuid(), 'user', 'user_updated',
       'User profile updated',
-      'User: A. Kamau — role changed',
+      'User: Cornel Mangulu — role changed',
       'Promotion to legal_officer after certification',
       v_user_id, COALESCE(v_user_name, 'System'),
       'user_management',

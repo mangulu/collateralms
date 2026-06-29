@@ -136,7 +136,7 @@ export const collateralLinkService = {
     try {
       const { data: col, error: colErr } = await supabase
         .from('collateral_records')
-        .select('id, collateral_id, valuation_amount, ltv_ratio, max_securable_amount, total_secured_amount, available_equity')
+        .select('id, collateral_id, valuation_amount, ltv_ratio, max_securable_amount, total_secured_amount, available_equity, value_tsh')
         .eq('id', collateralRecordId)
         .maybeSingle();
 
@@ -152,7 +152,13 @@ export const collateralLinkService = {
 
       const activeLinks = (links ?? []).filter((l: any) => l.status === 'ACTIVE');
       const totalSecured = activeLinks.reduce((sum: number, l: any) => sum + (parseFloat(l.allocated_amount) || 0), 0);
-      const valuation = parseFloat(col.valuation_amount) || 0;
+
+      // valuation_amount is the dedicated numeric column; fall back to value_tsh (formatted string) if not set
+      const valuationFromDedicated = parseFloat(col.valuation_amount) || 0;
+      const valuationFromValueTsh = typeof col.value_tsh === 'string' ? parseFloat(col.value_tsh.replace(/,/g,'')) || 0
+        : parseFloat(col.value_tsh) || 0;
+      const valuation = valuationFromDedicated > 0 ? valuationFromDedicated : valuationFromValueTsh;
+
       const ltv = parseFloat(col.ltv_ratio) || 0.70;
       const maxSecurable = valuation * ltv;
       const availableEquity = Math.max(0, maxSecurable - totalSecured);

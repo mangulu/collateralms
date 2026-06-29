@@ -1,4 +1,5 @@
 /// <reference types="@types/google.maps" />
+declare const google: typeof globalThis.google;
 
 export interface GeocodeResult {
   lat: number;

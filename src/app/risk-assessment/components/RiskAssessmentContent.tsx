@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import AccessDenied from '@/components/AccessDenied';
 import Icon from '@/components/ui/AppIcon';
+import { createClient } from '@/lib/supabase/client';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -64,70 +65,18 @@ interface ParsedAssessment {
   };
 }
 
-// ─── Mock Collateral Options ──────────────────────────────────────────────────
-
-const mockCollaterals = [
-  {
-    collateralId: 'COL-2024-0891',
-    collateralType: 'Mortgage',
-    obligor: 'Tanzanian Steel Industries Ltd',
-    valueTSh: '2,500,000,000',
-    registry: 'BRELA',
-    registrationDate: '2024-01-15',
-    perfectionDeadline: '2024-07-15',
-    status: 'Under Review',
-    titleDeedNumber: 'TD-00123',
-    valuationSource: 'External Valuer — ABC Valuers Ltd',
-  },
-  {
-    collateralId: 'COL-2024-0756',
-    collateralType: 'Debenture',
-    obligor: 'Kilimanjaro Coffee Exporters',
-    valueTSh: '850,000,000',
-    registry: 'BRELA',
-    registrationDate: '2024-02-20',
-    perfectionDeadline: '2024-08-20',
-    status: 'Submitted',
-    titleDeedNumber: 'TD-00456',
-    valuationSource: 'Internal Valuation',
-  },
-  {
-    collateralId: 'COL-2024-0612',
-    collateralType: 'Motor Vehicle',
-    obligor: 'Dar es Salaam Logistics Co.',
-    valueTSh: '320,000,000',
-    registry: 'TRA',
-    registrationDate: '2024-03-10',
-    perfectionDeadline: '2024-09-10',
-    status: 'Perfected',
-    titleDeedNumber: 'MV-78901',
-    valuationSource: 'External Valuer — XYZ Motors',
-  },
-  {
-    collateralId: 'COL-2024-0534',
-    collateralType: 'Shares (DSE)',
-    obligor: 'Mwanza Fish Processing Ltd',
-    valueTSh: '180,000,000',
-    registry: 'DSE',
-    registrationDate: '2024-04-05',
-    perfectionDeadline: '2024-10-05',
-    status: 'Draft',
-    titleDeedNumber: 'SH-00234',
-    valuationSource: 'Market Price — DSE',
-  },
-  {
-    collateralId: 'COL-2024-0489',
-    collateralType: 'Mortgage',
-    obligor: 'Arusha New Ventures Ltd',
-    valueTSh: '1,200,000,000',
-    registry: 'Lands Registry',
-    registrationDate: '2024-05-01',
-    perfectionDeadline: '2024-11-01',
-    status: 'Overdue',
-    titleDeedNumber: 'TD-00789',
-    valuationSource: 'External Valuer — Prime Valuers',
-  },
-];
+interface LiveCollateralOption {
+  collateralId: string;
+  collateralType: string;
+  obligor: string;
+  valueTSh: string;
+  registry: string;
+  registrationDate: string;
+  perfectionDeadline: string;
+  status: string;
+  titleDeedNumber: string;
+  valuationSource: string;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -353,6 +302,36 @@ export default function RiskAssessmentContent() {
   const [expandedDim, setExpandedDim] = useState<string | null>(null);
   const [assessmentHistory, setAssessmentHistory] = useState<Array<{ id: string; collateralId: string; level: RiskLevel; score: number; timestamp: string }>>([]);
 
+  // Live collateral options from Supabase
+  const [liveCollaterals, setLiveCollaterals] = useState<LiveCollateralOption[]>([]);
+  const [collateralsLoading, setCollateralsLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('collateral_records')
+      .select('collateral_id, collateral_type, obligor, value_tsh, registry, registration_date, perfection_deadline, status, facility_id')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setLiveCollaterals(data.map((row: any) => ({
+            collateralId: row.collateral_id,
+            collateralType: row.collateral_type ?? '',
+            obligor: row.obligor ?? '',
+            valueTSh: row.value_tsh ?? '0',
+            registry: row.registry ?? '',
+            registrationDate: row.registration_date ?? '',
+            perfectionDeadline: row.perfection_deadline ?? '',
+            status: row.status ?? '',
+            titleDeedNumber: row.collateral_id,
+            valuationSource: 'Internal Valuation',
+          })));
+        }
+        setCollateralsLoading(false);
+      })
+      .catch(() => setCollateralsLoading(false));
+  }, []);
+
   const { response, isLoading, error, sendMessage } = useChat('OPEN_AI', 'gpt-5', false);
 
   useEffect(() => {
@@ -379,7 +358,7 @@ export default function RiskAssessmentContent() {
 
   const getActiveInput = useCallback((): AssessmentInput => {
     if (useCustom) return customInput;
-    const found = mockCollaterals.find(c => c.collateralId === selectedCollateralId);
+    const found = liveCollaterals.find(c => c.collateralId === selectedCollateralId);
     if (!found) return customInput;
     return {
       collateralId: found.collateralId,
@@ -394,7 +373,7 @@ export default function RiskAssessmentContent() {
       valuationSource: found.valuationSource,
       additionalNotes: '',
     };
-  }, [useCustom, customInput, selectedCollateralId]);
+  }, [useCustom, customInput, selectedCollateralId, liveCollaterals]);
 
   const handleCollateralSelect = (id: string) => {
     setSelectedCollateralId(id);
@@ -506,10 +485,11 @@ export default function RiskAssessmentContent() {
                 <select
                   value={selectedCollateralId}
                   onChange={(e) => handleCollateralSelect(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  disabled={collateralsLoading}
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
                 >
-                  <option value="">— Choose a collateral record —</option>
-                  {mockCollaterals.map(c => (
+                  <option value="">{collateralsLoading ? 'Loading collateral records…' : '— Choose a collateral record —'}</option>
+                  {liveCollaterals.map(c => (
                     <option key={c.collateralId} value={c.collateralId}>
                       {c.collateralId} — {c.obligor} ({c.collateralType})
                     </option>

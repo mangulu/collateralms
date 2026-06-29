@@ -44,6 +44,7 @@ export interface AuditLogFilters {
   dateFrom?: string;
   dateTo?: string;
   performedBy?: string;
+  collateralId?: string;
 }
 
 // ─── Action type constants ────────────────────────────────────────────────────
@@ -210,6 +211,12 @@ export const auditLogService = {
       end.setDate(end.getDate() + 1);
       query = query.lt('created_at', end.toISOString());
     }
+    if (filters?.performedBy && filters.performedBy !== 'All') {
+      query = query.eq('performed_by_name', filters.performedBy);
+    }
+    if (filters?.collateralId && filters.collateralId !== 'All') {
+      query = query.eq('collateral_id', filters.collateralId);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
@@ -260,6 +267,18 @@ export const auditLogService = {
       .order('event_category');
     return Array.from(
       new Set((data ?? []).map((r: any) => r.event_category as string).filter(Boolean))
+    );
+  },
+
+  async getDistinctCollateralIds(): Promise<string[]> {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('audit_logs')
+      .select('collateral_id')
+      .not('collateral_id', 'is', null)
+      .order('collateral_id');
+    return Array.from(
+      new Set((data ?? []).map((r: any) => r.collateral_id as string).filter(Boolean))
     );
   },
 
@@ -671,6 +690,31 @@ export const auditLogService = {
       event_category:    categoryMap[params.entityType] ?? EVENT_CATEGORIES.MULTI_COLLATERAL,
       field_changes:     params.fieldChanges ?? null,
       batch_summary:     params.batchSummary ?? null,
+    });
+  },
+
+  /** Log legal sign-off on a perfected collateral record */
+  async logLegalSignOff(params: {
+    collateralRecordId: string;
+    collateralId: string;
+    performedBy?: string;
+    performedByName?: string;
+    notes?: string;
+    ipAddress?: string;
+  }): Promise<boolean> {
+    return insertAuditLog({
+      collateral_record_id: params.collateralRecordId,
+      collateral_id:        params.collateralId,
+      entity_type:          'collateral',
+      action:               'legal_signoff',
+      message:              `Legal sign-off recorded for ${params.collateralId}`,
+      detail:               params.notes ? `Notes: ${params.notes}` : 'Digital sign-off applied by legal officer',
+      reason:               null,
+      performed_by:         params.performedBy ?? null,
+      performed_by_name:    params.performedByName ?? 'Legal Officer',
+      ip_address:           params.ipAddress ?? null,
+      event_category:       EVENT_CATEGORIES.STATUS_TRANSITION,
+      field_changes:        null,
     });
   },
 };

@@ -7,6 +7,8 @@ import { useChat } from '@/lib/hooks/useChat';
 import toast from 'react-hot-toast';
 import { saveFraudAlert, fetchFraudAlerts, updateFraudAlertStatus, type FraudAlertRow } from '@/lib/supabase/fraudAlertService';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
+import Icon from '@/components/ui/AppIcon';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -226,12 +228,13 @@ function SummaryCard({ label, value, sub, icon: IconComp, variant = 'default' }:
   const bg = { default: 'bg-white border-border', danger: 'bg-red-50 border-red-200', warning: 'bg-amber-50 border-amber-200', success: 'bg-green-50 border-green-200' };
   const iconBg = { default: 'bg-primary/10 text-primary', danger: 'bg-red-100 text-red-600', warning: 'bg-amber-100 text-amber-600', success: 'bg-green-100 text-green-600' };
   const valColor = { default: 'text-foreground', danger: 'text-red-700', warning: 'text-amber-700', success: 'text-green-700' };
+  const Icon = IconComp;
   return (
     <div className={`rounded-xl p-5 shadow-card border ${bg[variant]}`}>
       <div className="flex items-start justify-between mb-3">
         <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider leading-tight pr-2">{label}</p>
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${iconBg[variant]}`}>
-          <IconComp size={18} />
+          <Icon size={18} />
         </div>
       </div>
       <p className={`text-3xl font-700 tabular-nums mb-1 font-mono ${valColor[variant]}`}>{value}</p>

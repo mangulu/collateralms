@@ -159,30 +159,30 @@ BEGIN
     ) VALUES
       (req1_uuid, col1_id, 'col-0312', 'Coastal Traders Co.', 'Mortgage', 'Lands Registry',
        '26 May 2026', 'Under Review'::public.perfection_request_status,
-       credit_user_id, 'J. Kamau', now() - interval '2 days',
-       legal_user_id, 'A. Mwangi', now() - interval '1 day',
+       credit_user_id, 'Lisa Alkado', now() - interval '2 days',
+       legal_user_id, 'Cornel Mangulu', now() - interval '1 day',
        'Title deed documents need notarization before final approval.', 'High'),
 
       (req2_uuid, col2_id, 'col-0307', 'Zanzibar Tourism Group', 'Guarantee', 'N/A',
        '', 'Approved'::public.perfection_request_status,
-       credit_user_id, 'J. Kamau', now() - interval '10 days',
-       legal_user_id, 'A. Mwangi', now() - interval '8 days',
+       credit_user_id, 'Lisa Alkado', now() - interval '10 days',
+       legal_user_id, 'Cornel Mangulu', now() - interval '8 days',
        'Corporate guarantee verified and perfected. All documentation in order.', 'Normal'),
 
       (req3_uuid, col3_id, 'col-0309', 'Mbeya Mining Corp.', 'Debenture', 'BRELA',
        '29 Mar 2026', 'Rejected'::public.perfection_request_status,
-       credit_user_id, 'J. Kamau', now() - interval '15 days',
-       legal_user_id, 'A. Mwangi', now() - interval '13 days',
+       credit_user_id, 'Lisa Alkado', now() - interval '15 days',
+       legal_user_id, 'Cornel Mangulu', now() - interval '13 days',
        'BRELA registration certificate missing. Resubmit with complete documentation.', 'High'),
 
       (req4_uuid, col4_id, 'col-0310', 'Dodoma Real Estate Ltd', 'Mortgage', 'Lands Registry',
        '13 Apr 2026', 'Submitted'::public.perfection_request_status,
-       credit_user_id, 'J. Kamau', now() - interval '1 day',
+       credit_user_id, 'Lisa Alkado', now() - interval '1 day',
        NULL, '', NULL, '', 'Normal'),
 
       (req5_uuid, NULL, 'col-0308', 'Kilimanjaro Logistics', 'Motor Vehicle', 'TRA',
        '11 Mar 2026', 'Draft'::public.perfection_request_status,
-       credit_user_id, 'P. Ochieng', NULL,
+       credit_user_id, 'Yahaya Frezier', NULL,
        NULL, '', NULL, '', 'Normal')
     ON CONFLICT (id) DO NOTHING;
 
@@ -192,31 +192,31 @@ BEGIN
     ) VALUES
       (gen_random_uuid(), req1_uuid, 'submitted'::public.perfection_action,
        'Perfection request submitted with title deed and valuation report attached.',
-       credit_user_id, 'J. Kamau', 'credit_officer'),
+       credit_user_id, 'Lisa Alkado', 'credit_officer'),
 
       (gen_random_uuid(), req1_uuid, 'reviewed'::public.perfection_action,
        'Documents received. Title deed requires notarization — please resubmit notarized copy.',
-       legal_user_id, 'A. Mwangi', 'legal_officer'),
+       legal_user_id, 'Cornel Mangulu', 'legal_officer'),
 
       (gen_random_uuid(), req2_uuid, 'submitted'::public.perfection_action,
        'Corporate guarantee from ZTG Holdings submitted for perfection review.',
-       credit_user_id, 'J. Kamau', 'credit_officer'),
+       credit_user_id, 'Lisa Alkado', 'credit_officer'),
 
       (gen_random_uuid(), req2_uuid, 'approved'::public.perfection_action,
        'Guarantee verified with ZTG Holdings board resolution. Perfection confirmed.',
-       legal_user_id, 'A. Mwangi', 'legal_officer'),
+       legal_user_id, 'Cornel Mangulu', 'legal_officer'),
 
       (gen_random_uuid(), req3_uuid, 'submitted'::public.perfection_action,
        'Debenture registration request submitted. BRELA filing in progress.',
-       credit_user_id, 'J. Kamau', 'credit_officer'),
+       credit_user_id, 'Lisa Alkado', 'credit_officer'),
 
       (gen_random_uuid(), req3_uuid, 'rejected'::public.perfection_action,
        'BRELA registration certificate not included. Cannot approve without official confirmation.',
-       legal_user_id, 'A. Mwangi', 'legal_officer'),
+       legal_user_id, 'Cornel Mangulu', 'legal_officer'),
 
       (gen_random_uuid(), req4_uuid, 'submitted'::public.perfection_action,
        'Mortgage perfection request submitted. Title deed Vol. 7 Folio 22 attached.',
-       credit_user_id, 'J. Kamau', 'credit_officer')
+       credit_user_id, 'Lisa Alkado', 'credit_officer')
     ON CONFLICT (id) DO NOTHING;
 
   ELSE

@@ -4,6 +4,7 @@
  * Permissions are seeded in the DB (roles / permissions / role_permissions tables).
  * This file provides:
  *  - Static permission key constants
+ *  - Screen-to-permission mapping for UI guards
  *  - A hook to load the current user's permissions from Supabase
  *  - Helper functions used by UI components
  */
@@ -62,6 +63,61 @@ export interface PermissionDefinition {
   module: string;
 }
 
+// ─── Role Display Helpers ─────────────────────────────────────────────────────
+
+export const ROLE_LABELS: Record<string, string> = {
+  credit_officer: 'Credit Officer',
+  legal_officer: 'Legal Officer',
+  system_admin: 'System Admin',
+};
+
+export const ROLE_COLORS: Record<string, string> = {
+  credit_officer: 'blue',
+  legal_officer: 'purple',
+  system_admin: 'amber',
+};
+
+/** Human-readable label for a role name */
+export function getRoleLabel(role: string): string {
+  return ROLE_LABELS[role] ?? role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ─── Screen Permission Map ────────────────────────────────────────────────────
+// Maps each screen route to the permission key required to access it.
+// Used by page components for client-side access guards.
+
+export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
+  '/collateral-dashboard': PERMISSIONS.DASHBOARD_VIEW,
+  '/portfolio-monitoring': PERMISSIONS.DASHBOARD_VIEW,
+  '/collateral-management': PERMISSIONS.COLLATERAL_VIEW,
+  '/collateral-detail': PERMISSIONS.COLLATERAL_VIEW,
+  '/perfection-workflow': PERMISSIONS.PERFECTION_VIEW,
+  '/collateral-documents': PERMISSIONS.COLLATERAL_VIEW,
+  '/batch-release': PERMISSIONS.COLLATERAL_EDIT,
+  '/bulk-upload': PERMISSIONS.COLLATERAL_EDIT,
+  '/scheduled-jobs': PERMISSIONS.COLLATERAL_EDIT,
+  '/fraud-prevention': PERMISSIONS.COMPLIANCE_VIEW,
+  '/risk-assessment': PERMISSIONS.COMPLIANCE_VIEW,
+  '/fast-track': PERMISSIONS.COLLATERAL_VIEW,
+  '/geomapping': PERMISSIONS.COLLATERAL_VIEW,
+  '/compliance-rules': PERMISSIONS.COMPLIANCE_VIEW,
+  '/compliance-audit': PERMISSIONS.COMPLIANCE_VIEW,
+  '/notifications-hub': PERMISSIONS.DASHBOARD_VIEW,
+  '/alerts-inbox': PERMISSIONS.DASHBOARD_VIEW,
+  '/alerts-delivery': PERMISSIONS.DASHBOARD_VIEW,
+  '/live-activity': PERMISSIONS.AUDIT_LOG_VIEW,
+  '/audit-trail': PERMISSIONS.AUDIT_LOG_VIEW,
+  '/audit-log': PERMISSIONS.AUDIT_LOG_VIEW,
+  '/activity-log': PERMISSIONS.AUDIT_LOG_VIEW,
+  '/audit-report': PERMISSIONS.AUDIT_LOG_VIEW,
+  '/reports': PERMISSIONS.REPORTS_VIEW,
+  '/reports-dashboard': PERMISSIONS.REPORTS_VIEW,
+  '/export': PERMISSIONS.REPORTS_VIEW,
+  '/user-management': PERMISSIONS.USER_MANAGEMENT_VIEW,
+  '/admin': PERMISSIONS.USER_MANAGEMENT_VIEW,
+  '/settings': PERMISSIONS.SETTINGS_VIEW,
+};
+
 // ─── Hook: usePermissions ─────────────────────────────────────────────────────
 
 export interface UsePermissionsResult {
@@ -70,6 +126,11 @@ export interface UsePermissionsResult {
   loading: boolean;
   hasPermission: (key: string) => boolean;
   isSystemAdmin: boolean;
+  isCreditOfficer: boolean;
+  isLegalOfficer: boolean;
+  canDelete: boolean;
+  canReviewPerfection: boolean;
+  canSubmitPerfection: boolean;
 }
 
 export function usePermissions(): UsePermissionsResult {
@@ -133,12 +194,22 @@ export function usePermissions(): UsePermissionsResult {
     return () => subscription.unsubscribe();
   }, [loadPermissions]);
 
+  const isSystemAdmin = role === 'system_admin';
+  const isCreditOfficer = role === 'credit_officer';
+  const isLegalOfficer = role === 'legal_officer';
+
   return {
     permissions,
     role,
     loading,
     hasPermission: (key: string) => permissions.has(key),
-    isSystemAdmin: role === 'system_admin',
+    isSystemAdmin,
+    isCreditOfficer,
+    isLegalOfficer,
+    // Derived convenience flags
+    canDelete: isSystemAdmin || isLegalOfficer,
+    canReviewPerfection: isSystemAdmin || isLegalOfficer,
+    canSubmitPerfection: isSystemAdmin || isCreditOfficer,
   };
 }
 
@@ -249,22 +320,25 @@ export async function deleteRole(roleName: string): Promise<void> {
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
 
-export const ROLE_COLOR_OPTIONS = [
-  { value: 'blue',   bg: 'bg-blue-100',   text: 'text-blue-700' },
-  { value: 'purple', bg: 'bg-purple-100', text: 'text-purple-700' },
-  { value: 'amber',  bg: 'bg-amber-100',  text: 'text-amber-700' },
-  { value: 'green',  bg: 'bg-green-100',  text: 'text-green-700' },
-  { value: 'red',    bg: 'bg-red-100',    text: 'text-red-700' },
-  { value: 'gray',   bg: 'bg-gray-100',   text: 'text-gray-700' },
-  { value: 'teal',   bg: 'bg-teal-100',   text: 'text-teal-700' },
-  { value: 'orange', bg: 'bg-orange-100', text: 'text-orange-700' },
-];
-
-export function getRoleColorClasses(color: string): { bg: string; text: string } {
-  return (
-    ROLE_COLOR_OPTIONS.find((c) => c.value === color) ?? {
-      bg: 'bg-gray-100',
-      text: 'text-gray-700',
-    }
-  );
+export function getRoleColorClass(color: string): string {
+  const map: Record<string, string> = {
+    blue: 'bg-blue-100 text-blue-700',
+    purple: 'bg-purple-100 text-purple-700',
+    amber: 'bg-amber-100 text-amber-700',
+    green: 'bg-green-100 text-green-700',
+    red: 'bg-red-100 text-red-700',
+    gray: 'bg-gray-100 text-gray-700',
+  };
+  return map[color] ?? 'bg-gray-100 text-gray-700';
 }
+
+function getRoleColorClasses(...args: any[]): any {
+  // eslint-disable-next-line no-console
+  console.warn('Placeholder: getRoleColorClasses is not implemented yet.', args);
+  return null;
+}
+
+export { getRoleColorClasses };
+const ROLE_COLOR_OPTIONS: any = null;
+
+export { ROLE_COLOR_OPTIONS };

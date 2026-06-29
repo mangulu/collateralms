@@ -11,6 +11,28 @@ export type CollateralType =
 export type RegistryType =
   | 'BRELA' | 'Lands Registry' | 'TRA' | 'DSE' | 'TASAC' | 'N/A';
 
+export type CollateralWriteErrorKind =
+  | 'network'        // fetch/connection failure
+  | 'constraint'     // unique/FK/check constraint violation (23xxx)
+  | 'auth'           // RLS / permission denied (42501 / PGRST301)
+  | 'schema'         // missing column/table (42xxx)
+  | 'validation'     // BRELA or app-level validation
+  | 'unknown';
+
+export class CollateralWriteError extends Error {
+  kind: CollateralWriteErrorKind;
+  retryable: boolean;
+  userMessage: string;
+
+  constructor(kind: CollateralWriteErrorKind, message: string, userMessage: string) {
+    super(message);
+    this.name = 'CollateralWriteError';
+    this.kind = kind;
+    this.retryable = kind === 'network' || kind === 'unknown';
+    this.userMessage = userMessage;
+  }
+}
+
 export interface CollateralRecord {
   id: string;
   collateralId: string;
@@ -44,6 +66,114 @@ export interface AuditLog {
   createdAt: string;
 }
 
+function classifySupabaseError(error: any): CollateralWriteError {
+  if (!error) {
+    return new CollateralWriteError('unknown', 'Unknown error', 'An unexpected error occurred. Please try again.');
+  }
+
+  const code = error.code ?? '';
+  const msg: string = error.message ?? '';
+
+  // Network / connection errors
+  if (
+    msg.includes('Failed to fetch') ||
+    msg.includes('NetworkError') ||
+    msg.includes('network') ||
+    msg.includes('ECONNREFUSED') ||
+    msg.includes('timeout') ||
+    code === 'PGRST000'
+  ) {
+    return new CollateralWriteError(
+      'network',
+      msg,
+      'Network error — check your connection and try again.'
+    );
+  }
+
+  // Auth / RLS errors
+  if (code === '42501' || code === 'PGRST301' || msg.includes('permission denied') || msg.includes('row-level security')) {
+    return new CollateralWriteError(
+      'auth',
+      msg,
+      'You do not have permission to perform this action. Contact your administrator.'
+    );
+  }
+
+  // Constraint violations (23xxx)
+  if (code.startsWith('23')) {
+    if (code === '23505') {
+      // Unique constraint
+      const brelaMatch = msg.match(/BRELA_VALIDATION:\s*(.+)/);
+      if (brelaMatch) {
+        return new CollateralWriteError('validation', msg, `BRELA_VALIDATION: ${brelaMatch[1].trim()}`);
+      }
+      if (msg.includes('collateral_id') || msg.includes('col-')) {
+        return new CollateralWriteError(
+          'constraint',
+          msg,
+          'A collateral record with this ID already exists. Please try saving again.'
+        );
+      }
+      if (msg.includes('facility_id') || msg.includes('obligor_id')) {
+        return new CollateralWriteError(
+          'constraint',
+          msg,
+          'A duplicate record was detected. Check the Facility ID and Obligor ID for uniqueness.'
+        );
+      }
+      return new CollateralWriteError(
+        'constraint',
+        msg,
+        'A duplicate record was detected. Please review your inputs and try again.'
+      );
+    }
+    if (code === '23503') {
+      return new CollateralWriteError(
+        'constraint',
+        msg,
+        'A referenced record (e.g. facility or obligor) does not exist. Verify your IDs.'
+      );
+    }
+    if (code === '23514') {
+      const brelaMatch = msg.match(/BRELA_VALIDATION:\s*(.+)/);
+      if (brelaMatch) {
+        return new CollateralWriteError('validation', msg, `BRELA_VALIDATION: ${brelaMatch[1].trim()}`);
+      }
+      return new CollateralWriteError(
+        'constraint',
+        msg,
+        'A data constraint was violated. Please review your inputs.'
+      );
+    }
+    return new CollateralWriteError(
+      'constraint',
+      msg,
+      'A database constraint was violated. Please review your inputs and try again.'
+    );
+  }
+
+  // Schema errors (42xxx)
+  if (
+    code.startsWith('42') ||
+    /relation.*does not exist/i.test(msg) ||
+    /column.*does not exist/i.test(msg)
+  ) {
+    return new CollateralWriteError(
+      'schema',
+      msg,
+      'A database configuration error occurred. Please contact support.'
+    );
+  }
+
+  // BRELA validation in message
+  const brelaMatch = msg.match(/BRELA_VALIDATION:\s*(.+)/);
+  if (brelaMatch) {
+    return new CollateralWriteError('validation', msg, `BRELA_VALIDATION: ${brelaMatch[1].trim()}`);
+  }
+
+  return new CollateralWriteError('unknown', msg || 'Unknown error', 'An unexpected error occurred. Please try again.');
+}
+
 function isSchemaError(error: any): boolean {
   if (!error) return false;
   if (error.code && typeof error.code === 'string') {
@@ -63,6 +193,28 @@ function isSchemaError(error: any): boolean {
     return schemaErrorPatterns.some((p) => p.test(error.message));
   }
   return false;
+}
+
+/** Exponential-backoff retry for retryable write operations */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+  baseDelayMs = 600
+): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      // Only retry if it's a CollateralWriteError and retryable
+      if (err instanceof CollateralWriteError && !err.retryable) throw err;
+      // Don't retry on last attempt
+      if (attempt === maxAttempts) break;
+      await new Promise((res) => setTimeout(res, baseDelayMs * Math.pow(2, attempt - 1)));
+    }
+  }
+  throw lastError;
 }
 
 function rowToCollateral(row: any): CollateralRecord {
@@ -148,16 +300,13 @@ export const collateralService = {
     }
   },
 
-  async create(record: Partial<CollateralRecord>, userId: string): Promise<CollateralRecord | null> {
+  async create(record: Partial<CollateralRecord>, userId: string): Promise<CollateralRecord> {
     const supabase = createClient();
-    try {
-      // Generate next collateral ID
-      const { count } = await supabase
-        .from('collateral_records')
-        .select('*', { count: 'exact', head: true });
 
-      const nextNum = (count ?? 0) + 313;
-      const collateralId = `col-${String(nextNum).padStart(4, '0')}`;
+    const doInsert = async (): Promise<CollateralRecord> => {
+      const timestamp = Date.now();
+      const suffix = String(timestamp).slice(-6);
+      const collateralId = `col-${suffix}`;
 
       const row = collateralToRow({
         ...record,
@@ -174,19 +323,21 @@ export const collateralService = {
         .single();
 
       if (error) {
-        if (isSchemaError(error)) throw error;
-        console.log('Insert error:', error.message);
-        return null;
+        throw classifySupabaseError(error);
       }
-      return data ? rowToCollateral(data) : null;
-    } catch (err: any) {
-      throw err;
-    }
+      if (!data) {
+        throw new CollateralWriteError('unknown', 'No data returned after insert', 'Failed to create record. Please try again.');
+      }
+      return rowToCollateral(data);
+    };
+
+    return withRetry(doInsert, 3, 600);
   },
 
-  async update(id: string, record: Partial<CollateralRecord>): Promise<CollateralRecord | null> {
+  async update(id: string, record: Partial<CollateralRecord>): Promise<CollateralRecord> {
     const supabase = createClient();
-    try {
+
+    const doUpdate = async (): Promise<CollateralRecord> => {
       const row = collateralToRow(record);
       const { data, error } = await supabase
         .from('collateral_records')
@@ -196,14 +347,15 @@ export const collateralService = {
         .single();
 
       if (error) {
-        if (isSchemaError(error)) throw error;
-        console.log('Update error:', error.message);
-        return null;
+        throw classifySupabaseError(error);
       }
-      return data ? rowToCollateral(data) : null;
-    } catch (err: any) {
-      throw err;
-    }
+      if (!data) {
+        throw new CollateralWriteError('unknown', 'No data returned after update', 'Failed to update record. Please try again.');
+      }
+      return rowToCollateral(data);
+    };
+
+    return withRetry(doUpdate, 3, 600);
   },
 
   async updateStatus(id: string, status: CollateralStatus): Promise<boolean> {
@@ -279,7 +431,7 @@ export const auditService = {
         id: row.id,
         collateralRecordId: row.collateral_record_id,
         collateralId: row.collateral_id,
-        action: row.action,
+        action: row.action ?? row.event_category ?? 'updated',
         message: row.message,
         detail: row.detail ?? '',
         performedBy: row.performed_by,
@@ -302,16 +454,32 @@ export const auditService = {
   }): Promise<void> {
     const supabase = createClient();
     try {
-      const { error } = await supabase.from('audit_logs').insert({
+      // Build insert payload — include action only if the column exists
+      // We always include it; if the column is missing the insert will fail silently
+      const payload: Record<string, any> = {
         collateral_record_id: entry.collateralRecordId ?? null,
         collateral_id: entry.collateralId ?? null,
-        action: entry.action,
         message: entry.message,
         detail: entry.detail ?? '',
         performed_by: entry.performedBy ?? null,
         performed_by_name: entry.performedByName ?? '',
-      });
+        event_category: 'collateral_change',
+      };
+
+      // Include action field — the migration ensures this column exists
+      payload.action = entry.action;
+
+      const { error } = await supabase.from('audit_logs').insert(payload);
       if (error) {
+        // If action column doesn't exist, retry without it
+        if (error.message?.includes('action') || error.code === '42703') {
+          const { action: _action, ...payloadWithoutAction } = payload;
+          const { error: retryError } = await supabase.from('audit_logs').insert(payloadWithoutAction);
+          if (retryError) {
+            console.log('Audit log retry error:', retryError.message);
+          }
+          return;
+        }
         if (isSchemaError(error)) throw error;
         console.log('Audit log error:', error.message);
       }
@@ -397,6 +565,50 @@ export const dashboardService = {
       });
 
       return Object.entries(counts).map(([type, count]) => ({ type, count }));
+    } catch (err: any) {
+      throw err;
+    }
+  },
+
+  async getPerfectionTrend(): Promise<{ month: string; perfected: number; submitted: number; overdue: number }[]> {
+    const supabase = createClient();
+    try {
+      // Build last 6 months array
+      const months: { key: string; label: string; start: string; end: string }[] = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const start = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+        const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
+        const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+        months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label, start, end });
+      }
+
+      const earliest = months[0].start;
+
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('action, created_at')
+        .in('action', ['perfected', 'submitted', 'overdue'])
+        .gte('created_at', earliest)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return months.map((m) => ({ month: m.label, perfected: 0, submitted: 0, overdue: 0 }));
+      }
+
+      const rows = data ?? [];
+
+      return months.map((m) => {
+        const inMonth = rows.filter((r) => r.created_at >= m.start && r.created_at < m.end);
+        return {
+          month: m.label,
+          perfected: inMonth.filter((r) => r.action === 'perfected').length,
+          submitted: inMonth.filter((r) => r.action === 'submitted').length,
+          overdue: inMonth.filter((r) => r.action === 'overdue').length,
+        };
+      });
     } catch (err: any) {
       throw err;
     }

@@ -1,11 +1,13 @@
 'use client';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2 } from 'lucide-react';
+import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
-import { CollateralRecord as Collateral } from '@/lib/supabase/collateralService';
+import { CollateralRecord as Collateral, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
+import { documentTypeSettingsService, DocumentTypeSetting } from '@/lib/supabase/documentTypeSettingsService';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 interface FormData {
   obligor: string;
@@ -25,18 +27,13 @@ interface AddEditCollateralModalProps {
   open: boolean;
   editItem: Collateral | null;
   onClose: () => void;
-  onSave: (data: Partial<Collateral>) => void;
+  onSave: (data: Partial<Collateral>, pendingFiles?: { file: File; docType: string; notes: string }[]) => Promise<void>;
 }
 
 const collateralTypes = [
   'Mortgage', 'Debenture', 'Motor Vehicle', 'Shares (DSE)', 'FDR', 'Guarantee', 'Ship/Vessel',
 ];
 const registries = ['BRELA', 'Lands Registry', 'TRA', 'DSE', 'TASAC', 'N/A'];
-const officers = ['J. Kamau', 'A. Mwangi', 'P. Ochieng', 'S. Ndege'];
-const documentTypes: DocumentType[] = [
-  'Title Deed', 'Charge Certificate', 'Valuation Report', 'BRELA Confirmation',
-  'Insurance Certificate', 'Board Resolution', 'Other',
-];
 
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -58,7 +55,12 @@ export default function AddEditCollateralModal({
       getUserProfile().then((p: any) => setUserProfile(p)).catch(() => {});
     }
   }, [user]);
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('details');
+  const [brelaError, setBrelaError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<{ kind: CollateralWriteError['kind']; message: string } | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const lastSubmitDataRef = useRef<{ data: Partial<Collateral>; pendingFiles?: { file: File; docType: string; notes: string }[] } | null>(null);
 
   // Document state
   const [documents, setDocuments] = useState<CollateralDocument[]>([]);
@@ -66,18 +68,92 @@ export default function AddEditCollateralModal({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<{ file: File; docType: DocumentType; notes: string }[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<{ file: File; docType: string; notes: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Document type settings from DB
+  const [docTypeSettings, setDocTypeSettings] = useState<DocumentTypeSetting[]>([]);
+  const [docTypeNames, setDocTypeNames] = useState<string[]>([]);
+  const [requiredDocTypes, setRequiredDocTypes] = useState<DocumentTypeSetting[]>([]);
+
+  // Officers loaded from Supabase user_profiles
+  const [officers, setOfficers] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      const supabase = createClient();
+      supabase
+        .from('user_profiles')
+        .select('full_name')
+        .eq('is_active', true)
+        .order('full_name', { ascending: true })
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const names = data
+              .map((u: any) => u.full_name)
+              .filter((n: string) => n && n.trim().length > 0);
+            setOfficers(names.length > 0 ? names : ['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
+          } else {
+            setOfficers(['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
+          }
+        })
+        .catch(() => {
+          setOfficers(['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
+        });
+    }
+  }, [open]);
 
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
 
   const requiresPerfection = watch('requiresPerfection');
+  const registryValue = watch('registry');
+  const registrationDateValue = watch('registrationDate');
+
+  // Load document type settings from DB
+  useEffect(() => {
+    if (open) {
+      documentTypeSettingsService.getAll().then((settings) => {
+        const active = settings.filter((s) => s.isActive);
+        setDocTypeSettings(active);
+        setDocTypeNames(active.map((s) => s.name));
+        setRequiredDocTypes(active.filter((s) => s.required));
+      }).catch(() => {
+        // Fallback to hardcoded types if DB unavailable
+        const fallback = [
+          'Title Deed', 'Charge Certificate', 'Valuation Report', 'BRELA Confirmation',
+          'Insurance Certificate', 'Board Resolution', 'Other',
+        ];
+        setDocTypeNames(fallback);
+        setRequiredDocTypes([]);
+      });
+    }
+  }, [open]);
+
+  // Auto-calculate BRELA 42-day perfection deadline
+  useEffect(() => {
+    if (requiresPerfection && registryValue === 'BRELA' && registrationDateValue) {
+      try {
+        const execDate = new Date(registrationDateValue);
+        if (!isNaN(execDate.getTime())) {
+          const deadline = new Date(execDate);
+          deadline.setDate(deadline.getDate() + 42);
+          const yyyy = deadline.getFullYear();
+          const mm = String(deadline.getMonth() + 1).padStart(2, '0');
+          const dd = String(deadline.getDate()).padStart(2, '0');
+          setValue('perfectionDeadline', `${yyyy}-${mm}-${dd}`, { shouldValidate: false });
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, [registryValue, registrationDateValue, requiresPerfection, setValue]);
 
   // Load documents when editing
   useEffect(() => {
@@ -97,6 +173,10 @@ export default function AddEditCollateralModal({
       setActiveTab('details');
       setPendingFiles([]);
       setUploadError(null);
+      setBrelaError(null);
+      setSaveError(null);
+      setRetryCount(0);
+      lastSubmitDataRef.current = null;
     }
   }, [open]);
 
@@ -137,18 +217,18 @@ export default function AddEditCollateralModal({
   const addPendingFiles = useCallback((files: FileList | File[]) => {
     setUploadError(null);
     const fileArray = Array.from(files);
-    const errors: string[] = [];
-    const valid: { file: File; docType: DocumentType; notes: string }[] = [];
+    const errs: string[] = [];
+    const valid: { file: File; docType: string; notes: string }[] = [];
 
     fileArray.forEach((file) => {
       const err = validateFile(file);
-      if (err) errors.push(err);
-      else valid.push({ file, docType: 'Other', notes: '' });
+      if (err) errs.push(err);
+      else valid.push({ file, docType: docTypeNames[0] || 'Other', notes: '' });
     });
 
-    if (errors.length > 0) setUploadError(errors.join(' '));
+    if (errs.length > 0) setUploadError(errs.join(' '));
     if (valid.length > 0) setPendingFiles((prev) => [...prev, ...valid]);
-  }, []);
+  }, [docTypeNames]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -165,7 +245,7 @@ export default function AddEditCollateralModal({
     setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const updatePendingDocType = (idx: number, docType: DocumentType) => {
+  const updatePendingDocType = (idx: number, docType: string) => {
     setPendingFiles((prev) => prev.map((p, i) => i === idx ? { ...p, docType } : p));
   };
 
@@ -181,7 +261,7 @@ export default function AddEditCollateralModal({
       pendingFiles.map((pf) =>
         documentService.upload(
           pf.file, collateralRecordId, collateralId,
-          pf.docType, pf.notes, user.id, userName
+          pf.docType as DocumentType, pf.notes, user.id, userName
         )
       )
     );
@@ -198,8 +278,14 @@ export default function AddEditCollateralModal({
     if (ok) setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
   };
 
+  // Compute missing required document types
+  const uploadedDocTypes = new Set([
+    ...documents.map((d) => d.documentType),
+    ...pendingFiles.map((pf) => pf.docType),
+  ]);
+  const missingRequiredTypes = requiredDocTypes.filter((rt) => !uploadedDocTypes.has(rt.name));
+
   const onSubmit = async (data: FormData) => {
-    await new Promise((r) => setTimeout(r, 300));
     const savedData: Partial<Collateral> = {
       obligor: data.obligor,
       obligorId: data.obligorId,
@@ -214,12 +300,71 @@ export default function AddEditCollateralModal({
       requiresPerfection: data.requiresPerfection,
     };
 
-    // If editing and there are pending files, upload them now
-    if (editItem?.id && pendingFiles.length > 0) {
-      await uploadPendingFiles(editItem.id, editItem.collateralId);
-    }
+    setSaveError(null);
+    setBrelaError(null);
 
-    onSave(savedData);
+    // Store for retry
+    lastSubmitDataRef.current = {
+      data: savedData,
+      pendingFiles: editItem?.id ? undefined : pendingFiles,
+    };
+
+    try {
+      if (editItem?.id) {
+        if (pendingFiles.length > 0) {
+          await uploadPendingFiles(editItem.id, editItem.collateralId);
+        }
+        await onSave(savedData);
+      } else {
+        await onSave(savedData, pendingFiles);
+      }
+    } catch (err: any) {
+      const msg: string = err?.message ?? '';
+      const userMsg: string = err?.userMessage ?? msg;
+
+      if (err instanceof CollateralWriteError) {
+        const brelaMatch = userMsg.match(/BRELA_VALIDATION:\s*(.+)/);
+        if (brelaMatch) {
+          setBrelaError(brelaMatch[1].trim());
+        } else if (err.kind === 'validation') {
+          setBrelaError(userMsg);
+        } else {
+          setSaveError({ kind: err.kind, message: userMsg });
+        }
+      } else {
+        const brelaMatch = msg.match(/BRELA_VALIDATION:\s*(.+)/);
+        if (brelaMatch) {
+          setBrelaError(brelaMatch[1].trim());
+        } else {
+          setSaveError({ kind: 'unknown', message: userMsg || 'Failed to save collateral record. Please check your inputs and try again.' });
+        }
+      }
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!lastSubmitDataRef.current) return;
+    setSaveError(null);
+    setBrelaError(null);
+    setRetryCount((c) => c + 1);
+    try {
+      const { data, pendingFiles: pf } = lastSubmitDataRef.current;
+      await onSave(data, pf);
+    } catch (err: any) {
+      const userMsg: string = err?.userMessage ?? err?.message ?? 'Failed to save. Please try again.';
+      if (err instanceof CollateralWriteError) {
+        const brelaMatch = userMsg.match(/BRELA_VALIDATION:\s*(.+)/);
+        if (brelaMatch) {
+          setBrelaError(brelaMatch[1].trim());
+        } else if (err.kind === 'validation') {
+          setBrelaError(userMsg);
+        } else {
+          setSaveError({ kind: err.kind, message: userMsg });
+        }
+      } else {
+        setSaveError({ kind: 'unknown', message: userMsg });
+      }
+    }
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -228,7 +373,7 @@ export default function AddEditCollateralModal({
     return '📎';
   };
 
-  const docBadgeColor: Record<DocumentType, string> = {
+  const docBadgeColors: Record<string, string> = {
     'Title Deed': 'bg-blue-100 text-blue-700',
     'Charge Certificate': 'bg-purple-100 text-purple-700',
     'Valuation Report': 'bg-green-100 text-green-700',
@@ -237,6 +382,7 @@ export default function AddEditCollateralModal({
     'Board Resolution': 'bg-rose-100 text-rose-700',
     'Other': 'bg-gray-100 text-gray-600',
   };
+  const getBadgeColor = (type: string) => docBadgeColors[type] ?? 'bg-gray-100 text-gray-600';
 
   return (
     <Modal
@@ -250,13 +396,90 @@ export default function AddEditCollateralModal({
       }
       size="xl"
     >
+      {/* BRELA / Validation Error Banner */}
+      {brelaError && (
+        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+          <AlertCircle size={15} className="text-destructive mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-600 text-destructive">Validation Error</p>
+            <p className="text-xs text-destructive mt-0.5">{brelaError}</p>
+          </div>
+          <button type="button" onClick={() => setBrelaError(null)} className="text-destructive/60 hover:text-destructive">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Save / Write Error Banner */}
+      {saveError && (
+        <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${
+          saveError.kind === 'network' ?'bg-amber-50 border-amber-300'
+            : saveError.kind === 'auth' ?'bg-red-50 border-red-300'
+            : saveError.kind === 'constraint' ?'bg-orange-50 border-orange-300' :'bg-destructive/10 border-destructive/30'
+        }`}>
+          {saveError.kind === 'network' ? (
+            <WifiOff size={15} className="text-amber-600 mt-0.5 shrink-0" />
+          ) : saveError.kind === 'auth' ? (
+            <ShieldAlert size={15} className="text-red-600 mt-0.5 shrink-0" />
+          ) : saveError.kind === 'constraint' ? (
+            <Database size={15} className="text-orange-600 mt-0.5 shrink-0" />
+          ) : (
+            <AlertCircle size={15} className="text-destructive mt-0.5 shrink-0" />
+          )}
+          <div className="flex-1">
+            <p className={`text-sm font-600 ${
+              saveError.kind === 'network' ? 'text-amber-800'
+              : saveError.kind === 'auth' ? 'text-red-800'
+              : saveError.kind === 'constraint'? 'text-orange-800' :'text-destructive'
+            }`}>
+              {saveError.kind === 'network' ? 'Network Error'
+                : saveError.kind === 'auth' ? 'Permission Denied'
+                : saveError.kind === 'constraint' ? 'Data Conflict'
+                : saveError.kind === 'schema'? 'Configuration Error' :'Save Failed'}
+            </p>
+            <p className={`text-xs mt-0.5 ${
+              saveError.kind === 'network' ? 'text-amber-700'
+              : saveError.kind === 'auth' ? 'text-red-700'
+              : saveError.kind === 'constraint'? 'text-orange-700' :'text-destructive'
+            }`}>
+              {saveError.message}
+            </p>
+            {retryCount > 0 && (
+              <p className="text-xs mt-1 text-muted-foreground">
+                Retry attempt {retryCount} failed.
+                {retryCount >= 3 ? ' Please contact support if the issue persists.' : ''}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {(saveError.kind === 'network' || saveError.kind === 'unknown') && retryCount < 3 && (
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-600 bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors border border-amber-300"
+              >
+                <RefreshCw size={11} />
+                Retry
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSaveError(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex border-b border-border mb-6 -mt-1">
         <button
           type="button"
           onClick={() => setActiveTab('details')}
           className={`px-4 py-2.5 text-sm font-500 border-b-2 transition-colors ${
-            activeTab === 'details' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+            activeTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           Collateral Details
@@ -266,13 +489,18 @@ export default function AddEditCollateralModal({
           onClick={() => setActiveTab('documents')}
           className={`px-4 py-2.5 text-sm font-500 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'documents'
-              ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           Documents & History
           {(documents.length > 0 || pendingFiles.length > 0) && (
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-xs font-600">
               {documents.length + pendingFiles.length}
+            </span>
+          )}
+          {missingRequiredTypes.length > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-600" title={`${missingRequiredTypes.length} required document(s) missing`}>
+              !
             </span>
           )}
         </button>
@@ -343,7 +571,9 @@ export default function AddEditCollateralModal({
                   {...register('assignedOfficer', { required: 'Assigned officer is required' })}
                 >
                   <option value="">Select officer...</option>
-                  {officers.map((o) => <option key={`officer-opt-${o}`} value={o}>{o}</option>)}
+                  {officers.map((name) => (
+                    <option key={`officer-opt-${name}`} value={name}>{name}</option>
+                  ))}
                 </select>
                 {errors.assignedOfficer && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{errors.assignedOfficer.message}</p>}
               </div>
@@ -485,169 +715,242 @@ export default function AddEditCollateralModal({
               </div>
             )}
           </div>
+
+          {/* Required Documents Checklist (shown on details tab) */}
+          {requiredDocTypes.length > 0 && (
+            <div className="mb-2">
+              <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">4</span>
+                Required Documents Checklist
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {requiredDocTypes.map((rt) => {
+                  const isSatisfied = uploadedDocTypes.has(rt.name);
+                  return (
+                    <div
+                      key={rt.id}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
+                        isSatisfied
+                          ? 'bg-green-50 border-green-200 text-green-800' :'bg-amber-50 border-amber-200 text-amber-800'
+                      }`}
+                    >
+                      {isSatisfied ? (
+                        <CheckCircle2 size={14} className="text-green-600 shrink-0" />
+                      ) : (
+                        <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                      )}
+                      <span className="font-500">{rt.name}</span>
+                      {!isSatisfied && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('documents')}
+                          className="ml-auto text-xs text-amber-700 underline hover:text-amber-900"
+                        >
+                          Upload
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {missingRequiredTypes.length > 0 && (
+                <p className="mt-2 text-xs text-amber-700 flex items-center gap-1">
+                  <AlertTriangle size={11} />
+                  {missingRequiredTypes.length} required document{missingRequiredTypes.length > 1 ? 's' : ''} missing. You can still save and upload later.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── DOCUMENTS TAB ── */}
         <div className={activeTab === 'documents' ? 'block' : 'hidden'}>
-          {!editItem && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 font-500">
-                💡 Save the collateral record first, then upload supporting documents via the Edit action.
-              </p>
+          {/* Required Documents Status */}
+          {requiredDocTypes.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-600 text-foreground mb-2">Required Documents Status:</p>
+              <div className="flex flex-wrap gap-2">
+                {requiredDocTypes.map((rt) => {
+                  const isSatisfied = uploadedDocTypes.has(rt.name);
+                  return (
+                    <span
+                      key={rt.id}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-500 ${
+                        isSatisfied ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {isSatisfied ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
+                      {rt.name}
+                    </span>
+                  );
+                })}
+              </div>
+              {missingRequiredTypes.length > 0 && (
+                <p className="mt-2 text-xs text-amber-700">
+                  Missing: {missingRequiredTypes.map((r) => r.name).join(', ')}
+                </p>
+              )}
             </div>
           )}
 
-          {editItem && (
-            <>
-              {/* Upload Zone */}
-              <div className="mb-5">
-                <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
-                  <Upload size={14} className="text-primary" />
-                  Upload Documents
-                </h3>
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
-                    dragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/40'
-                  }`}
-                >
-                  <Upload size={20} className="mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm font-500 text-muted-foreground mb-0.5">
-                    Drag & drop files here, or click to browse
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    PDF, JPG, PNG, DOCX — max 10MB each
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                    className="hidden"
-                    onChange={handleFileInput}
-                  />
-                </div>
+          {/* Upload Zone — available for both new and edit */}
+          <div className="mb-5">
+            <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
+              <Upload size={14} className="text-primary" />
+              Upload Documents
+            </h3>
 
-                {uploadError && (
-                  <div className="mt-2 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
-                    <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
-                    <p className="text-xs text-destructive">{uploadError}</p>
+            {!editItem && (
+              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800 font-500">
+                  💡 Files queued here will be uploaded automatically when you save the collateral record.
+                </p>
+              </div>
+            )}
+
+            <div
+              onDrop={handleDrop}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
+                dragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/40'
+              }`}
+            >
+              <Upload size={20} className="mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm font-500 text-muted-foreground mb-0.5">
+                Drag & drop files here, or click to browse
+              </p>
+              <p className="text-xs text-muted-foreground">
+                PDF, JPG, PNG, DOCX — max 10MB each
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                className="hidden"
+                onChange={handleFileInput}
+              />
+            </div>
+
+            {uploadError && (
+              <div className="mt-2 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
+                <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
+                <p className="text-xs text-destructive">{uploadError}</p>
+              </div>
+            )}
+
+            {/* Pending Files Queue */}
+            {pendingFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-600 text-foreground">Ready to upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
+                {pendingFiles.map((pf, idx) => (
+                  <div key={`pending-${idx}`} className="flex items-start gap-2 p-2.5 bg-white border border-border rounded-lg">
+                    <span className="text-lg leading-none mt-0.5">{getFileIcon(pf.file.type)}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-500 text-foreground truncate">{pf.file.name}</p>
+                      <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
+                      <div className="mt-1.5 flex gap-2">
+                        <select
+                          value={pf.docType}
+                          onChange={(e) => updatePendingDocType(idx, e.target.value)}
+                          className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        >
+                          {docTypeNames.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
+                        </select>
+                        <input
+                          type="text"
+                          placeholder="Notes (optional)"
+                          value={pf.notes}
+                          onChange={(e) => updatePendingNotes(idx, e.target.value)}
+                          className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        />
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => removePending(idx)} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
+                      <X size={14} />
+                    </button>
                   </div>
-                )}
+                ))}
+              </div>
+            )}
+          </div>
 
-                {/* Pending Files Queue */}
-                {pendingFiles.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-600 text-foreground">Ready to upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
-                    {pendingFiles.map((pf, idx) => (
-                      <div key={`pending-${idx}`} className="flex items-start gap-2 p-2.5 bg-white border border-border rounded-lg">
-                        <span className="text-lg leading-none mt-0.5">{getFileIcon(pf.file.type)}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-500 text-foreground truncate">{pf.file.name}</p>
-                          <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
-                          <div className="mt-1.5 flex gap-2">
-                            <select
-                              value={pf.docType}
-                              onChange={(e) => updatePendingDocType(idx, e.target.value as DocumentType)}
-                              className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                            >
-                              {documentTypes.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="Notes (optional)"
-                              value={pf.notes}
-                              onChange={(e) => updatePendingNotes(idx, e.target.value)}
-                              className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                            />
-                          </div>
+          {/* Version History — only for existing records */}
+          {editItem && (
+            <div>
+              <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
+                <Clock size={14} className="text-primary" />
+                Document Version History
+                {documents.length > 0 && (
+                  <span className="ml-auto text-xs font-400 text-muted-foreground">{documents.length} file{documents.length !== 1 ? 's' : ''}</span>
+                )}
+              </h3>
+
+              {docsLoading ? (
+                <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm">Loading documents...</span>
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText size={28} className="mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">No documents uploaded yet</p>
+                  <p className="text-xs mt-1">Upload title deeds, charge certificates, and other legal proof above</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-start gap-3 p-3 bg-white border border-border rounded-lg hover:border-primary/30 transition-colors group">
+                      <span className="text-xl leading-none mt-0.5">{getFileIcon(doc.mimeType)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-500 text-foreground truncate max-w-[200px]">{doc.fileName}</p>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-500 ${getBadgeColor(doc.documentType)}`}>
+                            {doc.documentType}
+                          </span>
+                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
+                            v{doc.version}
+                          </span>
                         </div>
-                        <button type="button" onClick={() => removePending(idx)} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
-                          <X size={14} />
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                          <span className="text-xs text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
+                          <span className="text-xs text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {doc.signedUrl && (
+                          <a
+                            href={doc.signedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                            title="Download"
+                          >
+                            <Download size={13} />
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDocument(doc)}
+                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={13} />
                         </button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Version History */}
-              <div>
-                <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
-                  <Clock size={14} className="text-primary" />
-                  Document Version History
-                  {documents.length > 0 && (
-                    <span className="ml-auto text-xs font-400 text-muted-foreground">{documents.length} file{documents.length !== 1 ? 's' : ''}</span>
-                  )}
-                </h3>
-
-                {docsLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
-                    <Loader2 size={16} className="animate-spin" />
-                    <span className="text-sm">Loading documents...</span>
-                  </div>
-                ) : documents.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText size={28} className="mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">No documents uploaded yet</p>
-                    <p className="text-xs mt-1">Upload title deeds, charge certificates, and other legal proof above</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="flex items-start gap-3 p-3 bg-white border border-border rounded-lg hover:border-primary/30 transition-colors group">
-                        <span className="text-xl leading-none mt-0.5">{getFileIcon(doc.mimeType)}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-500 text-foreground truncate max-w-[200px]">{doc.fileName}</p>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-500 ${docBadgeColor[doc.documentType]}`}>
-                              {doc.documentType}
-                            </span>
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
-                              v{doc.version}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                            <span className="text-xs text-muted-foreground">·</span>
-                            <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
-                            <span className="text-xs text-muted-foreground">·</span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                            </span>
-                          </div>
-                          {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {doc.signedUrl && (
-                            <a
-                              href={doc.signedUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                              title="Download"
-                            >
-                              <Download size={13} />
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteDocument(doc)}
-                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -655,6 +958,11 @@ export default function AddEditCollateralModal({
         <div className="flex items-center justify-between pt-4 border-t border-border mt-6">
           <p className="text-xs text-muted-foreground">
             <span className="text-destructive">*</span> Required fields
+            {missingRequiredTypes.length > 0 && (
+              <span className="ml-2 text-amber-600 font-500">
+                · {missingRequiredTypes.length} required doc{missingRequiredTypes.length > 1 ? 's' : ''} missing
+              </span>
+            )}
           </p>
           <div className="flex items-center gap-3">
             <button
@@ -675,10 +983,15 @@ export default function AddEditCollateralModal({
                   <Loader2 size={14} className="animate-spin" />
                   {uploading ? 'Uploading...' : 'Saving...'}
                 </>
+              ) : saveError ? (
+                <>
+                  <RefreshCw size={14} />
+                  Try Again
+                </>
               ) : editItem ? (
                 pendingFiles.length > 0 ? `Save & Upload (${pendingFiles.length})` : 'Update Collateral'
               ) : (
-                'Register Collateral'
+                pendingFiles.length > 0 ? `Register & Upload (${pendingFiles.length})` : 'Register Collateral'
               )}
             </button>
           </div>

@@ -1,16 +1,20 @@
-import { Metadata } from 'next';
+'use client';
+import React from 'react';
 import AppLayout from '@/components/AppLayout';
 import ScheduledJobsContent from './components/ScheduledJobsContent';
-
-export const metadata: Metadata = {
-  title: 'Scheduled Jobs | CollateralMS',
-  description: 'Automated batch collateral release scheduling',
-};
+import { usePermissions, PERMISSIONS } from '@/lib/rbac';
+import AccessDenied from '@/components/AccessDenied';
 
 export default function ScheduledJobsPage() {
+  const { hasPermission, loading } = usePermissions();
+
   return (
-    <AppLayout>
-      <ScheduledJobsContent />
+    <AppLayout currentPath="/scheduled-jobs">
+      {!loading && !hasPermission(PERMISSIONS?.COLLATERAL_EDIT) ? (
+        <AccessDenied title="Scheduled Jobs" />
+      ) : (
+        <ScheduledJobsContent />
+      )}
     </AppLayout>
   );
 }

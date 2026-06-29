@@ -2,6 +2,47 @@
 
 import { createClient } from '@/lib/supabase/client';
 
+// ─── Alert type keys ──────────────────────────────────────────────────────────
+export type AlertTypeKey =
+  | 'overdue_collateral' |'perfection_deadline' |'workflow_status_change' |'document_expiry' |'new_collateral_added' |'audit_log_events';
+
+// ─── Per-alert-type channel config ───────────────────────────────────────────
+export interface AlertChannelConfig {
+  email: boolean;
+  sms: boolean;
+  inapp: boolean;
+}
+
+export type AlertChannelConfigMap = Partial<Record<AlertTypeKey, AlertChannelConfig>>;
+
+// ─── Per-alert-type recipients ────────────────────────────────────────────────
+export interface AlertRecipients {
+  emails: string[];
+  phones: string[];
+}
+
+export type AlertRecipientsMap = Partial<Record<AlertTypeKey, AlertRecipients>>;
+
+// ─── Default channel config per alert type ───────────────────────────────────
+export const defaultAlertChannelConfig = (): AlertChannelConfigMap => ({
+  overdue_collateral: { email: true, sms: false, inapp: true },
+  perfection_deadline: { email: true, sms: false, inapp: true },
+  workflow_status_change: { email: true, sms: false, inapp: true },
+  document_expiry: { email: true, sms: false, inapp: true },
+  new_collateral_added: { email: false, sms: false, inapp: false },
+  audit_log_events: { email: false, sms: false, inapp: false },
+});
+
+export const defaultAlertRecipients = (): AlertRecipientsMap => ({
+  overdue_collateral: { emails: [], phones: [] },
+  perfection_deadline: { emails: [], phones: [] },
+  workflow_status_change: { emails: [], phones: [] },
+  document_expiry: { emails: [], phones: [] },
+  new_collateral_added: { emails: [], phones: [] },
+  audit_log_events: { emails: [], phones: [] },
+});
+
+// ─── Main preferences interface ───────────────────────────────────────────────
 export interface NotificationPreferences {
   id?: string;
   userId: string;
@@ -34,6 +75,10 @@ export interface NotificationPreferences {
   inappDocumentExpiry: boolean;
   inappSoundEnabled: boolean;
 
+  // Per-alert-type channel config & recipients (new)
+  alertChannelConfig: AlertChannelConfigMap;
+  alertRecipients: AlertRecipientsMap;
+
   createdAt?: string;
   updatedAt?: string;
 }
@@ -62,6 +107,12 @@ function rowToPrefs(row: any): NotificationPreferences {
     inappWorkflowStatusChange: row.inapp_workflow_status_change,
     inappDocumentExpiry: row.inapp_document_expiry,
     inappSoundEnabled: row.inapp_sound_enabled,
+    alertChannelConfig: row.alert_channel_config
+      ? { ...defaultAlertChannelConfig(), ...row.alert_channel_config }
+      : defaultAlertChannelConfig(),
+    alertRecipients: row.alert_recipients
+      ? { ...defaultAlertRecipients(), ...row.alert_recipients }
+      : defaultAlertRecipients(),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -90,6 +141,8 @@ function prefsToRow(prefs: Partial<NotificationPreferences>): Record<string, any
   if (prefs.inappWorkflowStatusChange !== undefined) row.inapp_workflow_status_change = prefs.inappWorkflowStatusChange;
   if (prefs.inappDocumentExpiry !== undefined) row.inapp_document_expiry = prefs.inappDocumentExpiry;
   if (prefs.inappSoundEnabled !== undefined) row.inapp_sound_enabled = prefs.inappSoundEnabled;
+  if (prefs.alertChannelConfig !== undefined) row.alert_channel_config = prefs.alertChannelConfig;
+  if (prefs.alertRecipients !== undefined) row.alert_recipients = prefs.alertRecipients;
   return row;
 }
 
@@ -115,6 +168,8 @@ export const defaultPreferences = (userId: string): NotificationPreferences => (
   inappWorkflowStatusChange: true,
   inappDocumentExpiry: true,
   inappSoundEnabled: false,
+  alertChannelConfig: defaultAlertChannelConfig(),
+  alertRecipients: defaultAlertRecipients(),
 });
 
 export const notificationService = {

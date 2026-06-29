@@ -45,6 +45,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setLoading(false);
       }
+    }).catch(() => {
+      // Network error (fetch failed) — treat as no session
+      setSession(null);
+      setUser(null);
+      setLoading(false);
     });
 
     // Listen for auth changes
@@ -87,7 +92,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email,
       password
     });
-    if (error) throw error;
+    if (error) {
+      // Provide a friendlier message for network errors
+      if ((error as any).__isAuthError && (error as any).status === 0) {
+        throw new Error('Unable to connect to the authentication server. Please check your internet connection and try again.');
+      }
+      throw error;
+    }
     return data;
   };
 

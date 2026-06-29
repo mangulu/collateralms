@@ -49,7 +49,7 @@ BEGIN
         WHEN 'created' THEN
           jsonb_build_array(
             jsonb_build_object('field','status','label','Status','old_value','','new_value','Draft'),
-            jsonb_build_object('field','assigned_officer','label','Assigned Officer','old_value','','new_value','J. Kamau')
+            jsonb_build_object('field','assigned_officer','label','Assigned Officer','old_value','','new_value','Lisa Alkado')
           )
         WHEN 'updated' THEN
           jsonb_build_array(
@@ -74,7 +74,7 @@ BEGIN
         WHEN 'approved' THEN
           jsonb_build_array(
             jsonb_build_object('field','request_status','label','Request Status','old_value','Under Review','new_value','Approved'),
-            jsonb_build_object('field','reviewed_by_name','label','Reviewed By','old_value','','new_value','A. Mwangi')
+            jsonb_build_object('field','reviewed_by_name','label','Reviewed By','old_value','','new_value','Cornel Mangulu')
           )
         WHEN 'rejected' THEN
           jsonb_build_array(

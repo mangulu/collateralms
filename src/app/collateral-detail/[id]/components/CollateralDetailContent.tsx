@@ -24,6 +24,20 @@ import {
   ChevronRight,
   Activity,
   PieChart,
+  BookOpen,
+  TrendingUp,
+  Layers,
+  Plus,
+  X,
+  AlertCircle,
+  ChevronDown,
+  FileImage,
+  FileType2,
+  File,
+  Stamp,
+  PenLine,
+  BadgeCheck,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Badge from '@/components/ui/Badge';
@@ -36,6 +50,8 @@ import AddEditCollateralModal from '@/app/collateral-management/components/AddEd
 import { collateralService } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralUtilizationTab from './CollateralUtilizationTab';
+import { legalSignOffService, LegalSignOff } from '@/lib/supabase/legalSignOffService';
+import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
 
 
 
@@ -85,14 +101,19 @@ const fraudStatusColors: Record<string, string> = {
   RESOLVED: 'bg-green-100 text-green-700',
 };
 
-const perfectionTimeline = [
-  { step: 'Security Document Executed', done: true },
-  { step: 'Collateral Registered in CMS', done: true },
-  { step: 'Legal Review & Approval', done: true },
-  { step: 'Registry Submission Filed', done: false },
-  { step: 'Registry Confirmation Received', done: false },
-  { step: 'Perfection Confirmed', done: false },
-];
+// ─── Dynamic Perfection Timeline ──────────────────────────────────────────────
+
+function getPerfectionTimeline(status: CollateralStatus) {
+  const steps = [
+    { step: 'Security Document Executed', statuses: ['Draft', 'Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released', 'Overdue', 'Rejected'] },
+    { step: 'Collateral Registered in CMS', statuses: ['Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released', 'Overdue', 'Rejected'] },
+    { step: 'Legal Review & Approval', statuses: ['Under Review', 'Perfected', 'Monitoring', 'Released'] },
+    { step: 'Registry Submission Filed', statuses: ['Perfected', 'Monitoring', 'Released'] },
+    { step: 'Registry Confirmation Received', statuses: ['Perfected', 'Monitoring', 'Released'] },
+    { step: 'Perfection Confirmed', statuses: ['Perfected', 'Released'] },
+  ];
+  return steps.map(s => ({ step: s.step, done: s.statuses.includes(status) }));
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -119,6 +140,74 @@ function DetailRow({ label, value, icon: RowIcon }: { label: string; value: Reac
         <p className="text-xs font-500 text-muted-foreground uppercase tracking-wide mb-0.5">{label}</p>
         <div className="text-sm text-foreground">{value}</div>
       </div>
+    </div>
+  );
+}
+
+// ─── KPI Strip ────────────────────────────────────────────────────────────────
+
+function KPIStrip({ collateral, utilization }: { collateral: CollateralRecord; utilization: CollateralUtilization | null }) {
+  const isOverdue = collateral.status === 'Overdue' || (collateral.daysToDeadline !== null && collateral.daysToDeadline < 0);
+  const isApproaching = collateral.daysToDeadline !== null && collateral.daysToDeadline >= 0 && collateral.daysToDeadline <= 7;
+
+  const deadlineLabel = collateral.daysToDeadline === null
+    ? 'N/A'
+    : isOverdue
+      ? `${Math.abs(collateral.daysToDeadline)}d overdue`
+      : `${collateral.daysToDeadline}d left`;
+
+  const deadlineColor = isOverdue
+    ? 'text-red-600'
+    : isApproaching
+      ? 'text-amber-600' :'text-green-600';
+
+  const activeCharges = utilization ? utilization.linkedLoans.filter(l => l.status === 'ACTIVE').length : null;
+  const utilizationPct = utilization ? utilization.utilizationPercentage : null;
+
+  const kpis = [
+    {
+      label: 'Collateral Value',
+      value: collateral.valueTSh ? `TSh ${collateral.valueTSh}` : '—',
+      icon: TrendingUp,
+      color: 'text-primary',
+      bg: 'bg-primary/5',
+    },
+    {
+      label: 'Utilization',
+      value: utilizationPct != null ? `${utilizationPct.toFixed(1)}%` : '—',
+      icon: PieChart,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+    },
+    {
+      label: 'Active Charges',
+      value: activeCharges != null ? String(activeCharges) : '—',
+      icon: Layers,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+    },
+    {
+      label: 'Days to Deadline',
+      value: deadlineLabel,
+      icon: Clock,
+      color: deadlineColor,
+      bg: isOverdue ? 'bg-red-50' : isApproaching ? 'bg-amber-50' : 'bg-green-50',
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      {kpis.map((kpi) => (
+        <div key={kpi.label} className={`flex items-center gap-3 p-4 rounded-xl border border-border ${kpi.bg}`}>
+          <div className={`w-9 h-9 rounded-lg bg-white/70 flex items-center justify-center shrink-0 shadow-sm`}>
+            <kpi.icon size={16} className={kpi.color} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide">{kpi.label}</p>
+            <p className={`text-sm font-700 truncate ${kpi.color}`}>{kpi.value}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -174,16 +263,222 @@ function GeoSection({ collateral }: { collateral: CollateralRecord }) {
   );
 }
 
+// ─── Upload Document Modal ────────────────────────────────────────────────────
+
+interface UploadDocumentModalProps {
+  collateral: CollateralRecord;
+  userId: string;
+  userName: string;
+  onClose: () => void;
+  onUploaded: () => void;
+  initialDocType?: DocumentType;
+}
+
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+
+const DOC_TYPE_OPTIONS: DocumentType[] = [
+  'Title Deed',
+  'Charge Certificate',
+  'Valuation Report',
+  'BRELA Confirmation',
+  'Insurance Certificate',
+  'Board Resolution',
+  'Other',
+];
+
+function getFileIconDetail(mimeType: string) {
+  if (mimeType?.includes('pdf')) return <FileType2 size={18} className="text-red-500" />;
+  if (mimeType?.includes('image')) return <FileImage size={18} className="text-blue-500" />;
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={18} className="text-indigo-500" />;
+  return <FileText size={18} className="text-slate-500" />;
+}
+
+function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded, initialDocType }: UploadDocumentModalProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [docType, setDocType] = useState<DocumentType>(initialDocType ?? 'Other');
+  const [notes, setNotes] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleFile = (file: File) => {
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setError('Unsupported file type. Allowed: PDF, JPEG, PNG, WEBP, DOC, DOCX');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File exceeds 10 MB limit.');
+      return;
+    }
+    setError('');
+    setSelectedFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedFile) { setError('Please select a file.'); return; }
+    setUploading(true);
+    setError('');
+    const result = await documentService.upload(
+      selectedFile,
+      collateral.id,
+      collateral.collateralId,
+      docType,
+      notes,
+      userId,
+      userName,
+    );
+    setUploading(false);
+    if (!result) {
+      setError('Upload failed. Please try again.');
+      return;
+    }
+    onUploaded();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Upload Document</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Linked to:{' '}
+              <span className="font-medium text-foreground">
+                {collateral.collateralId} — {collateral.obligor}
+              </span>
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Drop zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+              dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/40'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            />
+            {selectedFile ? (
+              <div className="flex items-center justify-center gap-3">
+                {getFileIconDetail(selectedFile.type)}
+                <div className="text-left">
+                  <p className="text-sm font-medium text-foreground truncate max-w-[260px]">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground">{documentService.formatFileSize(selectedFile.size)}</p>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); setError(''); }}
+                  className="ml-auto p-1 rounded hover:bg-muted"
+                >
+                  <X size={14} className="text-muted-foreground" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Upload size={24} className="mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-foreground">Drop file here or click to browse</p>
+                <p className="text-xs text-muted-foreground mt-1">PDF, JPEG, PNG, WEBP, DOC, DOCX · Max 10 MB</p>
+              </>
+            )}
+          </div>
+
+          {/* Document type */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
+            <div className="relative">
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value as DocumentType)}
+                className="w-full appearance-none border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
+              >
+                {DOC_TYPE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Notes <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Add context or version notes…"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={uploading || !selectedFile}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {uploading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+            {uploading ? 'Uploading…' : 'Upload Document'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Documents Section ────────────────────────────────────────────────────────
 
 function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
   const { user } = useAuth();
   const [docs, setDocs] = useState<CollateralDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [docType, setDocType] = useState<DocumentType>('Title Deed');
-  const [notes, setNotes] = useState('');
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState<DocumentType | undefined>(undefined);
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -193,35 +488,6 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
   }, [collateral.id]);
 
   useEffect(() => { loadDocs(); }, [loadDocs]);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploading(true);
-    try {
-      const result = await documentService.upload(
-        file,
-        collateral.id,
-        collateral.collateralId,
-        docType,
-        notes,
-        user.id,
-        user.email ?? 'Unknown'
-      );
-      if (result) {
-        toast.success('Document uploaded successfully');
-        setNotes('');
-        loadDocs();
-      } else {
-        toast.error('Upload failed');
-      }
-    } catch {
-      toast.error('Upload failed');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   const handleDelete = async (doc: CollateralDocument) => {
     const ok = await documentService.delete(doc);
@@ -233,45 +499,35 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
     }
   };
 
-  const docTypeOptions: DocumentType[] = [
-    'Title Deed', 'Charge Certificate', 'Valuation Report', 'BRELA Confirmation',
-    'Insurance Certificate', 'Board Resolution', 'Other',
-  ];
+  const openUploadFor = (docType?: DocumentType) => {
+    setUploadDocType(docType);
+    setShowUploadModal(true);
+  };
+
+  // Group uploaded docs by document type
+  const docsByType = docs.reduce<Record<string, CollateralDocument[]>>((acc, doc) => {
+    const key = doc.documentType ?? 'Other';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(doc);
+    return acc;
+  }, {});
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
         <SectionHeader title="Related Documents" icon={Files} />
-        <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
-      </div>
-
-      {/* Upload row */}
-      <div className="flex flex-wrap items-center gap-2 mb-4 p-3 bg-muted/30 rounded-lg border border-border/60">
-        <select
-          value={docType}
-          onChange={(e) => setDocType(e.target.value as DocumentType)}
-          className="text-xs border border-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          {docTypeOptions.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Notes (optional)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="flex-1 min-w-[120px] text-xs border border-border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-md text-xs font-600 hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-60"
-        >
-          <Upload size={12} />
-          {uploading ? 'Uploading…' : 'Upload'}
-        </button>
-        <input ref={fileInputRef} type="file" className="hidden" onChange={handleUpload} />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
+          {user && (
+            <button
+              onClick={() => openUploadFor(undefined)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={13} />
+              Upload
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -281,55 +537,125 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
         </div>
-      ) : docs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Files size={28} className="text-muted-foreground/40 mb-2" />
-          <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Upload title deeds, charge certificates, and other supporting documents above.</p>
-        </div>
       ) : (
-        <div className="space-y-2">
-          {docs.map((doc) => (
-            <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors group">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <FileText size={14} className="text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-500 text-foreground truncate">{doc.fileName}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground">{doc.documentType}</span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-xs text-muted-foreground">v{doc.version}</span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
-                </div>
-                {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {doc.signedUrl && (
-                  <a
-                    href={doc.signedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                    title="Download"
-                  >
-                    <Download size={13} />
-                  </a>
-                )}
+        <div className="space-y-3">
+          {/* Document type categories */}
+          {DOC_TYPE_OPTIONS.map((docType) => {
+            const typeDocs = docsByType[docType] ?? [];
+            const hasDocuments = typeDocs.length > 0;
+
+            return (
+              <div key={docType} className="rounded-lg border border-border/60 overflow-hidden">
+                {/* Category header — always clickable to upload */}
                 <button
-                  onClick={() => handleDelete(doc)}
-                  className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
-                  title="Delete"
+                  type="button"
+                  onClick={() => user && openUploadFor(docType)}
+                  disabled={!user}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                    hasDocuments
+                      ? 'bg-muted/30 hover:bg-muted/50' :'bg-muted/10 hover:bg-primary/5'
+                  } ${!user ? 'cursor-default' : 'cursor-pointer'}`}
                 >
-                  <Trash2 size={13} />
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
+                      hasDocuments ? 'bg-primary/10' : 'bg-muted/60'
+                    }`}>
+                      <FileText size={13} className={hasDocuments ? 'text-primary' : 'text-muted-foreground/50'} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-500 text-foreground">{docType}</span>
+                      {hasDocuments && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {typeDocs.length} file{typeDocs.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {user && (
+                    hasDocuments ? (
+                      <span className="flex items-center gap-1 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 px-2 py-1 rounded-md hover:bg-primary/10 transition-colors">
+                        <Upload size={11} /> Add
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                        <Upload size={12} />
+                        <span>Upload</span>
+                      </span>
+                    )
+                  )}
                 </button>
+
+                {/* Uploaded files for this type */}
+                {hasDocuments && (
+                  <div className="divide-y divide-border/40">
+                    {typeDocs.map((doc) => (
+                      <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-muted/20 transition-colors group">
+                        <div className="w-6 h-6 rounded flex items-center justify-center shrink-0">
+                          {getFileIconDetail(doc.mimeType ?? '')}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-500 text-foreground truncate">{doc.fileName}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-muted-foreground">v{doc.version}</span>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {doc.signedUrl && (
+                            <a
+                              href={doc.signedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                              title="Download"
+                            >
+                              <Download size={13} />
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleDelete(doc)}
+                            className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Empty tray when no documents for this type */}
+                {!hasDocuments && user && (
+                  <div
+                    onClick={() => openUploadFor(docType)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white cursor-pointer hover:bg-primary/5 transition-colors border-t border-border/40"
+                  >
+                    <div className="w-5 h-5 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center shrink-0">
+                      <Plus size={10} className="text-muted-foreground/40" />
+                    </div>
+                    <span className="text-xs text-muted-foreground/60 italic">No document — click to upload</span>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+      )}
+
+      {showUploadModal && user && (
+        <UploadDocumentModal
+          collateral={collateral}
+          userId={user.id}
+          userName={user.email ?? 'Unknown'}
+          initialDocType={uploadDocType}
+          onClose={() => { setShowUploadModal(false); setUploadDocType(undefined); }}
+          onUploaded={() => { loadDocs(); toast.success('Document uploaded successfully'); }}
+        />
       )}
     </div>
   );
@@ -388,11 +714,11 @@ function AuditTrailSection({ collateral }: { collateral: CollateralRecord }) {
           <p className="text-sm text-muted-foreground">No audit entries found for this collateral</p>
         </div>
       ) : (
-        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
           {entries.map((entry) => (
             <div key={entry.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/60 bg-muted/20">
               <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded shrink-0 mt-0.5 ${actionColors[entry.action] ?? 'bg-gray-100 text-gray-600'}`}>
-                {entry.action.replace(/_/g, ' ').toUpperCase()}
+                {(entry.action ?? '').replace(/_/g, ' ').toUpperCase()}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-500 text-foreground">{entry.message}</p>
@@ -417,11 +743,18 @@ function AuditTrailSection({ collateral }: { collateral: CollateralRecord }) {
   );
 }
 
-// ─── Fraud Alerts Section ─────────────────────────────────────────────────────
+// ─── Risk & Compliance Sidebar Card (merged Fraud + Workflow) ─────────────────
 
-function FraudAlertsSection({ collateral }: { collateral: CollateralRecord }) {
+function RiskComplianceSidebarCard({ collateral }: { collateral: CollateralRecord }) {
+  const [activePanel, setActivePanel] = useState<'fraud' | 'workflow'>('fraud');
+
+  // Fraud state
   const [alerts, setAlerts] = useState<FraudAlertRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fraudLoading, setFraudLoading] = useState(true);
+
+  // Workflow state
+  const [requests, setRequests] = useState<PerfectionRequest[]>([]);
+  const [workflowLoading, setWorkflowLoading] = useState(true);
 
   useEffect(() => {
     fetchFraudAlerts()
@@ -432,60 +765,8 @@ function FraudAlertsSection({ collateral }: { collateral: CollateralRecord }) {
         setAlerts(filtered);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setFraudLoading(false));
   }, [collateral.id, collateral.collateralId]);
-
-  return (
-    <div className="bg-white rounded-xl border border-border shadow-card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <SectionHeader title="Fraud Alerts" icon={ShieldAlert} />
-        <Link href="/fraud-prevention" className="text-xs text-primary hover:underline flex items-center gap-1">
-          View All <ChevronRight size={11} />
-        </Link>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-6">
-          <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-        </div>
-      ) : alerts.length === 0 ? (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
-          <CheckCircle2 size={16} className="text-green-600 shrink-0" />
-          <p className="text-sm text-green-700 font-500">No fraud alerts detected for this collateral</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {alerts.map((alert) => (
-            <div key={alert.id} className="p-3 rounded-lg border border-red-200 bg-red-50">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-600 text-red-700">{fraudAlertTypeLabels[alert.alert_type] ?? alert.alert_type}</span>
-                <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded ${fraudStatusColors[alert.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {alert.status.replace(/_/g, ' ')}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-red-600">Risk Score: <strong>{alert.risk_score}</strong></span>
-                <span className="text-muted-foreground/40">·</span>
-                <span className="text-xs text-red-600">Confidence: <strong>{alert.confidence}%</strong></span>
-                <span className="text-muted-foreground/40">·</span>
-                <span className="text-xs text-muted-foreground">{new Date(alert.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Perfection Workflow Section ──────────────────────────────────────────────
-
-function WorkflowSection({ collateral }: { collateral: CollateralRecord }) {
-  const [requests, setRequests] = useState<PerfectionRequest[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     perfectionService
@@ -497,10 +778,12 @@ function WorkflowSection({ collateral }: { collateral: CollateralRecord }) {
         setRequests(filtered);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setWorkflowLoading(false));
   }, [collateral.id, collateral.collateralId]);
 
-  const statusColors: Record<string, string> = {
+  const timeline = getPerfectionTimeline(collateral.status);
+
+  const workflowStatusColors: Record<string, string> = {
     Draft: 'bg-gray-100 text-gray-600',
     Submitted: 'bg-blue-100 text-blue-700',
     'Under Review': 'bg-amber-100 text-amber-700',
@@ -511,52 +794,446 @@ function WorkflowSection({ collateral }: { collateral: CollateralRecord }) {
   };
 
   return (
+    <div className="bg-white rounded-xl border border-border shadow-card overflow-hidden">
+      {/* Card header */}
+      <div className="flex items-center gap-2 px-5 pt-5 pb-3">
+        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Shield size={14} className="text-primary" />
+        </div>
+        <h2 className="text-sm font-700 text-foreground uppercase tracking-wider">Risk &amp; Compliance</h2>
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex border-b border-border mx-5">
+        <button
+          onClick={() => setActivePanel('fraud')}
+          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 border-b-2 transition-colors -mb-px ${
+            activePanel === 'fraud' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <ShieldAlert size={12} />
+          Fraud
+          {alerts.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-700">{alerts.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setActivePanel('workflow')}
+          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 border-b-2 transition-colors -mb-px ${
+            activePanel === 'workflow' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Activity size={12} />
+          Workflow
+        </button>
+      </div>
+
+      <div className="p-5">
+        {/* ── Fraud Panel ── */}
+        {activePanel === 'fraud' && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground">AI-detected fraud signals</p>
+              <Link href="/fraud-prevention" className="text-xs text-primary hover:underline flex items-center gap-1">
+                View All <ChevronRight size={11} />
+              </Link>
+            </div>
+            {fraudLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            ) : alerts.length === 0 ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
+                <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                <p className="text-sm text-green-700 font-500">No fraud alerts detected</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="p-3 rounded-lg border border-red-200 bg-red-50">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-600 text-red-700">{fraudAlertTypeLabels[alert.alert_type] ?? alert.alert_type}</span>
+                      <span className={`text-[10px] font-600 px-1.5 py-0.5 rounded ${fraudStatusColors[alert.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {alert.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-red-600">Risk: <strong>{alert.risk_score}</strong></span>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="text-xs text-red-600">Conf: <strong>{alert.confidence}%</strong></span>
+                      <span className="text-muted-foreground/40">·</span>
+                      <span className="text-xs text-muted-foreground">{new Date(alert.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Workflow Panel ── */}
+        {activePanel === 'workflow' && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground">Perfection progress</p>
+              <Link href="/perfection-workflow" className="text-xs text-primary hover:underline flex items-center gap-1">
+                View All <ChevronRight size={11} />
+              </Link>
+            </div>
+
+            {/* Dynamic timeline */}
+            <div className="space-y-2 mb-5">
+              {timeline.map((step, idx) => (
+                <div key={`step-${idx}`} className="flex items-center gap-2.5">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step.done ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
+                    {step.done ? <CheckCircle2 size={12} /> : <span className="text-[10px] font-700">{idx + 1}</span>}
+                  </div>
+                  <p className={`text-xs ${step.done ? 'text-foreground font-500' : 'text-muted-foreground'}`}>{step.step}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Live requests */}
+            {workflowLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <svg className="animate-spin w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            ) : requests.length > 0 ? (
+              <div className="space-y-2 border-t border-border pt-4">
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-2">Perfection Requests</p>
+                {requests.map((req) => (
+                  <div key={req.id} className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-muted/20">
+                    <div>
+                      <p className="text-xs font-500 text-foreground">{req.collateralId}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {req.submittedByName} · {new Date(req.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-600 px-2 py-0.5 rounded ${workflowStatusColors[req.requestStatus] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {req.requestStatus}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Legal Sign-Off Modal ─────────────────────────────────────────────────────
+
+interface LegalSignOffModalProps {
+  collateral: CollateralRecord;
+  userId: string;
+  userName: string;
+  userRole: string;
+  onClose: () => void;
+  onSigned: () => void;
+}
+
+function LegalSignOffModal({ collateral, userId, userName, userRole, onClose, onSigned }: LegalSignOffModalProps) {
+  const [notes, setNotes] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const signedAt = new Date();
+
+  const handleSubmit = async () => {
+    if (!confirmed) { setError('Please confirm the sign-off declaration before proceeding.'); return; }
+    setSubmitting(true);
+    setError('');
+    try {
+      const signOff = await legalSignOffService.create({
+        collateralRecordId: collateral.id,
+        collateralId: collateral.collateralId,
+        signedBy: userId,
+        signedByName: userName,
+        signedByRole: userRole || 'Legal Officer',
+        notes: notes.trim() || undefined,
+      });
+      if (!signOff) { setError('Sign-off failed. Please try again.'); setSubmitting(false); return; }
+
+      // Write audit log entry
+      await auditLogService.logLegalSignOff({
+        collateralRecordId: collateral.id,
+        collateralId: collateral.collateralId,
+        performedBy: userId,
+        performedByName: userName,
+        notes: notes.trim(),
+      });
+
+      onSigned();
+      onClose();
+    } catch {
+      setError('An error occurred. Please try again.');
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <Stamp size={18} className="text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Legal Sign-Off</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Perfected collateral record — <span className="font-medium text-foreground font-mono">{collateral.collateralId}</span>
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Collateral summary */}
+          <div className="rounded-lg bg-muted/40 border border-border/60 px-4 py-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Obligor</span>
+              <span className="text-xs font-medium text-foreground">{collateral.obligor}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Collateral Type</span>
+              <span className="text-xs font-medium text-foreground">{collateral.type}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Registry</span>
+              <span className="text-xs font-medium text-foreground">{collateral.registry}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Value</span>
+              <span className="text-xs font-mono font-semibold text-foreground">TSh {collateral.valueTSh}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Sign-Off Timestamp</span>
+              <span className="text-xs font-mono text-foreground">{signedAt.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Signing Officer</span>
+              <span className="text-xs font-medium text-foreground">{userName}</span>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Sign-Off Notes <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Add any observations, conditions, or remarks regarding this perfection sign-off…"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+            />
+          </div>
+
+          {/* Declaration checkbox */}
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <div className="relative mt-0.5 shrink-0">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(e) => { setConfirmed(e.target.checked); if (e.target.checked) setError(''); }}
+                className="sr-only"
+              />
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${confirmed ? 'bg-emerald-600 border-emerald-600' : 'border-border group-hover:border-emerald-400'}`}>
+                {confirmed && <CheckCircle2 size={10} className="text-white" />}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              I, <strong className="text-foreground">{userName}</strong>, confirm that I have reviewed this collateral record and hereby digitally sign off on its perfection status. This action is legally binding and will be permanently recorded in the audit trail.
+            </p>
+          </label>
+
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !confirmed}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {submitting ? <RefreshCw size={14} className="animate-spin" /> : <PenLine size={14} />}
+            {submitting ? 'Signing…' : 'Sign Off'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Legal Sign-Off Section ───────────────────────────────────────────────────
+
+function LegalSignOffSection({ collateral }: { collateral: CollateralRecord }) {
+  const { user, userProfile, userRole } = useAuth();
+  const [signOffs, setSignOffs] = useState<LegalSignOff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+
+  const loadSignOffs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await legalSignOffService.getByCollateral(collateral.id);
+      setSignOffs(data);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [collateral.id]);
+
+  useEffect(() => { loadSignOffs(); }, [loadSignOffs]);
+
+  const activeSignOffs = signOffs.filter((s) => s.status === 'signed');
+  const canSignOff = !!user && collateral.status === 'Perfected';
+
+  return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <SectionHeader title="Perfection Workflow" icon={Activity} />
-        <Link href="/perfection-workflow" className="text-xs text-primary hover:underline flex items-center gap-1">
-          View All <ChevronRight size={11} />
-        </Link>
+        <SectionHeader title="Legal Sign-Off" icon={Stamp} />
+        <div className="flex items-center gap-2">
+          {activeSignOffs.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+              <BadgeCheck size={11} /> {activeSignOffs.length} active sign-off{activeSignOffs.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          {canSignOff && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors"
+            >
+              <PenLine size={12} />
+              Sign Off
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Static timeline */}
-      <div className="space-y-2 mb-5">
-        {perfectionTimeline.map((step, idx) => (
-          <div key={`step-${idx}`} className="flex items-center gap-2.5">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${step.done ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'}`}>
-              {step.done ? <CheckCircle2 size={12} /> : <span className="text-[10px] font-700">{idx + 1}</span>}
-            </div>
-            <p className={`text-xs ${step.done ? 'text-foreground font-500' : 'text-muted-foreground'}`}>{step.step}</p>
-          </div>
-        ))}
-      </div>
+      {collateral.status !== 'Perfected' && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 mb-3">
+          <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+          <p className="text-xs text-amber-700">
+            Legal sign-off is only available for collateral records with <strong>Perfected</strong> status. Current status: <strong>{collateral.status}</strong>.
+          </p>
+        </div>
+      )}
 
-      {/* Live requests */}
       {loading ? (
-        <div className="flex items-center justify-center py-4">
-          <svg className="animate-spin w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none">
+        <div className="flex items-center justify-center py-8">
+          <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
         </div>
-      ) : requests.length > 0 ? (
-        <div className="space-y-2 border-t border-border pt-4">
-          <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide mb-2">Perfection Requests</p>
-          {requests.map((req) => (
-            <div key={req.id} className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-muted/20">
-              <div>
-                <p className="text-xs font-500 text-foreground">{req.collateralId}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {req.submittedByName} · {new Date(req.createdAt).toLocaleDateString()}
-                </p>
+      ) : signOffs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted/60 flex items-center justify-center mb-3">
+            <Stamp size={22} className="text-muted-foreground/40" />
+          </div>
+          <p className="text-sm font-medium text-foreground">No sign-offs recorded</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {collateral.status === 'Perfected' ?'Legal officers can sign off on this perfected record.' :'Sign-off becomes available once the collateral is perfected.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {signOffs.map((signOff) => (
+            <div
+              key={signOff.id}
+              className={`rounded-lg border p-4 ${
+                signOff.status === 'signed' ?'border-emerald-200 bg-emerald-50/50' :'border-border bg-muted/20 opacity-70'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                    signOff.status === 'signed' ? 'bg-emerald-100' : 'bg-muted'
+                  }`}>
+                    {signOff.status === 'signed'
+                      ? <BadgeCheck size={16} className="text-emerald-600" />
+                      : <XCircle size={16} className="text-muted-foreground" />
+                    }
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{signOff.signedByName}</p>
+                    <p className="text-xs text-muted-foreground">{signOff.signedByRole}</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                  signOff.status === 'signed' ?'bg-emerald-100 text-emerald-700' :'bg-gray-100 text-gray-600'
+                }`}>
+                  {signOff.status === 'signed' ? 'SIGNED' : 'REVOKED'}
+                </span>
               </div>
-              <span className={`text-[10px] font-600 px-2 py-0.5 rounded ${statusColors[req.requestStatus] ?? 'bg-gray-100 text-gray-600'}`}>
-                {req.requestStatus}
-              </span>
+
+              <div className="mt-3 space-y-1.5 pl-10">
+                <div className="flex items-center gap-2">
+                  <Clock size={11} className="text-muted-foreground shrink-0" />
+                  <span className="text-xs text-muted-foreground">
+                    Signed at <strong className="text-foreground font-mono">{new Date(signOff.signedAt).toLocaleString()}</strong>
+                  </span>
+                </div>
+                {signOff.notes && (
+                  <div className="flex items-start gap-2">
+                    <FileText size={11} className="text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-xs text-foreground italic">{signOff.notes}</p>
+                  </div>
+                )}
+                {signOff.status === 'revoked' && signOff.revokedAt && (
+                  <div className="mt-2 pt-2 border-t border-border/60">
+                    <p className="text-xs text-red-600">
+                      Revoked by <strong>{signOff.revokedByName}</strong> on {new Date(signOff.revokedAt).toLocaleString()}
+                      {signOff.revocationReason && ` — ${signOff.revocationReason}`}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
-      ) : null}
+      )}
+
+      {showModal && user && (
+        <LegalSignOffModal
+          collateral={collateral}
+          userId={user.id}
+          userName={userProfile?.full_name || user.email || 'Unknown Officer'}
+          userRole={userRole || 'Legal Officer'}
+          onClose={() => setShowModal(false)}
+          onSigned={() => {
+            loadSignOffs();
+            toast.success('Legal sign-off recorded successfully');
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -573,7 +1250,13 @@ export default function CollateralDetailContent({
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'utilization'>('overview');
+  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents'>('profile');
+  const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
+
+  useEffect(() => {
+    if (!collateral?.id) return;
+    collateralLinkService.getUtilization(collateral.id).then(setUtilization).catch(() => {});
+  }, [collateral?.id]);
 
   const handleSave = async (data: Partial<CollateralRecord>) => {
     if (!collateral) return;
@@ -648,7 +1331,7 @@ export default function CollateralDetailContent({
   return (
     <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto">
       {/* Breadcrumb + Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
         <div>
           <button
             onClick={onBack}
@@ -664,7 +1347,14 @@ export default function CollateralDetailContent({
             {collateral.obligor} · {collateral.type} · {collateral.registry}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <Link
+            href={`/collateral-library/${collateral.id}`}
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <BookOpen size={13} />
+            View in Library
+          </Link>
           <button
             onClick={onRefresh}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
@@ -684,7 +1374,7 @@ export default function CollateralDetailContent({
 
       {/* Status Banners */}
       {isOverdue && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-5">
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
           <AlertTriangle size={15} className="text-red-600 shrink-0" />
           <p className="text-sm text-red-700 font-500">
             This collateral is overdue for perfection — {collateral.daysToDeadline !== null && Math.abs(collateral.daysToDeadline)} days past the submission deadline. Immediate action required.
@@ -692,7 +1382,7 @@ export default function CollateralDetailContent({
         </div>
       )}
       {isApproaching && !isOverdue && (
-        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-5">
+        <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
           <Clock size={15} className="text-amber-600 shrink-0" />
           <p className="text-sm text-amber-700 font-500">
             Perfection deadline approaching — {collateral.daysToDeadline} days remaining to submit to {collateral.registry}.
@@ -700,15 +1390,19 @@ export default function CollateralDetailContent({
         </div>
       )}
 
+      {/* ── KPI Strip ── */}
+      <KPIStrip collateral={collateral} utilization={utilization} />
+
       {/* ── Tab Navigation ── */}
       <div className="flex items-center gap-1 mb-6 border-b border-border">
         {[
-          { key: 'overview', label: 'Overview', icon: Shield },
-          { key: 'utilization', label: 'Utilization & Charges', icon: PieChart },
+          { key: 'profile', label: 'Profile', icon: Shield },
+          { key: 'charges', label: 'Charges & Loans', icon: PieChart },
+          { key: 'documents', label: 'Documents & History', icon: Files },
         ].map(tab => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as 'overview' | 'utilization')}
+            onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents')}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${
               activeTab === tab.key
                 ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
@@ -720,8 +1414,8 @@ export default function CollateralDetailContent({
         ))}
       </div>
 
-      {/* ── Tab: Overview ── */}
-      {activeTab === 'overview' && (
+      {/* ── Tab: Profile ── */}
+      {activeTab === 'profile' && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left column — core details */}
           <div className="xl:col-span-2 space-y-6">
@@ -818,21 +1512,12 @@ export default function CollateralDetailContent({
 
             {/* Geomapping */}
             <GeoSection collateral={collateral} />
-
-            {/* Documents */}
-            <DocumentsSection collateral={collateral} />
-
-            {/* Audit Trail */}
-            <AuditTrailSection collateral={collateral} />
           </div>
 
-          {/* Right column — intelligence panels */}
+          {/* Right column — Risk & Compliance + Quick Links */}
           <div className="space-y-6">
-            {/* Fraud Alerts */}
-            <FraudAlertsSection collateral={collateral} />
-
-            {/* Workflow */}
-            <WorkflowSection collateral={collateral} />
+            {/* Merged Risk & Compliance card */}
+            <RiskComplianceSidebarCard collateral={collateral} />
 
             {/* Quick Links */}
             <div className="bg-white rounded-xl border border-border shadow-card p-5">
@@ -863,9 +1548,18 @@ export default function CollateralDetailContent({
         </div>
       )}
 
-      {/* ── Tab: Utilization & Charges ── */}
-      {activeTab === 'utilization' && (
+      {/* ── Tab: Charges & Loans ── */}
+      {activeTab === 'charges' && (
         <CollateralUtilizationTab collateral={collateral} />
+      )}
+
+      {/* ── Tab: Documents & History ── */}
+      {activeTab === 'documents' && (
+        <div className="space-y-6">
+          <DocumentsSection collateral={collateral} />
+          <LegalSignOffSection collateral={collateral} />
+          <AuditTrailSection collateral={collateral} />
+        </div>
       )}
 
       {/* Edit Modal */}
