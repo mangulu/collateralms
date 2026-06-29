@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  TrendingUp,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
@@ -97,6 +98,34 @@ export default function CollateralDetailModal({
 
   const registryUrl = registryLinks[item.registry];
 
+  // Financial health derived values
+  const valuation = item.valuationAmount ?? null;
+  const ltv = item.ltvRatio ?? null;
+  const maxSecurable = item.maxSecurableAmount ?? (valuation && ltv ? valuation * ltv : null);
+  const equity = item.availableEquity ?? null;
+  const hasFinancialData = valuation != null || maxSecurable != null || equity != null;
+
+  const ltvPct = ltv != null ? Math.round(ltv * 100) : null;
+  const ltvColor =
+    ltvPct == null ? 'text-muted-foreground' :
+    ltvPct >= 80 ? 'text-red-600' :
+    ltvPct >= 65 ? 'text-amber-600' : 'text-green-600';
+  const ltvBg =
+    ltvPct == null ? 'bg-muted/40' :
+    ltvPct >= 80 ? 'bg-red-50 border-red-200' :
+    ltvPct >= 65 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200';
+
+  const equityPct = maxSecurable && maxSecurable > 0 && equity != null
+    ? Math.round((equity / maxSecurable) * 100)
+    : null;
+
+  function fmtTSh(n: number | null | undefined) {
+    if (n == null) return '—';
+    if (n >= 1_000_000_000) return `TSh ${(n / 1_000_000_000).toFixed(2)}B`;
+    if (n >= 1_000_000) return `TSh ${(n / 1_000_000).toFixed(2)}M`;
+    return `TSh ${n.toLocaleString()}`;
+  }
+
   return (
     <Modal
       open={open}
@@ -121,6 +150,77 @@ export default function CollateralDetailModal({
           <p className="text-sm text-amber-700 font-500">
             Perfection deadline approaching — {item.daysToDeadline} days remaining to submit to {item.registry}.
           </p>
+        </div>
+      )}
+
+      {/* Financial Health Assessment */}
+      {hasFinancialData && (
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp size={14} className="text-primary" />
+            <h4 className="text-xs font-700 text-muted-foreground uppercase tracking-wider">
+              Financial Health Assessment
+            </h4>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Collateral Valuation */}
+            <div className="bg-muted/30 border border-border rounded-lg p-3">
+              <p className="text-[10px] font-600 text-muted-foreground uppercase tracking-wide mb-1">
+                Collateral Valuation
+              </p>
+              <p className="text-sm font-700 text-foreground font-mono leading-tight">
+                {fmtTSh(valuation)}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Appraised value</p>
+            </div>
+
+            {/* LTV Ratio */}
+            <div className={`border rounded-lg p-3 ${ltvBg}`}>
+              <p className="text-[10px] font-600 text-muted-foreground uppercase tracking-wide mb-1">
+                LTV Ratio
+              </p>
+              <p className={`text-sm font-700 font-mono leading-tight ${ltvColor}`}>
+                {ltvPct != null ? `${ltvPct}%` : '—'}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {ltvPct == null ? 'Not set' : ltvPct >= 80 ? 'High risk' : ltvPct >= 65 ? 'Moderate' : 'Healthy'}
+              </p>
+            </div>
+
+            {/* Max Securable Amount */}
+            <div className="bg-muted/30 border border-border rounded-lg p-3">
+              <p className="text-[10px] font-600 text-muted-foreground uppercase tracking-wide mb-1">
+                Max Securable
+              </p>
+              <p className="text-sm font-700 text-foreground font-mono leading-tight">
+                {fmtTSh(maxSecurable)}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Valuation × LTV</p>
+            </div>
+
+            {/* Available Equity */}
+            <div className={`border rounded-lg p-3 ${
+              equity == null ? 'bg-muted/30 border-border' :
+              equity <= 0 ? 'bg-red-50 border-red-200' :
+              equityPct != null && equityPct < 20 ? 'bg-amber-50 border-amber-200': 'bg-green-50 border-green-200'
+            }`}>
+              <p className="text-[10px] font-600 text-muted-foreground uppercase tracking-wide mb-1">
+                Available Equity
+              </p>
+              <p className={`text-sm font-700 font-mono leading-tight ${
+                equity == null ? 'text-muted-foreground' :
+                equity <= 0 ? 'text-red-600' :
+                equityPct != null && equityPct < 20 ? 'text-amber-600': 'text-green-600'
+              }`}>
+                {fmtTSh(equity)}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {equity == null ? 'Not calculated' :
+                 equity <= 0 ? 'Fully utilised' :
+                 equityPct != null ? `${equityPct}% free` : 'Remaining capacity'}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
