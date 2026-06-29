@@ -571,6 +571,9 @@ export default function AddEditCollateralModal({
                   {...register('assignedOfficer', { required: 'Assigned officer is required' })}
                 >
                   <option value="">Select officer...</option>
+                  {officers.map((name) => (
+                    <option key={`officer-opt-${name}`} value={name}>{name}</option>
+                  ))}
                 </select>
                 {errors.assignedOfficer && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{errors.assignedOfficer.message}</p>}
               </div>
