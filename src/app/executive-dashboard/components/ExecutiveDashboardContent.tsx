@@ -135,7 +135,7 @@ export default function ExecutiveDashboardContent() {
       ]);
 
       const records = valData.data ?? [];
-      const totalValue = records.reduce((sum, r) => sum + (r.value_tsh ?? 0), 0);
+      const totalValue = records.reduce((sum, r) => sum + (Number(r.value_tsh) || 0), 0);
       const ltvValues = records.filter((r) => r.ltv_ratio != null).map((r) => r.ltv_ratio as number);
       const avgLTV = ltvValues.length > 0 ? ltvValues.reduce((a, b) => a + b, 0) / ltvValues.length : 0;
 
