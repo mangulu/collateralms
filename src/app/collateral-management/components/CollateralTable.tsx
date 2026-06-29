@@ -1,11 +1,20 @@
 'use client';
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock,  } from 'lucide-react';
+import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { FolderOpen } from 'lucide-react';
+
+// Helper to format TSh values compactly
+function fmtTShCompact(n: number | null | undefined): string {
+  if (n == null) return '—';
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return n.toLocaleString();
+}
 
 type SortKey = keyof Collateral;
 type SortDir = 'asc' | 'desc';
@@ -218,8 +227,30 @@ export default function CollateralTable({
                     {/* Value */}
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="font-mono text-xs font-600 text-foreground">
-                        TSh {item.valueTS || item.valueTS2 || item.valueTS3 || item.valueTS4 || item.valueTS5 || item.valueTS6 || item.valueTS7 || item.valueTS8 || item.valueTS9 || item.valueTS10 || item.valueTS11 || item.valueTS12 || item.valueTS13 || item.valueTS14 || item.valueTS15 || item.valueTS16 || item.valueTS17 || item.valueTS18 || item.valueTS19 || item.valueTS20 || item.valueTS21 || item.valueTS22 || item.valueTS23 || item.valueTS24 || item.valueTS25 || item.valueTS26 || item.valueTS27 || item.valueTS28 || item.valueTS29 || item.valueTS30 || item.valueTS31 || item.valueTS32 || item.valueTS33 || item.valueTS34 || item.valueTS35 || item.valueTS36 || item.valueTS37 || item.valueTS38 || item.valueTS39 || item.valueTS40 || item.valueTS41 || item.valueTS42 || item.valueTS43 || item.valueTS44 || item.valueTS45 || item.valueTS46 || item.valueTS47 || item.valueTS48 || item.valueTS49 || item.valueTS50 || item.valueTS51 || item.valueTS52 || item.valueTS53 || item.valueTS54 || item.valueTS55 || item.valueTS56 || item.valueTS57 || item.valueTS58 || item.valueTS59 || item.valueTS60 || item.valueTS61 || item.valueTS62 || item.valueTS63 || item.valueTS64 || item.valueTS65 || item.valueTS66 || item.valueTS67 || item.valueTS68 || item.valueTS69 || item.valueTS70 || item.valueTS71 || item.valueTS72 || item.valueTS73 || item.valueTS74 || item.valueTS75 || item.valueTS76 || item.valueTS77 || item.valueTS78 || item.valueTS79 || item.valueTS80 || item.valueTS81 || item.valueTS82 || item.valueTS83 || item.valueTS84 || item.valueTS85 || item.valueTS86 || item.valueTS87 || item.valueTS88 || item.valueTS89 || item.valueTS90 || item.valueTS91 || item.valueTS92 || item.valueTS93 || item.valueTS94 || item.valueTS95 || item.valueTS96 || item.valueTS97 || item.valueTS98 || item.valueTS99 || item.valueTSh}
+                        TSh {item.valueTSh}
                       </span>
+                      {/* Financial health inline indicators */}
+                      {(item.ltvRatio != null || item.availableEquity != null) && (
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {item.ltvRatio != null && (
+                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-600 px-1.5 py-0.5 rounded ${
+                              item.ltvRatio >= 0.8 ? 'bg-red-100 text-red-700' :
+                              item.ltvRatio >= 0.65 ? 'bg-amber-100 text-amber-700': 'bg-green-100 text-green-700'
+                            }`}>
+                              <TrendingUp size={8} />
+                              LTV {Math.round(item.ltvRatio * 100)}%
+                            </span>
+                          )}
+                          {item.availableEquity != null && (
+                            <span className={`text-[10px] font-500 px-1.5 py-0.5 rounded ${
+                              item.availableEquity <= 0 ? 'bg-red-100 text-red-700' :
+                              item.maxSecurableAmount && (item.availableEquity / item.maxSecurableAmount) < 0.2 ? 'bg-amber-100 text-amber-700': 'bg-blue-50 text-blue-700'
+                            }`}>
+                              Eq: TSh {fmtTShCompact(item.availableEquity)}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                     {/* Facility */}
                     <td className="px-4 py-3">

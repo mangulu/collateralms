@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLogo from './ui/AppLogo';
-import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid, GitMerge } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Settings, Users, ChevronLeft, ChevronRight, LogOut, ClipboardList, BarChart2, GitBranch, ScrollText, Download, Bell, ShieldCheck, ShieldAlert, Activity, Zap, Map, Scale, BookOpen, UserCheck, Inbox, Files, ScanSearch, PieChart, Unlock, Upload, CalendarClock, SendHorizonal, Radio, LayoutGrid, GitMerge, TrendingUp, Target, AlarmClock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -19,6 +19,13 @@ const navGroups = [
   {
     label: 'Overview',
     items: [
+      {
+        label: 'Executive Dashboard',
+        icon: TrendingUp,
+        href: '/executive-dashboard',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
       {
         label: 'Dashboard',
         icon: LayoutDashboard,
@@ -108,6 +115,13 @@ const navGroups = [
         permission: PERMISSIONS.COMPLIANCE_VIEW,
       },
       {
+        label: 'Deadline Predictions',
+        icon: Target,
+        href: '/deadline-predictions',
+        badge: null,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+      {
         label: 'Fast Track',
         icon: Zap,
         href: '/fast-track',
@@ -120,13 +134,6 @@ const navGroups = [
         href: '/geomapping',
         badge: null,
         permission: PERMISSIONS.COLLATERAL_VIEW,
-      },
-      {
-        label: 'Compliance Rules',
-        icon: Scale,
-        href: '/compliance-rules',
-        badge: null,
-        permission: PERMISSIONS.COMPLIANCE_VIEW,
       },
     ],
   },
@@ -148,6 +155,13 @@ const navGroups = [
         permission: PERMISSIONS.DASHBOARD_VIEW,
       },
       {
+        label: 'Deadline Reminders',
+        icon: AlarmClock,
+        href: '/deadline-reminders',
+        badge: null,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
+      {
         label: 'Alert Delivery Log',
         icon: SendHorizonal,
         href: '/alerts-delivery',
@@ -157,7 +171,7 @@ const navGroups = [
     ],
   },
   {
-    label: 'Audit & Reports',
+    label: 'Audits & Compliance',
     items: [
       {
         label: 'Live Activity Stream',
@@ -194,6 +208,25 @@ const navGroups = [
         badge: null,
         permission: PERMISSIONS.AUDIT_LOG_VIEW,
       },
+      {
+        label: 'Compliance Rules',
+        icon: Scale,
+        href: '/compliance-rules',
+        badge: null,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+      {
+        label: 'Compliance Audit',
+        icon: ShieldCheck,
+        href: '/compliance-audit',
+        badge: null,
+        permission: PERMISSIONS.COMPLIANCE_VIEW,
+      },
+    ],
+  },
+  {
+    label: 'Reports',
+    items: [
       {
         label: 'Reports',
         icon: BarChart2,

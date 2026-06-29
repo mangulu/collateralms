@@ -395,14 +395,23 @@ export const collateralLinkService = {
     try {
       const { data: cols, error } = await supabase
         .from('collateral_records')
-        .select('id, collateral_id, valuation_amount, ltv_ratio, max_securable_amount, total_secured_amount, available_equity')
-        .not('valuation_amount', 'is', null)
+        .select('id, collateral_id, valuation_amount, ltv_ratio, max_securable_amount, total_secured_amount, available_equity, value_tsh')
         .order('created_at', { ascending: false });
 
       if (error || !cols) return [];
 
       const results: CollateralUtilization[] = [];
       for (const col of cols) {
+        // Resolve valuation: prefer dedicated numeric column, fall back to value_tsh string
+        const valuationFromDedicated = parseFloat(col.valuation_amount) || 0;
+        const valuationFromValueTsh =
+          typeof col.value_tsh === 'string' ? parseFloat(col.value_tsh.replace(/,/g,'')) || 0
+            : parseFloat(col.value_tsh) || 0;
+        const valuation = valuationFromDedicated > 0 ? valuationFromDedicated : valuationFromValueTsh;
+
+        // Skip records with no resolvable valuation
+        if (valuation <= 0) continue;
+
         const { data: links } = await supabase
           .from('collateral_loan_links')
           .select('*')
@@ -410,10 +419,15 @@ export const collateralLinkService = {
           .order('charge_rank', { ascending: true });
 
         const activeLinks = (links ?? []).filter((l: any) => l.status === 'ACTIVE');
-        const totalSecured = activeLinks.reduce((sum: number, l: any) => sum + (parseFloat(l.allocated_amount) || 0), 0);
-        const valuation = parseFloat(col.valuation_amount) || 0;
+        const totalSecured = activeLinks.reduce(
+          (sum: number, l: any) => sum + (parseFloat(l.allocated_amount) || 0),
+          0
+        );
         const ltv = parseFloat(col.ltv_ratio) || 0.70;
-        const maxSecurable = valuation * ltv;
+        const maxSecurable =
+          parseFloat(col.max_securable_amount) > 0
+            ? parseFloat(col.max_securable_amount)
+            : valuation * ltv;
         const availableEquity = Math.max(0, maxSecurable - totalSecured);
         const utilizationPct = maxSecurable > 0 ? (totalSecured / maxSecurable) * 100 : 0;
 

@@ -52,6 +52,11 @@ export interface CollateralRecord {
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Financial health fields
+  valuationAmount?: number | null;
+  ltvRatio?: number | null;
+  maxSecurableAmount?: number | null;
+  availableEquity?: number | null;
 }
 
 export interface AuditLog {
@@ -237,6 +242,11 @@ function rowToCollateral(row: any): CollateralRecord {
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    // Financial health fields
+    valuationAmount: row.valuation_amount != null ? parseFloat(row.valuation_amount) || null : null,
+    ltvRatio: row.ltv_ratio != null ? parseFloat(row.ltv_ratio) || null : null,
+    maxSecurableAmount: row.max_securable_amount != null ? parseFloat(row.max_securable_amount) || null : null,
+    availableEquity: row.available_equity != null ? parseFloat(row.available_equity) || null : null,
   };
 }
 
@@ -614,3 +624,5 @@ export const dashboardService = {
     }
   },
 };
+
+export { createClient };

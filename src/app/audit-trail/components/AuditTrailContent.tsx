@@ -1,53 +1,76 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight, User, Clock, FileText, ArrowRight, X, AlertCircle, Globe, LogIn, FolderOpen, GitBranch, Upload, Activity,  } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  ShieldCheck, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight,
+  User, Clock, FileText, ArrowRight, X, AlertCircle, Globe, LogIn, FolderOpen,
+  GitBranch, Upload, Activity, Pen, CheckCircle2, Stamp, FileSignature,
+  PlusCircle, Printer,
+} from 'lucide-react';
 import { auditLogService, AuditLogEntry, FieldChange } from '@/lib/supabase/auditLogService';
-import Icon from '@/components/ui/AppIcon';
-
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDateTime(iso: string): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
   });
+}
+
+function formatDateShort(iso: string): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // ─── Category Config ──────────────────────────────────────────────────────────
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: React.ElementType; bg: string; text: string; dot: string }> = {
-  login:             { label: 'Login / Auth',        icon: LogIn,      bg: 'bg-violet-100', text: 'text-violet-700', dot: 'bg-violet-500' },
-  collateral_change: { label: 'Collateral Change',   icon: FolderOpen, bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-500' },
-  status_transition: { label: 'Status Transition',   icon: GitBranch,  bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-500' },
-  export:            { label: 'Export',               icon: Download,   bg: 'bg-teal-100',   text: 'text-teal-700',   dot: 'bg-teal-500' },
-  document:          { label: 'Document',             icon: Upload,     bg: 'bg-cyan-100',   text: 'text-cyan-700',   dot: 'bg-cyan-500' },
-  user_management:   { label: 'User Management',      icon: User,       bg: 'bg-rose-100',   text: 'text-rose-700',   dot: 'bg-rose-500' },
-  system:            { label: 'System',               icon: Activity,   bg: 'bg-gray-100',   text: 'text-gray-600',   dot: 'bg-gray-400' },
+  login:             { label: 'Login / Auth',        icon: LogIn,         bg: 'bg-violet-100', text: 'text-violet-700', dot: 'bg-violet-500' },
+  collateral_change: { label: 'Collateral Change',   icon: FolderOpen,    bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-500' },
+  status_transition: { label: 'Status Transition',   icon: GitBranch,     bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-500' },
+  export:            { label: 'Export',               icon: Download,      bg: 'bg-teal-100',   text: 'text-teal-700',   dot: 'bg-teal-500' },
+  document:          { label: 'Document',             icon: Upload,        bg: 'bg-cyan-100',   text: 'text-cyan-700',   dot: 'bg-cyan-500' },
+  user_management:   { label: 'User Management',      icon: User,          bg: 'bg-rose-100',   text: 'text-rose-700',   dot: 'bg-rose-500' },
+  legal_signoff:     { label: 'Legal Sign-Off',       icon: FileSignature, bg: 'bg-emerald-100',text: 'text-emerald-700',dot: 'bg-emerald-500' },
+  system:            { label: 'System',               icon: Activity,      bg: 'bg-gray-100',   text: 'text-gray-600',   dot: 'bg-gray-400' },
 };
 
 const ACTION_DOT: Record<string, string> = {
-  created:   'bg-green-500',
-  updated:   'bg-blue-500',
-  deleted:   'bg-red-500',
-  perfected: 'bg-teal-500',
-  overdue:   'bg-red-500',
-  submitted: 'bg-purple-500',
-  reviewed:  'bg-amber-500',
-  approved:  'bg-green-500',
-  rejected:  'bg-rose-500',
-  returned:  'bg-orange-500',
-  login:     'bg-violet-500',
-  export:    'bg-teal-500',
+  created:       'bg-green-500',
+  updated:       'bg-blue-500',
+  deleted:       'bg-red-500',
+  perfected:     'bg-teal-500',
+  overdue:       'bg-red-500',
+  submitted:     'bg-purple-500',
+  reviewed:      'bg-amber-500',
+  approved:      'bg-green-500',
+  rejected:      'bg-rose-500',
+  returned:      'bg-orange-500',
+  login:         'bg-violet-500',
+  export:        'bg-teal-500',
+  legal_signoff: 'bg-emerald-500',
 };
 
+// Collateral-specific action filter groups
+const COLLATERAL_ACTION_PILLS = [
+  { key: 'all_collateral', label: 'All Collateral Events', actions: [] as string[], icon: FolderOpen },
+  { key: 'created',        label: 'Created',               actions: ['created'],                     icon: PlusCircle },
+  { key: 'edited',         label: 'Edited',                actions: ['updated', 'status_changed'],   icon: Pen },
+  { key: 'perfected',      label: 'Perfected',             actions: ['perfected'],                   icon: Stamp },
+  { key: 'signed_off',     label: 'Signed Off',            actions: ['legal_signoff'],               icon: CheckCircle2 },
+];
+
 function getCategoryConfig(category?: string) {
+  if (category === 'legal_signoff' || category === 'status_transition') {
+    // legal_signoff action stored under status_transition category — check action
+  }
   return CATEGORY_CONFIG[category ?? 'collateral_change'] ?? CATEGORY_CONFIG['collateral_change'];
+}
+
+function getEntryCategory(entry: AuditLogEntry) {
+  if (entry.action === 'legal_signoff') return CATEGORY_CONFIG['legal_signoff'];
+  return getCategoryConfig(entry.eventCategory);
 }
 
 function getDot(action: string, category?: string) {
@@ -61,9 +84,7 @@ function FieldChangeDiff({ changes }: { changes: FieldChange[] }) {
   return (
     <div className="mt-3 rounded-lg border border-border bg-muted/30 overflow-hidden">
       <div className="px-3 py-2 border-b border-border bg-muted/50">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Field-Level Changes
-        </p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Field-Level Changes</p>
       </div>
       <div className="divide-y divide-border">
         {changes.map((change, idx) => (
@@ -72,17 +93,13 @@ function FieldChangeDiff({ changes }: { changes: FieldChange[] }) {
               <p className="text-xs font-semibold text-foreground mb-1">{change.label}</p>
               <div className="flex items-center gap-2 flex-wrap">
                 {change.old_value ? (
-                  <span className="inline-flex items-center text-xs bg-red-50 text-red-700 border border-red-200 rounded px-2 py-0.5 font-mono">
-                    {change.old_value}
-                  </span>
+                  <span className="inline-flex items-center text-xs bg-red-50 text-red-700 border border-red-200 rounded px-2 py-0.5 font-mono">{change.old_value}</span>
                 ) : (
                   <span className="text-xs text-muted-foreground italic">empty</span>
                 )}
                 <ArrowRight size={12} className="text-muted-foreground shrink-0" />
                 {change.new_value ? (
-                  <span className="inline-flex items-center text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-0.5 font-mono">
-                    {change.new_value}
-                  </span>
+                  <span className="inline-flex items-center text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-0.5 font-mono">{change.new_value}</span>
                 ) : (
                   <span className="text-xs text-muted-foreground italic">empty</span>
                 )}
@@ -95,124 +112,15 @@ function FieldChangeDiff({ changes }: { changes: FieldChange[] }) {
   );
 }
 
-// ─── AuditTrailRow ────────────────────────────────────────────────────────────
-
-function AuditTrailRow({ entry, index }: { entry: AuditLogEntry; index: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const catConfig = getCategoryConfig(entry.eventCategory);
-  const dot = getDot(entry.action, entry.eventCategory);
-  const hasChanges = Array.isArray(entry.fieldChanges) && entry.fieldChanges.length > 0;
-  const hasDetail = !!entry.detail;
-  const isExpandable = hasChanges || hasDetail;
-
-  return (
-    <tr
-      className={`border-b border-border last:border-b-0 ${isExpandable ? 'cursor-pointer' : ''} hover:bg-muted/20 transition-colors`}
-      onClick={() => isExpandable && setExpanded((v) => !v)}
-    >
-      <td className="px-4 py-3 text-xs text-muted-foreground font-mono whitespace-nowrap">
-        {index + 1}
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center gap-1.5 text-xs text-foreground font-mono">
-          <Clock size={11} className="text-muted-foreground shrink-0" />
-          {formatDateTime(entry.createdAt)}
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
-          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${catConfig.bg} ${catConfig.text}`}>
-            <catConfig.icon size={10} />
-            {catConfig.label}
-          </span>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1.5 text-xs text-foreground">
-          <User size={11} className="text-muted-foreground shrink-0" />
-          <span className="font-medium">{entry.performedByName || 'System'}</span>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-          <Globe size={11} className="shrink-0" />
-          {entry.ipAddress ?? '—'}
-        </div>
-      </td>
-      <td className="px-4 py-3 max-w-xs">
-        <p className="text-sm text-foreground leading-snug truncate">{entry.message}</p>
-        {entry.collateralId && (
-          <span className="text-xs font-mono text-primary bg-primary/5 px-1.5 py-0.5 rounded mt-0.5 inline-block">
-            {entry.collateralId}
-          </span>
-        )}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-1">
-          {hasChanges && (
-            <span className="text-xs text-primary font-medium flex items-center gap-0.5">
-              {entry.fieldChanges!.length} field{entry.fieldChanges!.length !== 1 ? 's' : ''}
-              {expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-            </span>
-          )}
-          {!hasChanges && hasDetail && (
-            <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-              Details {expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-            </span>
-          )}
-          {!hasChanges && !hasDetail && (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-// ─── Expanded Detail Row ──────────────────────────────────────────────────────
-
-function AuditTrailExpandedRow({ entry, colSpan }: { entry: AuditLogEntry; colSpan: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const hasChanges = Array.isArray(entry.fieldChanges) && entry.fieldChanges.length > 0;
-
-  return (
-    <>
-      <AuditTrailRow entry={entry} index={0} />
-      {expanded && (
-        <tr className="bg-muted/10">
-          <td colSpan={colSpan} className="px-8 pb-3 pt-0">
-            {entry.detail && (
-              <p className="text-xs text-muted-foreground mb-2">{entry.detail}</p>
-            )}
-            {hasChanges && <FieldChangeDiff changes={entry.fieldChanges!} />}
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({
-  label,
-  value,
-  icon: IconComp,
-  color,
-  sub,
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ElementType;
-  color: string;
-  sub?: string;
+function KpiCard({ label, value, icon: IconComp, color, sub }: {
+  label: string; value: number | string; icon: React.ElementType; color: string; sub?: string;
 }) {
-  const Icon = IconComp;
   return (
-    <div className="bg-white rounded-xl border border-border shadow-card p-4 flex items-start gap-3">
+    <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-start gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-        <Icon size={18} />
+        <IconComp size={18} />
       </div>
       <div className="min-w-0">
         <p className="text-2xl font-bold tabular-nums text-foreground font-mono">{value}</p>
@@ -223,84 +131,103 @@ function KpiCard({
   );
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_ENTRIES: AuditLogEntry[] = [
-  {
-    id: 'm1', collateralId: undefined, entityType: 'system', action: 'login',
-    message: 'User login successful', detail: 'Session started via web browser',
-    performedByName: 'J. Kamau', ipAddress: '196.216.10.45', eventCategory: 'login',
-    fieldChanges: null, createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'm2', collateralId: 'col-0312', entityType: 'collateral', action: 'created',
-    message: 'New collateral registered: col-0312', detail: 'Coastal Traders Co. · Mortgage · TSh 780M',
-    performedByName: 'J. Kamau', ipAddress: '196.216.10.45', eventCategory: 'collateral_change',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: '', new_value: 'Draft' },
-      { field: 'assigned_officer', label: 'Assigned Officer', old_value: '', new_value: 'J. Kamau' },
-    ],
-    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'm3', collateralId: 'col-0289', entityType: 'collateral', action: 'perfected',
-    message: 'Collateral col-0289 perfected at BRELA', detail: 'Karibu Textiles Ltd · Debenture',
-    performedByName: 'A. Mwangi', ipAddress: '196.216.10.67', eventCategory: 'status_transition',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: 'Under Review', new_value: 'Perfected' },
-      { field: 'registration_date', label: 'Registration Date', old_value: '', new_value: '25 Apr 2026' },
-    ],
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'm4', collateralId: undefined, entityType: 'system', action: 'export',
-    message: 'Collateral registry exported to CSV', detail: 'Exported 47 records — all collateral types',
-    performedByName: 'A. Mwangi', ipAddress: '196.216.10.67', eventCategory: 'export',
-    fieldChanges: null, createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'm5', collateralId: 'col-0041', entityType: 'collateral', action: 'overdue',
-    message: 'BRELA deadline missed — col-0041', detail: 'Karibu Enterprises Ltd · 12 days overdue',
-    performedByName: 'System', ipAddress: '127.0.0.1', eventCategory: 'status_transition',
-    fieldChanges: [
-      { field: 'status', label: 'Status', old_value: 'Submitted', new_value: 'Overdue' },
-    ],
-    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'm6', collateralId: 'col-0298', entityType: 'document', action: 'DOCUMENT_UPLOAD',
-    message: 'Perfection certificate uploaded for col-0298', detail: 'BRELA_cert_col0298.pdf · 2.4 MB',
-    performedByName: 'P. Ochieng', ipAddress: '41.188.32.12', eventCategory: 'document',
-    fieldChanges: null, createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'm7', collateralId: undefined, entityType: 'system', action: 'login',
-    message: 'User login successful', detail: 'Session started via web browser',
-    performedByName: 'P. Ochieng', ipAddress: '41.188.32.12', eventCategory: 'login',
-    fieldChanges: null, createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'm8', collateralId: 'col-0312', entityType: 'collateral', action: 'updated',
-    message: 'Collateral record updated: col-0312', detail: 'Value and deadline revised',
-    performedByName: 'J. Kamau', ipAddress: '196.216.10.45', eventCategory: 'collateral_change',
-    fieldChanges: [
-      { field: 'value_tsh', label: 'Value (TSh)', old_value: '500,000,000', new_value: '650,000,000' },
-      { field: 'perfection_deadline', label: 'Perfection Deadline', old_value: '01 May 2026', new_value: '15 May 2026' },
-    ],
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
 // ─── Category Filter Pills ────────────────────────────────────────────────────
 
 const CATEGORY_PILLS = [
-  { key: 'All', label: 'All Events' },
-  { key: 'login', label: 'Login / Auth' },
-  { key: 'collateral_change', label: 'Collateral Changes' },
-  { key: 'status_transition', label: 'Status Transitions' },
-  { key: 'export', label: 'Exports' },
-  { key: 'document', label: 'Documents' },
+  { key: 'All',              label: 'All Events' },
+  { key: 'login',            label: 'Login / Auth' },
+  { key: 'collateral_change',label: 'Collateral Changes' },
+  { key: 'status_transition',label: 'Status Transitions' },
+  { key: 'export',           label: 'Exports' },
+  { key: 'document',         label: 'Documents' },
 ];
+
+// ─── PDF Export ───────────────────────────────────────────────────────────────
+
+function buildPrintableHTML(entries: AuditLogEntry[], filters: {
+  dateFrom: string; dateTo: string; collateralFilter: string; userFilter: string; collateralActionFilter: string;
+}): string {
+  const now = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const rows = entries.map((e, i) => {
+    const catConfig = getEntryCategory(e);
+    const changes = e.fieldChanges
+      ? e.fieldChanges.map((f) => `${f.label}: ${f.old_value || '—'} → ${f.new_value || '—'}`).join('<br/>')
+      : '—';
+    return `
+      <tr style="border-bottom:1px solid #e5e7eb;${i % 2 === 0 ? '' : 'background:#f9fafb'}">
+        <td style="padding:6px 8px;font-size:11px;color:#6b7280;font-family:monospace">${i + 1}</td>
+        <td style="padding:6px 8px;font-size:11px;font-family:monospace;white-space:nowrap">${formatDateTime(e.createdAt)}</td>
+        <td style="padding:6px 8px;font-size:11px;font-weight:600">${catConfig.label}</td>
+        <td style="padding:6px 8px;font-size:11px;font-weight:600;color:#111827">${e.performedByName || 'System'}</td>
+        <td style="padding:6px 8px;font-size:11px;font-family:monospace;color:#6b7280">${e.ipAddress ?? '—'}</td>
+        <td style="padding:6px 8px;font-size:11px">${e.collateralId ? `<span style="font-family:monospace;background:#eff6ff;color:#1d4ed8;padding:1px 4px;border-radius:3px">${e.collateralId}</span> ` : ''}${e.message}</td>
+        <td style="padding:6px 8px;font-size:10px;color:#6b7280">${changes}</td>
+      </tr>`;
+  }).join('');
+
+  const filterSummary = [
+    filters.dateFrom && `From: ${filters.dateFrom}`,
+    filters.dateTo && `To: ${filters.dateTo}`,
+    filters.collateralFilter !== 'All' && `Collateral: ${filters.collateralFilter}`,
+    filters.userFilter !== 'All' && `Officer: ${filters.userFilter}`,
+    filters.collateralActionFilter !== 'all_collateral' && `Action: ${COLLATERAL_ACTION_PILLS.find(p => p.key === filters.collateralActionFilter)?.label}`,
+  ].filter(Boolean).join(' | ');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Audit Trail — Regulatory Export</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size:12px; color:#111827; padding:24px; }
+    .header { border-bottom:2px solid #1d4ed8; padding-bottom:16px; margin-bottom:20px; }
+    .header h1 { font-size:18px; font-weight:700; color:#1d4ed8; }
+    .header .meta { display:flex; gap:24px; margin-top:8px; font-size:11px; color:#6b7280; }
+    .header .badge { display:inline-block; background:#dbeafe; color:#1d4ed8; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; margin-left:8px; }
+    .filters { background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; padding:8px 12px; margin-bottom:16px; font-size:11px; color:#374151; }
+    table { width:100%; border-collapse:collapse; }
+    thead tr { background:#1d4ed8; color:white; }
+    thead th { padding:8px; font-size:10px; font-weight:600; text-align:left; text-transform:uppercase; letter-spacing:0.05em; }
+    .footer { margin-top:20px; padding-top:12px; border-top:1px solid #e5e7eb; font-size:10px; color:#9ca3af; display:flex; justify-content:space-between; }
+    .compliance-notice { margin-top:16px; background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; padding:10px 12px; font-size:10px; color:#92400e; }
+    @media print { body { padding:12px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Security &amp; Compliance Audit Trail <span class="badge">REGULATORY EXPORT</span></h1>
+    <div class="meta">
+      <span>Generated: ${now}</span>
+      <span>Total Events: ${entries.length}</span>
+      <span>System: Collateral Management System</span>
+    </div>
+  </div>
+  ${filterSummary ? `<div class="filters"><strong>Active Filters:</strong> ${filterSummary}</div>` : ''}
+  <table>
+    <thead>
+      <tr>
+        <th style="width:32px">#</th>
+        <th style="width:140px">Timestamp</th>
+        <th style="width:120px">Event Type</th>
+        <th style="width:110px">Officer / Actor</th>
+        <th style="width:110px">IP Address</th>
+        <th>Description</th>
+        <th style="width:160px">Field Changes</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="compliance-notice">
+    <strong>Regulatory Notice:</strong> This audit trail is an immutable record of all system actions, retained in compliance with Bank of Tanzania regulatory requirements and applicable perfection authority rules (BRELA, Lands Registry, TRA, DSE, TASAC). This document is generated for official compliance and archival purposes. Any alteration of this record is prohibited.
+  </div>
+  <div class="footer">
+    <span>Collateral Management System — Confidential</span>
+    <span>Export Date: ${now} | Records: ${entries.length}</span>
+  </div>
+</body>
+</html>`;
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -313,66 +240,91 @@ export default function AuditTrailContent() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [actionFilter, setActionFilter] = useState('All');
+  const [collateralActionFilter, setCollateralActionFilter] = useState('all_collateral');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [userFilter, setUserFilter] = useState('All');
+  const [collateralFilter, setCollateralFilter] = useState('All');
   const [distinctActions, setDistinctActions] = useState<string[]>([]);
   const [distinctUsers, setDistinctUsers] = useState<string[]>([]);
+  const [distinctCollaterals, setDistinctCollaterals] = useState<string[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
     try {
-      const [data, actions, users] = await Promise.all([
+      const [data, actions, users, collaterals] = await Promise.all([
         auditLogService.getAll({
           search,
           action: actionFilter,
           eventCategory: categoryFilter,
           dateFrom,
           dateTo,
+          collateralId: collateralFilter,
         }),
         auditLogService.getDistinctActions(),
         auditLogService.getDistinctUsers(),
+        auditLogService.getDistinctCollateralIds(),
       ]);
       setEntries(data);
       setDistinctActions(actions);
       setDistinctUsers(users);
+      setDistinctCollaterals(collaterals);
       setLastRefreshed(new Date());
     } catch {
       setFetchError('Failed to load security & compliance trail. Please refresh to try again.');
       setEntries([]);
-      setDistinctActions([]);
-      setDistinctUsers([]);
     } finally {
       setIsLoading(false);
     }
-  }, [search, actionFilter, categoryFilter, dateFrom, dateTo]);
+  }, [search, actionFilter, categoryFilter, dateFrom, dateTo, collateralFilter]);
 
   useEffect(() => {
     loadData();
     setPage(1);
   }, [loadData]);
 
-  const filtered = entries.filter((e) =>
-    userFilter === 'All' ? true : e.performedByName === userFilter
-  );
+  // Apply client-side filters: user, collateral action group
+  const filtered = entries.filter((e) => {
+    if (userFilter !== 'All' && e.performedByName !== userFilter) return false;
+    if (collateralActionFilter !== 'all_collateral') {
+      const pill = COLLATERAL_ACTION_PILLS.find((p) => p.key === collateralActionFilter);
+      if (pill && pill.actions.length > 0 && !pill.actions.includes(e.action)) return false;
+    }
+    return true;
+  });
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // KPI counts
-  const loginCount = filtered.filter((e) => e.eventCategory === 'login').length;
-  const collateralChangeCount = filtered.filter((e) => e.eventCategory === 'collateral_change').length;
-  const statusTransitionCount = filtered.filter((e) => e.eventCategory === 'status_transition').length;
-  const exportCount = filtered.filter((e) => e.eventCategory === 'export').length;
-  const uniqueIPs = new Set(filtered.map((e) => e.ipAddress).filter(Boolean)).size;
-  const uniqueActors = new Set(filtered.map((e) => e.performedByName)).size;
+  const createdCount       = filtered.filter((e) => e.action === 'created').length;
+  const editedCount        = filtered.filter((e) => ['updated', 'status_changed'].includes(e.action)).length;
+  const perfectedCount     = filtered.filter((e) => e.action === 'perfected').length;
+  const signedOffCount     = filtered.filter((e) => e.action === 'legal_signoff').length;
+  const uniqueActors       = new Set(filtered.map((e) => e.performedByName)).size;
+  const uniqueCollaterals  = new Set(filtered.map((e) => e.collateralId).filter(Boolean)).size;
 
-  const hasActiveFilters = search || actionFilter !== 'All' || categoryFilter !== 'All' || dateFrom || dateTo || userFilter !== 'All';
+  const hasActiveFilters = search || actionFilter !== 'All' || categoryFilter !== 'All'
+    || dateFrom || dateTo || userFilter !== 'All' || collateralFilter !== 'All'
+    || collateralActionFilter !== 'all_collateral';
 
   function clearFilters() {
     setSearch('');
@@ -381,23 +333,24 @@ export default function AuditTrailContent() {
     setDateFrom('');
     setDateTo('');
     setUserFilter('All');
+    setCollateralFilter('All');
+    setCollateralActionFilter('all_collateral');
   }
 
   function toggleRow(id: string) {
     setExpandedRows((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }
 
   function exportCSV() {
-    const headers = ['#', 'Timestamp', 'Category', 'Action', 'Actor', 'IP Address', 'Collateral ID', 'Message', 'Detail', 'Field Changes'];
+    const headers = ['#', 'Timestamp', 'Event Type', 'Action', 'Officer / Actor', 'IP Address', 'Collateral ID', 'Message', 'Detail', 'Field Changes'];
     const rows = filtered.map((e, i) => [
       String(i + 1),
       formatDateTime(e.createdAt),
-      getCategoryConfig(e.eventCategory).label,
+      getEntryCategory(e).label,
       e.action,
       e.performedByName,
       e.ipAddress ?? '',
@@ -409,13 +362,25 @@ export default function AuditTrailContent() {
         : '',
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    setExportMenuOpen(false);
+  }
+
+  function exportPDF() {
+    const html = buildPrintableHTML(filtered, { dateFrom, dateTo, collateralFilter, userFilter, collateralActionFilter });
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 400);
+    setExportMenuOpen(false);
   }
 
   return (
@@ -427,12 +392,10 @@ export default function AuditTrailContent() {
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheck size={20} className="text-primary" />
               <h1 className="text-xl font-bold text-foreground">Security &amp; Compliance Trail</h1>
-              <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                Regulatory Compliance
-              </span>
+              <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">Regulatory Compliance</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Complete immutable record of all system actions — logins, collateral changes, status transitions, and exports
+              Immutable record of all collateral actions — created, edited, perfected, signed off — with officer names and timestamps
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -449,29 +412,75 @@ export default function AuditTrailContent() {
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
               Refresh
             </button>
-            <button
-              onClick={exportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <Download size={14} />
-              Export CSV
-            </button>
+            {/* Export dropdown */}
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                onClick={() => setExportMenuOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Download size={14} />
+                Export
+                <ChevronDown size={12} className={`transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {exportMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-border rounded-lg shadow-lg z-20 overflow-hidden">
+                  <button
+                    onClick={exportCSV}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                  >
+                    <FileText size={14} className="text-teal-600" />
+                    Export as CSV
+                  </button>
+                  <button
+                    onClick={exportPDF}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted transition-colors border-t border-border"
+                  >
+                    <Printer size={14} className="text-blue-600" />
+                    Export as PDF
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Strip */}
+      {/* KPI Strip — collateral-focused */}
       <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 shrink-0">
-        <KpiCard label="Login Events"       value={loginCount}           icon={LogIn}      color="bg-violet-100 text-violet-600" />
-        <KpiCard label="Collateral Changes" value={collateralChangeCount} icon={FolderOpen} color="bg-blue-100 text-blue-600" />
-        <KpiCard label="Status Transitions" value={statusTransitionCount} icon={GitBranch}  color="bg-amber-100 text-amber-600" />
-        <KpiCard label="Export Events"      value={exportCount}           icon={Download}  color="bg-teal-100 text-teal-600" />
-        <KpiCard label="Unique Actors"      value={uniqueActors}          icon={User}       color="bg-green-100 text-green-600" />
-        <KpiCard label="Unique IPs"         value={uniqueIPs}             icon={Globe}      color="bg-rose-100 text-rose-600" />
+        <KpiCard label="Created"          value={createdCount}      icon={PlusCircle}    color="bg-green-100 text-green-600" />
+        <KpiCard label="Edited"           value={editedCount}       icon={Pen}           color="bg-blue-100 text-blue-600" />
+        <KpiCard label="Perfected"        value={perfectedCount}    icon={Stamp}         color="bg-teal-100 text-teal-600" />
+        <KpiCard label="Signed Off"       value={signedOffCount}    icon={CheckCircle2}  color="bg-emerald-100 text-emerald-600" />
+        <KpiCard label="Unique Officers"  value={uniqueActors}      icon={User}          color="bg-violet-100 text-violet-600" />
+        <KpiCard label="Collaterals"      value={uniqueCollaterals} icon={FolderOpen}    color="bg-amber-100 text-amber-600" />
+      </div>
+
+      {/* Collateral Action Pills */}
+      <div className="px-6 pb-2 shrink-0">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Filter by Collateral Action</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          {COLLATERAL_ACTION_PILLS.map((pill) => {
+            const PillIcon = pill.icon;
+            return (
+              <button
+                key={pill.key}
+                onClick={() => { setCollateralActionFilter(pill.key); setPage(1); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                  collateralActionFilter === pill.key
+                    ? 'bg-primary text-white border-primary' :'bg-white text-foreground/70 border-border hover:bg-muted'
+                }`}
+              >
+                <PillIcon size={11} />
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Category Pills */}
       <div className="px-6 pb-3 shrink-0">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Filter by Event Category</p>
         <div className="flex items-center gap-2 flex-wrap">
           {CATEGORY_PILLS.map((pill) => (
             <button
@@ -479,7 +488,8 @@ export default function AuditTrailContent() {
               onClick={() => { setCategoryFilter(pill.key); setPage(1); }}
               className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
                 categoryFilter === pill.key
-                  ? 'bg-primary text-white border-primary' :'bg-white text-foreground/70 border-border hover:bg-muted'
+                  ? 'bg-foreground text-white border-foreground'
+                  : 'bg-white text-foreground/70 border-border hover:bg-muted'
               }`}
             >
               {pill.label}
@@ -495,7 +505,7 @@ export default function AuditTrailContent() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search by message, collateral ID, actor, IP address…"
+              placeholder="Search by message, collateral ID, officer, IP address…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -525,12 +535,9 @@ export default function AuditTrailContent() {
             {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
           </button>
           {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
               <X size={12} />
-              Clear
+              Clear All
             </button>
           )}
         </div>
@@ -561,9 +568,22 @@ export default function AuditTrailContent() {
                 onChange={(e) => setUserFilter(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="All">All Actors</option>
+                <option value="All">All Officers</option>
                 {distinctUsers.map((u) => (
                   <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+              <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            </div>
+            <div className="relative">
+              <select
+                value={collateralFilter}
+                onChange={(e) => setCollateralFilter(e.target.value)}
+                className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="All">All Collaterals</option>
+                {distinctCollaterals.map((c) => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
               <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -574,7 +594,7 @@ export default function AuditTrailContent() {
 
       {/* Table */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-        <div className="bg-white rounded-xl border border-border shadow-card overflow-hidden">
+        <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
           {/* Table header bar */}
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
             <p className="text-sm font-semibold text-foreground">
@@ -609,12 +629,8 @@ export default function AuditTrailContent() {
               <AlertCircle size={32} className="text-red-400 mb-3" />
               <p className="text-sm font-semibold text-red-600">Failed to load security &amp; compliance trail</p>
               <p className="text-xs text-muted-foreground mt-1 mb-4">{fetchError}</p>
-              <button
-                onClick={loadData}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                <RefreshCw size={13} />
-                Retry
+              <button onClick={loadData} className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <RefreshCw size={13} /> Retry
               </button>
             </div>
           ) : paginated.length === 0 ? (
@@ -636,7 +652,7 @@ export default function AuditTrailContent() {
                       <div className="flex items-center gap-1"><Activity size={11} /> Event Type</div>
                     </th>
                     <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      <div className="flex items-center gap-1"><User size={11} /> Actor</div>
+                      <div className="flex items-center gap-1"><User size={11} /> Officer / Actor</div>
                     </th>
                     <th className="px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <div className="flex items-center gap-1"><Globe size={11} /> IP Address</div>
@@ -649,26 +665,29 @@ export default function AuditTrailContent() {
                 </thead>
                 <tbody>
                   {paginated.map((entry, idx) => {
-                    const catConfig = getCategoryConfig(entry.eventCategory);
+                    const catConfig = getEntryCategory(entry);
                     const dot = getDot(entry.action, entry.eventCategory);
                     const hasChanges = Array.isArray(entry.fieldChanges) && entry.fieldChanges.length > 0;
                     const hasDetail = !!entry.detail;
                     const isExpandable = hasChanges || hasDetail;
                     const isExpanded = expandedRows.has(entry.id);
+                    const isSignOff = entry.action === 'legal_signoff';
 
                     return (
                       <React.Fragment key={entry.id}>
                         <tr
-                          className={`border-b border-border last:border-b-0 ${isExpandable ? 'cursor-pointer' : ''} hover:bg-muted/20 transition-colors`}
+                          className={`border-b border-border last:border-b-0 ${isExpandable ? 'cursor-pointer' : ''} hover:bg-muted/20 transition-colors ${isSignOff ? 'bg-emerald-50/30' : ''}`}
                           onClick={() => isExpandable && toggleRow(entry.id)}
                         >
                           <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
                             {(page - 1) * PAGE_SIZE + idx + 1}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 text-xs text-foreground font-mono">
-                              <Clock size={11} className="text-muted-foreground shrink-0" />
-                              {formatDateTime(entry.createdAt)}
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5 text-xs text-foreground font-mono">
+                                <Clock size={11} className="text-muted-foreground shrink-0" />
+                                {formatDateTime(entry.createdAt)}
+                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -679,11 +698,23 @@ export default function AuditTrailContent() {
                                 {catConfig.label}
                               </span>
                             </div>
+                            <div className="mt-1 ml-4">
+                              <span className="text-xs text-muted-foreground font-mono">{entry.action.replace(/_/g, ' ')}</span>
+                            </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 text-xs text-foreground">
-                              <User size={11} className="text-muted-foreground shrink-0" />
-                              <span className="font-medium">{entry.performedByName || 'System'}</span>
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                <User size={11} className="text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-foreground leading-tight">
+                                  {entry.performedByName || 'System'}
+                                </p>
+                                {isSignOff && (
+                                  <p className="text-xs text-emerald-600 font-medium leading-tight">Legal Officer</p>
+                                )}
+                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -738,7 +769,7 @@ export default function AuditTrailContent() {
         <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <ShieldCheck size={14} className="text-amber-600 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            <span className="font-semibold">Regulatory Notice:</span> This security &amp; compliance trail is an immutable record of all system actions. Records are retained for compliance with Bank of Tanzania and BRELA regulatory requirements. Export this log periodically for offline archival.
+            <span className="font-semibold">Regulatory Notice:</span> This security &amp; compliance trail is an immutable record of all system actions. Records are retained for compliance with Bank of Tanzania regulatory requirements and applicable perfection authority rules (BRELA, Lands Registry, TRA, DSE, TASAC). Use the Export button to download CSV or PDF for offline archival and regulatory submissions.
           </p>
         </div>
       </div>

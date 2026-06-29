@@ -52,6 +52,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import CollateralUtilizationTab from './CollateralUtilizationTab';
 import { legalSignOffService, LegalSignOff } from '@/lib/supabase/legalSignOffService';
 import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
+import QuickActionsPanel from './QuickActionsPanel';
 
 
 
@@ -1516,6 +1517,9 @@ export default function CollateralDetailContent({
 
           {/* Right column — Risk & Compliance + Quick Links */}
           <div className="space-y-6">
+            {/* Quick Actions Panel */}
+            <QuickActionsPanel collateral={collateral} onSignOffComplete={onRefresh} />
+
             {/* Merged Risk & Compliance card */}
             <RiskComplianceSidebarCard collateral={collateral} />
 
