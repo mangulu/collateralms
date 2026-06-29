@@ -46,12 +46,21 @@ function fmtTSh(n: number) {
   return `TSh ${n.toLocaleString()}`;
 }
 
+/** Returns high-contrast badge props for LTV risk level (WCAG AA 4.5:1 minimum) */
+function ltvRiskBadge(avgLTV: number): { label: string; className: string } {
+  if (avgLTV > 0.85) return { label: 'Critical Risk', className: 'bg-red-700 text-white' };
+  if (avgLTV > 0.75) return { label: 'High Risk', className: 'bg-amber-700 text-white' };
+  if (avgLTV > 0.60) return { label: 'Moderate', className: 'bg-yellow-600 text-white' };
+  return { label: 'Healthy', className: 'bg-green-700 text-white' };
+}
+
 function KPICard({
-  label, value, subtext, trend, icon: Icon, variant = 'default'
+  label, value, subtext, trend, icon: CardIcon, variant = 'default', ltvBadge
 }: {
   label: string; value: string; subtext: string;
   trend?: { direction: 'up' | 'down' | 'neutral'; label: string };
   icon: React.ElementType; variant?: 'default' | 'alert' | 'warning' | 'success';
+  ltvBadge?: { label: string; className: string };
 }) {
   const styles = {
     default: { card: 'bg-white border-border', icon: 'bg-primary/10 text-primary', val: 'text-foreground' },
@@ -60,21 +69,42 @@ function KPICard({
     success: { card: 'bg-green-50 border-green-200', icon: 'bg-green-100 text-green-600', val: 'text-green-700' },
   };
   const s = styles[variant];
+  const IconComponent = CardIcon as React.ElementType;
   return (
-    <div className={`rounded-xl p-4 shadow-sm border ${s.card}`}>
+    /* min-h-[88px] ensures the card itself is tall enough; the inner content provides the touch area */
+    <div
+      className={`rounded-xl p-4 shadow-sm border ${s.card} min-h-[88px]`}
+      role="region"
+      aria-label={`${label}: ${value}. ${subtext}${trend ? '. ' + trend.label : ''}${ltvBadge ? '. LTV risk: ' + ltvBadge.label : ''}`}
+    >
       <div className="flex items-start justify-between mb-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider leading-tight pr-2">{label}</p>
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${s.icon}`}>
-          <Icon size={16} />
+        {/* Icon touch target: 44×44px minimum */}
+        <div
+          className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${s.icon}`}
+          aria-hidden="true"
+        >
+          <IconComponent size={18} />
         </div>
       </div>
       <p className={`text-xl font-bold tabular-nums mb-1 font-mono leading-tight break-all ${s.val}`}>{value}</p>
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-xs text-muted-foreground">{subtext}</p>
+        {ltvBadge && (
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${ltvBadge.className}`}
+            aria-label={`LTV risk level: ${ltvBadge.label}`}
+          >
+            {ltvBadge.label}
+          </span>
+        )}
         {trend && (
-          <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-            trend.direction === 'up' ? 'text-green-600' : trend.direction === 'down' ? 'text-red-600' : 'text-muted-foreground'
-          }`}>
+          <span
+            className={`inline-flex items-center gap-0.5 text-xs font-medium ${
+              trend.direction === 'up' ? 'text-green-700' : trend.direction === 'down' ? 'text-red-700' : 'text-muted-foreground'
+            }`}
+            aria-hidden="true"
+          >
             {trend.direction === 'up' ? <TrendingUp size={11} /> : trend.direction === 'down' ? <TrendingDown size={11} /> : null}
             {trend.label}
           </span>
@@ -125,10 +155,10 @@ export default function ExecutiveDashboardContent() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6" aria-busy="true" aria-label="Loading dashboard data">
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-xl p-4 border bg-white animate-pulse h-24" />
+            <div key={i} className="rounded-xl p-4 border bg-white animate-pulse h-24" aria-hidden="true" />
           ))}
         </div>
       </div>
@@ -143,6 +173,11 @@ export default function ExecutiveDashboardContent() {
   const rate = stats?.perfectionRate ?? '0.0';
   const totalVal = stats?.totalValueTSh ?? 0;
   const avgLTV = stats?.avgLTV ?? 0;
+  const ltvBadge = ltvRiskBadge(avgLTV);
+
+  // Build accessible summary strings for charts
+  const trendSummary = trend.map(d => `${d.month}: ${d.perfected} perfected, ${d.submitted} submitted, ${d.overdue} overdue`).join('; ');
+  const typeSummary = typeDist.map(d => `${d.type}: ${d.count}`).join(', ');
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -151,8 +186,8 @@ export default function ExecutiveDashboardContent() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Executive Dashboard</h1>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full" aria-label="Live data">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
               Live
             </span>
           </div>
@@ -165,84 +200,110 @@ export default function ExecutiveDashboardContent() {
           <button
             onClick={() => loadData(true)}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-60"
+            aria-label={refreshing ? 'Refreshing dashboard data' : 'Refresh dashboard data'}
+            className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
           >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
             <span className="hidden sm:inline">Refresh</span>
           </button>
           <button
             onClick={() => toast.info('PDF export queued')}
-            className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-all"
+            aria-label="Export dashboard as PDF"
+            className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
           >
-            <Download size={14} />
+            <Download size={14} aria-hidden="true" />
             <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        <KPICard label="Total Portfolio Value" value={fmtTSh(totalVal)} subtext="Across all active collateral" trend={{ direction: 'up', label: 'Live' }} icon={Banknote} variant="success" />
-        <KPICard label="Perfection Rate" value={`${rate}%`} subtext={`${perfected} of ${total} perfected`} trend={{ direction: 'up', label: 'Live' }} icon={Shield} variant="default" />
-        <KPICard label="Total Collateral Items" value={String(total)} subtext="Active items in portfolio" trend={{ direction: 'up', label: 'Live' }} icon={Scale} variant="default" />
-        <KPICard label="Avg LTV Ratio" value={`${(avgLTV * 100).toFixed(1)}%`} subtext="Portfolio-wide average" trend={{ direction: avgLTV > 0.75 ? 'down' : 'neutral', label: avgLTV > 0.75 ? 'High risk' : 'Healthy' }} icon={Target} variant={avgLTV > 0.75 ? 'warning' : 'default'} />
-        <KPICard label="Overdue Actions" value={String(overdue)} subtext="Past registry deadline" trend={{ direction: 'down', label: 'Action needed' }} icon={AlertTriangle} variant="alert" />
-        <KPICard label="Approaching Deadline" value={String(approaching)} subtext="Due within 7 days" trend={{ direction: 'neutral', label: 'Monitor' }} icon={Clock} variant="warning" />
-        <KPICard label="Pending Legal Review" value={String(pending)} subtext="Awaiting Legal Officer" trend={{ direction: 'neutral', label: 'Under review' }} icon={Activity} variant="warning" />
-        <KPICard label="Perfected Items" value={String(perfected)} subtext="Fully registered" trend={{ direction: 'up', label: 'Completed' }} icon={Zap} variant="success" />
-      </div>
+      <section aria-label="Key Performance Indicators">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          <KPICard label="Total Portfolio Value" value={fmtTSh(totalVal)} subtext="Across all active collateral" trend={{ direction: 'up', label: 'Live' }} icon={Banknote} variant="success" />
+          <KPICard label="Perfection Rate" value={`${rate}%`} subtext={`${perfected} of ${total} perfected`} trend={{ direction: 'up', label: 'Live' }} icon={Shield} variant="default" />
+          <KPICard label="Total Collateral Items" value={String(total)} subtext="Active items in portfolio" trend={{ direction: 'up', label: 'Live' }} icon={Scale} variant="default" />
+          <KPICard label="Avg LTV Ratio" value={`${(avgLTV * 100).toFixed(1)}%`} subtext="Portfolio-wide average" trend={{ direction: avgLTV > 0.75 ? 'down' : 'neutral', label: avgLTV > 0.75 ? 'High risk' : 'Healthy' }} icon={Target} variant={avgLTV > 0.75 ? 'warning' : 'default'} ltvBadge={ltvBadge} />
+          <KPICard label="Overdue Actions" value={String(overdue)} subtext="Past registry deadline" trend={{ direction: 'down', label: 'Action needed' }} icon={AlertTriangle} variant="alert" />
+          <KPICard label="Approaching Deadline" value={String(approaching)} subtext="Due within 7 days" trend={{ direction: 'neutral', label: 'Monitor' }} icon={Clock} variant="warning" />
+          <KPICard label="Pending Legal Review" value={String(pending)} subtext="Awaiting Legal Officer" trend={{ direction: 'neutral', label: 'Under review' }} icon={Activity} variant="warning" />
+          <KPICard label="Perfected Items" value={String(perfected)} subtext="Fully registered" trend={{ direction: 'up', label: 'Completed' }} icon={Zap} variant="success" />
+        </div>
+      </section>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Perfection Trend */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-border p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Perfection Trend (6 Months)</h3>
+            <BarChart3 size={16} className="text-primary" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-foreground" id="trend-chart-title">Perfection Trend (6 Months)</h3>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="overdueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#dc2626" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Area type="monotone" dataKey="perfected" stroke="#2563eb" fill="url(#perfGrad)" strokeWidth={2} name="Perfected" />
-              <Area type="monotone" dataKey="submitted" stroke="#16a34a" fill="none" strokeWidth={2} strokeDasharray="4 2" name="Submitted" />
-              <Area type="monotone" dataKey="overdue" stroke="#dc2626" fill="url(#overdueGrad)" strokeWidth={2} name="Overdue" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {/* Screen-reader table summary */}
+          <p className="sr-only" aria-live="polite">
+            Perfection trend data: {trendSummary || 'No data available'}
+          </p>
+          <div
+            role="img"
+            aria-labelledby="trend-chart-title"
+            aria-describedby="trend-chart-desc"
+          >
+            <span id="trend-chart-desc" className="sr-only">
+              Area chart showing monthly perfection trend over 6 months. {trendSummary}
+            </span>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="overdueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#dc2626" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Area type="monotone" dataKey="perfected" stroke="#2563eb" fill="url(#perfGrad)" strokeWidth={2} name="Perfected" />
+                <Area type="monotone" dataKey="submitted" stroke="#16a34a" fill="none" strokeWidth={2} strokeDasharray="4 2" name="Submitted" />
+                <Area type="monotone" dataKey="overdue" stroke="#dc2626" fill="url(#overdueGrad)" strokeWidth={2} name="Overdue" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Type Distribution */}
         <div className="bg-white rounded-xl border border-border p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Scale size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Collateral by Type</h3>
+            <Scale size={16} className="text-primary" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-foreground" id="type-chart-title">Collateral by Type</h3>
           </div>
           {typeDist.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={typeDist} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={75} label={({ type, percent }) => `${type.split(' ')[0]} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
-                  {typeDist.map((_, i) => (
-                    <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div
+              role="img"
+              aria-labelledby="type-chart-title"
+              aria-describedby="type-chart-desc"
+            >
+              <span id="type-chart-desc" className="sr-only">
+                Pie chart showing collateral distribution by type. {typeSummary}
+              </span>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={typeDist} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={75} label={({ type, percent }) => `${type.split(' ')[0]} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                    {typeDist.map((_, i) => (
+                      <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">No data available</div>
+            <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground" role="status">No data available</div>
           )}
         </div>
       </div>
@@ -251,21 +312,30 @@ export default function ExecutiveDashboardContent() {
       {trend.length > 0 && (
         <div className="bg-white rounded-xl border border-border p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Monthly Activity Breakdown</h3>
+            <TrendingUp size={16} className="text-primary" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-foreground" id="activity-chart-title">Monthly Activity Breakdown</h3>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="perfected" fill="#2563eb" name="Perfected" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="submitted" fill="#16a34a" name="Submitted" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="overdue" fill="#dc2626" name="Overdue" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div
+            role="img"
+            aria-labelledby="activity-chart-title"
+            aria-describedby="activity-chart-desc"
+          >
+            <span id="activity-chart-desc" className="sr-only">
+              Bar chart showing monthly activity breakdown. {trendSummary}
+            </span>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="perfected" fill="#2563eb" name="Perfected" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="submitted" fill="#16a34a" name="Submitted" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="overdue" fill="#dc2626" name="Overdue" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
     </div>
