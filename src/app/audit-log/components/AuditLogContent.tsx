@@ -244,10 +244,11 @@ function AuditLogRow({ entry }: { entry: AuditLogEntry }) {
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, icon: IconComp, color }: { label: string; value: number | string; icon: React.ElementType; color: string }) {
+  const Icon = IconComp;
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-        {IconComp && <IconComp size={18} className="" />}
+        {Icon && <Icon size={18} className="" />}
       </div>
       <div className="min-w-0">
         <p className="text-2xl font-bold tabular-nums text-foreground font-mono">{value}</p>
