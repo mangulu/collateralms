@@ -262,6 +262,7 @@ interface UploadDocumentModalProps {
   userName: string;
   onClose: () => void;
   onUploaded: () => void;
+  initialDocType?: DocumentType;
 }
 
 const ALLOWED_MIME_TYPES = [
@@ -290,10 +291,10 @@ function getFileIconDetail(mimeType: string) {
   return <FileText size={18} className="text-slate-500" />;
 }
 
-function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded }: UploadDocumentModalProps) {
+function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded, initialDocType }: UploadDocumentModalProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [docType, setDocType] = useState<DocumentType>('Other');
+  const [docType, setDocType] = useState<DocumentType>(initialDocType ?? 'Other');
   const [notes, setNotes] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -468,6 +469,7 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
   const [docs, setDocs] = useState<CollateralDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState<DocumentType | undefined>(undefined);
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -488,6 +490,19 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
     }
   };
 
+  const openUploadFor = (docType?: DocumentType) => {
+    setUploadDocType(docType);
+    setShowUploadModal(true);
+  };
+
+  // Group uploaded docs by document type
+  const docsByType = docs.reduce<Record<string, CollateralDocument[]>>((acc, doc) => {
+    const key = doc.documentType ?? 'Other';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(doc);
+    return acc;
+  }, {});
+
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
@@ -496,7 +511,7 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
           <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
           {user && (
             <button
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => openUploadFor(undefined)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
             >
               <Plus size={13} />
@@ -513,63 +528,113 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
         </div>
-      ) : docs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Files size={28} className="text-muted-foreground/40 mb-2" />
-          <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
-          <p className="text-xs text-muted-foreground/70 mt-0.5">Upload title deeds, charge certificates, and other supporting documents.</p>
-          {user && (
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
-            >
-              <Upload size={13} />
-              Upload First Document
-            </button>
-          )}
-        </div>
       ) : (
-        <div className="space-y-2">
-          {docs.map((doc) => (
-            <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors group">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <FileText size={14} className="text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-500 text-foreground truncate">{doc.fileName}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground">{doc.documentType}</span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-xs text-muted-foreground">v{doc.version}</span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
-                </div>
-                {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {doc.signedUrl && (
-                  <a
-                    href={doc.signedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                    title="Download"
-                  >
-                    <Download size={13} />
-                  </a>
-                )}
+        <div className="space-y-3">
+          {/* Document type categories */}
+          {DOC_TYPE_OPTIONS.map((docType) => {
+            const typeDocs = docsByType[docType] ?? [];
+            const hasDocuments = typeDocs.length > 0;
+
+            return (
+              <div key={docType} className="rounded-lg border border-border/60 overflow-hidden">
+                {/* Category header — always clickable to upload */}
                 <button
-                  onClick={() => handleDelete(doc)}
-                  className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
-                  title="Delete"
+                  type="button"
+                  onClick={() => user && openUploadFor(docType)}
+                  disabled={!user}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${
+                    hasDocuments
+                      ? 'bg-muted/30 hover:bg-muted/50' :'bg-muted/10 hover:bg-primary/5'
+                  } ${!user ? 'cursor-default' : 'cursor-pointer'}`}
                 >
-                  <Trash2 size={13} />
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
+                      hasDocuments ? 'bg-primary/10' : 'bg-muted/60'
+                    }`}>
+                      <FileText size={13} className={hasDocuments ? 'text-primary' : 'text-muted-foreground/50'} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-500 text-foreground">{docType}</span>
+                      {hasDocuments && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {typeDocs.length} file{typeDocs.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {user && (
+                    hasDocuments ? (
+                      <span className="flex items-center gap-1 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 px-2 py-1 rounded-md hover:bg-primary/10 transition-colors">
+                        <Upload size={11} /> Add
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                        <Upload size={12} />
+                        <span>Upload</span>
+                      </span>
+                    )
+                  )}
                 </button>
+
+                {/* Uploaded files for this type */}
+                {hasDocuments && (
+                  <div className="divide-y divide-border/40">
+                    {typeDocs.map((doc) => (
+                      <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-muted/20 transition-colors group">
+                        <div className="w-6 h-6 rounded flex items-center justify-center shrink-0">
+                          {getFileIconDetail(doc.mimeType ?? '')}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-500 text-foreground truncate">{doc.fileName}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-muted-foreground">v{doc.version}</span>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {doc.signedUrl && (
+                            <a
+                              href={doc.signedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                              title="Download"
+                            >
+                              <Download size={13} />
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleDelete(doc)}
+                            className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Empty tray when no documents for this type */}
+                {!hasDocuments && user && (
+                  <div
+                    onClick={() => openUploadFor(docType)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white cursor-pointer hover:bg-primary/5 transition-colors border-t border-border/40"
+                  >
+                    <div className="w-5 h-5 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center shrink-0">
+                      <Plus size={10} className="text-muted-foreground/40" />
+                    </div>
+                    <span className="text-xs text-muted-foreground/60 italic">No document — click to upload</span>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -578,7 +643,8 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
           collateral={collateral}
           userId={user.id}
           userName={user.email ?? 'Unknown'}
-          onClose={() => setShowUploadModal(false)}
+          initialDocType={uploadDocType}
+          onClose={() => { setShowUploadModal(false); setUploadDocType(undefined); }}
           onUploaded={() => { loadDocs(); toast.success('Document uploaded successfully'); }}
         />
       )}
