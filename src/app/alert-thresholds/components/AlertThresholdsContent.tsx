@@ -1,31 +1,14 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SlidersHorizontal, Save, RotateCcw, Info, TrendingDown, Percent, CalendarClock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { alertThresholdsService, AlertThresholds } from '@/lib/supabase/alertThresholdsService';
 
-interface ThresholdConfig {
-  ltvBreachPct: number;
-  perfectionRateDropPct: number;
-  brelaDeadlineDays: number;
-}
-
-const DEFAULTS: ThresholdConfig = {
+const DEFAULTS: AlertThresholds = {
   ltvBreachPct: 80,
   perfectionRateDropPct: 10,
   brelaDeadlineDays: 30,
 };
-
-const STORAGE_KEY = 'collateralms_alert_thresholds';
-
-function loadSaved(): ThresholdConfig {
-  if (typeof window === 'undefined') return DEFAULTS;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULTS;
-    return { ...DEFAULTS, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULTS;
-  }
-}
 
 interface ThresholdCardProps {
   icon: React.ReactNode;
@@ -144,41 +127,81 @@ function ThresholdCard({
 }
 
 export default function AlertThresholdsContent() {
-  const [config, setConfig] = useState<ThresholdConfig>(DEFAULTS);
-  const [saved, setSaved] = useState<ThresholdConfig>(DEFAULTS);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const { user } = useAuth();
+  const [config, setConfig] = useState<AlertThresholds>(DEFAULTS);
+  const [saved, setSaved] = useState<AlertThresholds>(DEFAULTS);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [loading, setLoading] = useState(true);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const loadThresholds = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const data = await alertThresholdsService.load(user.id);
+      setConfig(data);
+      setSaved(data);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
-    const loaded = loadSaved();
-    setConfig(loaded);
-    setSaved(loaded);
-  }, []);
+    loadThresholds();
+  }, [loadThresholds]);
 
   const isDirty =
     config.ltvBreachPct !== saved.ltvBreachPct ||
     config.perfectionRateDropPct !== saved.perfectionRateDropPct ||
     config.brelaDeadlineDays !== saved.brelaDeadlineDays;
 
-  function handleSave() {
+  async function handleSave() {
+    if (!user?.id) return;
     setSaveStatus('saving');
-    setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-        setSaved({ ...config });
-        setSaveStatus('saved');
-        setTimeout(() => setSaveStatus('idle'), 2500);
-      } catch {
-        setSaveStatus('idle');
-      }
-    }, 600);
+    setSaveError(null);
+    try {
+      await alertThresholdsService.save(user.id, config);
+      setSaved({ ...config });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2500);
+    } catch (err: any) {
+      setSaveError(err?.message ?? 'Failed to save thresholds.');
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
   }
 
   function handleResetAll() {
     setConfig({ ...DEFAULTS });
   }
 
-  const set = (key: keyof ThresholdConfig) => (v: number) =>
+  const set = (key: keyof AlertThresholds) => (v: number) =>
     setConfig((prev) => ({ ...prev, [key]: v }));
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 max-w-5xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <SlidersHorizontal size={20} className="text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-700 text-foreground">Forecasting Alert Thresholds</h1>
+            <p className="text-sm text-muted-foreground">Loading your saved thresholds…</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-xl border border-border p-6 h-64 animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4 mb-3" />
+              <div className="h-3 bg-muted rounded w-full mb-2" />
+              <div className="h-3 bg-muted rounded w-5/6" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
@@ -237,6 +260,14 @@ export default function AlertThresholdsContent() {
           <p className="text-sm text-amber-700 font-500">
             You have unsaved threshold changes. Save to apply them to live alert monitoring.
           </p>
+        </div>
+      )}
+
+      {/* Save error banner */}
+      {saveStatus === 'error' && saveError && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5">
+          <AlertTriangle size={15} className="text-red-600 shrink-0" />
+          <p className="text-sm text-red-700 font-500">{saveError}</p>
         </div>
       )}
 
