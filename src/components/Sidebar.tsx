@@ -321,9 +321,9 @@ const navGroups = [
 ];
 
 const badgeVariantClasses: Record<string, string> = {
-  default: 'bg-primary/10 text-primary',
-  danger: 'bg-red-100 text-red-700',
-  warning: 'bg-amber-100 text-amber-700',
+  default: 'bg-blue-500/20 text-blue-300',
+  danger: 'bg-red-500/20 text-red-300',
+  warning: 'bg-amber-500/20 text-amber-300',
 };
 
 export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarProps) {
@@ -343,19 +343,19 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
 
   return (
     <aside
-      className="relative flex flex-col bg-white border-r border-border h-full shrink-0 sidebar-transition z-20"
-      style={{ width: collapsed ? '64px' : '240px' }}
+      className="relative flex flex-col h-full shrink-0 sidebar-transition z-20"
+      style={{ width: collapsed ? '64px' : '240px', backgroundColor: '#0F172A', borderRight: '1px solid rgba(255,255,255,0.08)' }}
     >
       {/* Logo */}
-      <div className="flex items-center h-16 px-3 border-b border-border shrink-0 overflow-hidden">
+      <div className="flex items-center h-16 px-3 shrink-0 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-2 min-w-0">
           <AppLogo size={32} />
           {!collapsed && (
             <div className="min-w-0 fade-in">
-              <p className="text-sm font-semibold text-primary truncate leading-tight">
+              <p className="text-sm font-semibold truncate leading-tight" style={{ color: '#93C5FD' }}>
                 CollateralMS
               </p>
-              <p className="text-xs text-muted-foreground truncate leading-tight">
+              <p className="text-xs truncate leading-tight" style={{ color: '#64748B' }}>
                 EXIM Bank Tanzania
               </p>
             </div>
@@ -376,11 +376,11 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           return (
             <div key={`group-${group.label}`} className="mb-4">
               {!collapsed && (
-                <p className="text-xs font-600 tracking-wider text-muted-foreground uppercase px-2 mb-1">
+                <p className="text-xs font-600 tracking-wider uppercase px-2 mb-1" style={{ color: '#475569' }}>
                   {group.label}
                 </p>
               )}
-              {collapsed && <div className="border-t border-border mx-1 mb-2" />}
+              {collapsed && <div className="mx-1 mb-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />}
               {visibleItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPath === item.href;
@@ -394,14 +394,28 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
                       href={item.href}
                       onMouseEnter={() => setHoveredItem(item.label)}
                       onMouseLeave={() => setHoveredItem(null)}
-                      className={`flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150 group mb-0.5 ${
+                      className={`flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150 group mb-0.5`}
+                      style={
                         isActive
-                          ? 'bg-primary/10 text-primary' :'text-foreground/70 hover:bg-muted hover:text-foreground'
-                      }`}
+                          ? { backgroundColor: '#2563EB', color: '#FFFFFF' }
+                          : { color: '#94A3B8' }
+                      }
+                      onMouseOver={(e) => {
+                        if (!isActive) {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)';
+                          (e.currentTarget as HTMLElement).style.color = '#F8FAFC';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!isActive) {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                          (e.currentTarget as HTMLElement).style.color = '#94A3B8';
+                        }
+                      }}
                     >
                       <Icon
                         size={18}
-                        className={`shrink-0 ${isActive ? 'text-primary' : ''}`}
+                        className="shrink-0"
                       />
                       {!collapsed && (
                         <span className="flex-1 truncate">{item.label}</span>
@@ -424,7 +438,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
                     {/* Collapsed tooltip */}
                     {collapsed && isHovered && (
                       <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-                        <div className="bg-foreground text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap">
+                        <div className="text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap" style={{ backgroundColor: '#1E293B' }}>
                           {item.label}
                           {item.badge && (
                             <span className="ml-1 opacity-75">({item.badge})</span>
@@ -441,29 +455,32 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
       </nav>
 
       {/* User Profile */}
-      <div className="border-t border-border p-2 shrink-0">
+      <div className="p-2 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         {!collapsed ? (
-          <div className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-muted cursor-pointer transition-colors group"
+          <div className="flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-colors group"
             onClick={() => signOut?.()}
             title="Sign out"
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
           >
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#2563EB' }}>
               <span className="text-white text-xs font-600">{initials}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-500 text-foreground truncate">
+              <p className="text-sm font-500 truncate" style={{ color: '#F8FAFC' }}>
                 {displayName}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs truncate" style={{ color: '#64748B' }}>
                 {displayRole}
               </p>
             </div>
-            <LogOut size={15} className="text-muted-foreground shrink-0 group-hover:text-red-500 transition-colors" />
+            <LogOut size={15} className="shrink-0 transition-colors group-hover:text-red-400" style={{ color: '#475569' }} />
           </div>
         ) : (
           <div className="flex justify-center py-1">
             <div
-              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-colors"
+              style={{ backgroundColor: '#2563EB' }}
               onClick={() => signOut?.()}
               title="Sign out"
             >
@@ -476,13 +493,14 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
       {/* Collapse Toggle */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 bg-white border border-border rounded-full flex items-center justify-center shadow-card hover:bg-muted transition-colors z-30"
+        className="absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center shadow-card transition-colors z-30"
+        style={{ backgroundColor: '#1E293B', border: '1px solid rgba(255,255,255,0.12)' }}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {collapsed ? (
-          <ChevronRight size={12} className="text-muted-foreground" />
+          <ChevronRight size={12} style={{ color: '#94A3B8' }} />
         ) : (
-          <ChevronLeft size={12} className="text-muted-foreground" />
+          <ChevronLeft size={12} style={{ color: '#94A3B8' }} />
         )}
       </button>
     </aside>
