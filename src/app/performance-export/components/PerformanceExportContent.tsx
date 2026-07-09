@@ -375,17 +375,13 @@ export default function PerformanceExportContent() {
         const csv = generateCSVContent(stats!, config);
         downloadBlob(csv, filename, 'text/csv');
       } else if (config.format === 'excel') {
-        await new Promise((r) => setTimeout(r, 300));
-        const csv = generateCSVContent(stats!, config).replace(/,/g, '\t');
-        downloadBlob(csv, filename, 'application/vnd.ms-excel');
-      } else {
-        // PDF via existing API
+        // Server-side Excel generation
         const reportTypeMap: Record<ReportCategory, string> = {
-          performance: 'collateral_aging',
-          trends: 'perfection_rate',
-          compliance: 'compliance_scorecard',
+          performance: 'performance_summary',
+          trends: 'trend_analysis',
+          compliance: 'compliance_metrics',
         };
-        const response = await fetch('/api/export/pdf', {
+        const response = await fetch('/api/performance-export/excel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -393,12 +389,40 @@ export default function PerformanceExportContent() {
             dateFrom: config.dateFrom,
             dateTo: config.dateTo,
             registries: config.registries,
-            statuses: [],
-            collateralTypes: [],
-            includeCharts: config.includeCharts,
             includeSummary: config.includeSummary,
-            includeDetails: config.includeBreakdown,
-            stakeholderMode: true,
+            includeCharts: config.includeCharts,
+            includeBreakdown: config.includeBreakdown,
+          }),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(err.error ?? `HTTP ${response.status}`);
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // Server-side PDF generation via dedicated performance-export route
+        const reportTypeMap: Record<ReportCategory, string> = {
+          performance: 'performance_summary',
+          trends: 'trend_analysis',
+          compliance: 'compliance_metrics',
+        };
+        const response = await fetch('/api/performance-export/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reportType: reportTypeMap[config.category],
+            dateFrom: config.dateFrom,
+            dateTo: config.dateTo,
+            registries: config.registries,
+            includeSummary: config.includeSummary,
+            includeCharts: config.includeCharts,
+            includeBreakdown: config.includeBreakdown,
           }),
         });
         if (!response.ok) {
