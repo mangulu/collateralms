@@ -344,18 +344,18 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
   return (
     <aside
       className="relative flex flex-col h-full shrink-0 sidebar-transition z-20"
-      style={{ width: collapsed ? '64px' : '240px', backgroundColor: '#0F172A', borderRight: '1px solid rgba(255,255,255,0.08)' }}
+      style={{ width: collapsed ? '64px' : '240px', backgroundColor: '#DBEAFE', borderRight: '1px solid rgba(0,0,0,0.08)' }}
     >
       {/* Logo */}
-      <div className="flex items-center h-16 px-3 shrink-0 overflow-hidden" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="flex items-center h-16 px-3 shrink-0 overflow-hidden" style={{ borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
         <div className="flex items-center gap-2 min-w-0">
           <AppLogo size={32} />
           {!collapsed && (
             <div className="min-w-0 fade-in">
-              <p className="text-sm font-semibold truncate leading-tight" style={{ color: '#93C5FD' }}>
+              <p className="text-sm font-semibold truncate leading-tight" style={{ color: '#1E40AF' }}>
                 CollateralMS
               </p>
-              <p className="text-xs truncate leading-tight" style={{ color: '#64748B' }}>
+              <p className="text-xs truncate leading-tight" style={{ color: '#3B82F6' }}>
                 EXIM Bank Tanzania
               </p>
             </div>
@@ -376,11 +376,11 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           return (
             <div key={`group-${group.label}`} className="mb-4">
               {!collapsed && (
-                <p className="text-xs font-600 tracking-wider uppercase px-2 mb-1" style={{ color: '#475569' }}>
+                <p className="text-xs font-600 tracking-wider uppercase px-2 mb-1" style={{ color: '#1D4ED8' }}>
                   {group.label}
                 </p>
               )}
-              {collapsed && <div className="mx-1 mb-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />}
+              {collapsed && <div className="mx-1 mb-2" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }} />}
               {visibleItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentPath === item.href;
@@ -398,18 +398,18 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
                       style={
                         isActive
                           ? { backgroundColor: '#2563EB', color: '#FFFFFF' }
-                          : { color: '#94A3B8' }
+                          : { color: '#1E3A8A' }
                       }
                       onMouseOver={(e) => {
                         if (!isActive) {
-                          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)';
-                          (e.currentTarget as HTMLElement).style.color = '#F8FAFC';
+                          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)';
+                          (e.currentTarget as HTMLElement).style.color = '#1E3A8A';
                         }
                       }}
                       onMouseOut={(e) => {
                         if (!isActive) {
                           (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                          (e.currentTarget as HTMLElement).style.color = '#94A3B8';
+                          (e.currentTarget as HTMLElement).style.color = '#1E3A8A';
                         }
                       }}
                     >
@@ -455,26 +455,26 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
       </nav>
 
       {/* User Profile */}
-      <div className="p-2 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="p-2 shrink-0" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }}>
         {!collapsed ? (
           <div className="flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-colors group"
             onClick={() => signOut?.()}
             title="Sign out"
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)'; }}
             onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
           >
             <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#2563EB' }}>
               <span className="text-white text-xs font-600">{initials}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-500 truncate" style={{ color: '#F8FAFC' }}>
+              <p className="text-sm font-500 truncate" style={{ color: '#1E3A8A' }}>
                 {displayName}
               </p>
-              <p className="text-xs truncate" style={{ color: '#64748B' }}>
+              <p className="text-xs truncate" style={{ color: '#3B82F6' }}>
                 {displayRole}
               </p>
             </div>
-            <LogOut size={15} className="shrink-0 transition-colors group-hover:text-red-400" style={{ color: '#475569' }} />
+            <LogOut size={15} className="shrink-0 transition-colors group-hover:text-red-500" style={{ color: '#1D4ED8' }} />
           </div>
         ) : (
           <div className="flex justify-center py-1">
@@ -494,13 +494,13 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
       <button
         onClick={onToggle}
         className="absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center shadow-card transition-colors z-30"
-        style={{ backgroundColor: '#1E293B', border: '1px solid rgba(255,255,255,0.12)' }}
+        style={{ backgroundColor: '#BFDBFE', border: '1px solid rgba(37,99,235,0.3)' }}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {collapsed ? (
-          <ChevronRight size={12} style={{ color: '#94A3B8' }} />
+          <ChevronRight size={12} style={{ color: '#1E40AF' }} />
         ) : (
-          <ChevronLeft size={12} style={{ color: '#94A3B8' }} />
+          <ChevronLeft size={12} style={{ color: '#1E40AF' }} />
         )}
       </button>
     </aside>
