@@ -30,6 +30,7 @@ export const PERMISSIONS = {
   COMPLIANCE_VIEW: 'compliance.view',
   AUDIT_LOG_VIEW: 'audit_log.view',
   REPORTS_VIEW: 'reports.view',
+  REPORTS_CREATE: 'reports.create',
   // Administration
   USER_MANAGEMENT_VIEW: 'user_management.view',
   USER_MANAGEMENT_MANAGE: 'user_management.manage',
@@ -113,6 +114,7 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/reports': PERMISSIONS.REPORTS_VIEW,
   '/reports-dashboard': PERMISSIONS.REPORTS_VIEW,
   '/export': PERMISSIONS.REPORTS_VIEW,
+  '/performance-export': PERMISSIONS.REPORTS_CREATE,
   '/user-management': PERMISSIONS.USER_MANAGEMENT_VIEW,
   '/admin': PERMISSIONS.USER_MANAGEMENT_VIEW,
   '/settings': PERMISSIONS.SETTINGS_VIEW,
