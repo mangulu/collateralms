@@ -88,7 +88,7 @@ export default function LoginForm() {
 
       const cred = mockCredentials.find((c) => c.email === data.email);
       toast.success(`Welcome back${cred ? ` — signed in as ${cred.role}` : ''}`);
-      router.push('/collateral-dashboard');
+      router.push('/module-hub');
       router.refresh();
     } catch (err: any) {
       setIsLoading(false);
@@ -145,7 +145,7 @@ export default function LoginForm() {
       // Re-sign in
       await signIn(pendingUser.email, pendingUser.password);
       toast.success('Welcome back — 2FA verified');
-      router.push('/collateral-dashboard');
+      router.push('/module-hub');
       router.refresh();
     } catch (err: any) {
       setOtpError(err?.message ?? 'Verification failed');
