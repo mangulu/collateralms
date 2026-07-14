@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 import CollateralTable from './CollateralTable';
 import CollateralFilters from './CollateralFilters';
 import AddEditCollateralModal from './AddEditCollateralModal';
@@ -59,6 +60,13 @@ export default function CollateralManagementContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Real-time subscription: silently refresh when any collateral row changes
+  useCollateralRealtime({
+    onCollateralChange: () => {
+      fetchData();
+    },
+  });
 
   // Close export menu on outside click
   useEffect(() => {
