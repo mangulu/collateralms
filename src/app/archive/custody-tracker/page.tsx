@@ -3,7 +3,7 @@ import CustodyTrackerContent from './components/CustodyTrackerContent';
 
 export default function CustodyTrackerPage() {
   return (
-    <AppLayout>
+    <AppLayout currentPath="/archive/custody-tracker">
       <CustodyTrackerContent />
     </AppLayout>
   );

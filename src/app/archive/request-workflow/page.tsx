@@ -3,7 +3,7 @@ import RequestWorkflowContent from './components/RequestWorkflowContent';
 
 export default function RequestWorkflowPage() {
   return (
-    <AppLayout>
+    <AppLayout currentPath="/archive/request-workflow">
       <RequestWorkflowContent />
     </AppLayout>
   );
