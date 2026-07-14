@@ -1,22 +1,30 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import AppLayout from '@/components/AppLayout';
 import UserManagementContent from './components/UserManagementContent';
 import RoleManagementContent from './components/RoleManagementContent';
 import ScreenAccessContent from './components/ScreenAccessContent';
 import TwoFASetup from '@/components/TwoFASetup';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Users, Shield, Lock, Monitor, Smartphone } from 'lucide-react';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 
 type Tab = 'users' | 'roles' | 'screen_access' | 'two_fa';
 
-export default function UserManagementPage() {
+function UserManagementInner() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>('users');
   const { hasPermission, loading } = usePermissions();
 
   const canManageRoles = hasPermission(PERMISSIONS.ROLES_VIEW);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab') as Tab | null;
+    if (tab && ['users', 'roles', 'screen_access', 'two_fa'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   return (
     <AppLayout currentPath={pathname}>
@@ -116,5 +124,13 @@ export default function UserManagementPage() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+export default function UserManagementPage() {
+  return (
+    <Suspense fallback={null}>
+      <UserManagementInner />
+    </Suspense>
   );
 }
