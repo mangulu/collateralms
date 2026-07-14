@@ -19,6 +19,7 @@ export interface CollateralDocument {
   uploadedBy?: string;
   uploadedByName: string;
   createdAt: string;
+  workflowStage?: string;
   signedUrl?: string;
 }
 
@@ -37,6 +38,7 @@ function rowToDocument(row: any): CollateralDocument {
     uploadedBy: row.uploaded_by,
     uploadedByName: row.uploaded_by_name ?? '',
     createdAt: row.created_at,
+    workflowStage: row.workflow_stage ?? undefined,
   };
 }
 
@@ -78,6 +80,42 @@ export const documentService = {
     }
   },
 
+  async getAll(): Promise<CollateralDocument[]> {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('collateral_documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Fetch all documents error:', error.message);
+        return [];
+      }
+
+      const docs = (data ?? []).map(rowToDocument);
+
+      // Generate signed URLs in parallel
+      const docsWithUrls = await Promise.all(
+        docs.map(async (doc) => {
+          try {
+            const { data: urlData } = await supabase.storage
+              .from('collateral-documents')
+              .createSignedUrl(doc.filePath, 3600);
+            return { ...doc, signedUrl: urlData?.signedUrl };
+          } catch {
+            return doc;
+          }
+        })
+      );
+
+      return docsWithUrls;
+    } catch (err: any) {
+      console.error('Document getAll failed:', err.message);
+      return [];
+    }
+  },
+
   async upload(
     file: File,
     collateralRecordId: string,
@@ -86,9 +124,16 @@ export const documentService = {
     notes: string,
     userId: string,
     userName: string
-  ): Promise<CollateralDocument | null> {
+  ): Promise<{ doc: CollateralDocument; error?: never } | { doc?: never; error: string }> {
     const supabase = createClient();
     try {
+      if (!collateralRecordId) {
+        return { error: 'No collateral record selected. Please select a collateral record first.' };
+      }
+      if (!userId) {
+        return { error: 'You must be logged in to upload documents.' };
+      }
+
       // Get current version count for this collateral + file name
       const { count } = await supabase
         .from('collateral_documents')
@@ -101,7 +146,8 @@ export const documentService = {
       // Build storage path: collateral-id/timestamp-version-filename
       const timestamp = Date.now();
       const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const filePath = `${collateralId}/${timestamp}_v${version}_${safeFileName}`;
+      const safeCollateralId = (collateralId || collateralRecordId).replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${safeCollateralId}/${timestamp}_v${version}_${safeFileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -110,7 +156,13 @@ export const documentService = {
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError.message);
-        return null;
+        if (uploadError.message?.includes('row-level security') || uploadError.message?.includes('Unauthorized')) {
+          return { error: 'Permission denied. You do not have access to upload documents.' };
+        }
+        if (uploadError.message?.includes('Duplicate')) {
+          return { error: 'A file with this name already exists. Please rename the file and try again.' };
+        }
+        return { error: `Upload failed: ${uploadError.message}` };
       }
 
       // Insert document record
@@ -136,13 +188,16 @@ export const documentService = {
         console.error('Document record insert error:', insertError.message);
         // Attempt to clean up uploaded file
         await supabase.storage.from('collateral-documents').remove([filePath]);
-        return null;
+        if (insertError.message?.includes('row-level security') || insertError.message?.includes('permission denied')) {
+          return { error: 'Permission denied. You do not have access to save document records.' };
+        }
+        return { error: `Failed to save document record: ${insertError.message}` };
       }
 
-      return data ? rowToDocument(data) : null;
+      return { doc: data ? rowToDocument(data) : rowToDocument({ id: '', collateral_record_id: collateralRecordId, collateral_id: collateralId, file_name: file.name, file_path: filePath, file_size: file.size, mime_type: file.type, document_type: documentType, version, notes, uploaded_by: userId, uploaded_by_name: userName, created_at: new Date().toISOString() }) };
     } catch (err: any) {
       console.error('Document upload failed:', err.message);
-      return null;
+      return { error: err.message || 'An unexpected error occurred during upload.' };
     }
   },
 

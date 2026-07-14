@@ -111,8 +111,8 @@ function UploadModal({ state, onClose, onUploaded, userId, userName }: UploadMod
       userName,
     );
     setUploading(false);
-    if (!result) {
-      setError('Upload failed. Please try again.');
+    if (result.error) {
+      setError(result.error);
       return;
     }
     onUploaded();

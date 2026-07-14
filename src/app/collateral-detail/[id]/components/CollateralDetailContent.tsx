@@ -344,8 +344,8 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
       userName,
     );
     setUploading(false);
-    if (!result) {
-      setError('Upload failed. Please try again.');
+    if (result.error) {
+      setError(result.error);
       return;
     }
     onUploaded();
