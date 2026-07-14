@@ -357,7 +357,7 @@ const badgeVariantClasses: Record<string, string> = {
 export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const { userProfile, signOut } = useAuth();
-  const { hasPermission, loading: permsLoading } = usePermissions();
+  const { hasPermission, loading: permsLoading, isSystemAdmin } = usePermissions();
 
   const initials = userProfile?.initials ||
     (userProfile?.full_name
@@ -397,7 +397,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           // Filter items by permission (skip filtering while loading to avoid flicker)
           const visibleItems = permsLoading
             ? group.items
-            : group.items.filter((item) => !item.permission || hasPermission(item.permission));
+            : group.items.filter((item) => !item.permission || isSystemAdmin || hasPermission(item.permission));
 
           if (visibleItems.length === 0) return null;
 
