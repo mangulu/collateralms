@@ -15,6 +15,7 @@ import {
   TrendingUp,
   ChevronRight,
   Layers,
+  Archive,
 } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
@@ -106,6 +107,18 @@ const modules: ModuleCard[] = [
     stats: 'Users · Roles · Settings',
     adminOnly: true,
     requiredPermission: PERMISSIONS.USER_MANAGEMENT_VIEW,
+  },
+  {
+    id: 'archive',
+    title: 'Archive',
+    description: 'Physical vault management, collateral placement, file loan workflow, custody tracking, and movement audit trail.',
+    icon: Archive,
+    href: '/archive/vault-management',
+    color: '#92400E',
+    bgGradient: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 60%, #FDE68A 100%)',
+    iconBg: '#D97706',
+    stats: 'Vaults · Custody · Requests',
+    requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
 ];
 

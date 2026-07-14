@@ -119,6 +119,12 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/admin': PERMISSIONS.USER_MANAGEMENT_VIEW,
   '/settings': PERMISSIONS.SETTINGS_VIEW,
   '/system-config': PERMISSIONS.SETTINGS_MANAGE,
+  '/archive/vault-management': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/collateral-placement': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/documents-library': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/request-workflow': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/custody-tracker': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/audit-log': PERMISSIONS.AUDIT_LOG_VIEW,
 };
 
 // ─── Hook: usePermissions ─────────────────────────────────────────────────────

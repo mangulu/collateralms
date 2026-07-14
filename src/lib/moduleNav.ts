@@ -11,6 +11,7 @@ import {
   BarChart2, LayoutGrid, PieChart, Sliders, Download, FileBarChart2,
   DatabaseZap, ClipboardList, ScrollText, UserCheck, BookOpen, ShieldCheck, Radio, Scale,
   Users, KeyRound, Settings, Landmark,
+  Archive, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -157,6 +158,38 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Client Bank Accounts', icon: Landmark, href: '/client-bank-accounts', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Settings', icon: Settings, href: '/settings', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Config', icon: Brain, href: '/system-config', permission: PERMISSIONS.SETTINGS_MANAGE },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'archive',
+    label: 'Archive',
+    groups: [
+      {
+        label: 'Vault',
+        items: [
+          { label: 'Vault Management', icon: Building2, href: '/archive/vault-management', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Collateral Placement', icon: MapPin, href: '/archive/collateral-placement', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'Documents',
+        items: [
+          { label: 'Documents Library', icon: Library, href: '/archive/documents-library', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'Workflow',
+        items: [
+          { label: 'Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Custody Tracker', icon: Eye, href: '/archive/custody-tracker', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'Audit',
+        items: [
+          { label: 'Archive Audit Log', icon: FileStack, href: '/archive/audit-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
         ],
       },
     ],

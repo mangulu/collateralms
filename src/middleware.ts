@@ -45,6 +45,13 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/user-management': ['user_management.view'],
   '/admin': ['user_management.view'],
   '/settings': ['settings.view'],
+  // Archive module
+  '/archive/vault-management': ['collateral.view'],
+  '/archive/collateral-placement': ['collateral.view'],
+  '/archive/documents-library': ['collateral.view'],
+  '/archive/request-workflow': ['collateral.view'],
+  '/archive/custody-tracker': ['collateral.view'],
+  '/archive/audit-log': ['audit_log.view'],
 };
 
 // Public routes that never require auth
