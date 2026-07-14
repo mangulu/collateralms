@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import '../styles/tailwind.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
+import BrandKitProvider from '@/components/BrandKitProvider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -25,7 +26,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          {children}
+          <BrandKitProvider>
+            {children}
+          </BrandKitProvider>
         </AuthProvider>
         <Toaster
           position="bottom-right"

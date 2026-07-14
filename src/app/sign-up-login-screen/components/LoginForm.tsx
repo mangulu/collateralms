@@ -169,8 +169,19 @@ export default function LoginForm() {
   // 2FA verification screen
   if (twoFARequired) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm">
+      <div className="min-h-screen flex items-center justify-center relative px-4">
+        {/* Blurred background */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80')`,
+            filter: 'blur(6px)',
+            transform: 'scale(1.05)',
+          }}
+        />
+        <div className="absolute inset-0 bg-slate-900/60" />
+
+        <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-6">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
               <Smartphone size={24} className="text-primary" />
@@ -222,166 +233,191 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 bg-primary flex-col justify-between p-10 relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-20 left-10 w-64 h-64 border border-white rounded-full" />
-          <div className="absolute top-10 left-32 w-96 h-96 border border-white rounded-full" />
-          <div className="absolute bottom-20 right-10 w-48 h-48 border border-white rounded-full" />
-          <div className="absolute bottom-40 right-20 w-72 h-72 border border-white rounded-full" />
-        </div>
+    <div className="min-h-screen flex items-center justify-center relative px-4 py-8">
+      {/* Blurred banking/collateral background */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80')`,
+          filter: 'blur(6px)',
+          transform: 'scale(1.05)',
+        }}
+      />
+      {/* Dark overlay for contrast */}
+      <div className="absolute inset-0 bg-slate-900/65" />
 
-        {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3">
-          <AppLogo size={40} />
-          <div>
-            <p className="text-white font-700 text-lg leading-tight">CollateralMS</p>
-            <p className="text-white/60 text-sm">EXIM Bank Tanzania</p>
-          </div>
-        </div>
-
-        {/* Hero content */}
-        <div className="relative z-10">
-          <h1 className="text-3xl xl:text-4xl font-700 text-white leading-tight mb-4">
-            Collateral Lifecycle
-            <br />
-            Management Platform
-          </h1>
-          <p className="text-white/70 text-base leading-relaxed mb-8 max-w-sm">
-            Automate perfection tracking, enforce BRELA 42-day submission rules,
-            and maintain a complete audit trail across all collateral types.
-          </p>
-
-          <div className="space-y-3">
-            {[
-              'Automated BRELA & Lands Registry submission tracking',
-              'Real-time perfection status across mortgages, debentures & shares',
-              'Integrated with TRA, DSE, and TASAC registries',
-              'Role-based access for Credit Officers and Legal teams',
-            ].map((feature) => (
-              <div key={`feat-${feature.slice(0, 20)}`} className="flex items-start gap-2">
-                <CheckCircle2 size={16} className="text-accent mt-0.5 shrink-0" />
-                <p className="text-white/80 text-sm">{feature}</p>
+      {/* Centered login card */}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          {/* Card header with brand */}
+          <div className="bg-primary px-8 pt-8 pb-6 text-center">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <AppLogo size={40} />
+              <div className="text-left">
+                <p className="text-white font-bold text-lg leading-tight">CollateralMS</p>
+                <p className="text-white/70 text-xs">Powered by Contentpro</p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="relative z-10">
-          <p className="text-white/40 text-xs">
-            © 2026 EXIM Bank Tanzania · Ghana Avenue, Dar es Salaam
-          </p>
-        </div>
-      </div>
-
-      {/* Right form panel */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-20 bg-background overflow-y-auto py-10">
-        <div className="flex items-center gap-2 mb-8 lg:hidden">
-          <AppLogo size={32} />
-          <span className="font-700 text-primary text-lg">CollateralMS</span>
-        </div>
-
-        <div className="w-full max-w-md">
-          <div className="mb-8">
-            <h2 className="text-2xl font-700 text-foreground mb-1">Sign in to your account</h2>
-            <p className="text-sm text-muted-foreground">
-              Enter your EXIM Bank credentials to access the collateral management system.
+            </div>
+            <h1 className="text-white text-xl font-bold mt-2">Sign in to your account</h1>
+            <p className="text-white/70 text-sm mt-1">
+              Enter your bank credentials to continue
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-500 text-foreground mb-1.5">Email address</label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="yourname@eximbank.co.tz"
-                className={`w-full px-3 py-2.5 rounded-md border text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${errors.email ? 'border-destructive focus:ring-destructive/30' : 'border-border hover:border-primary/40'}`}
-                {...register('email', {
-                  required: 'Email address is required',
-                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
-                })}
-              />
-              {errors.email && <p className="mt-1.5 text-xs text-destructive flex items-center gap-1"><AlertCircle size={12} />{errors.email.message}</p>}
-            </div>
-
-            {/* Password */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="password" className="block text-sm font-500 text-foreground">Password</label>
-                <button type="button" className="text-xs text-primary hover:underline">Forgot password?</button>
-              </div>
-              <div className="relative">
+          {/* Form body */}
+          <div className="px-8 py-6">
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
+                  Email address
+                </label>
                 <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  placeholder="••••••••••••"
-                  className={`w-full px-3 py-2.5 pr-10 rounded-md border text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${errors.password ? 'border-destructive focus:ring-destructive/30' : 'border-border hover:border-primary/40'}`}
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: { value: 6, message: 'Password must be at least 6 characters' },
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="yourname@bank.co.tz"
+                  className={`w-full px-3 py-2.5 rounded-lg border text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                    errors.email ? 'border-destructive focus:ring-destructive/30' : 'border-border hover:border-primary/40'
+                  }`}
+                  {...register('email', {
+                    required: 'Email address is required',
+                    pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
                   })}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors" aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                {errors.email && (
+                  <p className="mt-1.5 text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle size={12} />{errors.email.message}
+                  </p>
+                )}
               </div>
-              {errors.password && <p className="mt-1.5 text-xs text-destructive flex items-center gap-1"><AlertCircle size={12} />{errors.password.message}</p>}
-            </div>
 
-            {/* Remember me */}
-            <div className="flex items-center gap-2">
-              <input id="rememberMe" type="checkbox" className="w-4 h-4 rounded border-border accent-primary" {...register('rememberMe')} />
-              <label htmlFor="rememberMe" className="text-sm text-muted-foreground">Keep me signed in for 8 hours</label>
-            </div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 bg-primary text-white font-600 rounded-md text-sm hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <><RefreshCw size={16} className="animate-spin" /> Signing in…</>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </form>
-
-          {/* Demo credentials */}
-          <div className="mt-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-border" />
-              <p className="text-xs text-muted-foreground font-500">Demo Credentials</p>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="space-y-2">
-              {mockCredentials.map((cred) => (
-                <div key={cred.role} className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg border border-border/50 hover:border-primary/30 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                    <span className="text-white text-xs font-700">{cred.initials}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-600 text-foreground">{cred.role}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{cred.email}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => copyToClipboard(cred.password, `${cred.role}-pw`)} className="p-1.5 rounded hover:bg-muted transition-colors" title="Copy password">
-                      {copiedField === `${cred.role}-pw` ? <CheckCircle2 size={13} className="text-green-600" /> : <Copy size={13} className="text-muted-foreground" />}
-                    </button>
-                    <button onClick={() => autofill(cred.email, cred.password)} className="px-2 py-1 text-[10px] font-600 bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors">
-                      Use
-                    </button>
-                  </div>
+              {/* Password */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                    Password
+                  </label>
+                  <button type="button" className="text-xs text-primary hover:underline">
+                    Forgot password?
+                  </button>
                 </div>
-              ))}
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••••••"
+                    className={`w-full px-3 py-2.5 pr-10 rounded-lg border text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                      errors.password ? 'border-destructive focus:ring-destructive/30' : 'border-border hover:border-primary/40'
+                    }`}
+                    {...register('password', {
+                      required: 'Password is required',
+                      minLength: { value: 6, message: 'Password must be at least 6 characters' },
+                    })}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-1.5 text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle size={12} />{errors.password.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Remember me */}
+              <div className="flex items-center gap-2">
+                <input
+                  id="rememberMe"
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-border accent-primary"
+                  {...register('rememberMe')}
+                />
+                <label htmlFor="rememberMe" className="text-sm text-muted-foreground">
+                  Keep me signed in for 8 hours
+                </label>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg text-sm hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              >
+                {isLoading ? (
+                  <><RefreshCw size={16} className="animate-spin" /> Signing in…</>
+                ) : (
+                  'Sign In'
+                )}
+              </button>
+            </form>
+
+            {/* Demo credentials */}
+            <div className="mt-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 h-px bg-border" />
+                <p className="text-xs text-muted-foreground font-medium">Demo Credentials</p>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <div className="space-y-2">
+                {mockCredentials.map((cred) => (
+                  <div
+                    key={cred.role}
+                    className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <span className="text-white text-[10px] font-bold">{cred.initials}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground">{cred.role}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{cred.email}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => copyToClipboard(cred.password, `${cred.role}-pw`)}
+                        className="p-1.5 rounded hover:bg-muted transition-colors"
+                        title="Copy password"
+                      >
+                        {copiedField === `${cred.role}-pw` ? (
+                          <CheckCircle2 size={13} className="text-green-600" />
+                        ) : (
+                          <Copy size={13} className="text-muted-foreground" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => autofill(cred.email, cred.password)}
+                        className="px-2 py-1 text-[10px] font-semibold bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+                      >
+                        Use
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-8 py-4 bg-muted/30 border-t border-border text-center">
+            <p className="text-[11px] text-muted-foreground">
+              A product by{' '}
+              <a
+                href="https://www.contentpro.co.tz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Contentpro
+              </a>
+              {' '}· Deployable for any bank
+            </p>
           </div>
         </div>
       </div>
