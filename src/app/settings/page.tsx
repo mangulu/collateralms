@@ -345,7 +345,7 @@ type SettingsTab =
 export default function SettingsPage() {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<SettingsTab>('document-types');
-  const { hasPermission, loading } = usePermissions();
+  const { hasPermission, loading, permissions } = usePermissions();
   const { userProfile } = useAuth();
 
   // System config state
@@ -406,10 +406,10 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (hasPermission(PERMISSIONS.SETTINGS_MANAGE)) {
+    if (permissions.has(PERMISSIONS.SETTINGS_MANAGE)) {
       loadConfigs();
     }
-  }, [loadConfigs, hasPermission]);
+  }, [loadConfigs, permissions]);
 
   const handleConfigChange = (category: ConfigCategory, key: string, value: unknown) => {
     setLocalValues((prev) => ({ ...prev, [category]: { ...prev[category], [key]: value } }));
