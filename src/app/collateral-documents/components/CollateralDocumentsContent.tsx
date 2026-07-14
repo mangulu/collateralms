@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
 import SecurityPocketPanel from './SecurityPocketPanel';
+import DocumentVersionHistoryModal from '@/components/DocumentVersionHistoryModal';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1133,11 +1134,17 @@ export default function CollateralDocumentsContent() {
       )}
 
       {versionModal && (
-        <VersionHistoryModal
+        <DocumentVersionHistoryModal
           docs={versionModal.docs}
           fileName={versionModal.fileName}
+          collateralRecordId={versionModal.docs[0]?.collateralRecordId ?? ''}
+          currentVersion={Math.max(...versionModal.docs.map((d) => d.version))}
           onClose={() => setVersionModal(null)}
           onDownload={handleDownload}
+          onRollbackComplete={fetchData}
+          userId={userId}
+          userName={userName}
+          canRollback={canDelete}
         />
       )}
 
