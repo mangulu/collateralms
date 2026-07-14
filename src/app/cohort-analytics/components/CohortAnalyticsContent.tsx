@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { TrendingUp, AlertTriangle, RefreshCw, Target, Users, BarChart3, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
+import CollateralDocumentAnalysis from './CollateralDocumentAnalysis';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -767,6 +768,19 @@ export default function CohortAnalyticsContent() {
             </div>
           </div>
         )}
+
+        {/* AI Document Analysis Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs font-600 text-muted-foreground uppercase tracking-widest px-3">
+              AI Document Intelligence
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <CollateralDocumentAnalysis />
+        </div>
+
       </div>
     </div>
   );
