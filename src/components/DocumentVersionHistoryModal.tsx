@@ -44,7 +44,7 @@ export default function DocumentVersionHistoryModal({
   const [rollbackError, setRollbackError] = useState('');
   const [rollbackSuccess, setRollbackSuccess] = useState('');
 
-  const sorted = [...docs].sort((a, b) => b.version - a.version);
+  const sorted = [...(docs ?? [])].sort((a, b) => b.version - a.version);
   const latestVersion = sorted[0]?.version ?? currentVersion;
 
   const loadAudit = async () => {
