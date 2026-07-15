@@ -231,6 +231,34 @@ export const archivePlacementService = {
     }));
   },
 
+  async getByLocation(locationId: string): Promise<ArchivePlacement[]> {
+    const { data, error } = await supabase
+      .from('archive_placements')
+      .select(`
+        *,
+        collateral_records(id, collateral_type, description, owner_name),
+        archive_locations(id, name, code, location_type),
+        placed_by_profile:user_profiles!archive_placements_placed_by_fkey(full_name)
+      `)
+      .eq('location_id', locationId)
+      .order('placed_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map((r) => ({
+      id: r.id,
+      collateralId: r.collateral_id,
+      locationId: r.location_id,
+      physicalRef: r.physical_ref,
+      electronicRecordUrl: r.electronic_record_url,
+      notes: r.notes,
+      placedBy: r.placed_by,
+      placedAt: r.placed_at,
+      updatedAt: r.updated_at,
+      collateral: r.collateral_records as ArchivePlacement['collateral'],
+      location: r.archive_locations ? mapLocation(r.archive_locations as Record<string, unknown>) : undefined,
+      placedByProfile: r.placed_by_profile as ArchivePlacement['placedByProfile'],
+    }));
+  },
+
   async upsert(payload: {
     collateralId: string; locationId: string; physicalRef?: string;
     electronicRecordUrl?: string; notes?: string; placedBy: string;
