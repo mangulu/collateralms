@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Library, Search, RefreshCw, AlertCircle, FileText, FileImage, FileType2, File, Download, Clock, Link2, Filter,  } from 'lucide-react';
+import { Library, Search, RefreshCw, AlertCircle, FileText, FileImage, FileType2, File, Download, Clock, Link2, Filter } from 'lucide-react';
 import { documentService, CollateralDocument } from '@/lib/supabase/documentService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import DocumentVersionHistoryModal from '@/components/DocumentVersionHistoryModal';
@@ -34,6 +34,7 @@ export default function DocumentsLibraryContent() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [versionDoc, setVersionDoc] = useState<CollateralDocument | null>(null);
+  const [versionDocs, setVersionDocs] = useState<CollateralDocument[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,14 +52,29 @@ export default function DocumentsLibraryContent() {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleOpenVersionHistory = async (doc: CollateralDocument) => {
+    setVersionDoc(doc);
+    try {
+      const allVersions = await documentService.getByCollateralId(doc.collateralRecordId);
+      const sameFile = allVersions.filter((d) => d.fileName === doc.fileName);
+      setVersionDocs(sameFile.length > 0 ? sameFile : [doc]);
+    } catch {
+      setVersionDocs([doc]);
+    }
+  };
+
+  // collateralService returns camelCase; build a map by id
   const collateralMap = Object.fromEntries(collaterals.map((c) => [c.id, c]));
-  const docTypes = Array.from(new Set(documents.map((d) => d.document_type)));
+  const docTypes = Array.from(new Set(documents.map((d) => d.documentType)));
 
   const filtered = documents.filter((d) => {
     const q = search.toLowerCase();
-    const col = collateralMap[d.collateral_id];
-    const matchSearch = !q || d.file_name?.toLowerCase().includes(q) || col?.owner_name?.toLowerCase().includes(q) || d.document_type?.toLowerCase().includes(q);
-    const matchType = typeFilter === 'all' || d.document_type === typeFilter;
+    const col = collateralMap[d.collateralId];
+    const matchSearch = !q
+      || d.fileName?.toLowerCase().includes(q)
+      || col?.obligor?.toLowerCase().includes(q)
+      || d.documentType?.toLowerCase().includes(q);
+    const matchType = typeFilter === 'all' || d.documentType === typeFilter;
     return matchSearch && matchType;
   });
 
@@ -79,7 +95,7 @@ export default function DocumentsLibraryContent() {
         {[
           { label: 'Total Documents', value: documents.length, color: '#1D4ED8' },
           { label: 'Document Types', value: docTypes.length, color: '#15803D' },
-          { label: 'Collaterals Covered', value: new Set(documents.map((d) => d.collateral_id)).size, color: '#7E22CE' },
+          { label: 'Collaterals Covered', value: new Set(documents.map((d) => d.collateralId)).size, color: '#7E22CE' },
           { label: 'With Notes', value: documents.filter((d) => d.notes).length, color: '#B45309' },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
@@ -128,40 +144,40 @@ export default function DocumentsLibraryContent() {
       ) : (
         <div className="space-y-2">
           {filtered.map((doc) => {
-            const col = collateralMap[doc.collateral_id];
+            const col = collateralMap[doc.collateralId];
             return (
               <div key={doc.id} className="flex items-center gap-4 p-4 rounded-xl group"
                 style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#EFF6FF' }}>
-                  {getFileIcon(doc.mime_type ?? '')}
+                  {getFileIcon(doc.mimeType ?? '')}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>{doc.file_name}</p>
+                    <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>{doc.fileName}</p>
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
-                      {doc.document_type}
+                      {doc.documentType}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                     {col && (
                       <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
-                        <Link2 size={11} /> {col.collateral_type} — {col.owner_name}
+                        <Link2 size={11} /> {col.type} — {col.obligor}
                       </span>
                     )}
-                    <span className="text-xs" style={{ color: '#9CA3AF' }}>{formatFileSize(doc.file_size ?? 0)}</span>
+                    <span className="text-xs" style={{ color: '#9CA3AF' }}>{formatFileSize(doc.fileSize ?? 0)}</span>
                     <span className="flex items-center gap-1 text-xs" style={{ color: '#9CA3AF' }}>
-                      <Clock size={11} /> {formatDate(doc.created_at)}
+                      <Clock size={11} /> {formatDate(doc.createdAt)}
                     </span>
                   </div>
                 </div>
                 <div className="flex gap-1.5 shrink-0">
-                  <button onClick={() => setVersionDoc(doc)}
+                  <button onClick={() => handleOpenVersionHistory(doc)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium opacity-0 group-hover:opacity-100 transition-all"
                     style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
                     <Clock size={12} /> History
                   </button>
-                  {doc.file_url && (
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                  {doc.signedUrl && (
+                    <a href={doc.signedUrl} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium opacity-0 group-hover:opacity-100 transition-all"
                       style={{ backgroundColor: '#F0FDF4', color: '#15803D' }}>
                       <Download size={12} /> Download
@@ -176,8 +192,15 @@ export default function DocumentsLibraryContent() {
 
       {versionDoc && (
         <DocumentVersionHistoryModal
-          document={versionDoc}
-          onClose={() => setVersionDoc(null)}
+          docs={versionDocs.length > 0 ? versionDocs : [versionDoc]}
+          fileName={versionDoc.fileName}
+          collateralRecordId={versionDoc.collateralRecordId}
+          currentVersion={versionDoc.version}
+          onClose={() => { setVersionDoc(null); setVersionDocs([]); }}
+          onDownload={(d) => { if (d.signedUrl) window.open(d.signedUrl, '_blank'); }}
+          onRollbackComplete={() => { setVersionDoc(null); setVersionDocs([]); load(); }}
+          userId={user?.id ?? ''}
+          userName={user?.email ?? ''}
         />
       )}
     </div>

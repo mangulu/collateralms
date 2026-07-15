@@ -63,7 +63,7 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
               style={{ borderColor: '#D1D5DB' }}>
               <option value="">Select collateral…</option>
               {collaterals.map((c) => (
-                <option key={c.id} value={c.id}>{c.collateral_type} — {c.owner_name}</option>
+                <option key={c.id} value={c.id}>{c.type} — {c.obligor}</option>
               ))}
             </select>
           </div>
