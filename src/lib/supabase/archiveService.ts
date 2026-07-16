@@ -210,8 +210,7 @@ export const archivePlacementService = {
       .select(`
         *,
         collateral_records(id, collateral_type, description, owner_name),
-        archive_locations(id, name, code, location_type),
-        placed_by_profile:user_profiles!archive_placements_placed_by_fkey(full_name)
+        archive_locations(id, name, code, location_type)
       `)
       .order('placed_at', { ascending: false });
     if (error) throw error;
@@ -227,7 +226,7 @@ export const archivePlacementService = {
       updatedAt: r.updated_at,
       collateral: r.collateral_records as ArchivePlacement['collateral'],
       location: r.archive_locations ? mapLocation(r.archive_locations as Record<string, unknown>) : undefined,
-      placedByProfile: r.placed_by_profile as ArchivePlacement['placedByProfile'],
+      placedByProfile: undefined,
     }));
   },
 
@@ -237,8 +236,7 @@ export const archivePlacementService = {
       .select(`
         *,
         collateral_records(id, collateral_type, description, owner_name),
-        archive_locations(id, name, code, location_type),
-        placed_by_profile:user_profiles!archive_placements_placed_by_fkey(full_name)
+        archive_locations(id, name, code, location_type)
       `)
       .eq('location_id', locationId)
       .order('placed_at', { ascending: false });
@@ -255,7 +253,7 @@ export const archivePlacementService = {
       updatedAt: r.updated_at,
       collateral: r.collateral_records as ArchivePlacement['collateral'],
       location: r.archive_locations ? mapLocation(r.archive_locations as Record<string, unknown>) : undefined,
-      placedByProfile: r.placed_by_profile as ArchivePlacement['placedByProfile'],
+      placedByProfile: undefined,
     }));
   },
 
