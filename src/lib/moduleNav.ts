@@ -12,7 +12,7 @@ import {
   DatabaseZap, ClipboardList, ScrollText, UserCheck, BookOpen, ShieldCheck, Radio, Scale,
   Users, KeyRound, Settings, Landmark,
   Archive, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
-  MailCheck, History,
+  MailCheck, History, BadgeCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -61,6 +61,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Operations',
         items: [
           { label: 'Approval Inbox', icon: MailCheck, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Approval Workflow', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Batch Release', icon: Unlock, href: '/batch-release', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Bulk Upload', icon: Upload, href: '/bulk-upload', permission: PERMISSIONS.COLLATERAL_EDIT },
@@ -208,6 +209,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-library': 'collaterals',
   '/document-management': 'collaterals',
   '/collateral-history': 'collaterals',
+  '/document-approval': 'collaterals',
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'collaterals',
