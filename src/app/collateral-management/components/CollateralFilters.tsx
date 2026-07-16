@@ -7,21 +7,22 @@ interface CollateralFiltersProps {
   filters: FilterState;
   onChange: (f: FilterState) => void;
   onClear: () => void;
+  collateralTypes?: string[];
+  registries?: string[];
+  officers?: string[];
 }
 
-const collateralTypes = [
-  'Mortgage', 'Debenture', 'Motor Vehicle', 'Shares (DSE)', 'FDR', 'Guarantee', 'Ship/Vessel',
-];
 const statuses = [
   'Draft', 'Submitted', 'Under Review', 'Perfected', 'Monitoring', 'Released', 'Overdue', 'Rejected',
 ];
-const registries = ['BRELA', 'Lands Registry', 'TRA', 'DSE', 'TASAC', 'N/A'];
-const officers = ['J. Kamau', 'A. Mwangi', 'P. Ochieng', 'S. Ndege'];
 
 export default function CollateralFilters({
   filters,
   onChange,
   onClear,
+  collateralTypes = [],
+  registries = [],
+  officers = [],
 }: CollateralFiltersProps) {
   const set = (key: keyof FilterState, value: string) =>
     onChange({ ...filters, [key]: value });
