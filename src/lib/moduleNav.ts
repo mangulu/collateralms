@@ -200,9 +200,24 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
 ];
 
 /**
+ * Secondary paths that are not listed as nav items but belong to a module.
+ * Maps path prefixes → module id.
+ */
+const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
+  '/collateral-detail': 'collaterals',
+  '/collateral-library': 'collaterals',
+  '/document-management': 'collaterals',
+  '/collateral-history': 'collaterals',
+  '/user-guide': 'administration',
+  '/admin': 'administration',
+  '/approval-inbox': 'collaterals',
+};
+
+/**
  * Given a pathname, return the module id it belongs to.
  */
 export function getModuleForPath(pathname: string): string | null {
+  // First: check exact nav item matches (including sub-paths)
   for (const mod of MODULE_DEFINITIONS) {
     for (const group of mod.groups) {
       for (const item of group.items) {
@@ -213,5 +228,13 @@ export function getModuleForPath(pathname: string): string | null {
       }
     }
   }
+
+  // Second: check secondary path map for detail/sub pages not in nav
+  for (const [prefix, moduleId] of Object.entries(SECONDARY_PATH_MODULE_MAP)) {
+    if (pathname === prefix || pathname.startsWith(prefix + '/')) {
+      return moduleId;
+    }
+  }
+
   return null;
 }
