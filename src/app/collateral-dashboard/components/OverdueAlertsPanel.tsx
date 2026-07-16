@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Clock, ChevronRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { dashboardService, CollateralRecord } from '@/lib/supabase/collateralService';
+import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 
 const registryBadgeColors: Record<string, string> = {
   BRELA: 'bg-blue-100 text-blue-700',
@@ -17,7 +18,7 @@ export default function OverdueAlertsPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadOverdue = () => {
     dashboardService.getOverdueItems().then((data) => {
       setOverdueItems(data);
       setIsLoading(false);
@@ -25,7 +26,18 @@ export default function OverdueAlertsPanel() {
       setError('Failed to load overdue items.');
       setIsLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadOverdue();
   }, []);
+
+  // Real-time: refresh whenever a collateral record changes
+  useCollateralRealtime({
+    onCollateralChange: () => {
+      dashboardService.getOverdueItems().then((data) => setOverdueItems(data)).catch(() => {});
+    },
+  });
 
   return (
     <div className="bg-white rounded-xl shadow-card border border-border overflow-hidden">

@@ -11,6 +11,7 @@ import {
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 
 const ACCEPTED_TYPES = [
   'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
@@ -306,6 +307,19 @@ export default function CollateralPlacementContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Real-time: silently refresh placements and collateral when any officer updates them
+  useCollateralRealtime({
+    onPlacementChange: () => {
+      archivePlacementService.getAll().then((data) => setPlacements(data)).catch(() => {});
+    },
+    onCollateralChange: () => {
+      collateralService.getAll().then((data) => setCollaterals(data)).catch(() => {});
+    },
+    onDocumentChange: () => {
+      archivePlacementService.getAll().then((data) => setPlacements(data)).catch(() => {});
+    },
+  });
 
   const filtered = placements.filter((p) => {
     const q = search.toLowerCase();
