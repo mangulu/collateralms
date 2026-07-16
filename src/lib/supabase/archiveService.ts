@@ -289,8 +289,8 @@ export const archiveRequestService = {
       .select(`
         *,
         collateral_records(id, collateral_type, description, owner_name),
-        requested_by_profile:user_profiles!archive_requests_requested_by_fkey(full_name, email),
-        approved_by_profile:user_profiles!archive_requests_approved_by_fkey(full_name)
+        requested_by_profile:user_profiles!requested_by(full_name, email),
+        approved_by_profile:user_profiles!approved_by(full_name)
       `)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -389,7 +389,7 @@ export const archiveCustodyService = {
       .select(`
         *,
         collateral_records(id, collateral_type, description, owner_name),
-        checked_out_by_profile:user_profiles!archive_custody_checked_out_by_fkey(full_name)
+        checked_out_by_profile:user_profiles!checked_out_by(full_name)
       `)
       .order('updated_at', { ascending: false });
     if (error) throw error;
@@ -437,7 +437,7 @@ export const archiveAuditService = {
       .select(`
         *,
         collateral_records(collateral_type, description),
-        performed_by_profile:user_profiles!archive_audit_log_performed_by_fkey(full_name),
+        performed_by_profile:user_profiles!performed_by(full_name),
         archive_locations(name, code)
       `)
       .order('created_at', { ascending: false })
