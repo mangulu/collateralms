@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MapPin, Plus, Search, RefreshCw, AlertCircle, Link2, Package, Edit2,
+  Upload, FileText, X, Loader2, Paperclip,
 } from 'lucide-react';
 import {
   archivePlacementService, archiveLocationService, archiveAuditService,
@@ -9,6 +10,20 @@ import {
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
+import { createClient } from '@/lib/supabase/client';
+
+const ACCEPTED_TYPES = [
+  'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface AssignModalProps {
   collaterals: CollateralRecord[];
@@ -27,26 +42,110 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Document upload state
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // If editing and there's already an electronic record, show it
+  const existingDocUrl = existing?.electronicRecordUrl ?? null;
+
   const slots = locations.filter((l) => l.locationType === 'slot');
+
+  const validateFile = (file: File): string | null => {
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      return 'Unsupported file type. Use PDF, JPG, PNG, or DOCX.';
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      return 'File exceeds 10 MB limit.';
+    }
+    return null;
+  };
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const err = validateFile(file);
+    if (err) { setFileError(err); return; }
+    setFileError('');
+    setPendingFile(file);
+  }, []);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validateFile(file);
+    if (err) { setFileError(err); return; }
+    setFileError('');
+    setPendingFile(file);
+    e.target.value = '';
+  };
+
+  const uploadFileToStorage = async (file: File, collId: string): Promise<string | null> => {
+    const supabase = createClient();
+    const timestamp = Date.now();
+    const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const safeCollId = collId.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `placements/${safeCollId}/${timestamp}_${safeFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('collateral-documents')
+      .upload(filePath, file, { upsert: false });
+
+    if (uploadError) {
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+
+    const { data: urlData } = await supabase.storage
+      .from('collateral-documents')
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1-year signed URL
+
+    return urlData?.signedUrl ?? null;
+  };
 
   const handleSave = async () => {
     if (!collateralId || !locationId) { setError('Collateral and location are required.'); return; }
     setSaving(true);
+    setUploading(!!pendingFile);
     try {
-      await archivePlacementService.upsert({ collateralId, locationId, physicalRef, notes, placedBy: userId });
+      let electronicRecordUrl: string | undefined = existing?.electronicRecordUrl ?? undefined;
+
+      if (pendingFile) {
+        const url = await uploadFileToStorage(pendingFile, collateralId);
+        if (url) electronicRecordUrl = url;
+      }
+
+      await archivePlacementService.upsert({
+        collateralId,
+        locationId,
+        physicalRef,
+        electronicRecordUrl,
+        notes,
+        placedBy: userId,
+      });
       await archiveAuditService.log({
-        eventType: 'placement_assigned', collateralId, locationId, performedBy: userId,
-        description: `Collateral assigned to location`,
+        eventType: 'placement_assigned',
+        collateralId,
+        locationId,
+        performedBy: userId,
+        description: `Collateral assigned to location${pendingFile ? ' with supporting document' : ''}`,
       });
       onSaved();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to save');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+      setUploading(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-base font-bold mb-4" style={{ color: '#1E3A8A' }}>
           {existing ? 'Update Placement' : 'Assign Physical Location'}
         </h3>
@@ -90,13 +189,86 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               style={{ borderColor: '#D1D5DB' }} />
           </div>
+
+          {/* ── Supporting Document Upload ── */}
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+              Supporting Document
+              <span className="ml-1 font-normal text-gray-400">(deed, certificate, agreement…)</span>
+            </label>
+
+            {/* Existing document link */}
+            {existingDocUrl && !pendingFile && (
+              <div className="flex items-center gap-2 mb-2 p-2 rounded-lg text-xs"
+                style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+                <Link2 size={12} style={{ color: '#2563EB' }} />
+                <span style={{ color: '#1D4ED8' }} className="font-medium">Electronic record linked</span>
+                <a href={existingDocUrl} target="_blank" rel="noopener noreferrer"
+                  className="ml-auto underline" style={{ color: '#2563EB' }}>View</a>
+              </div>
+            )}
+
+            {pendingFile ? (
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border"
+                style={{ backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }}>
+                <FileText size={14} style={{ color: '#15803D' }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate" style={{ color: '#166534' }}>{pendingFile.name}</p>
+                  <p className="text-xs" style={{ color: '#4ADE80' }}>{formatFileSize(pendingFile.size)}</p>
+                </div>
+                <button type="button" onClick={() => setPendingFile(null)}
+                  className="p-1 rounded hover:bg-green-100 transition-colors">
+                  <X size={13} style={{ color: '#15803D' }} />
+                </button>
+              </div>
+            ) : (
+              <div
+                onDrop={handleFileDrop}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors"
+                style={{
+                  borderColor: dragOver ? '#2563EB' : '#D1D5DB',
+                  backgroundColor: dragOver ? '#EFF6FF' : '#FAFAFA',
+                }}>
+                <Upload size={16} className="mx-auto mb-1.5" style={{ color: '#9CA3AF' }} />
+                <p className="text-xs font-medium" style={{ color: '#6B7280' }}>
+                  Drag & drop or <span style={{ color: '#2563EB' }}>click to browse</span>
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>PDF, JPG, PNG, DOCX — max 10 MB</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  className="hidden"
+                  onChange={handleFileInput}
+                />
+              </div>
+            )}
+
+            {fileError && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-xs" style={{ color: '#DC2626' }}>
+                <AlertCircle size={12} /> {fileError}
+              </div>
+            )}
+          </div>
         </div>
+
         <div className="flex gap-2 mt-5">
-          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: '#D1D5DB', color: '#374151' }}>Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border"
+            style={{ borderColor: '#D1D5DB', color: '#374151' }}>
+            Cancel
+          </button>
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-2 rounded-lg text-sm font-medium text-white"
+            className="flex-1 py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
             style={{ backgroundColor: '#2563EB', opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                {uploading ? 'Uploading…' : 'Saving…'}
+              </>
+            ) : 'Save'}
           </button>
         </div>
       </div>
@@ -222,9 +394,10 @@ export default function CollateralPlacementContent() {
                     </span>
                   )}
                   {p.electronicRecordUrl && (
-                    <span className="flex items-center gap-1 text-xs" style={{ color: '#15803D' }}>
-                      <Link2 size={11} /> Electronic linked
-                    </span>
+                    <a href={p.electronicRecordUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs hover:underline" style={{ color: '#15803D' }}>
+                      <Paperclip size={11} /> Document attached
+                    </a>
                   )}
                 </div>
               </div>
