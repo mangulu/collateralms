@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send, TrendingUp, TrendingDown, Minus, BarChart2, Timer, Layers } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send, TrendingUp, TrendingDown, Minus, BarChart2, Timer, Layers, Sparkles, ShieldAlert, ListChecks, FileText } from 'lucide-react';
 import { perfectionService, PerfectionRequest, PerfectionRequestStatus } from '@/lib/supabase/perfectionService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
+import { classifyCollateralDocument, DocumentClassificationResult } from '@/lib/ai/documentClassificationService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,165 @@ function CollateralDetailPanel({ collateralId }: { collateralId: string }) {
           <span className="text-gray-800 font-medium mt-0.5">{value ?? '—'}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── Document Classification Panel ───────────────────────────────────────────
+
+interface DocumentClassificationPanelProps {
+  collateralId: string;
+  collateralType: string;
+  obligor: string;
+  registry: string;
+}
+
+const CONFIDENCE_CONFIG: Record<string, { textColor: string; bgColor: string; borderColor: string }> = {
+  High:   { textColor: 'text-green-700',  bgColor: 'bg-green-50',  borderColor: 'border-green-200' },
+  Medium: { textColor: 'text-amber-700',  bgColor: 'bg-amber-50',  borderColor: 'border-amber-200' },
+  Low:    { textColor: 'text-red-700',    bgColor: 'bg-red-50',    borderColor: 'border-red-200' },
+};
+
+function DocumentClassificationPanel({ collateralId, collateralType, obligor, registry }: DocumentClassificationPanelProps) {
+  const [result, setResult] = useState<DocumentClassificationResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ran, setRan] = useState(false);
+
+  const runClassification = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const classification = await classifyCollateralDocument(
+        collateralId,
+        collateralType,
+        obligor,
+        registry
+      );
+      setResult(classification);
+    } catch (e: any) {
+      setError('Classification failed. Please try again.');
+    } finally {
+      setLoading(false);
+      setRan(true);
+    }
+  }, [collateralId, collateralType, obligor, registry]);
+
+  const confidenceCfg = result ? (CONFIDENCE_CONFIG[result.confidence] ?? CONFIDENCE_CONFIG['Medium']) : null;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Panel Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-50 to-blue-50 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+            <Sparkles size={14} className="text-violet-600" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-800">AI Document Classification</p>
+            <p className="text-xs text-gray-500">Powered by OpenAI</p>
+          </div>
+        </div>
+        {!loading && (
+          <button
+            onClick={runClassification}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-violet-700 bg-violet-100 hover:bg-violet-200 rounded-lg transition-colors"
+          >
+            <Sparkles size={12} />
+            {ran ? 'Re-classify' : 'Classify Document'}
+          </button>
+        )}
+        {loading && (
+          <div className="flex items-center gap-1.5 text-xs text-violet-600">
+            <Loader2 size={13} className="animate-spin" />
+            Classifying…
+          </div>
+        )}
+      </div>
+
+      {/* Panel Body */}
+      <div className="px-4 py-3">
+        {!ran && !loading && (
+          <p className="text-xs text-gray-400 italic py-2">
+            Click <strong>Classify Document</strong> to automatically identify the document type and required verification steps for this collateral.
+          </p>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <AlertCircle size={13} />
+            {error}
+          </div>
+        )}
+
+        {result && !loading && (
+          <div className="space-y-3">
+            {/* Document Type + Confidence */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <FileText size={15} className="text-violet-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Document Type</p>
+                  <p className="text-sm font-bold text-gray-900 mt-0.5">{result.documentType}</p>
+                </div>
+              </div>
+              {confidenceCfg && (
+                <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${confidenceCfg.textColor} ${confidenceCfg.bgColor} ${confidenceCfg.borderColor}`}>
+                  {result.confidence} Confidence
+                </span>
+              )}
+            </div>
+
+            {/* Description */}
+            <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+              {result.description}
+            </p>
+
+            {/* Required Actions */}
+            {result.requiredActions.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <ListChecks size={13} className="text-blue-500" />
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Required Verification Steps</p>
+                </div>
+                <ul className="space-y-1">
+                  {result.requiredActions.map((action, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-gray-700">
+                      <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0 mt-0.5 text-[10px]">{i + 1}</span>
+                      {action}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Risk Flags */}
+            {result.riskFlags.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <ShieldAlert size={13} className="text-amber-500" />
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Risk Flags</p>
+                </div>
+                <ul className="space-y-1">
+                  {result.riskFlags.map((flag, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5">
+                      <AlertCircle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                      {flag}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {result.riskFlags.length === 0 && (
+              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
+                <CheckCircle size={12} className="text-green-500" />
+                No risk flags identified for this document type.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -327,6 +487,20 @@ function RequestRow({ request, expanded, onToggle, onAction, canAct }: RequestRo
               <div className="bg-white rounded-xl border border-gray-200 p-4">
                 <CollateralDetailPanel collateralId={request.collateralId} />
               </div>
+            </div>
+
+            {/* AI Document Classification */}
+            <div>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <Sparkles size={12} />
+                Document Classification
+              </h4>
+              <DocumentClassificationPanel
+                collateralId={request.collateralId}
+                collateralType={request.collateralType}
+                obligor={request.obligor}
+                registry={request.registry}
+              />
             </div>
 
             {/* Action Buttons */}
