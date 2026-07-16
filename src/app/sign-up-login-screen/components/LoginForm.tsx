@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Copy, CheckCircle2, AlertCircle, Smartphone, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -14,36 +14,12 @@ interface LoginFormData {
   rememberMe: boolean;
 }
 
-const mockCredentials = [
-  {
-    role: 'Credit Officer',
-    email: 'j.kamau@eximbank.co.tz',
-    password: 'CreditOfficer@2026',
-    initials: 'JK',
-    description: 'Create & edit collateral records',
-  },
-  {
-    role: 'Legal Officer',
-    email: 'a.mwangi@eximbank.co.tz',
-    password: 'LegalOfficer@2026',
-    initials: 'AM',
-    description: 'Approve & manage perfection workflows',
-  },
-  {
-    role: 'System Admin',
-    email: 'admin@eximbank.co.tz',
-    password: 'SysAdmin@2026',
-    initials: 'SA',
-    description: 'Full system control & user management',
-  },
-];
 
 export default function LoginForm() {
   const router = useRouter();
   const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // 2FA state
   const [twoFARequired, setTwoFARequired] = useState(false);
@@ -86,8 +62,7 @@ export default function LoginForm() {
         return;
       }
 
-      const cred = mockCredentials.find((c) => c.email === data.email);
-      toast.success(`Welcome back${cred ? ` — signed in as ${cred.role}` : ''}`);
+      toast.success(`Welcome back`);
       router.push('/module-hub');
       router.refresh();
     } catch (err: any) {
@@ -152,18 +127,6 @@ export default function LoginForm() {
     } finally {
       setOtpLoading(false);
     }
-  };
-
-  const autofill = (email: string, password: string) => {
-    setValue('email', email);
-    setValue('password', password);
-    toast.info('Credentials autofilled — click Sign In to continue');
-  };
-
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(key);
-    setTimeout(() => setCopiedField(null), 2000);
   };
 
   // 2FA verification screen
@@ -358,50 +321,6 @@ export default function LoginForm() {
                 )}
               </button>
             </form>
-
-            {/* Demo credentials */}
-            <div className="mt-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex-1 h-px bg-border" />
-                <p className="text-xs text-muted-foreground font-medium">Demo Credentials</p>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              <div className="space-y-2">
-                {mockCredentials.map((cred) => (
-                  <div
-                    key={cred.role}
-                    className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
-                  >
-                    <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <span className="text-white text-[10px] font-bold">{cred.initials}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{cred.role}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{cred.email}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => copyToClipboard(cred.password, `${cred.role}-pw`)}
-                        className="p-1.5 rounded hover:bg-muted transition-colors"
-                        title="Copy password"
-                      >
-                        {copiedField === `${cred.role}-pw` ? (
-                          <CheckCircle2 size={13} className="text-green-600" />
-                        ) : (
-                          <Copy size={13} className="text-muted-foreground" />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => autofill(cred.email, cred.password)}
-                        className="px-2 py-1 text-[10px] font-semibold bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
-                      >
-                        Use
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Footer */}
