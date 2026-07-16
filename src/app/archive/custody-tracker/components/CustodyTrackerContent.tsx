@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<CustodyStatus, { label: string; bg: string; text: st
 };
 
 async function sendOverdueSmsReminder(custody: ArchiveCustody, userId: string): Promise<void> {
-  const message = `[CollateralMS] OVERDUE NOTICE: Physical file for collateral "${custody.collateral?.collateral_type ?? ''} — ${custody.collateral?.owner_name ?? ''}" is overdue for return. Please return immediately. Ref: ${custody.collateralId.slice(0, 8).toUpperCase()}`;
+  const message = `[CollateralMS] OVERDUE NOTICE: Physical file for collateral "${custody.collateral?.collateral_type ?? ''} — ${custody.collateral?.obligor ?? ''}" is overdue for return. Please return immediately. Ref: ${custody.collateralId.slice(0, 8).toUpperCase()}`;
   await fetch('/api/sms/send-alert', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -63,7 +63,7 @@ export default function CustodyTrackerContent() {
 
   const filtered = custody.filter((c) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || c.collateral?.owner_name?.toLowerCase().includes(q) || c.collateral?.description?.toLowerCase().includes(q);
+    const matchSearch = !q || c.collateral?.obligor?.toLowerCase().includes(q) || c.collateral?.description?.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' || c.currentStatus === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -155,7 +155,7 @@ export default function CustodyTrackerContent() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
-                      {c.collateral?.collateral_type ?? 'Unknown'} — {c.collateral?.owner_name ?? '—'}
+                      {c.collateral?.collateral_type ?? 'Unknown'} — {c.collateral?.obligor ?? '—'}
                     </p>
                     <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
                       {sc.label}

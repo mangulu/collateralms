@@ -206,7 +206,7 @@ function SlotContentsPanel({ slot, userId, onClose, onRefreshTree }: SlotContent
                       {p.collateral?.description ?? 'Unnamed Collateral'}
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
-                      {p.collateral?.collateral_type ?? '—'} · {p.collateral?.owner_name ?? '—'}
+                      {p.collateral?.collateral_type ?? '—'} · {p.collateral?.obligor ?? '—'}
                     </p>
                     {p.physicalRef && (
                       <p className="text-xs mt-0.5 font-mono" style={{ color: '#9CA3AF' }}>Ref: {p.physicalRef}</p>

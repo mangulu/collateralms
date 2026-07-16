@@ -290,14 +290,16 @@ export default function CollateralPlacementContent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [p, c, l] = await Promise.all([
+      const [pResult, cResult, lResult] = await Promise.allSettled([
         archivePlacementService.getAll(),
         collateralService.getAll(),
         archiveLocationService.getAll(),
       ]);
-      setPlacements(p);
-      setCollaterals(c);
-      setLocations(l);
+      if (pResult.status === 'fulfilled') setPlacements(pResult.value);
+      if (cResult.status === 'fulfilled') setCollaterals(cResult.value);
+      else setError('Failed to load collateral records');
+      if (lResult.status === 'fulfilled') setLocations(lResult.value);
+      else setError((prev) => prev || 'Failed to load locations');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally { setLoading(false); }
@@ -309,7 +311,7 @@ export default function CollateralPlacementContent() {
     const q = search.toLowerCase();
     return (
       p.collateral?.description?.toLowerCase().includes(q) ||
-      p.collateral?.owner_name?.toLowerCase().includes(q) ||
+      p.collateral?.obligor?.toLowerCase().includes(q) ||
       p.location?.name?.toLowerCase().includes(q) ||
       p.physicalRef?.toLowerCase().includes(q)
     );
@@ -382,7 +384,7 @@ export default function CollateralPlacementContent() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>
-                  {p.collateral?.collateral_type ?? 'Unknown'} — {p.collateral?.owner_name ?? '—'}
+                  {p.collateral?.collateral_type ?? 'Unknown'} — {p.collateral?.obligor ?? '—'}
                 </p>
                 <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                   <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>

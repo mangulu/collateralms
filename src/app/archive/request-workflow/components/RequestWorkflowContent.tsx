@@ -133,7 +133,7 @@ function ActionModal({ request, action, userId, onClose, onDone }: ActionModalPr
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
         <h3 className="text-base font-bold mb-2" style={{ color: '#1E3A8A' }}>{titles[action]}</h3>
         <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
-          {request.collateral?.collateral_type} — {request.collateral?.owner_name}
+          {request.collateral?.collateral_type} — {request.collateral?.obligor}
         </p>
         {error && (
           <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-red-50 text-red-700 text-sm">
@@ -187,7 +187,7 @@ export default function RequestWorkflowContent() {
 
   const filtered = requests.filter((r) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || r.collateral?.owner_name?.toLowerCase().includes(q) || r.purpose.toLowerCase().includes(q);
+    const matchSearch = !q || r.collateral?.obligor?.toLowerCase().includes(q) || r.purpose.toLowerCase().includes(q);
     const matchStatus = statusFilter === 'all' || r.requestStatus === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -268,7 +268,7 @@ export default function RequestWorkflowContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
-                        {req.collateral?.collateral_type ?? 'Unknown'} — {req.collateral?.owner_name ?? '—'}
+                        {req.collateral?.collateral_type ?? 'Unknown'} — {req.collateral?.obligor ?? '—'}
                       </p>
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
                         {sc.label}

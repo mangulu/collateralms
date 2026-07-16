@@ -37,7 +37,7 @@ export interface ArchivePlacement {
   placedBy: string | null;
   placedAt: string;
   updatedAt: string;
-  collateral?: { id: string; collateral_type: string; description: string; owner_name: string };
+  collateral?: { id: string; collateral_type: string; description: string; obligor: string };
   location?: ArchiveLocation;
   placedByProfile?: { full_name: string };
 }
@@ -57,7 +57,7 @@ export interface ArchiveRequest {
   smsReminderSent: boolean;
   createdAt: string;
   updatedAt: string;
-  collateral?: { id: string; collateral_type: string; description: string; owner_name: string };
+  collateral?: { id: string; collateral_type: string; description: string; obligor: string };
   requestedByProfile?: { full_name: string; email: string };
   approvedByProfile?: { full_name: string };
 }
@@ -72,7 +72,7 @@ export interface ArchiveCustody {
   checkedOutBy: string | null;
   overdueSince: string | null;
   updatedAt: string;
-  collateral?: { id: string; collateral_type: string; description: string; owner_name: string };
+  collateral?: { id: string; collateral_type: string; description: string; obligor: string };
   checkedOutByProfile?: { full_name: string };
   currentRequest?: ArchiveRequest;
 }
@@ -209,7 +209,7 @@ export const archivePlacementService = {
       .from('archive_placements')
       .select(`
         *,
-        collateral_records(id, collateral_type, description, owner_name),
+        collateral_records(id, collateral_type, description, obligor),
         archive_locations(id, name, code, location_type)
       `)
       .order('placed_at', { ascending: false });
@@ -235,7 +235,7 @@ export const archivePlacementService = {
       .from('archive_placements')
       .select(`
         *,
-        collateral_records(id, collateral_type, description, owner_name),
+        collateral_records(id, collateral_type, description, obligor),
         archive_locations(id, name, code, location_type)
       `)
       .eq('location_id', locationId)
@@ -288,7 +288,7 @@ export const archiveRequestService = {
       .from('archive_requests')
       .select(`
         *,
-        collateral_records(id, collateral_type, description, owner_name),
+        collateral_records(id, collateral_type, description, obligor),
         requested_by_profile:user_profiles!requested_by(full_name, email),
         approved_by_profile:user_profiles!approved_by(full_name)
       `)
@@ -397,7 +397,7 @@ export const archiveCustodyService = {
         checked_out_by,
         overdue_since,
         updated_at,
-        collateral_records(id, collateral_type, description, owner_name)
+        collateral_records(id, collateral_type, description, obligor)
       `)
       .order('updated_at', { ascending: false });
     if (error) throw error;
