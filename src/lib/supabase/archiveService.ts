@@ -384,16 +384,38 @@ export const archiveRequestService = {
 
 export const archiveCustodyService = {
   async getAll(): Promise<ArchiveCustody[]> {
+    // Step 1: fetch custody records with collateral join only (no user_profiles FK join)
     const { data, error } = await supabase
       .from('archive_custody')
       .select(`
-        *,
-        collateral_records(id, collateral_type, description, owner_name),
-        checked_out_by_profile:user_profiles!checked_out_by(full_name)
+        id,
+        collateral_id,
+        current_status,
+        current_request_id,
+        last_checked_out_at,
+        last_returned_at,
+        checked_out_by,
+        overdue_since,
+        updated_at,
+        collateral_records(id, collateral_type, description, owner_name)
       `)
       .order('updated_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map((r) => ({
+
+    const rows = data || [];
+
+    // Step 2: collect unique checked_out_by UUIDs and fetch profiles separately
+    const userIds = [...new Set(rows.map((r) => r.checked_out_by).filter(Boolean))] as string[];
+    const profileMap: Record<string, { full_name: string }> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      (profiles || []).forEach((p) => { profileMap[p.id] = { full_name: p.full_name }; });
+    }
+
+    return rows.map((r) => ({
       id: r.id,
       collateralId: r.collateral_id,
       currentStatus: r.current_status as CustodyStatus,
@@ -404,7 +426,7 @@ export const archiveCustodyService = {
       overdueSince: r.overdue_since,
       updatedAt: r.updated_at,
       collateral: r.collateral_records as ArchiveCustody['collateral'],
-      checkedOutByProfile: r.checked_out_by_profile as ArchiveCustody['checkedOutByProfile'],
+      checkedOutByProfile: r.checked_out_by ? profileMap[r.checked_out_by] : undefined,
     }));
   },
 
