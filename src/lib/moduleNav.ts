@@ -12,7 +12,7 @@ import {
   DatabaseZap, ClipboardList, ScrollText, UserCheck, BookOpen, ShieldCheck, Radio, Scale,
   Users, KeyRound, Settings, Landmark,
   Archive, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
-  MailCheck, History, BadgeCheck,
+  MailCheck, History, BadgeCheck, CheckSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -23,6 +23,7 @@ export interface ModuleNavItem {
   badge?: string | null;
   badgeVariant?: 'default' | 'danger' | 'warning';
   permission?: string;
+  children?: ModuleNavItem[];
 }
 
 export interface ModuleNavGroup {
@@ -59,9 +60,18 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'Operations',
         items: [
-          { label: 'Approval Inbox', icon: MailCheck, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Approval Workflow', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
+          {
+            label: 'Approvals',
+            icon: CheckSquare,
+            href: '/approval-inbox',
+            permission: PERMISSIONS.PERFECTION_VIEW,
+            children: [
+              { label: 'Approval Inbox', icon: MailCheck, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
+              { label: 'Perfection Approval', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
+              { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+              { label: 'Release Approval', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+            ],
+          },
           { label: 'Batch Release', icon: Unlock, href: '/batch-release', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Bulk Upload', icon: Upload, href: '/bulk-upload', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Scheduled Jobs', icon: CalendarClock, href: '/scheduled-jobs', permission: PERMISSIONS.COLLATERAL_EDIT },
@@ -213,19 +223,29 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'collaterals',
+  '/perfection-workflow': 'collaterals',
+  '/release-approval': 'collaterals',
 };
 
 /**
  * Given a pathname, return the module id it belongs to.
  */
 export function getModuleForPath(pathname: string): string | null {
-  // First: check exact nav item matches (including sub-paths)
+  // First: check exact nav item matches (including sub-paths), including children
   for (const mod of MODULE_DEFINITIONS) {
     for (const group of mod.groups) {
       for (const item of group.items) {
         const itemPath = item.href.split('?')[0];
         if (pathname === itemPath || pathname.startsWith(itemPath + '/')) {
           return mod.id;
+        }
+        if (item.children) {
+          for (const child of item.children) {
+            const childPath = child.href.split('?')[0];
+            if (pathname === childPath || pathname.startsWith(childPath + '/')) {
+              return mod.id;
+            }
+          }
         }
       }
     }
