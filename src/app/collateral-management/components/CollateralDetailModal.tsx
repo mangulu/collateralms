@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Pencil,
   ExternalLink,
@@ -14,6 +14,12 @@ import {
   TrendingUp,
   Sparkles,
   History,
+  Files,
+  Download,
+  FileImage,
+  FileType2,
+  File,
+  RefreshCw,
 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
@@ -21,6 +27,7 @@ import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase
 import Icon from '@/components/ui/AppIcon';
 import ValuationHistoryTimeline from './ValuationHistoryTimeline';
 import AIRiskNarrative from './AIRiskNarrative';
+import { documentService, CollateralDocument } from '@/lib/supabase/documentService';
 
 
 interface CollateralDetailModalProps {
@@ -83,6 +90,127 @@ const perfectionTimeline = [
   { step: 'Perfection Confirmed', done: false },
 ];
 
+function getFileIcon(mimeType: string) {
+  if (mimeType?.includes('pdf')) return <FileType2 size={16} className="text-red-500" />;
+  if (mimeType?.includes('image')) return <FileImage size={16} className="text-blue-500" />;
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={16} className="text-indigo-500" />;
+  return <FileText size={16} className="text-slate-500" />;
+}
+
+function DocumentsTab({ collateral }: { collateral: Collateral }) {
+  const [docs, setDocs] = useState<CollateralDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadDocs = useCallback(async () => {
+    setLoading(true);
+    const data = await documentService.getByCollateralId(collateral.id);
+    setDocs(data);
+    setLoading(false);
+  }, [collateral.id]);
+
+  useEffect(() => { loadDocs(); }, [loadDocs]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw size={18} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (docs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+          <Files size={20} className="text-muted-foreground" />
+        </div>
+        <p className="text-sm font-500 text-foreground">No documents uploaded</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Documents can be uploaded from the Collateral Detail page.
+        </p>
+      </div>
+    );
+  }
+
+  // Group by document type
+  const docsByType = docs.reduce<Record<string, CollateralDocument[]>>((acc, doc) => {
+    const key = doc.documentType ?? 'Other';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(doc);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-muted-foreground">{docs.length} document{docs.length !== 1 ? 's' : ''} attached</p>
+      </div>
+      {Object.entries(docsByType).map(([docType, typeDocs]) => (
+        <div key={docType} className="rounded-lg border border-border/60 overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+            <FileText size={13} className="text-primary" />
+            <span className="text-xs font-600 text-foreground">{docType}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{typeDocs.length} file{typeDocs.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="divide-y divide-border/40">
+            {typeDocs.map((doc) => (
+              <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-muted/10 transition-colors">
+                <div className="w-7 h-7 rounded flex items-center justify-center shrink-0">
+                  {getFileIcon(doc.mimeType ?? '')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-500 text-foreground truncate">{doc.fileName}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-xs text-muted-foreground">v{doc.version}</span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                    {doc.uploadedByName && (
+                      <>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
+                      </>
+                    )}
+                  </div>
+                  {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {doc.signedUrl ? (
+                    <>
+                      <a
+                        href={doc.signedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors"
+                        title="View document"
+                      >
+                        <ExternalLink size={11} />
+                        View
+                      </a>
+                      <a
+                        href={doc.signedUrl}
+                        download={doc.fileName}
+                        className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors"
+                        title="Download document"
+                      >
+                        <Download size={11} />
+                        Download
+                      </a>
+                    </>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/50 italic">Unavailable</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function CollateralDetailModal({
   open,
   item,
@@ -90,7 +218,7 @@ export default function CollateralDetailModal({
   onEdit,
   onStatusChange,
 }: CollateralDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'details' | 'valuation' | 'ai-risk'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'documents' | 'valuation' | 'ai-risk'>('details');
 
   if (!item) return null;
 
@@ -134,6 +262,7 @@ export default function CollateralDetailModal({
 
   const tabs = [
     { id: 'details', label: 'Details', icon: FileText },
+    { id: 'documents', label: 'Documents', icon: Files },
     { id: 'valuation', label: 'Valuation History', icon: History },
     { id: 'ai-risk', label: 'AI Risk', icon: Sparkles },
   ] as const;
@@ -262,6 +391,11 @@ export default function CollateralDetailModal({
             </div>
           </div>
         </>
+      )}
+
+      {/* Tab: Documents */}
+      {activeTab === 'documents' && (
+        <DocumentsTab collateral={item} />
       )}
 
       {/* Tab: Valuation History */}
