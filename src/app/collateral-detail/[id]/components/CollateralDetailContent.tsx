@@ -53,6 +53,7 @@ import CollateralUtilizationTab from './CollateralUtilizationTab';
 import { legalSignOffService, LegalSignOff } from '@/lib/supabase/legalSignOffService';
 import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
 import QuickActionsPanel from './QuickActionsPanel';
+import CollateralHistoryTab from './CollateralHistoryTab';
 
 
 
@@ -1265,7 +1266,7 @@ export default function CollateralDetailContent({
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history'>('profile');
   const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
 
   useEffect(() => {
@@ -1414,10 +1415,11 @@ export default function CollateralDetailContent({
           { key: 'profile', label: 'Profile', icon: Shield },
           { key: 'charges', label: 'Charges & Loans', icon: PieChart },
           { key: 'documents', label: 'Documents & History', icon: Files },
+          { key: 'history', label: 'History', icon: History },
         ].map(tab => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents')}
+            onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history')}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${
               activeTab === tab.key
                 ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
@@ -1578,6 +1580,11 @@ export default function CollateralDetailContent({
           <LegalSignOffSection collateral={collateral} />
           <AuditTrailSection collateral={collateral} />
         </div>
+      )}
+
+      {/* ── Tab: History ── */}
+      {activeTab === 'history' && (
+        <CollateralHistoryTab collateral={collateral} />
       )}
 
       {/* Edit Modal */}

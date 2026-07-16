@@ -54,7 +54,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Collateral Registry', icon: FolderOpen, href: '/collateral-management', badge: '3', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Loan–Collateral Map', icon: GitMerge, href: '/collateral-loan-visualization', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Collateral Documents', icon: Files, href: '/collateral-documents', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Collateral History', icon: History, href: '/collateral-history', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
