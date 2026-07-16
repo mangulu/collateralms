@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send, TrendingUp, TrendingDown, Minus, BarChart2, Timer, Layers } from 'lucide-react';
 import { perfectionService, PerfectionRequest, PerfectionRequestStatus } from '@/lib/supabase/perfectionService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -369,6 +369,214 @@ function RequestRow({ request, expanded, onToggle, onAction, canAct }: RequestRo
   );
 }
 
+// ─── KPI Cards ────────────────────────────────────────────────────────────────
+
+interface KPICardsProps {
+  requests: PerfectionRequest[];
+}
+
+function computeAvgApprovalHours(requests: PerfectionRequest[]): number | null {
+  const withBoth = requests.filter(
+    (r) => r.submittedAt && r.reviewedAt
+  );
+  if (withBoth.length === 0) return null;
+  const totalMs = withBoth.reduce((sum, r) => {
+    return sum + (new Date(r.reviewedAt!).getTime() - new Date(r.submittedAt!).getTime());
+  }, 0);
+  return totalMs / withBoth.length / (1000 * 60 * 60);
+}
+
+function computeSLACompliance(requests: PerfectionRequest[]): number {
+  if (requests.length === 0) return 100;
+  const compliant = requests.filter((r) => {
+    const d = daysUntil(r.perfectionDeadline);
+    return d === null || d >= 0;
+  }).length;
+  return Math.round((compliant / requests.length) * 100);
+}
+
+interface BottleneckEntry {
+  type: string;
+  count: number;
+  highPriority: number;
+}
+
+function computeBottlenecks(requests: PerfectionRequest[]): BottleneckEntry[] {
+  const map: Record<string, BottleneckEntry> = {};
+  for (const r of requests) {
+    const t = r.collateralType || 'Unknown';
+    if (!map[t]) map[t] = { type: t, count: 0, highPriority: 0 };
+    map[t].count++;
+    if (r.priority === 'High') map[t].highPriority++;
+  }
+  return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 4);
+}
+
+function KPICards({ requests }: KPICardsProps) {
+  const queueDepth = requests.length;
+  const submitted = requests.filter((r) => r.requestStatus === 'Submitted').length;
+  const underReview = requests.filter((r) => r.requestStatus === 'Under Review').length;
+  const highPriority = requests.filter((r) => r.priority === 'High').length;
+
+  const slaCompliance = computeSLACompliance(requests);
+  const slaBreached = requests.filter((r) => {
+    const d = daysUntil(r.perfectionDeadline);
+    return d !== null && d < 0;
+  }).length;
+  const slaNearBreach = requests.filter((r) => {
+    const d = daysUntil(r.perfectionDeadline);
+    return d !== null && d >= 0 && d <= 3;
+  }).length;
+
+  const avgHours = computeAvgApprovalHours(requests);
+  const avgDisplay = avgHours === null
+    ? '—'
+    : avgHours < 24
+      ? `${avgHours.toFixed(1)}h`
+      : `${(avgHours / 24).toFixed(1)}d`;
+  const avgTrend: 'good' | 'warn' | 'neutral' =
+    avgHours === null ? 'neutral' : avgHours <= 24 ? 'good' : avgHours <= 72 ? 'warn' : 'neutral';
+
+  const bottlenecks = computeBottlenecks(requests);
+  const maxCount = bottlenecks[0]?.count ?? 1;
+
+  return (
+    <div className="grid grid-cols-4 gap-4 px-6 pt-5 pb-2">
+      {/* 1 — Queue Depth */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Layers size={16} className="text-blue-600" />
+            </div>
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Queue Depth</span>
+          </div>
+          {highPriority > 0 && (
+            <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+              {highPriority} urgent
+            </span>
+          )}
+        </div>
+        <div>
+          <p className="text-3xl font-bold text-gray-900 leading-none">{queueDepth}</p>
+          <p className="text-xs text-gray-400 mt-1">pending approvals</p>
+        </div>
+        <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+            <span className="text-xs text-gray-500">{submitted} awaiting</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+            <span className="text-xs text-gray-500">{underReview} in review</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2 — SLA Compliance */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${slaCompliance >= 80 ? 'bg-green-50' : slaCompliance >= 60 ? 'bg-amber-50' : 'bg-red-50'}`}>
+              {slaCompliance >= 80
+                ? <TrendingUp size={16} className="text-green-600" />
+                : slaCompliance >= 60
+                  ? <Minus size={16} className="text-amber-600" />
+                  : <TrendingDown size={16} className="text-red-600" />}
+            </div>
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">SLA Compliance</span>
+          </div>
+        </div>
+        <div>
+          <p className={`text-3xl font-bold leading-none ${slaCompliance >= 80 ? 'text-green-700' : slaCompliance >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
+            {slaCompliance}%
+          </p>
+          <p className="text-xs text-gray-400 mt-1">within deadline</p>
+        </div>
+        {/* Progress bar */}
+        <div className="space-y-1.5">
+          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${slaCompliance >= 80 ? 'bg-green-500' : slaCompliance >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+              style={{ width: `${slaCompliance}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            {slaBreached > 0 && (
+              <span className="text-xs text-red-600 font-medium">{slaBreached} breached</span>
+            )}
+            {slaNearBreach > 0 && (
+              <span className="text-xs text-amber-600 font-medium">{slaNearBreach} at risk</span>
+            )}
+            {slaBreached === 0 && slaNearBreach === 0 && (
+              <span className="text-xs text-green-600 font-medium">All on track</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 3 — Avg Approval Time */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${avgTrend === 'good' ? 'bg-green-50' : avgTrend === 'warn' ? 'bg-amber-50' : 'bg-gray-50'}`}>
+            <Timer size={16} className={avgTrend === 'good' ? 'text-green-600' : avgTrend === 'warn' ? 'text-amber-600' : 'text-gray-500'} />
+          </div>
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg Approval Time</span>
+        </div>
+        <div>
+          <p className={`text-3xl font-bold leading-none ${avgTrend === 'good' ? 'text-green-700' : avgTrend === 'warn' ? 'text-amber-700' : 'text-gray-700'}`}>
+            {avgDisplay}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            {avgHours === null ? 'no completed reviews yet' : 'from submission to decision'}
+          </p>
+        </div>
+        <div className="pt-1 border-t border-gray-100">
+          <p className="text-xs text-gray-400">
+            {avgTrend === 'good' ?'✓ Within 24h target'
+              : avgTrend === 'warn' ?'⚠ Exceeds 24h target' :'Target: ≤ 24h per request'}
+          </p>
+        </div>
+      </div>
+
+      {/* 4 — Bottleneck by Type */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center">
+            <BarChart2 size={16} className="text-purple-600" />
+          </div>
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bottleneck by Type</span>
+        </div>
+        {bottlenecks.length === 0 ? (
+          <p className="text-xs text-gray-400 italic mt-1">No data</p>
+        ) : (
+          <div className="space-y-2 flex-1">
+            {bottlenecks.map((b) => (
+              <div key={b.type} className="space-y-0.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-700 font-medium truncate max-w-[120px]" title={b.type}>{b.type}</span>
+                  <div className="flex items-center gap-1.5">
+                    {b.highPriority > 0 && (
+                      <span className="text-xs text-red-500 font-semibold">{b.highPriority}↑</span>
+                    )}
+                    <span className="text-xs font-bold text-gray-800">{b.count}</span>
+                  </div>
+                </div>
+                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${b.highPriority > 0 ? 'bg-red-400' : 'bg-purple-400'}`}
+                    style={{ width: `${Math.round((b.count / maxCount) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const PENDING_STATUSES: PerfectionRequestStatus[] = ['Submitted', 'Under Review'];
@@ -525,6 +733,13 @@ export default function ApprovalInboxContent() {
           ))}
         </div>
       </div>
+
+      {/* KPI Cards */}
+      {!loading && !error && (
+        <div className="bg-gray-50 border-b border-gray-100 shrink-0">
+          <KPICards requests={requests} />
+        </div>
+      )}
 
       {/* Filters */}
       <div className="px-6 py-3 bg-white border-b border-gray-100 shrink-0">
