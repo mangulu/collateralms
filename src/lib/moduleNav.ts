@@ -122,6 +122,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Custom Reports', icon: Sliders, href: '/custom-reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Export', icon: Download, href: '/export', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Performance Export', icon: FileBarChart2, href: '/performance-export', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Collateral Reports', icon: TrendingUp, href: '/collateral-reports', permission: PERMISSIONS.REPORTS_VIEW },
         ],
       },
     ],
