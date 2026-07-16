@@ -131,20 +131,20 @@ function UploadModal({ collateral, existingDoc, onClose, onUploaded, userId, use
         userId,
         userName,
       );
-      if (!result) { setError('Upload failed. Please try again.'); setUploading(false); return; }
+      if (result.error) { setError(result.error); setUploading(false); return; }
 
       // Update workflow_stage if set
-      if (workflowStage !== undefined) {
+      if (workflowStage !== undefined && result.doc) {
         const supabase = createClient();
         await supabase
           .from('collateral_documents')
           .update({ workflow_stage: workflowStage || null })
-          .eq('id', result.id);
+          .eq('id', result.doc.id);
       }
       onUploaded();
       onClose();
-    } catch {
-      setError('Upload failed. Please try again.');
+    } catch (err: any) {
+      setError(err?.message || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }

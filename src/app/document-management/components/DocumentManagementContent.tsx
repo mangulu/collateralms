@@ -5,6 +5,7 @@ import { documentService, CollateralDocument, DocumentType } from '@/lib/supabas
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
+import DocumentVersionHistoryModal from '@/components/DocumentVersionHistoryModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,8 +112,8 @@ function UploadModal({ state, onClose, onUploaded, userId, userName }: UploadMod
       userName,
     );
     setUploading(false);
-    if (!result) {
-      setError('Upload failed. Please try again.');
+    if (result.error) {
+      setError(result.error);
       return;
     }
     onUploaded();
@@ -738,11 +739,17 @@ export default function DocumentManagementContent() {
 
       {/* Version History Modal */}
       {versionModal.open && (
-        <VersionHistoryModal
+        <DocumentVersionHistoryModal
           docs={versionModal.docs}
           fileName={versionModal.fileName}
+          collateralRecordId={versionModal.docs[0]?.collateralRecordId ?? ''}
+          currentVersion={Math.max(...versionModal.docs.map((d) => d.version))}
           onClose={() => setVersionModal((s) => ({ ...s, open: false }))}
           onDownload={handleDownload}
+          onRollbackComplete={() => loadData(true)}
+          userId={user?.id ?? ''}
+          userName={userProfile?.full_name ?? user?.email ?? 'Unknown'}
+          canRollback={canDelete}
         />
       )}
     </div>

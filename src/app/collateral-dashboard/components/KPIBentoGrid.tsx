@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { dashboardService } from '@/lib/supabase/collateralService';
 import Icon from '@/components/ui/AppIcon';
+import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 
 
 interface KPICardProps {
@@ -97,7 +98,7 @@ export default function KPIBentoGrid() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadStats = () => {
     dashboardService.getKPIStats().then((data) => {
       setStats(data);
       setIsLoading(false);
@@ -105,7 +106,18 @@ export default function KPIBentoGrid() {
       setError('Failed to load KPI statistics. Please refresh to try again.');
       setIsLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadStats();
   }, []);
+
+  // Real-time: refresh KPIs whenever collateral records change
+  useCollateralRealtime({
+    onCollateralChange: () => {
+      dashboardService.getKPIStats().then((data) => setStats(data)).catch(() => {});
+    },
+  });
 
   if (isLoading) {
     return (

@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import GlobalSearch from './GlobalSearch';
 import { Menu } from 'lucide-react';
@@ -12,6 +13,10 @@ interface AppLayoutProps {
 export default function AppLayout({ children, currentPath }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Always use the real pathname from the router; fall back to the prop only if pathname is unavailable
+  const activePath = pathname || currentPath;
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -32,7 +37,7 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-          currentPath={currentPath}
+          currentPath={activePath}
         />
       </div>
 

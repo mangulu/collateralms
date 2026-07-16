@@ -18,10 +18,11 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { fetchRoles, RoleDefinition } from '@/lib/rbac';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type UserRole = 'credit_officer' | 'legal_officer' | 'system_admin';
+type UserRole = string;
 
 interface UserProfile {
   id: string;
@@ -61,29 +62,19 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-const roleConfig: Record<UserRole, { label: string; color: string; bg: string }> = {
-  credit_officer: {
-    label: 'Credit Officer',
-    color: 'text-blue-700',
-    bg: 'bg-blue-100',
-  },
-  legal_officer: {
-    label: 'Legal Officer',
-    color: 'text-purple-700',
-    bg: 'bg-purple-100',
-  },
-  system_admin: {
-    label: 'System Admin',
-    color: 'text-amber-700',
-    bg: 'bg-amber-100',
-  },
-};
-
-const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-  { value: 'credit_officer', label: 'Credit Officer' },
-  { value: 'legal_officer', label: 'Legal Officer' },
-  { value: 'system_admin', label: 'System Admin' },
-];
+function getRoleBadgeClasses(color: string): { bg: string; text: string } {
+  const map: Record<string, { bg: string; text: string }> = {
+    blue: { bg: 'bg-blue-100', text: 'text-blue-700' },
+    purple: { bg: 'bg-purple-100', text: 'text-purple-700' },
+    amber: { bg: 'bg-amber-100', text: 'text-amber-700' },
+    green: { bg: 'bg-green-100', text: 'text-green-700' },
+    red: { bg: 'bg-red-100', text: 'text-red-700' },
+    gray: { bg: 'bg-gray-100', text: 'text-gray-700' },
+    teal: { bg: 'bg-teal-100', text: 'text-teal-700' },
+    indigo: { bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  };
+  return map[color] ?? { bg: 'bg-gray-100', text: 'text-gray-700' };
+}
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -98,10 +89,11 @@ export default function UserManagementContent() {
   const supabase = createClient();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -119,22 +111,22 @@ export default function UserManagementContent() {
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
 
-  const fetchUsers = useCallback(async (silent = false) => {
+  const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
 
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [usersRes, rolesData] = await Promise.all([
+        supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
+        fetchRoles(),
+      ]);
 
-      if (error) {
-        showToast('Failed to load users: ' + error.message, 'error');
+      if (usersRes.error) {
+        showToast('Failed to load users: ' + usersRes.error.message, 'error');
         return;
       }
 
-      const mapped: UserProfile[] = (data || []).map((row) => ({
+      const mapped: UserProfile[] = (usersRes.data || []).map((row) => ({
         id: row.id,
         email: row.email,
         fullName: row.full_name,
@@ -146,6 +138,7 @@ export default function UserManagementContent() {
       }));
 
       setUsers(mapped);
+      setRoles(rolesData);
     } catch (err: any) {
       showToast('Unexpected error loading users', 'error');
     } finally {
@@ -155,8 +148,8 @@ export default function UserManagementContent() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    fetchData();
+  }, [fetchData]);
 
   // ─── Toast ──────────────────────────────────────────────────────────────────
 
@@ -169,7 +162,7 @@ export default function UserManagementContent() {
 
   function openCreateModal() {
     setEditingUser(null);
-    setFormData({ email: '', fullName: '', role: 'credit_officer', password: '' });
+    setFormData({ email: '', fullName: '', role: roles[0]?.name || 'credit_officer', password: '' });
     setFormError(null);
     setModalOpen(true);
   }
@@ -212,7 +205,6 @@ export default function UserManagementContent() {
     setSaving(true);
     try {
       if (editingUser) {
-        // Update existing profile
         const initials = getInitials(formData.fullName);
         const { error } = await supabase
           .from('user_profiles')
@@ -230,8 +222,6 @@ export default function UserManagementContent() {
         }
         showToast('User updated successfully.', 'success');
       } else {
-        // Create new auth user via Supabase Admin — use signUp for now
-        // The user_profiles row is created by DB trigger on auth.users insert
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email.trim(),
           password: formData.password,
@@ -250,7 +240,6 @@ export default function UserManagementContent() {
         const newUserId = signUpData?.user?.id;
         if (newUserId) {
           const initials = getInitials(formData.fullName);
-          // Upsert profile with role
           await supabase.from('user_profiles').upsert({
             id: newUserId,
             email: formData.email.trim(),
@@ -265,7 +254,7 @@ export default function UserManagementContent() {
       }
 
       closeModal();
-      fetchUsers(true);
+      fetchData(true);
     } catch (err: any) {
       setFormError('Unexpected error: ' + err.message);
     } finally {
@@ -317,9 +306,9 @@ export default function UserManagementContent() {
   // ─── KPI Counts ─────────────────────────────────────────────────────────────
 
   const totalUsers = users.length;
-  const creditOfficers = users.filter((u) => u.role === 'credit_officer').length;
-  const legalOfficers = users.filter((u) => u.role === 'legal_officer').length;
   const activeUsers = users.filter((u) => u.isActive).length;
+  const adminUsers = users.filter((u) => u.role === 'system_admin').length;
+  const totalRoles = roles.length;
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -346,12 +335,12 @@ export default function UserManagementContent() {
         <div>
           <h1 className="text-2xl font-700 text-foreground">User Management</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Manage Credit Officers, Legal Officers, and System Admins
+            Manage users, assign roles, and control account access
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => fetchUsers(true)}
+            onClick={() => fetchData(true)}
             disabled={refreshing}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
           >
@@ -372,9 +361,9 @@ export default function UserManagementContent() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Users', value: totalUsers, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Credit Officers', value: creditOfficers, icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Legal Officers', value: legalOfficers, icon: Shield, color: 'text-purple-600', bg: 'bg-purple-50' },
           { label: 'Active Accounts', value: activeUsers, icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'System Admins', value: adminUsers, icon: Shield, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Available Roles', value: totalRoles, icon: Shield, color: 'text-purple-600', bg: 'bg-purple-50' },
         ].map((kpi) => {
           const KpiIcon = kpi.icon;
           return (
@@ -410,12 +399,12 @@ export default function UserManagementContent() {
           <div className="relative">
             <select
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
+              onChange={(e) => setRoleFilter(e.target.value)}
               className="appearance-none pl-3 pr-8 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
             >
               <option value="all">All Roles</option>
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
+              {roles.map((r) => (
+                <option key={r.name} value={r.name}>{r.label}</option>
               ))}
             </select>
             <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -478,7 +467,9 @@ export default function UserManagementContent() {
                 </tr>
               ) : (
                 filteredUsers.map((user) => {
-                  const rc = roleConfig[user.role];
+                  const roleDef = roles.find((r) => r.name === user.role);
+                  const badgeClasses = getRoleBadgeClasses(roleDef?.color || 'gray');
+                  const roleLabel = roleDef?.label || user.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
                   return (
                     <tr key={user.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       {/* User */}
@@ -492,8 +483,8 @@ export default function UserManagementContent() {
                       </td>
                       {/* Role */}
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-600 ${rc.bg} ${rc.color}`}>
-                          {rc.label}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-600 ${badgeClasses.bg} ${badgeClasses.text}`}>
+                          {roleLabel}
                         </span>
                       </td>
                       {/* Email */}
@@ -614,11 +605,11 @@ export default function UserManagementContent() {
                 <div className="relative">
                   <select
                     value={formData.role}
-                    onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value as UserRole }))}
+                    onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value }))}
                     className="w-full appearance-none pl-3 pr-8 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
                   >
-                    {ROLE_OPTIONS.map((r) => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
+                    {roles.map((r) => (
+                      <option key={r.name} value={r.name}>{r.label}</option>
                     ))}
                   </select>
                   <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />

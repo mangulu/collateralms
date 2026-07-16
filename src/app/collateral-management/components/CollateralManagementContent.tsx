@@ -4,7 +4,9 @@ import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown } fr
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
+import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 import CollateralTable from './CollateralTable';
 import CollateralFilters from './CollateralFilters';
 import AddEditCollateralModal from './AddEditCollateralModal';
@@ -42,6 +44,26 @@ export default function CollateralManagementContent() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
+  // Live lookup data for filter dropdowns
+  const [filterCollateralTypes, setFilterCollateralTypes] = useState<string[]>([]);
+  const [filterRegistries, setFilterRegistries] = useState<string[]>([]);
+  const [filterOfficers, setFilterOfficers] = useState<string[]>([]);
+
+  // Load lookup data once on mount
+  useEffect(() => {
+    Promise.all([
+      collateralLookupsService.getCollateralTypeNames(),
+      collateralLookupsService.getRegistryNames(),
+      collateralLookupsService.getOfficerNames(),
+    ]).then(([types, regs, officers]) => {
+      setFilterCollateralTypes(types);
+      setFilterRegistries(regs);
+      setFilterOfficers(officers);
+    }).catch(() => {
+      // Fallbacks handled inside service
+    });
+  }, []);
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
@@ -59,6 +81,13 @@ export default function CollateralManagementContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Real-time subscription: silently refresh when any collateral row changes
+  useCollateralRealtime({
+    onCollateralChange: () => {
+      fetchData();
+    },
+  });
 
   // Close export menu on outside click
   useEffect(() => {
@@ -392,6 +421,9 @@ export default function CollateralManagementContent() {
             setFilters({ search: filters.search, type: '', status: '', registry: '', officer: '' });
             setCurrentPage(1);
           }}
+          collateralTypes={filterCollateralTypes}
+          registries={filterRegistries}
+          officers={filterOfficers}
         />
       )}
 

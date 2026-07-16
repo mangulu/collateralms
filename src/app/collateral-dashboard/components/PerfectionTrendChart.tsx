@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { dashboardService } from '@/lib/supabase/collateralService';
 import { AlertCircle } from 'lucide-react';
+import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 
 interface TrendPoint {
   month: string;
@@ -55,6 +56,13 @@ export default function PerfectionTrendChart() {
         setIsLoading(false);
       });
   }, []);
+
+  // Real-time: refresh trend chart whenever collateral records change
+  useCollateralRealtime({
+    onCollateralChange: () => {
+      dashboardService.getPerfectionTrend().then((data) => setTrendData(data)).catch(() => {});
+    },
+  });
 
   // Derive the date range label dynamically
   const rangeLabel =

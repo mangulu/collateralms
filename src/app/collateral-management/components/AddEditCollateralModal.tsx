@@ -6,8 +6,8 @@ import Modal from '@/components/ui/Modal';
 import { CollateralRecord as Collateral, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { documentTypeSettingsService, DocumentTypeSetting } from '@/lib/supabase/documentTypeSettingsService';
+import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
 import { useAuth } from '@/contexts/AuthContext';
-import { createClient } from '@/lib/supabase/client';
 
 interface FormData {
   obligor: string;
@@ -29,11 +29,6 @@ interface AddEditCollateralModalProps {
   onClose: () => void;
   onSave: (data: Partial<Collateral>, pendingFiles?: { file: File; docType: string; notes: string }[]) => Promise<void>;
 }
-
-const collateralTypes = [
-  'Mortgage', 'Debenture', 'Motor Vehicle', 'Shares (DSE)', 'FDR', 'Guarantee', 'Ship/Vessel',
-];
-const registries = ['BRELA', 'Lands Registry', 'TRA', 'DSE', 'TASAC', 'N/A'];
 
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -78,28 +73,24 @@ export default function AddEditCollateralModal({
 
   // Officers loaded from Supabase user_profiles
   const [officers, setOfficers] = useState<string[]>([]);
+  // Live collateral types and registries from DB
+  const [collateralTypes, setCollateralTypes] = useState<string[]>([]);
+  const [registries, setRegistries] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
-      const supabase = createClient();
-      supabase
-        .from('user_profiles')
-        .select('full_name')
-        .eq('is_active', true)
-        .order('full_name', { ascending: true })
-        .then(({ data, error }) => {
-          if (!error && data) {
-            const names = data
-              .map((u: any) => u.full_name)
-              .filter((n: string) => n && n.trim().length > 0);
-            setOfficers(names.length > 0 ? names : ['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
-          } else {
-            setOfficers(['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
-          }
-        })
-        .catch(() => {
-          setOfficers(['Lisa Alkado', 'Cornel Mangulu', 'Godfrey Woiso', 'Yahaya Frezier']);
-        });
+      // Load officers, collateral types, and registries in parallel
+      Promise.all([
+        collateralLookupsService.getOfficerNames(),
+        collateralLookupsService.getCollateralTypeNames(),
+        collateralLookupsService.getRegistryNames(),
+      ]).then(([officerNames, typeNames, registryNames]) => {
+        setOfficers(officerNames);
+        setCollateralTypes(typeNames);
+        setRegistries(registryNames);
+      }).catch(() => {
+        // Fallbacks are handled inside the service
+      });
     }
   }, [open]);
 

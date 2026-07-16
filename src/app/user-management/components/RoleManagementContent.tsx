@@ -13,6 +13,10 @@ import {
   Lock,
   ChevronDown,
   ChevronUp,
+  Users,
+  UserPlus,
+  UserMinus,
+  Search,
 } from 'lucide-react';
 import {
   fetchRoles,
@@ -26,6 +30,7 @@ import {
   RoleDefinition,
   PermissionDefinition,
 } from '@/lib/rbac';
+import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,11 +39,214 @@ interface ToastState {
   type: 'success' | 'error';
 }
 
+interface UserProfile {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  initials: string;
+  isActive: boolean;
+}
+
+// ─── Assign Users Panel ───────────────────────────────────────────────────────
+
+interface AssignUsersPanelProps {
+  role: RoleDefinition;
+  allUsers: UserProfile[];
+  onClose: () => void;
+  onAssigned: () => void;
+  showToast: (msg: string, type: 'success' | 'error') => void;
+}
+
+function AssignUsersPanel({ role, allUsers, onClose, onAssigned, showToast }: AssignUsersPanelProps) {
+  const supabase = createClient();
+  const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const usersWithRole = allUsers.filter((u) => u.role === role.name);
+  const usersWithoutRole = allUsers.filter((u) => u.role !== role.name);
+
+  const filteredWithout = usersWithoutRole.filter(
+    (u) =>
+      !search ||
+      u.fullName.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  async function assignRole(user: UserProfile) {
+    setSaving(user.id);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: role.name, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+      if (error) throw error;
+      showToast(`${user.fullName} assigned to ${role.label}.`, 'success');
+      onAssigned();
+    } catch (err: any) {
+      showToast('Failed to assign role: ' + err.message, 'error');
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function removeRole(user: UserProfile) {
+    setSaving(user.id);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: 'credit_officer', updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+      if (error) throw error;
+      showToast(`${user.fullName} removed from ${role.label}.`, 'success');
+      onAssigned();
+    } catch (err: any) {
+      showToast('Failed to remove role: ' + err.message, 'error');
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg z-10 flex flex-col max-h-[85vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users size={15} className="text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-700 text-foreground">Manage Users — {role.label}</p>
+              <p className="text-xs text-muted-foreground">
+                {usersWithRole.length} user{usersWithRole.length !== 1 ? 's' : ''} assigned to this role
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {/* Current Users */}
+          <div>
+            <p className="text-xs font-700 text-muted-foreground uppercase tracking-wider mb-2">
+              Currently Assigned ({usersWithRole.length})
+            </p>
+            {usersWithRole.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">No users assigned to this role yet.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {usersWithRole.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0">
+                        <span className="text-white text-[10px] font-600">{user.initials}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-500 text-foreground">{user.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+                    </div>
+                    {!role.isSystem && (
+                      <button
+                        onClick={() => removeRole(user)}
+                        disabled={saving === user.id}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 border border-red-200 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {saving === user.id ? (
+                          <RefreshCw size={11} className="animate-spin" />
+                        ) : (
+                          <UserMinus size={11} />
+                        )}
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Assign More Users */}
+          <div>
+            <p className="text-xs font-700 text-muted-foreground uppercase tracking-wider mb-2">
+              Assign Users to This Role
+            </p>
+            <div className="relative mb-3">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search users…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
+            </div>
+            {filteredWithout.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                {search ? 'No users match your search.' : 'All users are already assigned to this role.'}
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                {filteredWithout.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between px-3 py-2 bg-muted/30 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-muted-foreground/20 flex items-center justify-center shrink-0">
+                        <span className="text-foreground text-[10px] font-600">{user.initials}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-500 text-foreground">{user.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => assignRole(user)}
+                      disabled={saving === user.id}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors disabled:opacity-50"
+                    >
+                      {saving === user.id ? (
+                        <RefreshCw size={11} className="animate-spin" />
+                      ) : (
+                        <UserPlus size={11} />
+                      )}
+                      Assign
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-border shrink-0 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function RoleManagementContent() {
+  const supabase = createClient();
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [permissions, setPermissions] = useState<PermissionDefinition[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -47,6 +255,9 @@ export default function RoleManagementContent() {
   const [expandedRole, setExpandedRole] = useState<string | null>(null);
   const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>({});
   const [loadingPerms, setLoadingPerms] = useState<string | null>(null);
+
+  // Assign users panel
+  const [assignTarget, setAssignTarget] = useState<RoleDefinition | null>(null);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -69,9 +280,26 @@ export default function RoleManagementContent() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [rolesData, permsData] = await Promise.all([fetchRoles(), fetchPermissions()]);
+      const [rolesData, permsData, usersRes] = await Promise.all([
+        fetchRoles(),
+        fetchPermissions(),
+        supabase.from('user_profiles').select('id, email, full_name, role, initials, is_active').order('full_name'),
+      ]);
       setRoles(rolesData);
       setPermissions(permsData);
+
+      if (!usersRes.error) {
+        setAllUsers(
+          (usersRes.data || []).map((row) => ({
+            id: row.id,
+            email: row.email,
+            fullName: row.full_name || row.email,
+            role: row.role,
+            initials: row.initials || (row.full_name || row.email).slice(0, 2).toUpperCase(),
+            isActive: row.is_active ?? true,
+          }))
+        );
+      }
     } catch (err: any) {
       showToast('Failed to load roles: ' + err.message, 'error');
     } finally {
@@ -130,7 +358,6 @@ export default function RoleManagementContent() {
     setFormDescription(role.description);
     setFormColor(role.color);
     setFormError(null);
-    // Load current permissions
     try {
       const perms = await fetchRolePermissions(role.name);
       setFormPermissions(perms);
@@ -163,7 +390,6 @@ export default function RoleManagementContent() {
     }
 
     if (!editingRole) {
-      // Validate name
       if (!formName.trim()) {
         setFormError('Role name (identifier) is required.');
         return;
@@ -183,7 +409,6 @@ export default function RoleManagementContent() {
       if (editingRole) {
         await updateRolePermissions(editingRole.name, formPermissions);
         showToast(`Permissions for "${editingRole.label}" updated.`, 'success');
-        // Invalidate cached permissions for this role
         setRolePermissions((prev) => {
           const next = { ...prev };
           delete next[editingRole.name];
@@ -255,7 +480,7 @@ export default function RoleManagementContent() {
         <div>
           <h2 className="text-lg font-700 text-foreground">Role Management</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Define roles and their permissions. System roles cannot be deleted.
+            Define roles, assign permissions, and manage user assignments per role.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -295,6 +520,7 @@ export default function RoleManagementContent() {
               const colors = getRoleColorClasses(role.color);
               const isExpanded = expandedRole === role.name;
               const perms = rolePermissions[role.name] || [];
+              const usersInRole = allUsers.filter((u) => u.role === role.name);
 
               return (
                 <div
@@ -322,6 +548,11 @@ export default function RoleManagementContent() {
                             System
                           </span>
                         )}
+                        {/* User count badge */}
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          <Users size={10} />
+                          {usersInRole.length} user{usersInRole.length !== 1 ? 's' : ''}
+                        </span>
                       </div>
                       {role.description && (
                         <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -332,6 +563,15 @@ export default function RoleManagementContent() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
+                      {/* Assign Users button */}
+                      <button
+                        onClick={() => setAssignTarget(role)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors"
+                        title="Assign users to this role"
+                      >
+                        <UserPlus size={12} />
+                        <span className="hidden sm:inline">Users</span>
+                      </button>
                       <button
                         onClick={() => toggleExpand(role.name)}
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"
@@ -358,31 +598,71 @@ export default function RoleManagementContent() {
                     </div>
                   </div>
 
-                  {/* Expanded Permissions */}
+                  {/* Expanded: Permissions + Users */}
                   {isExpanded && (
-                    <div className="border-t border-border px-4 py-3 bg-muted/20">
-                      {loadingPerms === role.name ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <RefreshCw size={13} className="animate-spin" />
-                          Loading permissions…
+                    <div className="border-t border-border bg-muted/20">
+                      {/* Permissions */}
+                      <div className="px-4 py-3 border-b border-border">
+                        <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Permissions</p>
+                        {loadingPerms === role.name ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <RefreshCw size={13} className="animate-spin" />
+                            Loading permissions…
+                          </div>
+                        ) : perms.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No permissions assigned.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {perms.map((pk) => {
+                              const pDef = permissions.find((p) => p.key === pk);
+                              return (
+                                <span
+                                  key={pk}
+                                  className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-500"
+                                >
+                                  {pDef?.label ?? pk}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Users in this role */}
+                      <div className="px-4 py-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider">
+                            Users with this role ({usersInRole.length})
+                          </p>
+                          <button
+                            onClick={() => setAssignTarget(role)}
+                            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          >
+                            <UserPlus size={11} />
+                            Manage
+                          </button>
                         </div>
-                      ) : perms.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No permissions assigned.</p>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {perms.map((pk) => {
-                            const pDef = permissions.find((p) => p.key === pk);
-                            return (
-                              <span
-                                key={pk}
-                                className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-500"
+                        {usersInRole.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No users assigned to this role.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {usersInRole.map((user) => (
+                              <div
+                                key={user.id}
+                                className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-border rounded-full text-xs"
                               >
-                                {pDef?.label ?? pk}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
+                                <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                                  <span className="text-white text-[8px] font-700">{user.initials}</span>
+                                </div>
+                                <span className="font-500 text-foreground">{user.fullName}</span>
+                                {!user.isActive && (
+                                  <span className="text-[10px] text-red-500">(inactive)</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -577,6 +857,17 @@ export default function RoleManagementContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Assign Users Panel */}
+      {assignTarget && (
+        <AssignUsersPanel
+          role={assignTarget}
+          allUsers={allUsers}
+          onClose={() => setAssignTarget(null)}
+          onAssigned={() => loadData(true)}
+          showToast={showToast}
+        />
       )}
     </div>
   );

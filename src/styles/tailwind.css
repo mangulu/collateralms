@@ -6,22 +6,24 @@
 
 @layer base {
   :root {
-    --primary: 0 100% 65%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
-    --accent: 158 100% 33%;
+    --accent: 142 71% 45%;
     --accent-foreground: 0 0% 100%;
-    --background: 210 20% 97%;
+    --background: 210 40% 98%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
-    --border: 214 20% 88%;
-    --muted: 214 15% 94%;
+    --card-foreground: 222 47% 11%;
+    --border: 214 32% 91%;
+    --muted: 214 32% 95%;
     --muted-foreground: 215 16% 47%;
     --destructive: 0 72% 51%;
     --warning: 38 92% 50%;
-    --success: 158 64% 40%;
-    --foreground: 215 25% 15%;
-    --ring: 0 100% 65%;
-    --field-bg: 0 100% 95%;
+    --success: 142 71% 45%;
+    --foreground: 222 47% 11%;
+    --ring: 221 83% 53%;
+    --field-bg: 214 32% 97%;
+    --sidebar-bg: #0F172A;
+    --sidebar-fg: #F8FAFC;
   }
 
   * {
@@ -36,14 +38,14 @@
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,
   select {
-    background-color: #ffe5e5;
+    background-color: #EFF6FF;
   }
 
   input:disabled,
   textarea:disabled,
   select:disabled,
   [disabled] {
-    background-color: #ffe5e5 !important;
+    background-color: #DBEAFE !important;
     opacity: 0.6;
   }
 
@@ -94,7 +96,7 @@
 
   @keyframes pulseHighlight {
     0% { background-color: transparent; }
-    30% { background-color: hsl(38 92% 90%); }
+    30% { background-color: hsl(221 83% 93%); }
     100% { background-color: transparent; }
   }
 }

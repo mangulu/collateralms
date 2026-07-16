@@ -30,6 +30,7 @@ export const PERMISSIONS = {
   COMPLIANCE_VIEW: 'compliance.view',
   AUDIT_LOG_VIEW: 'audit_log.view',
   REPORTS_VIEW: 'reports.view',
+  REPORTS_CREATE: 'reports.create',
   // Administration
   USER_MANAGEMENT_VIEW: 'user_management.view',
   USER_MANAGEMENT_MANAGE: 'user_management.manage',
@@ -113,9 +114,17 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/reports': PERMISSIONS.REPORTS_VIEW,
   '/reports-dashboard': PERMISSIONS.REPORTS_VIEW,
   '/export': PERMISSIONS.REPORTS_VIEW,
+  '/performance-export': PERMISSIONS.REPORTS_CREATE,
   '/user-management': PERMISSIONS.USER_MANAGEMENT_VIEW,
   '/admin': PERMISSIONS.USER_MANAGEMENT_VIEW,
   '/settings': PERMISSIONS.SETTINGS_VIEW,
+  '/system-config': PERMISSIONS.SETTINGS_MANAGE,
+  '/archive/vault-management': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/collateral-placement': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/documents-library': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/request-workflow': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/custody-tracker': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/audit-log': PERMISSIONS.AUDIT_LOG_VIEW,
 };
 
 // ─── Hook: usePermissions ─────────────────────────────────────────────────────
@@ -332,13 +341,23 @@ export function getRoleColorClass(color: string): string {
   return map[color] ?? 'bg-gray-100 text-gray-700';
 }
 
-function getRoleColorClasses(...args: any[]): any {
-  // eslint-disable-next-line no-console
-  console.warn('Placeholder: getRoleColorClasses is not implemented yet.', args);
-  return null;
+export interface RoleColorOption {
+  value: string;
+  bg: string;
+  text: string;
 }
 
-export { getRoleColorClasses };
-const ROLE_COLOR_OPTIONS: any = null;
+const COLOR_MAP: Record<string, RoleColorOption> = {
+  blue:   { value: 'blue',   bg: 'bg-blue-100',   text: 'text-blue-700' },
+  purple: { value: 'purple', bg: 'bg-purple-100',  text: 'text-purple-700' },
+  amber:  { value: 'amber',  bg: 'bg-amber-100',   text: 'text-amber-700' },
+  green:  { value: 'green',  bg: 'bg-green-100',   text: 'text-green-700' },
+  red:    { value: 'red',    bg: 'bg-red-100',     text: 'text-red-700' },
+  gray:   { value: 'gray',   bg: 'bg-gray-100',    text: 'text-gray-700' },
+};
 
-export { ROLE_COLOR_OPTIONS };
+export function getRoleColorClasses(color: string): RoleColorOption {
+  return COLOR_MAP[color] ?? COLOR_MAP['gray'];
+}
+
+export const ROLE_COLOR_OPTIONS: RoleColorOption[] = Object.values(COLOR_MAP);

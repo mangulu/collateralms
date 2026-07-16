@@ -53,6 +53,7 @@ import CollateralUtilizationTab from './CollateralUtilizationTab';
 import { legalSignOffService, LegalSignOff } from '@/lib/supabase/legalSignOffService';
 import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
 import QuickActionsPanel from './QuickActionsPanel';
+import CollateralHistoryTab from './CollateralHistoryTab';
 
 
 
@@ -344,8 +345,8 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
       userName,
     );
     setUploading(false);
-    if (!result) {
-      setError('Upload failed. Please try again.');
+    if (result.error) {
+      setError(result.error);
       return;
     }
     onUploaded();
@@ -605,21 +606,35 @@ function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
                           </div>
                           {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {doc.signedUrl && (
-                            <a
-                              href={doc.signedUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                              title="Download"
-                            >
-                              <Download size={13} />
-                            </a>
+                        <div className="flex items-center gap-1">
+                          {doc.signedUrl ? (
+                            <>
+                              <a
+                                href={doc.signedUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors"
+                                title="View document"
+                              >
+                                <ExternalLink size={12} />
+                                View
+                              </a>
+                              <a
+                                href={doc.signedUrl}
+                                download={doc.fileName}
+                                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors"
+                                title="Download document"
+                              >
+                                <Download size={12} />
+                                Download
+                              </a>
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50 italic px-2">No URL</span>
                           )}
                           <button
                             onClick={() => handleDelete(doc)}
-                            className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                            className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
                             title="Delete"
                           >
                             <Trash2 size={13} />
@@ -1251,7 +1266,7 @@ export default function CollateralDetailContent({
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history'>('profile');
   const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
 
   useEffect(() => {
@@ -1400,10 +1415,11 @@ export default function CollateralDetailContent({
           { key: 'profile', label: 'Profile', icon: Shield },
           { key: 'charges', label: 'Charges & Loans', icon: PieChart },
           { key: 'documents', label: 'Documents & History', icon: Files },
+          { key: 'history', label: 'History', icon: History },
         ].map(tab => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents')}
+            onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history')}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${
               activeTab === tab.key
                 ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
@@ -1564,6 +1580,11 @@ export default function CollateralDetailContent({
           <LegalSignOffSection collateral={collateral} />
           <AuditTrailSection collateral={collateral} />
         </div>
+      )}
+
+      {/* ── Tab: History ── */}
+      {activeTab === 'history' && (
+        <CollateralHistoryTab collateral={collateral} />
       )}
 
       {/* Edit Modal */}

@@ -455,6 +455,62 @@ export const auditLogService = {
     });
   },
 
+  /** Log document approved by Legal Officer */
+  async logDocumentApproved(
+    collateralRecordId: string | null,
+    collateralId: string,
+    fileName: string,
+    documentType: string,
+    performedBy: string,
+    performedByName: string,
+    notes?: string
+  ): Promise<boolean> {
+    return insertAuditLog({
+      collateral_record_id: collateralRecordId,
+      collateral_id:        collateralId,
+      entity_type:          'document',
+      action:               'document_approved',
+      message:              `Document approved: ${documentType}`,
+      detail:               `File: ${fileName} approved for registry entry`,
+      reason:               notes ?? null,
+      performed_by:         performedBy,
+      performed_by_name:    performedByName,
+      event_category:       EVENT_CATEGORIES.DOCUMENT,
+      field_changes: [
+        { field: 'approval_status', label: 'Approval Status', old_value: 'pending', new_value: 'approved' },
+        { field: 'document_type',   label: 'Document Type',   old_value: '',        new_value: documentType },
+      ],
+    });
+  },
+
+  /** Log document rejected by Legal Officer */
+  async logDocumentRejected(
+    collateralRecordId: string | null,
+    collateralId: string,
+    fileName: string,
+    documentType: string,
+    performedBy: string,
+    performedByName: string,
+    reason: string
+  ): Promise<boolean> {
+    return insertAuditLog({
+      collateral_record_id: collateralRecordId,
+      collateral_id:        collateralId,
+      entity_type:          'document',
+      action:               'document_rejected',
+      message:              `Document rejected: ${documentType}`,
+      detail:               `File: ${fileName} rejected — ${reason}`,
+      reason:               reason,
+      performed_by:         performedBy,
+      performed_by_name:    performedByName,
+      event_category:       EVENT_CATEGORIES.DOCUMENT,
+      field_changes: [
+        { field: 'approval_status', label: 'Approval Status', old_value: 'pending', new_value: 'rejected' },
+        { field: 'rejection_reason', label: 'Rejection Reason', old_value: '', new_value: reason },
+      ],
+    });
+  },
+
   // ── SMS events ─────────────────────────────────────────────────────────────
 
   /** Log SMS alert sent */

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { FileCheck, FilePlus, AlertCircle, CheckCircle2, ArrowUpRight } from 'lucide-react';
 import { auditService, AuditLog } from '@/lib/supabase/collateralService';
 import Icon from '@/components/ui/AppIcon';
+import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 
 
 const activityConfig: Record<
@@ -35,7 +36,7 @@ export default function RecentActivityFeed() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadActivities = () => {
     auditService.getRecent(8).then((data) => {
       setActivities(data);
       setIsLoading(false);
@@ -43,7 +44,18 @@ export default function RecentActivityFeed() {
       setError('Failed to load recent activity.');
       setIsLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadActivities();
   }, []);
+
+  // Real-time: refresh feed whenever a new audit log entry arrives
+  useCollateralRealtime({
+    onAuditChange: () => {
+      auditService.getRecent(8).then((data) => setActivities(data)).catch(() => {});
+    },
+  });
 
   return (
     <div className="bg-white rounded-xl shadow-card border border-border h-full">

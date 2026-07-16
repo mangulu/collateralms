@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
 import SecurityPocketPanel from './SecurityPocketPanel';
+import DocumentVersionHistoryModal from '@/components/DocumentVersionHistoryModal';
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -111,8 +112,8 @@ function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName }
       userName,
     );
     setUploading(false);
-    if (!result) {
-      setError('Upload failed. Please try again.');
+    if (result.error) {
+      setError(result.error);
       return;
     }
     onUploaded();
@@ -292,8 +293,8 @@ function UploadVersionModal({ collateralRecord, existingDoc, onClose, onUploaded
       userName,
     );
     setUploading(false);
-    if (!result) {
-      setError('Upload failed. Please try again.');
+    if (result.error) {
+      setError(result.error);
       return;
     }
     onUploaded();
@@ -829,9 +830,14 @@ export default function CollateralDocumentsContent() {
           {activeView === 'documents' && (
             <button
               onClick={() => {
-                if (collateralRecords.length > 0) setUploadModal(collateralRecords[0]);
+                if (collateralRecords.length > 0) {
+                  setUploadModal(collateralRecords[0]);
+                } else {
+                  setError('No collateral records found. Please add a collateral record before uploading documents.');
+                }
               }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Upload size={14} />
               Upload Document
@@ -929,14 +935,19 @@ export default function CollateralDocumentsContent() {
           <div className="m-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
             <AlertCircle size={16} className="text-red-600 mt-0.5 shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-red-700">Failed to load documents</p>
+              <p className="text-sm font-medium text-red-700">
+                {error.includes('No collateral records') ? 'No Collateral Records' : 'Failed to load documents'}
+              </p>
               <p className="text-xs text-red-600 mt-0.5">{error}</p>
             </div>
             <button
-              onClick={fetchData}
+              onClick={() => {
+                setError(null);
+                if (!error.includes('No collateral records')) fetchData();
+              }}
               className="flex items-center gap-1.5 text-xs font-medium text-red-700 hover:text-red-800 transition-colors"
             >
-              <RefreshCw size={12} /> Retry
+              <X size={12} /> Dismiss
             </button>
           </div>
         )}
@@ -1123,11 +1134,17 @@ export default function CollateralDocumentsContent() {
       )}
 
       {versionModal && (
-        <VersionHistoryModal
+        <DocumentVersionHistoryModal
           docs={versionModal.docs}
           fileName={versionModal.fileName}
+          collateralRecordId={versionModal.docs[0]?.collateralRecordId ?? ''}
+          currentVersion={Math.max(...versionModal.docs.map((d) => d.version))}
           onClose={() => setVersionModal(null)}
           onDownload={handleDownload}
+          onRollbackComplete={fetchData}
+          userId={userId}
+          userName={userName}
+          canRollback={canDelete}
         />
       )}
 

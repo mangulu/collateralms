@@ -45,10 +45,20 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/user-management': ['user_management.view'],
   '/admin': ['user_management.view'],
   '/settings': ['settings.view'],
+  // Archive module
+  '/archive/vault-management': ['collateral.view'],
+  '/archive/collateral-placement': ['collateral.view'],
+  '/archive/documents-library': ['collateral.view'],
+  '/archive/request-workflow': ['collateral.view'],
+  '/archive/custody-tracker': ['collateral.view'],
+  '/archive/audit-log': ['audit_log.view'],
 };
 
 // Public routes that never require auth
 const PUBLIC_ROUTES = ['/sign-up-login-screen', '/auth/callback'];
+
+// Authenticated-but-no-permission-check routes
+const AUTH_ONLY_ROUTES = ['/module-hub'];
 
 export async function middleware(request: NextRequest) {
   injectTokenFromHeader(request);
@@ -104,6 +114,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Auth-only routes — no permission check needed
+  if (AUTH_ONLY_ROUTES.some((r) => pathname.startsWith(r))) {
+    return supabaseResponse;
+  }
+
   // Find the matching route permission requirement
   const matchedRoute = Object.keys(ROUTE_PERMISSIONS).find((route) =>
     pathname.startsWith(route)
@@ -156,9 +171,9 @@ export async function middleware(request: NextRequest) {
   const hasAccess = requiredPermissions.some((perm) => permSet.has(perm));
 
   if (!hasAccess) {
-    // Redirect to dashboard (or the first accessible page)
+    // Redirect to module hub
     const url = request.nextUrl.clone();
-    url.pathname = '/collateral-dashboard';
+    url.pathname = '/module-hub';
     return NextResponse.redirect(url);
   }
 
