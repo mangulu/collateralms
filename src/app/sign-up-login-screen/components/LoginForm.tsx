@@ -132,14 +132,14 @@ export default function LoginForm() {
   // 2FA verification screen
   if (twoFARequired) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative px-4">
+      <div className="min-h-screen flex items-center justify-center relative px-4 overflow-hidden">
         {/* Blurred background */}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: `url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80')`,
             filter: 'blur(6px)',
-            transform: 'scale(1.05)',
+            transform: 'scale(1.1)',
           }}
         />
         <div className="absolute inset-0 bg-slate-900/60" />
@@ -196,14 +196,14 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center relative px-4 py-8 overflow-hidden">
       {/* Blurred banking/collateral background */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
           backgroundImage: `url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80')`,
           filter: 'blur(6px)',
-          transform: 'scale(1.05)',
+          transform: 'scale(1.1)',
         }}
       />
       {/* Dark overlay for contrast */}
