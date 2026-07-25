@@ -1,6 +1,9 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Library, Search, RefreshCw, AlertCircle, FileText, FileImage, FileType2, File, Download, Clock, Link2, Filter } from 'lucide-react';
+import {
+  Library, Search, RefreshCw, AlertCircle, FileText, FileImage, FileType2,
+  File, Download, Clock, Link2, Filter, Info,
+} from 'lucide-react';
 import { documentService, CollateralDocument } from '@/lib/supabase/documentService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import DocumentVersionHistoryModal from '@/components/DocumentVersionHistoryModal';
@@ -63,7 +66,6 @@ export default function DocumentsLibraryContent() {
     }
   };
 
-  // collateralService returns camelCase; build a map by id
   const collateralMap = Object.fromEntries(collaterals.map((c) => [c.id, c]));
   const docTypes = Array.from(new Set(documents.map((d) => d.documentType)));
 
@@ -79,11 +81,30 @@ export default function DocumentsLibraryContent() {
   });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
+      {/* Purpose banner */}
+      <div className="flex items-start gap-3 mb-5 p-4 rounded-xl"
+        style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+        <Info size={18} style={{ color: '#2563EB', flexShrink: 0, marginTop: 1 }} />
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#1D4ED8' }}>Documents Library — Read-Only Archive</p>
+          <p className="text-xs mt-0.5" style={{ color: '#3B82F6' }}>
+            This is a <strong>read-only reference library</strong> of all collateral-linked documents uploaded across the system.
+            Use it to browse, search, and download documents with full version history.
+            To <strong>upload, classify, or manage</strong> documents, go to{' '}
+            <a href="/document-management" className="underline font-medium">Document Management</a>.
+          </p>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>Documents Library</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>All collateral documents with version history — physical and electronic</p>
+          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+            Documents Library
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
+            Browse &amp; download all collateral documents with version history
+          </p>
         </div>
         <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: '#BFDBFE' }}>
           <RefreshCw size={16} style={{ color: '#2563EB' }} />
@@ -148,13 +169,15 @@ export default function DocumentsLibraryContent() {
             return (
               <div key={doc.id} className="flex items-center gap-4 p-4 rounded-xl group"
                 style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#EFF6FF' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: '#EFF6FF' }}>
                   {getFileIcon(doc.mimeType ?? '')}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>{doc.fileName}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
+                    <span className="text-xs px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
                       {doc.documentType}
                     </span>
                   </div>

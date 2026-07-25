@@ -1,10 +1,10 @@
 import AppLayout from '@/components/AppLayout';
-import CollateralPlacementContent from './components/CollateralPlacementContent';
+import CollateralFilingContent from './components/CollateralPlacementContent';
 
-export default function CollateralPlacementPage() {
+export default function CollateralFilingPage() {
   return (
     <AppLayout currentPath="/archive/collateral-placement">
-      <CollateralPlacementContent />
+      <CollateralFilingContent />
     </AppLayout>
   );
 }

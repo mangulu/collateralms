@@ -421,6 +421,21 @@ export default function DocumentManagementContent() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-background">
+      {/* Purpose banner */}
+      <div className="px-6 pt-4 bg-white shrink-0">
+        <div className="flex items-start gap-3 p-3 rounded-xl mb-0"
+          style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+          <span className="text-base shrink-0">⚙️</span>
+          <div>
+            <p className="text-xs font-semibold" style={{ color: '#15803D' }}>Document Management — Upload &amp; Manage</p>
+            <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
+              Use this page to <strong>upload, classify, version-control, and link</strong> supporting documents to collateral records.
+              To <strong>browse and download</strong> the full document archive, go to{' '}
+              <a href="/archive/documents-library" className="underline font-medium">Documents Library</a>.
+            </p>
+          </div>
+        </div>
+      </div>
       {/* Header */}
       <div className="px-6 py-5 border-b border-border bg-white shrink-0">
         <div className="flex items-start justify-between gap-4">

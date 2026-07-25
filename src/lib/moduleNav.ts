@@ -4,16 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import {
-  FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge,
-  Brain, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard,
-  Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal,
-  BarChart2, LayoutGrid, PieChart, Sliders, Download, FileBarChart2,
-  DatabaseZap, ClipboardList, ScrollText, UserCheck, BookOpen, ShieldCheck, Radio, Scale,
-  Users, KeyRound, Settings, Landmark,
-  Archive, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
-  MailCheck, History, BadgeCheck, CheckSquare,
-} from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, Brain, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -60,21 +51,42 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'Operations',
         items: [
-          {
-            label: 'Approvals',
-            icon: CheckSquare,
-            href: '/approval-inbox',
-            permission: PERMISSIONS.PERFECTION_VIEW,
-            children: [
-              { label: 'Approval Inbox', icon: MailCheck, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
-              { label: 'Perfection Approval', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
-              { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
-              { label: 'Release Approval', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
-            ],
-          },
           { label: 'Batch Release', icon: Unlock, href: '/batch-release', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Bulk Upload', icon: Upload, href: '/bulk-upload', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Scheduled Jobs', icon: CalendarClock, href: '/scheduled-jobs', permission: PERMISSIONS.COLLATERAL_EDIT },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'obligors',
+    label: 'Obligors',
+    groups: [
+      {
+        label: 'Obligor Management',
+        items: [
+          { label: 'Obligors', icon: Users, href: '/obligors', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'approvals',
+    label: 'Workflows',
+    groups: [
+      {
+        label: 'Approval Workflows',
+        items: [
+          { label: 'Approval Inbox', icon: MailCheck, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Perfection Approval', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Release Approval', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+        ],
+      },
+      {
+        label: 'Archive Workflows',
+        items: [
+          { label: 'Archive Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -98,6 +110,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'AI Risk Assessment', icon: ScanSearch, href: '/risk-assessment', permission: PERMISSIONS.COMPLIANCE_VIEW },
           { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Geomapping', icon: Map, href: '/geomapping', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Portfolio Heatmap', icon: Flame, href: '/portfolio-heatmap', permission: PERMISSIONS.DASHBOARD_VIEW },
         ],
       },
     ],
@@ -113,7 +126,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Alerts Inbox', icon: Inbox, href: '/alerts-inbox', permission: PERMISSIONS.DASHBOARD_VIEW },
           { label: 'Deadline Reminders', icon: AlarmClock, href: '/deadline-reminders', permission: PERMISSIONS.DASHBOARD_VIEW },
           { label: 'Alert Delivery Log', icon: SendHorizonal, href: '/alerts-delivery', permission: PERMISSIONS.DASHBOARD_VIEW },
-          { label: 'Alert Thresholds', icon: SlidersHorizontal, href: '/alert-thresholds', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
     ],
@@ -125,13 +137,9 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'Reports',
         items: [
-          { label: 'Reports', icon: BarChart2, href: '/reports', permission: PERMISSIONS.REPORTS_VIEW },
-          { label: 'Regulatory Reports', icon: LayoutGrid, href: '/reports-dashboard', permission: PERMISSIONS.REPORTS_VIEW },
-          { label: 'Utilization Report', icon: PieChart, href: '/reports?tab=utilization', permission: PERMISSIONS.REPORTS_VIEW },
-          { label: 'Custom Reports', icon: Sliders, href: '/custom-reports', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Reports Hub', icon: BarChart2, href: '/reports', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Custom Reports', icon: ScrollText, href: '/custom-reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Export', icon: Download, href: '/export', permission: PERMISSIONS.REPORTS_VIEW },
-          { label: 'Performance Export', icon: FileBarChart2, href: '/performance-export', permission: PERMISSIONS.REPORTS_VIEW },
-          { label: 'Collateral Reports', icon: TrendingUp, href: '/collateral-reports', permission: PERMISSIONS.REPORTS_VIEW },
         ],
       },
     ],
@@ -146,9 +154,8 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Live Activity Stream', icon: Radio, href: '/live-activity', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Center', icon: DatabaseZap, href: '/audit-center', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Security & Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
-          { label: 'Change History', icon: ScrollText, href: '/audit-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
-          { label: 'Activity Log', icon: UserCheck, href: '/activity-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Report', icon: BookOpen, href: '/audit-report', permission: PERMISSIONS.AUDIT_LOG_VIEW },
+          { label: 'Archive Audit Log', icon: FileStack, href: '/archive/audit-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
         ],
       },
       {
@@ -171,6 +178,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Officer Permissions', icon: KeyRound, href: '/officer-permissions', permission: PERMISSIONS.USER_MANAGEMENT_MANAGE },
           { label: 'Client Bank Accounts', icon: Landmark, href: '/client-bank-accounts', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Settings', icon: Settings, href: '/settings', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Alert Thresholds', icon: SlidersHorizontal, href: '/alert-thresholds', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Config', icon: Brain, href: '/system-config', permission: PERMISSIONS.SETTINGS_MANAGE },
         ],
       },
@@ -184,26 +192,29 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Vault',
         items: [
           { label: 'Vault Management', icon: Building2, href: '/archive/vault-management', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Collateral Placement', icon: MapPin, href: '/archive/collateral-placement', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Collateral Filing', icon: FolderCheck, href: '/archive/collateral-placement', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
         label: 'Documents',
         items: [
           { label: 'Documents Library', icon: Library, href: '/archive/documents-library', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Document Management', icon: FolderArchive, href: '/document-management', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
         label: 'Workflow',
         items: [
           { label: 'Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Request Status', icon: ListChecks, href: '/archive/request-status', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Custody Tracker', icon: Eye, href: '/archive/custody-tracker', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Chain of Custody', icon: Link2, href: '/archive/chain-of-custody', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
-        label: 'Audit',
+        label: 'Analytics',
         items: [
-          { label: 'Archive Audit Log', icon: FileStack, href: '/archive/audit-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
+          { label: 'Occupancy Heatmap', icon: Thermometer, href: '/archive/occupancy-heatmap', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -216,15 +227,23 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
  */
 const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-detail': 'collaterals',
+  '/collateral-record': 'collaterals',
   '/collateral-library': 'collaterals',
-  '/document-management': 'collaterals',
   '/collateral-history': 'collaterals',
-  '/document-approval': 'collaterals',
+  '/document-management': 'archive',
+  '/document-approval': 'approvals',
+  '/obligors': 'obligors',
   '/user-guide': 'administration',
   '/admin': 'administration',
-  '/approval-inbox': 'collaterals',
-  '/perfection-workflow': 'collaterals',
-  '/release-approval': 'collaterals',
+  '/approval-inbox': 'approvals',
+  '/perfection-workflow': 'approvals',
+  '/release-approval': 'approvals',
+  '/audit-log': 'audit',
+  '/activity-log': 'audit',
+  '/performance-export': 'reports',
+  '/reports-dashboard': 'reports',
+  '/collateral-reports': 'reports',
+  '/onboarding-guide': 'administration',
 };
 
 /**
@@ -251,7 +270,7 @@ export function getModuleForPath(pathname: string): string | null {
     }
   }
 
-  // Second: check secondary path map for detail/sub pages not in nav
+  // Second: check secondary path map
   for (const [prefix, moduleId] of Object.entries(SECONDARY_PATH_MODULE_MAP)) {
     if (pathname === prefix || pathname.startsWith(prefix + '/')) {
       return moduleId;

@@ -131,9 +131,10 @@ function getMarkerIcon(pin: CollateralPin, isSelected: boolean) {
 
 export default function GeomappingContent() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+  const hasValidKey = apiKey !== '' && apiKey !== 'your-google-maps-api-key-here';
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
+    googleMapsApiKey: hasValidKey ? apiKey : '',
     libraries: LIBRARIES,
   });
 
@@ -144,16 +145,58 @@ export default function GeomappingContent() {
   const [selectedPin, setSelectedPin] = useState<CollateralPin | null>(null);
   const [activeTab, setActiveTab] = useState<'map' | 'validation' | 'risk'>('map');
   const [showHeatmap, setShowHeatmap] = useState(false);
-  const [pins, setPins] = useState<CollateralPin[]>(mockPins);
+  const [pins, setPins] = useState<CollateralPin[]>([]);
   const [validations, setValidations] = useState<AddressValidation[]>(mockValidations);
   const [geocodingStatus, setGeocodingStatus] = useState<Record<string, 'idle' | 'loading' | 'done' | 'error'>>({});
   const [validatingAll, setValidatingAll] = useState(false);
   const [geocodeSearch, setGeocodeSearch] = useState('');
   const [geocodeResult, setGeocodeResult] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [geocodeLoading, setGeocodeLoading] = useState(false);
+  const [loadingPins, setLoadingPins] = useState(true);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+
+  // Load real collateral pins from Supabase
+  useEffect(() => {
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      const supabase = createClient();
+      supabase
+        .from('collateral_records')
+        .select('id, collateral_id, obligor, collateral_type, status, latitude, longitude, location_address, description, value_tsh')
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const livePins: CollateralPin[] = data.map((row: any, idx: number) => ({
+              id: row.id,
+              collateralId: row.collateral_id,
+              titleDeed: row.collateral_id,
+              obligor: row.obligor ?? 'Unknown',
+              type: row.collateral_type ?? 'Other',
+              status: row.status as CollateralStatus,
+              lat: parseFloat(row.latitude),
+              lng: parseFloat(row.longitude),
+              address: row.location_address ?? row.description ?? '',
+              addressVerified: true,
+              riskZone: 'LOW' as RiskZone,
+              utilization: 0,
+              valueTZS: row.value_tsh ?? '0',
+              region: row.location_address ?? '',
+            }));
+            setPins(livePins);
+          } else {
+            // Fall back to mock data if no geo-tagged records exist
+            setPins(mockPins);
+          }
+          setLoadingPins(false);
+        })
+        .catch(() => {
+          setPins(mockPins);
+          setLoadingPins(false);
+        });
+    });
+  }, []);
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
@@ -251,7 +294,7 @@ export default function GeomappingContent() {
       </div>
 
       {/* API Key Warning */}
-      {!apiKey && (
+      {!hasValidKey && (
         <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
           <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-600" />
           <span>
@@ -383,7 +426,19 @@ export default function GeomappingContent() {
             <div className="flex gap-4 h-[420px]">
               {/* Map */}
               <div className="flex-1 rounded-xl overflow-hidden border border-border">
-                {loadError ? (
+                {!hasValidKey ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 gap-3 text-center px-6">
+                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Map size={26} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-600 text-foreground">Interactive Map Unavailable</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configure <code className="font-mono text-xs bg-muted px-1 rounded">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> in your environment variables to enable the map.
+                      </p>
+                    </div>
+                  </div>
+                ) : loadError ? (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 text-red-600 text-sm gap-2">
                     <AlertTriangle size={24} />
                     <p className="font-600">Failed to load Google Maps</p>
