@@ -131,9 +131,10 @@ function getMarkerIcon(pin: CollateralPin, isSelected: boolean) {
 
 export default function GeomappingContent() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+  const hasValidKey = apiKey !== '' && apiKey !== 'your-google-maps-api-key-here';
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
+    googleMapsApiKey: hasValidKey ? apiKey : '',
     libraries: LIBRARIES,
   });
 
@@ -293,7 +294,7 @@ export default function GeomappingContent() {
       </div>
 
       {/* API Key Warning */}
-      {!apiKey && (
+      {!hasValidKey && (
         <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
           <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-600" />
           <span>
@@ -425,7 +426,19 @@ export default function GeomappingContent() {
             <div className="flex gap-4 h-[420px]">
               {/* Map */}
               <div className="flex-1 rounded-xl overflow-hidden border border-border">
-                {loadError ? (
+                {!hasValidKey ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 gap-3 text-center px-6">
+                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Map size={26} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-600 text-foreground">Interactive Map Unavailable</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Configure <code className="font-mono text-xs bg-muted px-1 rounded">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> in your environment variables to enable the map.
+                      </p>
+                    </div>
+                  </div>
+                ) : loadError ? (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 text-red-600 text-sm gap-2">
                     <AlertTriangle size={24} />
                     <p className="font-600">Failed to load Google Maps</p>
