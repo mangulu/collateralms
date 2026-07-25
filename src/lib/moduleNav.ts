@@ -216,6 +216,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
  */
 const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-detail': 'collaterals',
+  '/collateral-record': 'collaterals',
   '/collateral-library': 'collaterals',
   '/document-management': 'collaterals',
   '/collateral-history': 'collaterals',
