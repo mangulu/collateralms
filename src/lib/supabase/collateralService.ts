@@ -38,6 +38,7 @@ export interface CollateralRecord {
   collateralId: string;
   obligor: string;
   obligorId: string;
+  obligorRefId?: string | null;
   type: CollateralType;
   description: string;
   valueTSh: string;
@@ -57,6 +58,10 @@ export interface CollateralRecord {
   ltvRatio?: number | null;
   maxSecurableAmount?: number | null;
   availableEquity?: number | null;
+  // Geo fields
+  latitude?: number | null;
+  longitude?: number | null;
+  locationAddress?: string | null;
 }
 
 export interface AuditLog {
@@ -228,6 +233,7 @@ function rowToCollateral(row: any): CollateralRecord {
     collateralId: row.collateral_id,
     obligor: row.obligor,
     obligorId: row.obligor_id,
+    obligorRefId: row.obligor_ref_id ?? null,
     type: row.collateral_type as CollateralType,
     description: row.description,
     valueTSh: row.value_tsh,
@@ -247,6 +253,10 @@ function rowToCollateral(row: any): CollateralRecord {
     ltvRatio: row.ltv_ratio != null ? parseFloat(row.ltv_ratio) || null : null,
     maxSecurableAmount: row.max_securable_amount != null ? parseFloat(row.max_securable_amount) || null : null,
     availableEquity: row.available_equity != null ? parseFloat(row.available_equity) || null : null,
+    // Geo fields
+    latitude: row.latitude != null ? parseFloat(row.latitude) : null,
+    longitude: row.longitude != null ? parseFloat(row.longitude) : null,
+    locationAddress: row.location_address ?? null,
   };
 }
 
@@ -255,6 +265,7 @@ function collateralToRow(data: Partial<CollateralRecord>) {
   if (data.collateralId !== undefined) row.collateral_id = data.collateralId;
   if (data.obligor !== undefined) row.obligor = data.obligor;
   if (data.obligorId !== undefined) row.obligor_id = data.obligorId;
+  if (data.obligorRefId !== undefined) row.obligor_ref_id = data.obligorRefId;
   if (data.type !== undefined) row.collateral_type = data.type;
   if (data.description !== undefined) row.description = data.description;
   if (data.valueTSh !== undefined) row.value_tsh = data.valueTSh;
@@ -267,6 +278,9 @@ function collateralToRow(data: Partial<CollateralRecord>) {
   if (data.requiresPerfection !== undefined) row.requires_perfection = data.requiresPerfection;
   if (data.daysToDeadline !== undefined) row.days_to_deadline = data.daysToDeadline;
   if (data.createdBy !== undefined) row.created_by = data.createdBy;
+  if (data.latitude !== undefined) row.latitude = data.latitude;
+  if (data.longitude !== undefined) row.longitude = data.longitude;
+  if (data.locationAddress !== undefined) row.location_address = data.locationAddress;
   return row;
 }
 

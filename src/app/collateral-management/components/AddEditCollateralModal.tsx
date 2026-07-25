@@ -8,10 +8,10 @@ import { documentService, CollateralDocument, DocumentType } from '@/lib/supabas
 import { documentTypeSettingsService, DocumentTypeSetting } from '@/lib/supabase/documentTypeSettingsService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
 import { useAuth } from '@/contexts/AuthContext';
+import ObligorPicker from '@/components/ObligorPicker';
+import LocationPicker from '@/components/LocationPicker';
 
 interface FormData {
-  obligor: string;
-  obligorId: string;
   type: string;
   description: string;
   valueTS: string;
@@ -56,6 +56,13 @@ export default function AddEditCollateralModal({
   const [saveError, setSaveError] = useState<{ kind: CollateralWriteError['kind']; message: string } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const lastSubmitDataRef = useRef<{ data: Partial<Collateral>; pendingFiles?: { file: File; docType: string; notes: string }[] } | null>(null);
+
+  // Obligor picker state
+  const [selectedObligor, setSelectedObligor] = useState<{ id: string; name: string; code: string } | null>(null);
+  const [obligorError, setObligorError] = useState<string | null>(null);
+
+  // Location picker state
+  const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
   // Document state
   const [documents, setDocuments] = useState<CollateralDocument[]>([]);
@@ -168,14 +175,13 @@ export default function AddEditCollateralModal({
       setSaveError(null);
       setRetryCount(0);
       lastSubmitDataRef.current = null;
+      setObligorError(null);
     }
   }, [open]);
 
   useEffect(() => {
     if (editItem) {
       reset({
-        obligor: editItem.obligor,
-        obligorId: editItem.obligorId,
         type: editItem.type,
         description: editItem.description,
         valueTS: editItem.valueTSh,
@@ -186,12 +192,28 @@ export default function AddEditCollateralModal({
         assignedOfficer: editItem.assignedOfficer,
         requiresPerfection: editItem.requiresPerfection,
       });
+      // Restore obligor picker
+      if (editItem.obligorRefId) {
+        setSelectedObligor({ id: editItem.obligorRefId, name: editItem.obligor, code: editItem.obligorId });
+      } else if (editItem.obligor) {
+        setSelectedObligor({ id: '', name: editItem.obligor, code: editItem.obligorId });
+      } else {
+        setSelectedObligor(null);
+      }
+      // Restore location
+      if (editItem.latitude != null && editItem.longitude != null) {
+        setLocation({ lat: editItem.latitude, lng: editItem.longitude, address: editItem.locationAddress ?? `${editItem.latitude}, ${editItem.longitude}` });
+      } else {
+        setLocation(null);
+      }
     } else {
       reset({
-        obligor: '', obligorId: '', type: '', description: '', valueTS: '',
+        type: '', description: '', valueTS: '',
         facilityId: '', registry: '', registrationDate: '', perfectionDeadline: '',
         assignedOfficer: '', requiresPerfection: true,
       });
+      setSelectedObligor(null);
+      setLocation(null);
     }
   }, [editItem, open, reset]);
 
@@ -277,9 +299,17 @@ export default function AddEditCollateralModal({
   const missingRequiredTypes = requiredDocTypes.filter((rt) => !uploadedDocTypes.has(rt.name));
 
   const onSubmit = async (data: FormData) => {
+    // Validate obligor
+    if (!selectedObligor) {
+      setObligorError('Please select an obligor.');
+      return;
+    }
+    setObligorError(null);
+
     const savedData: Partial<Collateral> = {
-      obligor: data.obligor,
-      obligorId: data.obligorId,
+      obligor: selectedObligor.name,
+      obligorId: selectedObligor.code,
+      obligorRefId: selectedObligor.id || null,
       type: data.type as Collateral['type'],
       description: data.description,
       valueTSh: data.valueTS,
@@ -289,6 +319,9 @@ export default function AddEditCollateralModal({
       perfectionDeadline: data.requiresPerfection ? data.perfectionDeadline : '',
       assignedOfficer: data.assignedOfficer,
       requiresPerfection: data.requiresPerfection,
+      latitude: location?.lat ?? null,
+      longitude: location?.lng ?? null,
+      locationAddress: location?.address ?? null,
     };
 
     setSaveError(null);
@@ -507,34 +540,21 @@ export default function AddEditCollateralModal({
               Obligor & Facility Details
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-500 text-foreground mb-1">
-                  Obligor / Borrower Name <span className="text-destructive">*</span>
+                  Obligor / Borrower <span className="text-destructive">*</span>
                 </label>
-                <p className="text-xs text-muted-foreground mb-1.5">Full legal name of the entity providing this collateral</p>
-                <input
-                  type="text"
-                  placeholder="e.g. Karibu Enterprises Ltd"
-                  className={`w-full px-3 py-2.5 rounded-md border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors ${errors.obligor ? 'border-destructive' : 'border-border hover:border-primary/40'}`}
-                  {...register('obligor', { required: 'Obligor name is required' })}
+                <p className="text-xs text-muted-foreground mb-1.5">Select the borrower from the obligors registry</p>
+                <ObligorPicker
+                  value={selectedObligor}
+                  onChange={(val) => { setSelectedObligor(val); if (val) setObligorError(null); }}
+                  error={obligorError ?? undefined}
                 />
-                {errors.obligor && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{errors.obligor.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-500 text-foreground mb-1">
-                  Obligor ID <span className="text-destructive">*</span>
-                </label>
-                <p className="text-xs text-muted-foreground mb-1.5">Internal customer reference (e.g. OBL-2024-0441)</p>
-                <input
-                  type="text"
-                  placeholder="OBL-YYYY-NNNN"
-                  className={`w-full px-3 py-2.5 rounded-md border text-sm bg-white font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors ${errors.obligorId ? 'border-destructive' : 'border-border hover:border-primary/40'}`}
-                  {...register('obligorId', {
-                    required: 'Obligor ID is required',
-                    pattern: { value: /^OBL-\d{4}-\d{4}$/, message: 'Format must be OBL-YYYY-NNNN' },
-                  })}
-                />
-                {errors.obligorId && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{errors.obligorId.message}</p>}
+                {obligorError && (
+                  <p className="mt-1 text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle size={11} />{obligorError}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-500 text-foreground mb-1">
@@ -708,6 +728,16 @@ export default function AddEditCollateralModal({
           </div>
 
           {/* Required Documents Checklist (shown on details tab) */}
+          {/* Section 4: Location */}
+          <div className="mb-6">
+            <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">4</span>
+              Geolocation <span className="text-xs font-400 text-muted-foreground ml-1">(optional)</span>
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3">Pin the physical location of this collateral asset on the map.</p>
+            <LocationPicker value={location} onChange={setLocation} />
+          </div>
+
           {requiredDocTypes.length > 0 && (
             <div className="mb-2">
               <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
