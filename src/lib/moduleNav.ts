@@ -12,7 +12,7 @@ import {
   DatabaseZap, ClipboardList, ScrollText, UserCheck, BookOpen, ShieldCheck, Radio, Scale,
   Users, KeyRound, Settings, Landmark,
   Archive, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
-  MailCheck, History, BadgeCheck, CheckSquare,
+  MailCheck, History, BadgeCheck, CheckSquare, Flame,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -99,6 +99,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'AI Risk Assessment', icon: ScanSearch, href: '/risk-assessment', permission: PERMISSIONS.COMPLIANCE_VIEW },
           { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Geomapping', icon: Map, href: '/geomapping', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Portfolio Heatmap', icon: Flame, href: '/portfolio-heatmap', permission: PERMISSIONS.DASHBOARD_VIEW },
         ],
       },
     ],
