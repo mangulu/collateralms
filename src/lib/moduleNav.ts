@@ -229,6 +229,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/performance-export': 'reports',
   '/reports-dashboard': 'reports',
   '/collateral-reports': 'reports',
+  '/onboarding-guide': 'administration',
 };
 
 /**

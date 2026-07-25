@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppLogo from './ui/AppLogo';
-import { ChevronLeft, ChevronRight, LogOut, LayoutGrid, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, LayoutGrid, ChevronDown, BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/lib/rbac';
 import { MODULE_DEFINITIONS, getModuleForPath, ModuleNavItem } from '@/lib/moduleNav';
@@ -277,6 +277,43 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
               </div>
             )}
           </div>
+          {/* Onboarding Guide button */}
+          <div
+            className="relative mt-1"
+            onMouseEnter={() => setHoveredItem('__onboarding__')}
+            onMouseLeave={() => setHoveredItem(null)}
+          >
+            <button
+              onClick={() => router.push('/onboarding-guide')}
+              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150"
+              style={
+                currentPath === '/onboarding-guide'
+                  ? { backgroundColor: '#2563EB', color: '#FFFFFF' }
+                  : { color: '#1E3A8A' }
+              }
+              onMouseOver={(e) => {
+                if (currentPath !== '/onboarding-guide') {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (currentPath !== '/onboarding-guide') {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <BookOpen size={18} className="shrink-0" />
+              {!collapsed && <span className="flex-1 truncate text-left">Onboarding Guide</span>}
+            </button>
+            {collapsed && hoveredItem === '__onboarding__' && (
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
+                <div className="text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap" style={{ backgroundColor: '#1E293B' }}>
+                  Onboarding Guide
+                </div>
+              </div>
+            )}
+          </div>
+
           {!collapsed && (
             <div className="mx-1 mt-2" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }} />
           )}
