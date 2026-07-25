@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, Brain, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck,  } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, Brain, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer,  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -207,6 +207,12 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Custody Tracker', icon: Eye, href: '/archive/custody-tracker', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'Analytics',
+        items: [
+          { label: 'Occupancy Heatmap', icon: Thermometer, href: '/archive/occupancy-heatmap', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
