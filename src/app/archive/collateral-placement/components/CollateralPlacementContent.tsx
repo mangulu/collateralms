@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FolderCheck, Plus, Search, RefreshCw, AlertCircle, Link2, Package, Edit2,
-  Upload, FileText, X, Loader2, Paperclip, CheckCircle2,
+  Upload, FileText, X, Loader2, Paperclip, CheckCircle2, CheckSquare, Square,
+  Layers, MoveRight,
 } from 'lucide-react';
 import {
   archivePlacementService, archiveLocationService, archiveAuditService,
@@ -34,6 +35,157 @@ function generatePhysicalRef(): string {
   return `PHY-${date}-${rand}`;
 }
 
+// ─── Bulk Move Modal ──────────────────────────────────────────────────────────
+interface BulkMoveModalProps {
+  selected: CollateralRecord[];
+  locations: ArchiveLocation[];
+  userId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function BulkMoveModal({ selected, locations, userId, onClose, onSaved }: BulkMoveModalProps) {
+  const slots = locations.filter((l) => l.locationType === 'slot');
+  const [locationId, setLocationId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+
+  const handleBulkFile = async () => {
+    if (!locationId) { setError('Please select a vault slot.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      for (let i = 0; i < selected.length; i++) {
+        const c = selected[i];
+        const physicalRef = generatePhysicalRef();
+        await archivePlacementService.upsert({
+          collateralId: c.id,
+          locationId,
+          physicalRef,
+          placedBy: userId,
+        });
+        await archiveAuditService.log({
+          eventType: 'placement_assigned',
+          collateralId: c.id,
+          locationId,
+          performedBy: userId,
+          description: `Bulk filed — physical ref ${physicalRef}`,
+        });
+        setProgress(i + 1);
+      }
+      onSaved();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Bulk filing failed');
+    } finally { setSaving(false); }
+  };
+
+  const selectedSlot = slots.find((s) => s.id === locationId);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: '#EFF6FF' }}>
+            <Layers size={18} style={{ color: '#2563EB' }} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>Bulk File Collaterals</h3>
+            <p className="text-xs" style={{ color: '#6B7280' }}>
+              {selected.length} collateral{selected.length !== 1 ? 's' : ''} selected
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-red-50 text-red-700 text-sm">
+            <AlertCircle size={14} /> {error}
+          </div>
+        )}
+
+        {/* Selected collaterals preview */}
+        <div className="mb-4 rounded-xl border max-h-36 overflow-y-auto"
+          style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}>
+          {selected.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0"
+              style={{ borderColor: '#DBEAFE' }}>
+              <Package size={13} style={{ color: '#1D4ED8' }} />
+              <span className="text-xs truncate" style={{ color: '#1E3A8A' }}>
+                {c.type} — {c.obligor}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Slot selector */}
+        <div className="mb-4">
+          <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>
+            Target Vault Slot *
+          </label>
+          <select value={locationId} onChange={(e) => setLocationId(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            style={{ borderColor: '#D1D5DB' }}>
+            <option value="">Select slot…</option>
+            {slots.map((l) => (
+              <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Physical ref note */}
+        <div className="flex items-start gap-2 mb-5 p-3 rounded-xl text-xs"
+          style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D' }}>
+          <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
+          <span>
+            A unique physical reference (PHY-YYYYMMDD-XXXX) will be auto-generated for each
+            collateral and saved automatically.
+          </span>
+        </div>
+
+        {/* Progress bar while saving */}
+        {saving && (
+          <div className="mb-4">
+            <div className="flex justify-between text-xs mb-1" style={{ color: '#6B7280' }}>
+              <span>Filing…</span>
+              <span>{progress} / {selected.length}</span>
+            </div>
+            <div className="w-full rounded-full h-2" style={{ backgroundColor: '#DBEAFE' }}>
+              <div className="h-2 rounded-full transition-all"
+                style={{ width: `${(progress / selected.length) * 100}%`, backgroundColor: '#2563EB' }} />
+            </div>
+          </div>
+        )}
+
+        {selectedSlot && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-xs"
+            style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8' }}>
+            <MoveRight size={13} />
+            <span>All selected collaterals → <strong>{selectedSlot.name}</strong> ({selectedSlot.code})</span>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={onClose} disabled={saving}
+            className="flex-1 py-2 rounded-lg text-sm font-medium border"
+            style={{ borderColor: '#D1D5DB', color: '#374151', opacity: saving ? 0.5 : 1 }}>
+            Cancel
+          </button>
+          <button onClick={handleBulkFile} disabled={saving || !locationId}
+            className="flex-1 py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
+            style={{ backgroundColor: '#2563EB', opacity: (saving || !locationId) ? 0.6 : 1 }}>
+            {saving
+              ? <><Loader2 size={14} className="animate-spin" /> Filing…</>
+              : <><Layers size={14} /> File {selected.length} Collateral{selected.length !== 1 ? 's' : ''}</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Single Assign Modal ──────────────────────────────────────────────────────
 interface AssignModalProps {
   collaterals: CollateralRecord[];
   locations: ArchiveLocation[];
@@ -258,6 +410,7 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
   );
 }
 
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CollateralFilingContent() {
   const { user } = useAuth();
   const [placements, setPlacements] = useState<ArchivePlacement[]>([]);
@@ -270,8 +423,13 @@ export default function CollateralFilingContent() {
   const [editPlacement, setEditPlacement] = useState<ArchivePlacement | undefined>();
   const [showFiledOnly, setShowFiledOnly] = useState(false);
 
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkModal, setShowBulkModal] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
+    setSelectedIds(new Set());
     try {
       const [pResult, cResult, lResult] = await Promise.allSettled([
         archivePlacementService.getAll(),
@@ -324,6 +482,34 @@ export default function CollateralFilingContent() {
     return !q || c.description?.toLowerCase().includes(q) || c.obligor?.toLowerCase().includes(q);
   });
 
+  // Selection helpers
+  const allUnfiledSelected = filteredUnfiled.length > 0 && filteredUnfiled.every((c) => selectedIds.has(c.id));
+  const someUnfiledSelected = filteredUnfiled.some((c) => selectedIds.has(c.id));
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allUnfiledSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredUnfiled.map((c) => c.id)));
+    }
+  };
+
+  const selectedCollaterals = unfiledCollaterals.filter((c) => selectedIds.has(c.id));
+
+  // Clear selection when switching tabs
+  const handleTabSwitch = (toAwaiting: boolean) => {
+    setShowFiledOnly(toAwaiting);
+    setSelectedIds(new Set());
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -372,7 +558,7 @@ export default function CollateralFilingContent() {
             placeholder="Search by collateral, owner, location…" />
         </div>
         <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: '#DBEAFE' }}>
-          <button onClick={() => setShowFiledOnly(false)}
+          <button onClick={() => handleTabSwitch(false)}
             className="px-3 py-2 text-xs font-medium transition-colors"
             style={{
               backgroundColor: !showFiledOnly ? '#2563EB' : '#F8FAFF',
@@ -380,7 +566,7 @@ export default function CollateralFilingContent() {
             }}>
             Filed ({placements.length})
           </button>
-          <button onClick={() => setShowFiledOnly(true)}
+          <button onClick={() => handleTabSwitch(true)}
             className="px-3 py-2 text-xs font-medium transition-colors"
             style={{
               backgroundColor: showFiledOnly ? '#B45309' : '#F8FAFF',
@@ -402,7 +588,7 @@ export default function CollateralFilingContent() {
           {[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />)}
         </div>
       ) : showFiledOnly ? (
-        /* Awaiting Filing list */
+        /* ── Awaiting Filing list with multi-select ── */
         filteredUnfiled.length === 0 ? (
           <div className="text-center py-16">
             <CheckCircle2 size={40} className="mx-auto mb-3" style={{ color: '#86EFAC' }} />
@@ -410,39 +596,115 @@ export default function CollateralFilingContent() {
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl text-xs"
+            {/* Info banner */}
+            <div className="flex items-center gap-2 mb-1 px-3 py-2 rounded-xl text-xs"
               style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', color: '#B45309' }}>
               <AlertCircle size={13} />
               <span>These collaterals have not been assigned a physical vault location yet.</span>
             </div>
-            {filteredUnfiled.map((c) => (
-              <div key={c.id} className="flex items-center gap-4 p-4 rounded-xl"
-                style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: '#FEF3C7' }}>
-                  <Package size={18} style={{ color: '#B45309' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: '#92400E' }}>
-                    {c.type} — {c.obligor}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#B45309' }}>{c.description}</p>
-                </div>
+
+            {/* Bulk action toolbar */}
+            <div className="flex items-center justify-between px-3 py-2 rounded-xl"
+              style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <button
-                  onClick={() => {
-                    setEditPlacement(undefined);
-                    setShowModal(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                  style={{ backgroundColor: '#2563EB', color: '#fff' }}>
-                  <Plus size={12} /> File Now
+                  type="button"
+                  onClick={toggleSelectAll}
+                  className="flex items-center justify-center w-5 h-5 rounded transition-colors"
+                  aria-label={allUnfiledSelected ? 'Deselect all' : 'Select all'}
+                >
+                  {allUnfiledSelected ? (
+                    <CheckSquare size={18} style={{ color: '#2563EB' }} />
+                  ) : someUnfiledSelected ? (
+                    <CheckSquare size={18} style={{ color: '#93C5FD' }} />
+                  ) : (
+                    <Square size={18} style={{ color: '#9CA3AF' }} />
+                  )}
                 </button>
-              </div>
-            ))}
+                <span className="text-xs font-medium" style={{ color: '#374151' }}>
+                  {selectedIds.size > 0
+                    ? `${selectedIds.size} of ${filteredUnfiled.length} selected`
+                    : 'Select all'}
+                </span>
+              </label>
+
+              {selectedIds.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: '#6B7280' }}>
+                    {selectedIds.size} collateral{selectedIds.size !== 1 ? 's' : ''} selected
+                  </span>
+                  <button
+                    onClick={() => setShowBulkModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                    style={{ backgroundColor: '#2563EB' }}>
+                    <Layers size={13} /> Bulk File to Slot
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="p-1.5 rounded-lg text-xs"
+                    style={{ color: '#6B7280' }}
+                    title="Clear selection">
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Collateral rows */}
+            {filteredUnfiled.map((c) => {
+              const isSelected = selectedIds.has(c.id);
+              return (
+                <div key={c.id}
+                  className="flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    backgroundColor: isSelected ? '#EFF6FF' : '#FFFBEB',
+                    border: `1px solid ${isSelected ? '#93C5FD' : '#FDE68A'}`,
+                  }}
+                  onClick={() => toggleSelect(c.id)}>
+                  {/* Checkbox */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(c.id); }}
+                    className="flex items-center justify-center w-5 h-5 shrink-0 rounded transition-colors"
+                    aria-label={isSelected ? 'Deselect' : 'Select'}>
+                    {isSelected
+                      ? <CheckSquare size={18} style={{ color: '#2563EB' }} />
+                      : <Square size={18} style={{ color: '#9CA3AF' }} />
+                    }
+                  </button>
+
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: isSelected ? '#DBEAFE' : '#FEF3C7' }}>
+                    <Package size={16} style={{ color: isSelected ? '#1D4ED8' : '#B45309' }} />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate"
+                      style={{ color: isSelected ? '#1E3A8A' : '#92400E' }}>
+                      {c.type} — {c.obligor}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: isSelected ? '#3B82F6' : '#B45309' }}>
+                      {c.description}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditPlacement(undefined);
+                      setShowModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0"
+                    style={{ backgroundColor: '#2563EB', color: '#fff' }}>
+                    <Plus size={12} /> File Now
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )
       ) : (
-        /* Filed placements list */
+        /* ── Filed placements list ── */
         filtered.length === 0 ? (
           <div className="text-center py-16">
             <FolderCheck size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
@@ -489,6 +751,7 @@ export default function CollateralFilingContent() {
         )
       )}
 
+      {/* Single file modal */}
       {showModal && (
         <AssignModal
           collaterals={showFiledOnly ? unfiledCollaterals : collaterals}
@@ -497,6 +760,17 @@ export default function CollateralFilingContent() {
           userId={user?.id ?? ''}
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); load(); }}
+        />
+      )}
+
+      {/* Bulk move modal */}
+      {showBulkModal && (
+        <BulkMoveModal
+          selected={selectedCollaterals}
+          locations={locations}
+          userId={user?.id ?? ''}
+          onClose={() => setShowBulkModal(false)}
+          onSaved={() => { setShowBulkModal(false); load(); }}
         />
       )}
     </div>
