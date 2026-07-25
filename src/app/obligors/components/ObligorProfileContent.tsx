@@ -1,7 +1,12 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Building2, User, MapPin, Phone, Mail, Shield, Edit2, AlertTriangle, CheckCircle2, Loader2, RefreshCw, FileText, CreditCard, ExternalLink, Hash, Globe, UserCheck, AlertCircle,  } from 'lucide-react';
+import {
+  ArrowLeft, Building2, User, MapPin, Phone, Mail, Shield, Edit2,
+  AlertTriangle, CheckCircle2, Loader2, RefreshCw, FileText, CreditCard,
+  ExternalLink, Hash, Globe, UserCheck, AlertCircle, TrendingUp, TrendingDown,
+  BarChart2, Activity, Target, Percent, Clock, XCircle,
+} from 'lucide-react';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
 import ObligorFormModal from '../components/ObligorFormModal';
 import Icon from '@/components/ui/AppIcon';
@@ -10,9 +15,9 @@ import Icon from '@/components/ui/AppIcon';
 interface Props { id: string; }
 
 const riskConfig = {
-  LOW: { color: 'text-green-700', bg: 'bg-green-100', border: 'border-green-200', icon: CheckCircle2 },
-  MEDIUM: { color: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-200', icon: AlertTriangle },
-  HIGH: { color: 'text-red-700', bg: 'bg-red-100', border: 'border-red-200', icon: AlertTriangle },
+  LOW: { color: 'text-green-700', bg: 'bg-green-100', border: 'border-green-200', icon: CheckCircle2, score: 82 },
+  MEDIUM: { color: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-200', icon: AlertTriangle, score: 55 },
+  HIGH: { color: 'text-red-700', bg: 'bg-red-100', border: 'border-red-200', icon: AlertTriangle, score: 28 },
 };
 
 const statusColors: Record<string, string> = {
@@ -38,6 +43,45 @@ function DetailRow({ label, value, icon: Icon }: { label: string; value: React.R
         <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">{label}</p>
         <div className="text-sm text-foreground">{value || <span className="text-muted-foreground">—</span>}</div>
       </div>
+    </div>
+  );
+}
+
+function ScoreGauge({ score }: { score: number }) {
+  const clampedScore = Math.max(0, Math.min(100, score));
+  const color = clampedScore >= 70 ? '#16a34a' : clampedScore >= 40 ? '#d97706' : '#dc2626';
+  const label = clampedScore >= 70 ? 'Good Standing' : clampedScore >= 40 ? 'Moderate Risk' : 'High Risk';
+  const radius = 36;
+  const circumference = Math.PI * radius;
+  const offset = circumference - (clampedScore / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative w-24 h-14 overflow-hidden">
+        <svg width="96" height="56" viewBox="0 0 96 56" className="absolute top-0 left-0">
+          <path
+            d="M 12 48 A 36 36 0 0 1 84 48"
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 12 48 A 36 36 0 0 1 84 48"
+            fill="none"
+            stroke={color}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+          />
+        </svg>
+        <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center">
+          <span className="text-xl font-800 leading-none" style={{ color }}>{clampedScore}</span>
+        </div>
+      </div>
+      <span className="text-[10px] font-600 uppercase tracking-wide" style={{ color }}>{label}</span>
     </div>
   );
 }
@@ -102,6 +146,38 @@ export default function ObligorProfileContent({ id }: Props) {
 
   const perfectedCount = collaterals.filter((c) => c.status === 'Perfected').length;
   const overdueCount = collaterals.filter((c) => c.status === 'Overdue').length;
+
+  // ── Credit Risk Score ──────────────────────────────────────────────────────
+  const baseScore = riskConfig[obligor.riskRating ?? 'MEDIUM'].score;
+  const overdueDeduction = Math.min(overdueCount * 8, 30);
+  const perfectionBonus = Math.min(perfectedCount * 3, 15);
+  const creditRiskScore = Math.max(5, Math.min(100, baseScore - overdueDeduction + perfectionBonus));
+
+  // ── Exposure Metrics ───────────────────────────────────────────────────────
+  const creditLimit = obligor.creditLimit ?? 0;
+  const utilizationRate = creditLimit > 0 ? Math.min(100, (totalCollateralValue / creditLimit) * 100) : null;
+  const activeCollaterals = collaterals.filter((c) => !['Released', 'Rejected'].includes(c.status));
+  const avgCollateralValue = activeCollaterals.length > 0 ? totalCollateralValue / activeCollaterals.length : 0;
+  const releasedValue = collaterals
+    .filter((c) => c.status === 'Released')
+    .reduce((sum, c) => {
+      const v = parseFloat((c.value_tsh ?? '0').replace(/,/g, ''));
+      return sum + (isNaN(v) ? 0 : v);
+    }, 0);
+
+  // ── Approval Trend Summary ─────────────────────────────────────────────────
+  const approvedCount = collaterals.filter((c) => ['Perfected', 'Monitoring'].includes(c.status)).length;
+  const rejectedCount = collaterals.filter((c) => c.status === 'Rejected').length;
+  const pendingCount = collaterals.filter((c) => ['Draft', 'Submitted', 'Under Review'].includes(c.status)).length;
+  const totalDecided = approvedCount + rejectedCount;
+  const approvalRate = totalDecided > 0 ? Math.round((approvedCount / totalDecided) * 100) : null;
+
+  const formatTsh = (val: number) => {
+    if (val >= 1e9) return `TSh ${(val / 1e9).toFixed(1)}B`;
+    if (val >= 1e6) return `TSh ${(val / 1e6).toFixed(1)}M`;
+    if (val >= 1e3) return `TSh ${(val / 1e3).toFixed(0)}K`;
+    return val > 0 ? `TSh ${val.toFixed(0)}` : '—';
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -252,8 +328,280 @@ export default function ObligorProfileContent({ id }: Props) {
           )}
         </div>
 
-        {/* Right: Linked Collaterals */}
-        <div className="lg:col-span-2">
+        {/* Right: Linked Collaterals + Risk Panels */}
+        <div className="lg:col-span-2 space-y-4">
+
+          {/* ── Credit Risk Score ─────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-border shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Target size={14} className="text-primary" />
+              </div>
+              <h2 className="text-sm font-700 text-foreground uppercase tracking-wider">Credit Risk Score</h2>
+              {(obligor.riskRating === 'HIGH' || creditRiskScore < 40) && (
+                <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-700 bg-red-100 text-red-700 border border-red-200">
+                  <AlertTriangle size={10} /> High-Risk Obligor
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-6">
+              <ScoreGauge score={creditRiskScore} />
+              <div className="flex-1 grid grid-cols-2 gap-3">
+                {[
+                  {
+                    label: 'Base Rating',
+                    value: obligor.riskRating ?? 'MEDIUM',
+                    color: risk.color,
+                    bg: risk.bg,
+                    icon: Shield,
+                  },
+                  {
+                    label: 'Overdue Penalty',
+                    value: overdueDeduction > 0 ? `-${overdueDeduction} pts` : 'None',
+                    color: overdueDeduction > 0 ? 'text-red-700' : 'text-green-700',
+                    bg: overdueDeduction > 0 ? 'bg-red-50' : 'bg-green-50',
+                    icon: TrendingDown,
+                  },
+                  {
+                    label: 'Perfection Bonus',
+                    value: perfectionBonus > 0 ? `+${perfectionBonus} pts` : 'None',
+                    color: perfectionBonus > 0 ? 'text-green-700' : 'text-muted-foreground',
+                    bg: perfectionBonus > 0 ? 'bg-green-50' : 'bg-muted/30',
+                    icon: TrendingUp,
+                  },
+                  {
+                    label: 'Final Score',
+                    value: `${creditRiskScore} / 100`,
+                    color: creditRiskScore >= 70 ? 'text-green-700' : creditRiskScore >= 40 ? 'text-amber-700' : 'text-red-700',
+                    bg: creditRiskScore >= 70 ? 'bg-green-50' : creditRiskScore >= 40 ? 'bg-amber-50' : 'bg-red-50',
+                    icon: Activity,
+                  },
+                ].map((item) => (
+                  <div key={item.label} className={`p-3 rounded-lg border border-border ${item.bg}`}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <item.icon size={11} className="text-muted-foreground" />
+                      <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide">{item.label}</p>
+                    </div>
+                    <p className={`text-sm font-700 ${item.color}`}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Score bar */}
+            <div className="mt-4">
+              <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                <span>0 — Critical</span>
+                <span>40 — Moderate</span>
+                <span>70 — Good</span>
+                <span>100</span>
+              </div>
+              <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${creditRiskScore}%`,
+                    background: creditRiskScore >= 70
+                      ? '#16a34a'
+                      : creditRiskScore >= 40
+                      ? '#d97706' :'#dc2626',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Exposure Metrics ──────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-border shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                <BarChart2 size={14} className="text-blue-600" />
+              </div>
+              <h2 className="text-sm font-700 text-foreground uppercase tracking-wider">Exposure Metrics</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+              {[
+                {
+                  label: 'Total Exposure',
+                  value: formatTsh(totalCollateralValue),
+                  sub: `${activeCollaterals.length} active items`,
+                  icon: CreditCard,
+                  color: 'text-blue-700',
+                  bg: 'bg-blue-50',
+                },
+                {
+                  label: 'Avg. Collateral Value',
+                  value: formatTsh(avgCollateralValue),
+                  sub: 'per active collateral',
+                  icon: TrendingUp,
+                  color: 'text-indigo-700',
+                  bg: 'bg-indigo-50',
+                },
+                {
+                  label: 'Released Exposure',
+                  value: formatTsh(releasedValue),
+                  sub: `${collaterals.filter((c) => c.status === 'Released').length} released`,
+                  icon: CheckCircle2,
+                  color: 'text-slate-600',
+                  bg: 'bg-slate-50',
+                },
+              ].map((m) => (
+                <div key={m.label} className={`p-3 rounded-lg border border-border ${m.bg}`}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <m.icon size={12} className={m.color} />
+                    <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide">{m.label}</p>
+                  </div>
+                  <p className={`text-base font-700 ${m.color}`}>{m.value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{m.sub}</p>
+                </div>
+              ))}
+            </div>
+            {/* Utilization bar */}
+            {utilizationRate !== null ? (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Percent size={12} className="text-muted-foreground" />
+                    <span className="text-xs font-600 text-foreground">Credit Limit Utilization</span>
+                  </div>
+                  <span className={`text-xs font-700 ${utilizationRate >= 90 ? 'text-red-700' : utilizationRate >= 70 ? 'text-amber-700' : 'text-green-700'}`}>
+                    {utilizationRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.min(utilizationRate, 100)}%`,
+                      background: utilizationRate >= 90 ? '#dc2626' : utilizationRate >= 70 ? '#d97706' : '#2563eb',
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>Limit: {formatTsh(creditLimit)}</span>
+                  <span>Used: {formatTsh(totalCollateralValue)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border">
+                <AlertCircle size={13} className="text-muted-foreground shrink-0" />
+                <p className="text-xs text-muted-foreground">No credit limit set — utilization rate unavailable</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Approval Trend Summary ────────────────────────────────────── */}
+          <div className="bg-white rounded-xl border border-border shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center">
+                <Activity size={14} className="text-purple-600" />
+              </div>
+              <h2 className="text-sm font-700 text-foreground uppercase tracking-wider">Approval Trend Summary</h2>
+              {approvalRate !== null && (
+                <span className={`ml-auto px-2 py-0.5 rounded-full text-[10px] font-700 border ${approvalRate >= 70 ? 'bg-green-100 text-green-700 border-green-200' : approvalRate >= 40 ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                  {approvalRate}% Approval Rate
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                {
+                  label: 'Approved',
+                  value: approvedCount,
+                  icon: CheckCircle2,
+                  color: 'text-green-700',
+                  bg: 'bg-green-50',
+                  border: 'border-green-200',
+                  desc: 'Perfected + Monitoring',
+                },
+                {
+                  label: 'Pending',
+                  value: pendingCount,
+                  icon: Clock,
+                  color: 'text-amber-700',
+                  bg: 'bg-amber-50',
+                  border: 'border-amber-200',
+                  desc: 'Draft / Submitted / Review',
+                },
+                {
+                  label: 'Rejected',
+                  value: rejectedCount,
+                  icon: XCircle,
+                  color: 'text-red-700',
+                  bg: 'bg-red-50',
+                  border: 'border-red-200',
+                  desc: 'Rejected collaterals',
+                },
+              ].map((item) => (
+                <div key={item.label} className={`p-4 rounded-lg border ${item.border} ${item.bg} flex flex-col items-center text-center gap-1`}>
+                  <item.icon size={18} className={item.color} />
+                  <p className={`text-2xl font-800 ${item.color}`}>{item.value}</p>
+                  <p className="text-xs font-600 text-foreground">{item.label}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+            {/* Stacked progress bar */}
+            {collaterals.length > 0 && (
+              <div>
+                <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
+                  {approvedCount > 0 && (
+                    <div
+                      className="bg-green-500 transition-all duration-700"
+                      style={{ width: `${(approvedCount / collaterals.length) * 100}%` }}
+                      title={`Approved: ${approvedCount}`}
+                    />
+                  )}
+                  {pendingCount > 0 && (
+                    <div
+                      className="bg-amber-400 transition-all duration-700"
+                      style={{ width: `${(pendingCount / collaterals.length) * 100}%` }}
+                      title={`Pending: ${pendingCount}`}
+                    />
+                  )}
+                  {overdueCount > 0 && (
+                    <div
+                      className="bg-orange-500 transition-all duration-700"
+                      style={{ width: `${(overdueCount / collaterals.length) * 100}%` }}
+                      title={`Overdue: ${overdueCount}`}
+                    />
+                  )}
+                  {rejectedCount > 0 && (
+                    <div
+                      className="bg-red-500 transition-all duration-700"
+                      style={{ width: `${(rejectedCount / collaterals.length) * 100}%` }}
+                      title={`Rejected: ${rejectedCount}`}
+                    />
+                  )}
+                  {collaterals.filter((c) => c.status === 'Released').length > 0 && (
+                    <div
+                      className="bg-slate-300 transition-all duration-700"
+                      style={{ width: `${(collaterals.filter((c) => c.status === 'Released').length / collaterals.length) * 100}%` }}
+                      title={`Released: ${collaterals.filter((c) => c.status === 'Released').length}`}
+                    />
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  {[
+                    { label: 'Approved', color: 'bg-green-500', count: approvedCount },
+                    { label: 'Pending', color: 'bg-amber-400', count: pendingCount },
+                    { label: 'Overdue', color: 'bg-orange-500', count: overdueCount },
+                    { label: 'Rejected', color: 'bg-red-500', count: rejectedCount },
+                    { label: 'Released', color: 'bg-slate-300', count: collaterals.filter((c) => c.status === 'Released').length },
+                  ].filter((l) => l.count > 0).map((l) => (
+                    <div key={l.label} className="flex items-center gap-1.5">
+                      <div className={`w-2.5 h-2.5 rounded-sm ${l.color}`} />
+                      <span className="text-[10px] text-muted-foreground">{l.label} ({l.count})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {collaterals.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-2">No collateral workflow data available</p>
+            )}
+          </div>
+
+          {/* Linked Collaterals */}
           <div className="bg-white rounded-xl border border-border shadow-sm">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div className="flex items-center gap-2">
@@ -317,7 +665,7 @@ export default function ObligorProfileContent({ id }: Props) {
           </div>
 
           {/* Risk Summary */}
-          <div className="mt-4 bg-white rounded-xl border border-border shadow-sm p-5">
+          <div className="bg-white rounded-xl border border-border shadow-sm p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Shield size={14} className="text-primary" />
