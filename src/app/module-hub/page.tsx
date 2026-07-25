@@ -63,14 +63,14 @@ const modules: ModuleCard[] = [
   },
   {
     id: 'approvals',
-    title: 'Approvals',
-    description: 'Centralised approval inbox for perfection, document, and release approval workflows.',
+    title: 'Workflows',
+    description: 'Centralised approval inbox for perfection, document, release, and archive request workflows.',
     icon: CheckSquare,
     href: '/approval-inbox',
     color: '#1D4ED8',
     bgGradient: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%)',
     iconBg: '#3B82F6',
-    stats: 'Inbox · Perfection · Release',
+    stats: 'Inbox · Perfection · Archive Requests',
     requiredPermission: PERMISSIONS.PERFECTION_VIEW,
   },
   {

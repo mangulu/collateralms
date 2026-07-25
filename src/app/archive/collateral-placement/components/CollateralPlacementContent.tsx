@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  MapPin, Plus, Search, RefreshCw, AlertCircle, Link2, Package, Edit2,
-  Upload, FileText, X, Loader2, Paperclip,
+  FolderCheck, Plus, Search, RefreshCw, AlertCircle, Link2, Package, Edit2,
+  Upload, FileText, X, Loader2, Paperclip, CheckCircle2,
 } from 'lucide-react';
 import {
   archivePlacementService, archiveLocationService, archiveAuditService,
@@ -18,12 +18,20 @@ const ACCEPTED_TYPES = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Auto-generate physical reference: PHY-YYYYMMDD-XXXX
+function generatePhysicalRef(): string {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `PHY-${date}-${rand}`;
 }
 
 interface AssignModalProps {
@@ -38,30 +46,23 @@ interface AssignModalProps {
 function AssignModal({ collaterals, locations, existing, userId, onClose, onSaved }: AssignModalProps) {
   const [collateralId, setCollateralId] = useState(existing?.collateralId ?? '');
   const [locationId, setLocationId] = useState(existing?.locationId ?? '');
-  const [physicalRef, setPhysicalRef] = useState(existing?.physicalRef ?? '');
+  const [physicalRef, setPhysicalRef] = useState(existing?.physicalRef ?? generatePhysicalRef());
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Document upload state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // If editing and there's already an electronic record, show it
   const existingDocUrl = existing?.electronicRecordUrl ?? null;
-
   const slots = locations.filter((l) => l.locationType === 'slot');
 
   const validateFile = (file: File): string | null => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      return 'Unsupported file type. Use PDF, JPG, PNG, or DOCX.';
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return 'File exceeds 10 MB limit.';
-    }
+    if (!ACCEPTED_TYPES.includes(file.type)) return 'Unsupported file type. Use PDF, JPG, PNG, or DOCX.';
+    if (file.size > MAX_FILE_SIZE) return 'File exceeds 10 MB limit.';
     return null;
   };
 
@@ -92,19 +93,13 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
     const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const safeCollId = collId.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `placements/${safeCollId}/${timestamp}_${safeFileName}`;
-
     const { error: uploadError } = await supabase.storage
       .from('collateral-documents')
       .upload(filePath, file, { upsert: false });
-
-    if (uploadError) {
-      throw new Error(`Upload failed: ${uploadError.message}`);
-    }
-
+    if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
     const { data: urlData } = await supabase.storage
       .from('collateral-documents')
-      .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1-year signed URL
-
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365);
     return urlData?.signedUrl ?? null;
   };
 
@@ -114,41 +109,28 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
     setUploading(!!pendingFile);
     try {
       let electronicRecordUrl: string | undefined = existing?.electronicRecordUrl ?? undefined;
-
       if (pendingFile) {
         const url = await uploadFileToStorage(pendingFile, collateralId);
         if (url) electronicRecordUrl = url;
       }
-
       await archivePlacementService.upsert({
-        collateralId,
-        locationId,
-        physicalRef,
-        electronicRecordUrl,
-        notes,
-        placedBy: userId,
+        collateralId, locationId, physicalRef, electronicRecordUrl, notes, placedBy: userId,
       });
       await archiveAuditService.log({
-        eventType: 'placement_assigned',
-        collateralId,
-        locationId,
-        performedBy: userId,
-        description: `Collateral assigned to location${pendingFile ? ' with supporting document' : ''}`,
+        eventType: 'placement_assigned', collateralId, locationId, performedBy: userId,
+        description: `Collateral filed at location${pendingFile ? ' with supporting document' : ''}`,
       });
       onSaved();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to save');
-    } finally {
-      setSaving(false);
-      setUploading(false);
-    }
+    } finally { setSaving(false); setUploading(false); }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-base font-bold mb-4" style={{ color: '#1E3A8A' }}>
-          {existing ? 'Update Placement' : 'Assign Physical Location'}
+          {existing ? 'Update Filing' : 'File Collateral'}
         </h3>
         {error && (
           <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-red-50 text-red-700 text-sm">
@@ -179,10 +161,22 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Physical Reference</label>
-            <input value={physicalRef} onChange={(e) => setPhysicalRef(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }} placeholder="e.g. PHY-REF-001" />
+            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>
+              Physical Reference
+              <span className="ml-1 text-xs font-normal px-1.5 py-0.5 rounded"
+                style={{ backgroundColor: '#F0FDF4', color: '#15803D' }}>Auto-generated</span>
+            </label>
+            <div className="flex gap-2">
+              <input value={physicalRef} onChange={(e) => setPhysicalRef(e.target.value)}
+                className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono"
+                style={{ borderColor: '#D1D5DB' }} placeholder="PHY-YYYYMMDD-XXXX" />
+              <button type="button" onClick={() => setPhysicalRef(generatePhysicalRef())}
+                className="px-3 py-2 rounded-lg text-xs font-medium border"
+                style={{ borderColor: '#BFDBFE', color: '#1D4ED8', backgroundColor: '#EFF6FF' }}
+                title="Regenerate reference">
+                ↺
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Notes</label>
@@ -191,14 +185,12 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
               style={{ borderColor: '#D1D5DB' }} />
           </div>
 
-          {/* ── Supporting Document Upload ── */}
+          {/* Supporting Document Upload */}
           <div>
             <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
               Supporting Document
               <span className="ml-1 font-normal text-gray-400">(deed, certificate, agreement…)</span>
             </label>
-
-            {/* Existing document link */}
             {existingDocUrl && !pendingFile && (
               <div className="flex items-center gap-2 mb-2 p-2 rounded-lg text-xs"
                 style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
@@ -208,7 +200,6 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
                   className="ml-auto underline" style={{ color: '#2563EB' }}>View</a>
               </div>
             )}
-
             {pendingFile ? (
               <div className="flex items-center gap-2 p-2.5 rounded-lg border"
                 style={{ backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }}>
@@ -238,16 +229,11 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
                   Drag & drop or <span style={{ color: '#2563EB' }}>click to browse</span>
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>PDF, JPG, PNG, DOCX — max 10 MB</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
+                <input ref={fileInputRef} type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                  className="hidden"
-                  onChange={handleFileInput}
-                />
+                  className="hidden" onChange={handleFileInput} />
               </div>
             )}
-
             {fileError && (
               <div className="flex items-center gap-1.5 mt-1.5 text-xs" style={{ color: '#DC2626' }}>
                 <AlertCircle size={12} /> {fileError}
@@ -258,17 +244,12 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
 
         <div className="flex gap-2 mt-5">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border"
-            style={{ borderColor: '#D1D5DB', color: '#374151' }}>
-            Cancel
-          </button>
+            style={{ borderColor: '#D1D5DB', color: '#374151' }}>Cancel</button>
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
             style={{ backgroundColor: '#2563EB', opacity: saving ? 0.6 : 1 }}>
             {saving ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                {uploading ? 'Uploading…' : 'Saving…'}
-              </>
+              <><Loader2 size={14} className="animate-spin" />{uploading ? 'Uploading…' : 'Saving…'}</>
             ) : 'Save'}
           </button>
         </div>
@@ -277,7 +258,7 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
   );
 }
 
-export default function CollateralPlacementContent() {
+export default function CollateralFilingContent() {
   const { user } = useAuth();
   const [placements, setPlacements] = useState<ArchivePlacement[]>([]);
   const [collaterals, setCollaterals] = useState<CollateralRecord[]>([]);
@@ -287,6 +268,7 @@ export default function CollateralPlacementContent() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editPlacement, setEditPlacement] = useState<ArchivePlacement | undefined>();
+  const [showFiledOnly, setShowFiledOnly] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -308,7 +290,6 @@ export default function CollateralPlacementContent() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Real-time: silently refresh placements and collateral when any officer updates them
   useCollateralRealtime({
     onPlacementChange: () => {
       archivePlacementService.getAll().then((data) => setPlacements(data)).catch(() => {});
@@ -321,6 +302,12 @@ export default function CollateralPlacementContent() {
     },
   });
 
+  // IDs of collaterals that are already filed
+  const filedCollateralIds = new Set(placements.map((p) => p.collateralId));
+
+  // Collaterals available for filing (not yet filed)
+  const unfiledCollaterals = collaterals.filter((c) => !filedCollateralIds.has(c.id));
+
   const filtered = placements.filter((p) => {
     const q = search.toLowerCase();
     return (
@@ -331,12 +318,22 @@ export default function CollateralPlacementContent() {
     );
   });
 
+  // For the "unfiled collaterals" panel
+  const filteredUnfiled = unfiledCollaterals.filter((c) => {
+    const q = search.toLowerCase();
+    return !q || c.description?.toLowerCase().includes(q) || c.obligor?.toLowerCase().includes(q);
+  });
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>Collateral Placement</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>Assign physical vault locations to collateral records</p>
+          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+            Collateral Filing
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
+            Assign physical vault slots to collateral records
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: '#BFDBFE' }}>
@@ -345,16 +342,17 @@ export default function CollateralPlacementContent() {
           <button onClick={() => { setEditPlacement(undefined); setShowModal(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
             style={{ backgroundColor: '#2563EB' }}>
-            <Plus size={16} /> Assign Location
+            <Plus size={16} /> File Collateral
           </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         {[
-          { label: 'Total Placed', value: placements.length, color: '#1D4ED8' },
-          { label: 'Linked to Electronic', value: placements.filter((p) => p.electronicRecordUrl).length, color: '#15803D' },
+          { label: 'Total Filed', value: placements.length, color: '#1D4ED8' },
+          { label: 'Awaiting Filing', value: unfiledCollaterals.length, color: '#B45309' },
+          { label: 'With Electronic Record', value: placements.filter((p) => p.electronicRecordUrl).length, color: '#15803D' },
           { label: 'With Physical Ref', value: placements.filter((p) => p.physicalRef).length, color: '#7E22CE' },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
@@ -364,13 +362,33 @@ export default function CollateralPlacementContent() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
-        <input value={search} onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
-          placeholder="Search by collateral, owner, location…" />
+      {/* Toggle + Search */}
+      <div className="flex gap-3 mb-4 flex-wrap items-center">
+        <div className="relative flex-1 min-w-48">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
+            placeholder="Search by collateral, owner, location…" />
+        </div>
+        <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: '#DBEAFE' }}>
+          <button onClick={() => setShowFiledOnly(false)}
+            className="px-3 py-2 text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: !showFiledOnly ? '#2563EB' : '#F8FAFF',
+              color: !showFiledOnly ? '#fff' : '#1D4ED8',
+            }}>
+            Filed ({placements.length})
+          </button>
+          <button onClick={() => setShowFiledOnly(true)}
+            className="px-3 py-2 text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: showFiledOnly ? '#B45309' : '#F8FAFF',
+              color: showFiledOnly ? '#fff' : '#B45309',
+            }}>
+            Awaiting ({unfiledCollaterals.length})
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -383,52 +401,97 @@ export default function CollateralPlacementContent() {
         <div className="space-y-2">
           {[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />)}
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <MapPin size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
-          <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No placements found</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((p) => (
-            <div key={p.id} className="flex items-center gap-4 p-4 rounded-xl group transition-all"
-              style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#DBEAFE' }}>
-                <Package size={18} style={{ color: '#1D4ED8' }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>
-                  {p.collateral?.collateral_type ?? 'Unknown'} — {p.collateral?.obligor ?? '—'}
-                </p>
-                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                  <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
-                    <MapPin size={11} /> {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
-                  </span>
-                  {p.physicalRef && (
-                    <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
-                      {p.physicalRef}
-                    </span>
-                  )}
-                  {p.electronicRecordUrl && (
-                    <a href={p.electronicRecordUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs hover:underline" style={{ color: '#15803D' }}>
-                      <Paperclip size={11} /> Document attached
-                    </a>
-                  )}
-                </div>
-              </div>
-              <button onClick={() => { setEditPlacement(p); setShowModal(true); }}
-                className="opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all hover:bg-blue-100">
-                <Edit2 size={14} style={{ color: '#2563EB' }} />
-              </button>
+      ) : showFiledOnly ? (
+        /* Awaiting Filing list */
+        filteredUnfiled.length === 0 ? (
+          <div className="text-center py-16">
+            <CheckCircle2 size={40} className="mx-auto mb-3" style={{ color: '#86EFAC' }} />
+            <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>All collaterals have been filed!</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl text-xs"
+              style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', color: '#B45309' }}>
+              <AlertCircle size={13} />
+              <span>These collaterals have not been assigned a physical vault location yet.</span>
             </div>
-          ))}
-        </div>
+            {filteredUnfiled.map((c) => (
+              <div key={c.id} className="flex items-center gap-4 p-4 rounded-xl"
+                style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: '#FEF3C7' }}>
+                  <Package size={18} style={{ color: '#B45309' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: '#92400E' }}>
+                    {c.type} — {c.obligor}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: '#B45309' }}>{c.description}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditPlacement(undefined);
+                    setShowModal(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ backgroundColor: '#2563EB', color: '#fff' }}>
+                  <Plus size={12} /> File Now
+                </button>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        /* Filed placements list */
+        filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <FolderCheck size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
+            <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No filings found</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((p) => (
+              <div key={p.id} className="flex items-center gap-4 p-4 rounded-xl group transition-all"
+                style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: '#DBEAFE' }}>
+                  <Package size={18} style={{ color: '#1D4ED8' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>
+                    {p.collateral?.collateral_type ?? 'Unknown'} — {p.collateral?.obligor ?? '—'}
+                  </p>
+                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                    <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                      📂 {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
+                    </span>
+                    {p.physicalRef && (
+                      <span className="text-xs font-mono px-1.5 py-0.5 rounded"
+                        style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
+                        {p.physicalRef}
+                      </span>
+                    )}
+                    {p.electronicRecordUrl && (
+                      <a href={p.electronicRecordUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs hover:underline" style={{ color: '#15803D' }}>
+                        <Paperclip size={11} /> Document attached
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => { setEditPlacement(p); setShowModal(true); }}
+                  className="opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all hover:bg-blue-100">
+                  <Edit2 size={14} style={{ color: '#2563EB' }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )
       )}
 
       {showModal && (
         <AssignModal
-          collaterals={collaterals}
+          collaterals={showFiledOnly ? unfiledCollaterals : collaterals}
           locations={locations}
           existing={editPlacement}
           userId={user?.id ?? ''}

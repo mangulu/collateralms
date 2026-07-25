@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, Brain, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive,  } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, Brain, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck,  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -72,7 +72,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
   },
   {
     id: 'approvals',
-    label: 'Approvals',
+    label: 'Workflows',
     groups: [
       {
         label: 'Approval Workflows',
@@ -81,6 +81,12 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Perfection Approval', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Release Approval', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+        ],
+      },
+      {
+        label: 'Archive Workflows',
+        items: [
+          { label: 'Archive Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -186,7 +192,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Vault',
         items: [
           { label: 'Vault Management', icon: Building2, href: '/archive/vault-management', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Collateral Placement', icon: MapPin, href: '/archive/collateral-placement', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Collateral Filing', icon: FolderCheck, href: '/archive/collateral-placement', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
