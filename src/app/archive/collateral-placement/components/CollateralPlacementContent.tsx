@@ -165,6 +165,15 @@ function BulkMoveModal({ selected, locations, userId, onClose, onSaved }: BulkMo
           </div>
         )}
 
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-xs"
+          style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE', color: '#1E3A8A' }}>
+          <Package size={13} style={{ color: '#1D4ED8' }} />
+          <span className="font-medium">Selected collaterals:</span>
+          <span className="ml-2 text-xs" style={{ color: '#6B7280' }}>
+            {selected.length} / {unfiledCollaterals.length}
+          </span>
+        </div>
+
         <div className="flex gap-2">
           <button onClick={onClose} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium border"

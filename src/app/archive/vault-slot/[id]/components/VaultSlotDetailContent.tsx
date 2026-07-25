@@ -15,6 +15,7 @@ import {
 } from '@/lib/supabase/archiveService';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
+import SlotTimelineLog from './SlotTimelineLog';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
 
@@ -530,6 +531,12 @@ export default function VaultSlotDetailContent() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Real-time sync for placements in this slot
+  useEffect(() => {
+    const channel = archivePlacementService.subscribeToChanges(() => { load(); });
+    return () => { channel.unsubscribe(); };
+  }, [load]);
+
   // Clear selection when placements reload
   useEffect(() => { setSelectedIds(new Set()); }, [placements]);
 
@@ -1038,6 +1045,11 @@ export default function VaultSlotDetailContent() {
           placement={detailTarget}
           onClose={() => setDetailTarget(null)}
         />
+      )}
+
+      {/* Timeline Log — bottom of slot detail */}
+      {slot && (
+        <SlotTimelineLog slotId={slot.id} slotCode={slot.code} />
       )}
     </div>
   );

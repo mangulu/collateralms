@@ -8,8 +8,9 @@ export type LocationType = 'vault' | 'room' | 'cabinet' | 'shelf' | 'slot';
 export type CustodyStatus = 'in_vault' | 'on_loan' | 'overdue' | 'returned' | 'missing';
 export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'checked_out' | 'returned';
 export type ArchiveEventType =
-  | 'vault_created' | 'vault_updated' | 'placement_assigned' | 'placement_updated' |'request_raised'| 'request_approved' | 'request_rejected' |'checked_out' | 'returned' | 'overdue_flagged' | 'sms_sent'
-  | 'document_added' | 'document_removed';
+  | 'vault_created' | 'vault_updated' |'placement_assigned'| 'placement_updated' | 'placement_removed' | 'collateral_moved' |'request_raised'| 'request_approved' | 'request_rejected' |'checked_out' | 'returned' | 'overdue_flagged' | 'sms_sent'
+  | 'document_added' | 'document_removed'
+  | 'custody_handoff' | 'custody_received' | 'officer_assigned';
 
 export interface ArchiveLocation {
   id: string;
@@ -83,13 +84,54 @@ export interface ArchiveAuditEntry {
   collateralId: string | null;
   requestId: string | null;
   locationId: string | null;
+  sourceLocationId: string | null;
+  destinationLocationId: string | null;
   performedBy: string | null;
+  actorName: string | null;
+  reason: string | null;
   description: string;
   metadata: Record<string, unknown>;
   createdAt: string;
   collateral?: { collateral_type: string; description: string };
   performedByProfile?: { full_name: string };
   location?: { name: string; code: string };
+  sourceLocation?: { name: string; code: string };
+  destinationLocation?: { name: string; code: string };
+}
+
+export interface CustodyChainEntry {
+  id: string;
+  collateralId: string;
+  eventType: string;
+  fromOfficerId: string | null;
+  toOfficerId: string | null;
+  fromLocationId: string | null;
+  toLocationId: string | null;
+  confirmedBy: string | null;
+  confirmationStatus: 'pending' | 'confirmed' | 'rejected';
+  notes: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+  collateral?: { id: string; collateral_type: string; description: string; obligor: string };
+  fromOfficer?: { full_name: string };
+  toOfficer?: { full_name: string };
+  confirmedByProfile?: { full_name: string };
+  fromLocation?: { name: string; code: string };
+  toLocation?: { name: string; code: string };
+}
+
+export interface RequestStatusLogEntry {
+  id: string;
+  requestId: string;
+  collateralId: string | null;
+  oldStatus: string | null;
+  newStatus: string;
+  changedBy: string | null;
+  notes: string | null;
+  createdAt: string;
+  changedByProfile?: { full_name: string };
+  collateral?: { collateral_type: string; description: string; obligor: string };
+  request?: { purpose: string };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -199,6 +241,13 @@ export const archiveLocationService = {
     const { error } = await supabase.from('archive_locations').delete().eq('id', id);
     if (error) throw error;
   },
+
+  subscribeToChanges(callback: () => void) {
+    return supabase
+      .channel('archive_locations_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'archive_locations' }, callback)
+      .subscribe();
+  },
 };
 
 // ─── Placement Service ────────────────────────────────────────────────────────
@@ -260,7 +309,15 @@ export const archivePlacementService = {
   async upsert(payload: {
     collateralId: string; locationId: string; physicalRef?: string;
     electronicRecordUrl?: string; notes?: string; placedBy: string;
+    sourceLocationId?: string; reason?: string;
   }): Promise<void> {
+    // Get current placement to track source location
+    const { data: existing } = await supabase
+      .from('archive_placements')
+      .select('location_id')
+      .eq('collateral_id', payload.collateralId)
+      .maybeSingle();
+
     const { error } = await supabase
       .from('archive_placements')
       .upsert({
@@ -277,14 +334,57 @@ export const archivePlacementService = {
     await supabase
       .from('archive_custody')
       .upsert({ collateral_id: payload.collateralId, current_status: 'in_vault' }, { onConflict: 'collateral_id' });
+
+    // Log movement in audit log
+    const sourceLocId = payload.sourceLocationId ?? existing?.location_id ?? null;
+    const isMove = sourceLocId && sourceLocId !== payload.locationId;
+    await supabase.from('archive_audit_log').insert({
+      event_type: isMove ? 'collateral_moved' : 'placement_assigned',
+      collateral_id: payload.collateralId,
+      location_id: payload.locationId,
+      source_location_id: sourceLocId,
+      destination_location_id: payload.locationId,
+      performed_by: payload.placedBy,
+      description: isMove ? 'Collateral moved to new vault slot' : 'Collateral filed into vault slot',
+      reason: payload.reason ?? null,
+      metadata: { source_location_id: sourceLocId, destination_location_id: payload.locationId },
+    });
   },
 
-  async remove(collateralId: string): Promise<void> {
+  async remove(collateralId: string, performedBy?: string, reason?: string): Promise<void> {
+    // Get current location before removing
+    const { data: existing } = await supabase
+      .from('archive_placements')
+      .select('location_id')
+      .eq('collateral_id', collateralId)
+      .maybeSingle();
+
     const { error } = await supabase
       .from('archive_placements')
       .delete()
       .eq('collateral_id', collateralId);
     if (error) throw error;
+
+    // Log removal
+    if (performedBy) {
+      await supabase.from('archive_audit_log').insert({
+        event_type: 'placement_removed',
+        collateral_id: collateralId,
+        location_id: existing?.location_id ?? null,
+        source_location_id: existing?.location_id ?? null,
+        performed_by: performedBy,
+        description: 'Collateral removed from vault slot',
+        reason: reason ?? null,
+        metadata: {},
+      });
+    }
+  },
+
+  subscribeToChanges(callback: () => void) {
+    return supabase
+      .channel('archive_placements_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'archive_placements' }, callback)
+      .subscribe();
   },
 };
 
@@ -347,6 +447,17 @@ export const archiveRequestService = {
         last_checked_out_at: new Date().toISOString(),
         checked_out_by: approvedBy,
       }, { onConflict: 'collateral_id' });
+
+    // Log custody chain
+    await supabase.from('archive_custody_chain').insert({
+      collateral_id: req.collateral_id,
+      event_type: 'custody_handoff',
+      to_officer_id: approvedBy,
+      confirmation_status: 'confirmed',
+      confirmed_by: approvedBy,
+      confirmed_at: new Date().toISOString(),
+      notes: checkoutNotes ?? 'File checked out via approved request',
+    });
   },
 
   async reject(id: string, rejectionReason: string): Promise<void> {
@@ -385,6 +496,22 @@ export const archiveRequestService = {
         overdue_since: null,
       })
       .eq('collateral_id', req.collateral_id);
+
+    // Log custody chain return
+    await supabase.from('archive_custody_chain').insert({
+      collateral_id: req.collateral_id,
+      event_type: 'custody_received',
+      confirmation_status: 'confirmed',
+      confirmed_at: new Date().toISOString(),
+      notes: returnNotes ?? 'File returned to vault',
+    });
+  },
+
+  subscribeToChanges(callback: () => void) {
+    return supabase
+      .channel('archive_requests_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'archive_requests' }, callback)
+      .subscribe();
   },
 };
 
@@ -392,7 +519,6 @@ export const archiveRequestService = {
 
 export const archiveCustodyService = {
   async getAll(): Promise<ArchiveCustody[]> {
-    // Step 1: fetch custody records with collateral join only (no user_profiles FK join)
     const { data, error } = await supabase
       .from('archive_custody')
       .select(`
@@ -411,8 +537,6 @@ export const archiveCustodyService = {
     if (error) throw error;
 
     const rows = data || [];
-
-    // Step 2: collect unique checked_out_by UUIDs and fetch profiles separately
     const userIds = [...new Set(rows.map((r) => r.checked_out_by).filter(Boolean))] as string[];
     const profileMap: Record<string, { full_name: string }> = {};
     if (userIds.length > 0) {
@@ -456,6 +580,163 @@ export const archiveCustodyService = {
     }
     return overdueReqs.length;
   },
+
+  subscribeToChanges(callback: () => void) {
+    return supabase
+      .channel('archive_custody_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'archive_custody' }, callback)
+      .subscribe();
+  },
+};
+
+// ─── Custody Chain Service ────────────────────────────────────────────────────
+
+export const archiveCustodyChainService = {
+  async getAll(limit = 200): Promise<CustodyChainEntry[]> {
+    const { data, error } = await supabase
+      .from('archive_custody_chain')
+      .select(`
+        *,
+        collateral_records(id, collateral_type, description, obligor),
+        from_officer:user_profiles!from_officer_id(full_name),
+        to_officer:user_profiles!to_officer_id(full_name),
+        confirmed_by_profile:user_profiles!confirmed_by(full_name),
+        from_location:archive_locations!from_location_id(name, code),
+        to_location:archive_locations!to_location_id(name, code)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map((r) => ({
+      id: r.id,
+      collateralId: r.collateral_id,
+      eventType: r.event_type,
+      fromOfficerId: r.from_officer_id,
+      toOfficerId: r.to_officer_id,
+      fromLocationId: r.from_location_id,
+      toLocationId: r.to_location_id,
+      confirmedBy: r.confirmed_by,
+      confirmationStatus: r.confirmation_status as CustodyChainEntry['confirmationStatus'],
+      notes: r.notes,
+      confirmedAt: r.confirmed_at,
+      createdAt: r.created_at,
+      collateral: r.collateral_records as CustodyChainEntry['collateral'],
+      fromOfficer: r.from_officer as CustodyChainEntry['fromOfficer'],
+      toOfficer: r.to_officer as CustodyChainEntry['toOfficer'],
+      confirmedByProfile: r.confirmed_by_profile as CustodyChainEntry['confirmedByProfile'],
+      fromLocation: r.from_location as CustodyChainEntry['fromLocation'],
+      toLocation: r.to_location as CustodyChainEntry['toLocation'],
+    }));
+  },
+
+  async getByCollateral(collateralId: string): Promise<CustodyChainEntry[]> {
+    const { data, error } = await supabase
+      .from('archive_custody_chain')
+      .select(`
+        *,
+        collateral_records(id, collateral_type, description, obligor),
+        from_officer:user_profiles!from_officer_id(full_name),
+        to_officer:user_profiles!to_officer_id(full_name),
+        confirmed_by_profile:user_profiles!confirmed_by(full_name),
+        from_location:archive_locations!from_location_id(name, code),
+        to_location:archive_locations!to_location_id(name, code)
+      `)
+      .eq('collateral_id', collateralId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map((r) => ({
+      id: r.id,
+      collateralId: r.collateral_id,
+      eventType: r.event_type,
+      fromOfficerId: r.from_officer_id,
+      toOfficerId: r.to_officer_id,
+      fromLocationId: r.from_location_id,
+      toLocationId: r.to_location_id,
+      confirmedBy: r.confirmed_by,
+      confirmationStatus: r.confirmation_status as CustodyChainEntry['confirmationStatus'],
+      notes: r.notes,
+      confirmedAt: r.confirmed_at,
+      createdAt: r.created_at,
+      collateral: r.collateral_records as CustodyChainEntry['collateral'],
+      fromOfficer: r.from_officer as CustodyChainEntry['fromOfficer'],
+      toOfficer: r.to_officer as CustodyChainEntry['toOfficer'],
+      confirmedByProfile: r.confirmed_by_profile as CustodyChainEntry['confirmedByProfile'],
+      fromLocation: r.from_location as CustodyChainEntry['fromLocation'],
+      toLocation: r.to_location as CustodyChainEntry['toLocation'],
+    }));
+  },
+
+  async confirm(id: string, confirmedBy: string): Promise<void> {
+    const { error } = await supabase
+      .from('archive_custody_chain')
+      .update({ confirmation_status: 'confirmed', confirmed_by: confirmedBy, confirmed_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async log(entry: {
+    collateralId: string;
+    eventType: string;
+    fromOfficerId?: string;
+    toOfficerId?: string;
+    fromLocationId?: string;
+    toLocationId?: string;
+    confirmedBy?: string;
+    confirmationStatus?: 'pending' | 'confirmed' | 'rejected';
+    notes?: string;
+  }): Promise<void> {
+    const { error } = await supabase.from('archive_custody_chain').insert({
+      collateral_id: entry.collateralId,
+      event_type: entry.eventType,
+      from_officer_id: entry.fromOfficerId ?? null,
+      to_officer_id: entry.toOfficerId ?? null,
+      from_location_id: entry.fromLocationId ?? null,
+      to_location_id: entry.toLocationId ?? null,
+      confirmed_by: entry.confirmedBy ?? null,
+      confirmation_status: entry.confirmationStatus ?? 'pending',
+      notes: entry.notes ?? null,
+      confirmed_at: entry.confirmationStatus === 'confirmed' ? new Date().toISOString() : null,
+    });
+    if (error) throw error;
+  },
+
+  subscribeToChanges(callback: () => void) {
+    return supabase
+      .channel('archive_custody_chain_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'archive_custody_chain' }, callback)
+      .subscribe();
+  },
+};
+
+// ─── Request Status Log Service ───────────────────────────────────────────────
+
+export const archiveRequestStatusLogService = {
+  async getAll(limit = 200): Promise<RequestStatusLogEntry[]> {
+    const { data, error } = await supabase
+      .from('archive_request_status_log')
+      .select(`
+        *,
+        changed_by_profile:user_profiles!changed_by(full_name),
+        collateral_records(collateral_type, description, obligor),
+        archive_requests!request_id(purpose)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map((r) => ({
+      id: r.id,
+      requestId: r.request_id,
+      collateralId: r.collateral_id,
+      oldStatus: r.old_status,
+      newStatus: r.new_status,
+      changedBy: r.changed_by,
+      notes: r.notes,
+      createdAt: r.created_at,
+      changedByProfile: r.changed_by_profile as RequestStatusLogEntry['changedByProfile'],
+      collateral: r.collateral_records as RequestStatusLogEntry['collateral'],
+      request: r.archive_requests as RequestStatusLogEntry['request'],
+    }));
+  },
 };
 
 // ─── Audit Log Service ────────────────────────────────────────────────────────
@@ -479,7 +760,44 @@ export const archiveAuditService = {
       collateralId: r.collateral_id,
       requestId: r.request_id,
       locationId: r.location_id,
+      sourceLocationId: r.source_location_id ?? null,
+      destinationLocationId: r.destination_location_id ?? null,
       performedBy: r.performed_by,
+      actorName: r.actor_name ?? null,
+      reason: r.reason ?? null,
+      description: r.description,
+      metadata: (r.metadata as Record<string, unknown>) ?? {},
+      createdAt: r.created_at,
+      collateral: r.collateral_records as ArchiveAuditEntry['collateral'],
+      performedByProfile: r.performed_by_profile as ArchiveAuditEntry['performedByProfile'],
+      location: r.archive_locations as ArchiveAuditEntry['location'],
+    }));
+  },
+
+  async getByLocation(locationId: string, limit = 100): Promise<ArchiveAuditEntry[]> {
+    const { data, error } = await supabase
+      .from('archive_audit_log')
+      .select(`
+        *,
+        collateral_records(collateral_type, description),
+        performed_by_profile:user_profiles!performed_by(full_name),
+        archive_locations(name, code)
+      `)
+      .or(`location_id.eq.${locationId},source_location_id.eq.${locationId},destination_location_id.eq.${locationId}`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map((r) => ({
+      id: r.id,
+      eventType: r.event_type as ArchiveEventType,
+      collateralId: r.collateral_id,
+      requestId: r.request_id,
+      locationId: r.location_id,
+      sourceLocationId: r.source_location_id ?? null,
+      destinationLocationId: r.destination_location_id ?? null,
+      performedBy: r.performed_by,
+      actorName: r.actor_name ?? null,
+      reason: r.reason ?? null,
       description: r.description,
       metadata: (r.metadata as Record<string, unknown>) ?? {},
       createdAt: r.created_at,
@@ -494,7 +812,11 @@ export const archiveAuditService = {
     collateralId?: string;
     requestId?: string;
     locationId?: string;
+    sourceLocationId?: string;
+    destinationLocationId?: string;
     performedBy?: string;
+    actorName?: string;
+    reason?: string;
     description: string;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
@@ -503,9 +825,20 @@ export const archiveAuditService = {
       collateral_id: entry.collateralId ?? null,
       request_id: entry.requestId ?? null,
       location_id: entry.locationId ?? null,
+      source_location_id: entry.sourceLocationId ?? null,
+      destination_location_id: entry.destinationLocationId ?? null,
       performed_by: entry.performedBy ?? null,
+      actor_name: entry.actorName ?? null,
+      reason: entry.reason ?? null,
       description: entry.description,
       metadata: entry.metadata ?? {},
     });
+  },
+
+  subscribeToChanges(callback: () => void) {
+    return supabase
+      .channel('archive_audit_log_changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'archive_audit_log' }, callback)
+      .subscribe();
   },
 };

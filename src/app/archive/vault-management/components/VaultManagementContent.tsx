@@ -696,6 +696,16 @@ export default function VaultManagementContent() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Real-time sync for vault locations and placements
+  useEffect(() => {
+    const locChannel = archiveLocationService.subscribeToChanges(() => { load(); });
+    const placeChannel = archivePlacementService.subscribeToChanges(() => { load(); });
+    return () => {
+      locChannel.unsubscribe();
+      placeChannel.unsubscribe();
+    };
+  }, [load]);
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this location and all its children?')) return;
     try { await archiveLocationService.delete(id); load(); }
