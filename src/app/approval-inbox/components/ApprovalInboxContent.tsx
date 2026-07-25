@@ -1,10 +1,18 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send, TrendingUp, TrendingDown, Minus, BarChart2, Timer, Layers, Sparkles, ShieldAlert, ListChecks, FileText } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send, TrendingUp, TrendingDown, Minus, BarChart2, Timer, Layers, Sparkles, ShieldAlert, ListChecks, FileText, Bell, Smartphone, Wifi, WifiOff } from 'lucide-react';
 import { perfectionService, PerfectionRequest, PerfectionRequestStatus } from '@/lib/supabase/perfectionService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import { classifyCollateralDocument, DocumentClassificationResult } from '@/lib/ai/documentClassificationService';
+import { useApprovalQueueRealtime } from '@/lib/hooks/useApprovalQueueRealtime';
+import {
+  requestDesktopPermission,
+  notifyPerfectionRequest,
+  notifyReleaseRequest,
+  sendPerfectionSmsAlert,
+  sendReleaseSmsAlert,
+} from '@/lib/approvalNotifications';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -773,6 +781,105 @@ export default function ApprovalInboxContent() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // ─── Realtime & Notification State ─────────────────────────────────────────
+  const [desktopPermission, setDesktopPermission] = useState<NotificationPermission>('default');
+  const [smsAlertsEnabled, setSmsAlertsEnabled] = useState(false);
+  const [smsPhone, setSmsPhone] = useState('');
+  const [showSmsInput, setShowSmsInput] = useState(false);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [liveAlertCount, setLiveAlertCount] = useState(0);
+  const requestIdsRef = useRef<Set<string>>(new Set());
+
+  // Initialise desktop permission state (client-only)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setDesktopPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleRequestDesktopPermission = useCallback(async () => {
+    const perm = await requestDesktopPermission();
+    setDesktopPermission(perm);
+  }, []);
+
+  // ─── Realtime listeners ─────────────────────────────────────────────────────
+  useApprovalQueueRealtime({
+    enabled: true,
+    onPerfectionChange: useCallback(async (change) => {
+      const rec = change.record;
+      const status: string = rec?.request_status ?? '';
+      const isPending = status === 'Submitted' || status === 'Under Review';
+
+      if (!isPending) return;
+
+      // Avoid duplicate alerts for the same request on initial load
+      const id: string = rec?.id ?? '';
+      if (change.event === 'INSERT') {
+        if (requestIdsRef.current.has(id)) return;
+        requestIdsRef.current.add(id);
+      }
+
+      setRealtimeConnected(true);
+      setLiveAlertCount((n) => n + 1);
+
+      // Reload the list silently
+      setRefreshing(true);
+      try {
+        const all = await perfectionService.getAll();
+        const pending = all.filter((r) => PENDING_STATUSES.includes(r.requestStatus));
+        setRequests(pending);
+        // Sync known IDs
+        requestIdsRef.current = new Set(pending.map((r) => r.id));
+      } catch { /* silent */ } finally {
+        setRefreshing(false);
+      }
+
+      const payload = {
+        requestId: id,
+        collateralId: rec?.collateral_id ?? '',
+        obligor: rec?.obligor ?? '',
+        status,
+        priority: rec?.priority ?? 'Normal',
+      };
+
+      // Desktop notification
+      notifyPerfectionRequest(payload);
+
+      // Optional SMS
+      if (smsAlertsEnabled && smsPhone.trim()) {
+        await sendPerfectionSmsAlert(payload, {
+          phone: smsPhone.trim(),
+          recipientName: userProfile?.full_name ?? undefined,
+        });
+      }
+    }, [smsAlertsEnabled, smsPhone, userProfile]),
+
+    onCollateralStatusChange: useCallback(async (change) => {
+      const rec = change.record;
+      const newStatus: string = rec?.status ?? '';
+      const releaseStatuses = ['Release Pending', 'Discharge Requested', 'Under Release Review'];
+      if (!releaseStatuses.includes(newStatus)) return;
+
+      setRealtimeConnected(true);
+      setLiveAlertCount((n) => n + 1);
+
+      const payload = {
+        collateralId: rec?.collateral_id ?? rec?.id ?? '',
+        obligor: rec?.obligor ?? undefined,
+        newStatus,
+      };
+
+      notifyReleaseRequest(payload);
+
+      if (smsAlertsEnabled && smsPhone.trim()) {
+        await sendReleaseSmsAlert(payload, {
+          phone: smsPhone.trim(),
+          recipientName: userProfile?.full_name ?? undefined,
+        });
+      }
+    }, [smsAlertsEnabled, smsPhone, userProfile]),
+  });
+
   const canActOnRequest = useCallback((req: PerfectionRequest): boolean => {
     if (!['legal_officer', 'system_admin'].includes(userRole)) return false;
     return PENDING_STATUSES.includes(req.requestStatus);
@@ -784,9 +891,9 @@ export default function ApprovalInboxContent() {
     setError(null);
     try {
       const all = await perfectionService.getAll();
-      // Show all pending requests (Submitted + Under Review)
       const pending = all.filter((r) => PENDING_STATUSES.includes(r.requestStatus));
       setRequests(pending);
+      requestIdsRef.current = new Set(pending.map((r) => r.id));
     } catch (e: any) {
       setError(e?.message ?? 'Failed to load approval requests.');
     } finally {
@@ -874,20 +981,107 @@ export default function ApprovalInboxContent() {
       <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Approval Inbox</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-gray-900">Approval Inbox</h1>
+              {/* Realtime status indicator */}
+              <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border ${realtimeConnected ? 'text-green-700 bg-green-50 border-green-200' : 'text-gray-500 bg-gray-50 border-gray-200'}`}>
+                {realtimeConnected
+                  ? <><Wifi size={11} className="text-green-500" /> Live</>
+                  : <><WifiOff size={11} className="text-gray-400" /> Connecting…</>}
+              </div>
+              {liveAlertCount > 0 && (
+                <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                  {liveAlertCount} live update{liveAlertCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 mt-0.5">
               Review pending loan perfection requests, compare collateral details, and take action.
             </p>
           </div>
-          <button
-            onClick={() => load(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Desktop notification toggle */}
+            {desktopPermission !== 'granted' && (
+              <button
+                onClick={handleRequestDesktopPermission}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-lg transition-colors"
+                title="Enable desktop notifications for new approval requests"
+              >
+                <Bell size={13} />
+                Enable Alerts
+              </button>
+            )}
+            {desktopPermission === 'granted' && (
+              <div className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                <Bell size={13} className="text-green-600" />
+                Alerts On
+              </div>
+            )}
+            {/* SMS toggle */}
+            <button
+              onClick={() => setShowSmsInput((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                smsAlertsEnabled
+                  ? 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100' :'text-gray-600 bg-gray-100 border-gray-200 hover:bg-gray-200'
+              }`}
+              title="Configure SMS alerts for approval queue changes"
+            >
+              <Smartphone size={13} />
+              SMS {smsAlertsEnabled ? 'On' : 'Off'}
+            </button>
+            <button
+              onClick={() => load(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
         </div>
+
+        {/* SMS opt-in panel */}
+        {showSmsInput && (
+          <div className="mt-3 flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
+            <Smartphone size={15} className="text-blue-500 shrink-0" />
+            <div className="flex-1 flex items-center gap-3 flex-wrap">
+              <p className="text-xs font-medium text-blue-800">
+                Receive SMS alerts for new perfection &amp; release requests:
+              </p>
+              <input
+                type="tel"
+                value={smsPhone}
+                onChange={(e) => setSmsPhone(e.target.value)}
+                placeholder="+255712345678"
+                className="flex-1 min-w-40 max-w-56 text-sm border border-blue-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+              />
+              <button
+                onClick={() => {
+                  if (smsPhone.trim()) {
+                    setSmsAlertsEnabled(true);
+                    setShowSmsInput(false);
+                    setToast({ message: `SMS alerts enabled for ${smsPhone.trim()}`, type: 'success' });
+                  }
+                }}
+                disabled={!smsPhone.trim()}
+                className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Enable SMS
+              </button>
+              {smsAlertsEnabled && (
+                <button
+                  onClick={() => { setSmsAlertsEnabled(false); setSmsPhone(''); setShowSmsInput(false); }}
+                  className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 rounded-lg transition-colors"
+                >
+                  Disable
+                </button>
+              )}
+            </div>
+            <button onClick={() => setShowSmsInput(false)} className="p-1 rounded hover:bg-blue-100 transition-colors">
+              <X size={14} className="text-blue-500" />
+            </button>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mt-4">
