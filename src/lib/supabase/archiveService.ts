@@ -278,6 +278,14 @@ export const archivePlacementService = {
       .from('archive_custody')
       .upsert({ collateral_id: payload.collateralId, current_status: 'in_vault' }, { onConflict: 'collateral_id' });
   },
+
+  async remove(collateralId: string): Promise<void> {
+    const { error } = await supabase
+      .from('archive_placements')
+      .delete()
+      .eq('collateral_id', collateralId);
+    if (error) throw error;
+  },
 };
 
 // ─── Request Service ──────────────────────────────────────────────────────────

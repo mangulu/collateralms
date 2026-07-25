@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, ChevronRight, ChevronDown, Trash2, RefreshCw, AlertCircle, Package, FileText, X, Search, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3,  } from 'lucide-react';
 import {
   archiveLocationService, archivePlacementService,
@@ -529,6 +530,7 @@ interface LocationNodeProps {
 }
 
 function LocationNode({ node, depth, onAddChild, onDelete, onSelectSlot, selectedSlotId }: LocationNodeProps) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(depth < 2);
   const colors = LOCATION_TYPE_COLORS[node.locationType];
   const hasChildren = (node.children?.length ?? 0) > 0;
@@ -542,6 +544,12 @@ function LocationNode({ node, depth, onAddChild, onDelete, onSelectSlot, selecte
   const occupancyPct = node.capacity > 0 ? Math.round((node.currentOccupancy / node.capacity) * 100) : 0;
   const illustration = LEVEL_ILLUSTRATIONS[node.locationType];
 
+  const handleSlotClick = () => {
+    if (isSlot) {
+      router.push(`/archive/vault-slot/${node.id}`);
+    }
+  };
+
   return (
     <div style={{ marginLeft: depth > 0 ? '20px' : '0' }}>
       <div
@@ -551,7 +559,7 @@ function LocationNode({ node, depth, onAddChild, onDelete, onSelectSlot, selecte
           border: `1px solid ${isSelected ? colors.text : colors.border}`,
           boxShadow: isSelected ? `0 0 0 2px ${colors.border}` : undefined,
         }}
-        onClick={isSlot ? () => onSelectSlot(node) : undefined}
+        onClick={handleSlotClick}
       >
         {/* Expand toggle */}
         <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
@@ -590,7 +598,7 @@ function LocationNode({ node, depth, onAddChild, onDelete, onSelectSlot, selecte
           )}
           {isSlot && (
             <p className="text-xs mt-0.5" style={{ color: colors.text, opacity: 0.7 }}>
-              Click to view contents &amp; add collaterals
+              Click to view contents, move &amp; remove files
             </p>
           )}
         </div>
@@ -752,7 +760,7 @@ export default function VaultManagementContent() {
       <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs"
         style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
         <FolderOpen size={13} />
-        <span>Click on any <strong>📂 Slot</strong> to view its contents and add collaterals. Slots are auto-generated when you add a Shelf/Cabinet.</span>
+        <span>Click on any <strong>📂 Slot</strong> to open its detail page — view contents, move files to another slot, or remove them.</span>
       </div>
 
       {/* Tree */}
