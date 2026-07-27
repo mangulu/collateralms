@@ -6,6 +6,7 @@ import { obligorService, Obligor } from '@/lib/supabase/obligorService';
 import { loanService, Loan } from '@/lib/supabase/loanService';
 import ObligorFormModal from '../components/ObligorFormModal';
 import Icon from '@/components/ui/AppIcon';
+import PledgeDocumentsPanel from './PledgeDocumentsPanel';
 
 
 interface Props { id: string; }
@@ -805,6 +806,9 @@ export default function ObligorProfileContent({ id }: Props) {
               ))}
             </div>
           </div>
+
+          {/* Pledge Documents */}
+          <PledgeDocumentsPanel obligorId={id} />
         </div>
       </div>
 
