@@ -408,7 +408,7 @@ export default function RequestStatusTrackerContent() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
         {(['pending', 'approved', 'checked_out', 'returned', 'rejected'] as RequestStatus[]).map((s) => {
           const sc = STATUS_CONFIG[s];
-          const Icon = sc.icon;
+          const StatusIcon = sc.icon;
           return (
             <button key={s} onClick={() => setStatusFilter(statusFilter === s ? 'all' : s)}
               className="rounded-xl p-3 text-left transition-all"
@@ -416,7 +416,7 @@ export default function RequestStatusTrackerContent() {
                 backgroundColor: statusFilter === s ? sc.bg : '#F8FAFF',
                 border: `1px solid ${statusFilter === s ? sc.border : '#DBEAFE'}`,
               }}>
-              <Icon size={15} style={{ color: sc.text }} className="mb-1" />
+              <StatusIcon size={15} style={{ color: sc.text }} className="mb-1" />
               <p className="text-xl font-bold" style={{ color: sc.text }}>{counts[s] ?? 0}</p>
               <p className="text-xs font-medium" style={{ color: '#6B7280' }}>{sc.label}</p>
             </button>
@@ -493,7 +493,7 @@ export default function RequestStatusTrackerContent() {
                 <div className="flex items-start gap-3 p-4">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ backgroundColor: sc.bg, border: `1px solid ${sc.border}` }}>
-                    {sc.icon} {sc.label}
+                    {React.createElement(sc.icon, { size: 18, style: { color: sc.text } })}
                   </div>
 
                   <div className="flex-1 min-w-0">

@@ -137,15 +137,21 @@ BEGIN
   IF loan1 IS NOT NULL THEN
     UPDATE public.collateral_records
     SET loan_id = loan1
-    WHERE obligor_ref_id = obl1 AND loan_id IS NULL
-    LIMIT 2;
+    WHERE id IN (
+      SELECT id FROM public.collateral_records
+      WHERE obligor_ref_id = obl1 AND loan_id IS NULL
+      LIMIT 2
+    );
   END IF;
 
   IF loan3 IS NOT NULL THEN
     UPDATE public.collateral_records
     SET loan_id = loan3
-    WHERE obligor_ref_id = obl2 AND loan_id IS NULL
-    LIMIT 1;
+    WHERE id IN (
+      SELECT id FROM public.collateral_records
+      WHERE obligor_ref_id = obl2 AND loan_id IS NULL
+      LIMIT 1
+    );
   END IF;
 
 EXCEPTION

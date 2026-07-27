@@ -28,7 +28,7 @@ function KPICard({
   value,
   subtext,
   trend,
-  icon: IconComp,
+  icon: Icon,
   variant = 'default',
 }: KPICardProps) {
   const variantStyles: Record<string, React.CSSProperties> = {
@@ -70,7 +70,7 @@ function KPICard({
           className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
           style={iconBg[variant]}
         >
-          <IconComp size={18} />
+          <Icon size={18} />
         </div>
       </div>
       <p

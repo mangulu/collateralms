@@ -673,6 +673,8 @@ export default function AuditTrailContent() {
                     const isExpanded = expandedRows.has(entry.id);
                     const isSignOff = entry.action === 'legal_signoff';
 
+                    const Icon = catConfig.icon;
+
                     return (
                       <React.Fragment key={entry.id}>
                         <tr
@@ -694,7 +696,7 @@ export default function AuditTrailContent() {
                             <div className="flex items-center gap-2">
                               <div className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
                               <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${catConfig.bg} ${catConfig.text}`}>
-                                <catConfig.icon size={10} />
+                                <Icon size={10} />
                                 {catConfig.label}
                               </span>
                             </div>
