@@ -66,6 +66,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Obligor Management',
         items: [
           { label: 'Obligors', icon: Users, href: '/obligors', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Loan Facilities', icon: Landmark, href: '/loans', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -233,6 +234,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/document-management': 'archive',
   '/document-approval': 'approvals',
   '/obligors': 'obligors',
+  '/loans': 'obligors',
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'approvals',
