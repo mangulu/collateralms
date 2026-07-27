@@ -9,14 +9,14 @@
     /* IZOU Design Tokens */
     --izou-primary: #00a9e0;
     --izou-primary-dark: #007cb3;
-    --izou-primary-light: #e8f8fd;
+    --izou-primary-light: #d6f0fb;
     --izou-cyan: #35c8f3;
     --izou-teal: #00c2a8;
-    --izou-bg: #f5f7fa;
+    --izou-bg: #eef1f6;
     --izou-card: #fff;
-    --izou-text: #102033;
-    --izou-muted: #667085;
-    --izou-border: #e5e7eb;
+    --izou-text: #0d1c2e;
+    --izou-muted: #4b5a6e;
+    --izou-border: #c8cdd6;
     --izou-success: #16a34a;
     --izou-warning: #f59e0b;
     --izou-danger: #dc2626;
@@ -27,18 +27,18 @@
     --primary-foreground: 0 0% 100%;
     --accent: 172 100% 38%;
     --accent-foreground: 0 0% 100%;
-    --background: 210 20% 97%;
+    --background: 214 18% 92%;
     --card: 0 0% 100%;
-    --card-foreground: 210 60% 13%;
-    --border: 220 13% 91%;
-    --muted: 214 20% 95%;
-    --muted-foreground: 220 9% 46%;
+    --card-foreground: 210 60% 11%;
+    --border: 216 12% 78%;
+    --muted: 214 18% 90%;
+    --muted-foreground: 215 16% 35%;
     --destructive: 0 72% 51%;
     --warning: 38 92% 50%;
     --success: 142 71% 45%;
-    --foreground: 210 60% 13%;
+    --foreground: 210 60% 11%;
     --ring: 196 100% 44%;
-    --field-bg: 196 100% 97%;
+    --field-bg: 196 60% 94%;
     --sidebar-bg: #007CB3;
     --sidebar-fg: #FFFFFF;
   }
@@ -219,6 +219,28 @@
   .izou-btn-primary:hover {
     background-color: var(--izou-primary-dark);
     box-shadow: 0 10px 28px rgba(0,169,224,0.32);
+    color: #ffffff;
+  }
+
+  .izou-btn-primary:active {
+    background-color: #005f8a;
+    box-shadow: 0 4px 12px rgba(0,169,224,0.2);
+    color: #ffffff;
+    transform: scale(0.98);
+  }
+
+  .izou-btn-primary:disabled {
+    background-color: var(--izou-primary);
+    color: #ffffff;
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .izou-btn-primary:focus-visible {
+    outline: 2px solid var(--izou-primary);
+    outline-offset: 2px;
+    color: #ffffff;
   }
 
   /* IZOU Card */
@@ -226,13 +248,13 @@
     background: var(--izou-card);
     border: 1px solid var(--izou-border);
     border-radius: 14px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.09), 0 1px 2px rgba(0,0,0,0.05);
     transition: box-shadow 0.22s var(--izou-ease), border-color 0.22s var(--izou-ease);
   }
 
   .izou-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
-    border-color: rgba(0,169,224,0.2);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.07);
+    border-color: rgba(0,169,224,0.35);
   }
 
   /* IZOU Badge */

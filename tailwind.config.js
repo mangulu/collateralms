@@ -15,7 +15,7 @@ module.exports = {
         primary: {
           DEFAULT: '#00A9E0',
           50: '#e8f8fd',
-          100: '#cdf0fb',
+          100: '#d6f0fb',
           200: '#9be1f7',
           300: '#5ccef2',
           400: '#1db8e9',
@@ -34,12 +34,12 @@ module.exports = {
           600: '#009e88',
           foreground: '#FFFFFF',
         },
-        border: '#e5e7eb',
-        background: '#f5f7fa',
+        border: '#c8cdd6',
+        background: '#eef1f6',
         card: '#ffffff',
         muted: {
-          DEFAULT: '#f1f4f8',
-          foreground: '#667085',
+          DEFAULT: '#e4e8ef',
+          foreground: '#4b5a6e',
         },
         destructive: {
           DEFAULT: '#dc2626',
@@ -53,7 +53,7 @@ module.exports = {
           DEFAULT: '#16a34a',
           foreground: '#FFFFFF',
         },
-        foreground: '#102033',
+        foreground: '#0d1c2e',
         sidebar: {
           DEFAULT: '#007CB3',
           foreground: '#FFFFFF',
