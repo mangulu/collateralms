@@ -11,7 +11,7 @@ import {
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
-import Icon from '@/components/ui/AppIcon';
+
 
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
@@ -230,7 +230,9 @@ function RequestDetailDrawer({ request, statusLog, onClose }: RequestDetailDrawe
               { label: 'Raised On', value: formatDateTime(request.createdAt), icon: Calendar },
               { label: 'Expected Return', value: request.expectedReturnDate ? formatDate(request.expectedReturnDate) : '—', icon: Calendar },
               { label: 'Actual Return', value: request.actualReturnDate ? formatDate(request.actualReturnDate) : '—', icon: Calendar },
-            ].map(({ label, value, icon: FieldIcon }) => (
+            ].map(({ label, value, icon }) => {
+              const FieldIcon = icon as React.ElementType;
+              return (
               <div key={label} className="flex items-start gap-2">
                 <FieldIcon size={13} className="mt-0.5 shrink-0" style={{ color: '#9CA3AF' }} />
                 <div>
@@ -238,7 +240,8 @@ function RequestDetailDrawer({ request, statusLog, onClose }: RequestDetailDrawe
                   <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>{value}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
             {request.rejectionReason && (
               <div className="p-3 rounded-xl" style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3' }}>
                 <p className="text-xs font-medium mb-1" style={{ color: '#BE123C' }}>Rejection Reason</p>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { auditLogService, AuditLogEntry, FieldChange } from '@/lib/supabase/auditLogService';
 
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDateTime(iso: string): string {
@@ -673,7 +674,7 @@ export default function AuditTrailContent() {
                     const isExpanded = expandedRows.has(entry.id);
                     const isSignOff = entry.action === 'legal_signoff';
 
-                    const Icon = catConfig.icon;
+                    const EntryIcon = catConfig.icon;
 
                     return (
                       <React.Fragment key={entry.id}>
@@ -696,7 +697,7 @@ export default function AuditTrailContent() {
                             <div className="flex items-center gap-2">
                               <div className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
                               <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${catConfig.bg} ${catConfig.text}`}>
-                                <Icon size={10} />
+                                <EntryIcon size={10} />
                                 {catConfig.label}
                               </span>
                             </div>

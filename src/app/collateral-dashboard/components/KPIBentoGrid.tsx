@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { dashboardService } from '@/lib/supabase/collateralService';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import Icon from '@/components/ui/AppIcon';
+
 
 
 interface KPICardProps {
