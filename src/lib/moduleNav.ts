@@ -154,7 +154,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Live Activity Stream', icon: Radio, href: '/live-activity', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Center', icon: DatabaseZap, href: '/audit-center', permission: PERMISSIONS.AUDIT_LOG_VIEW },
-          { label: 'Security & Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
+          { label: 'Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Report', icon: BookOpen, href: '/audit-report', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Archive Audit Log', icon: FileStack, href: '/archive/audit-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
         ],
@@ -240,8 +240,6 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/approval-inbox': 'approvals',
   '/perfection-workflow': 'approvals',
   '/release-approval': 'approvals',
-  '/audit-log': 'audit',
-  '/activity-log': 'audit',
   '/performance-export': 'reports',
   '/reports-dashboard': 'reports',
   '/collateral-reports': 'reports',
