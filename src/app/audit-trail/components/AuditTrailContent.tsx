@@ -4,9 +4,10 @@ import {
   ShieldCheck, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight,
   User, Clock, FileText, ArrowRight, X, AlertCircle, Globe, LogIn, FolderOpen,
   GitBranch, Upload, Activity, Pen, CheckCircle2, Stamp, FileSignature,
-  PlusCircle, Printer,
+  PlusCircle, Printer, ShieldAlert,
 } from 'lucide-react';
 import { auditLogService, AuditLogEntry, FieldChange } from '@/lib/supabase/auditLogService';
+import RiskPriorityPanel from './RiskPriorityPanel';
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -235,6 +236,7 @@ function buildPrintableHTML(entries: AuditLogEntry[], filters: {
 const PAGE_SIZE = 50;
 
 export default function AuditTrailContent() {
+  const [activeTab, setActiveTab] = useState<'audit' | 'risk'>('audit');
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -386,6 +388,34 @@ export default function AuditTrailContent() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-background">
+      {/* Tab Switcher */}
+      <div className="px-6 pt-4 pb-0 bg-white border-b border-border shrink-0">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'audit' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ShieldCheck size={14} />
+            Security &amp; Compliance Trail
+          </button>
+          <button
+            onClick={() => setActiveTab('risk')}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'risk' ?'border-amber-500 text-amber-600' :'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ShieldAlert size={14} />
+            Risk Priority View
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'risk' ? (
+        <RiskPriorityPanel />
+      ) : (
+        <>
       {/* Header */}
       <div className="px-6 pt-6 pb-4 border-b border-border bg-white shrink-0">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -776,6 +806,8 @@ export default function AuditTrailContent() {
           </p>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
