@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppLogo from './ui/AppLogo';
@@ -35,9 +35,36 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
   const [expandedItems, setExpandedItems] = useState<Set<string>>(() => {
     return new Set<string>();
   });
+  const [fraudPendingCount, setFraudPendingCount] = useState<number | null>(null);
   const { userProfile, signOut } = useAuth();
   const { hasPermission, loading: permsLoading, isSystemAdmin } = usePermissions();
   const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchFraudCount() {
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { count } = await supabase
+          .from('fraud_alerts')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'PENDING_REVIEW');
+        if (!cancelled) setFraudPendingCount(count ?? 0);
+      } catch { /* silent */ }
+    }
+    fetchFraudCount();
+    const interval = setInterval(fetchFraudCount, 60_000); // refresh every minute
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  const getBadgeOverride = (href: string): string | null | undefined => {
+    if (href === '/fraud-prevention') {
+      if (fraudPendingCount === null) return undefined; // not yet loaded — keep static
+      return fraudPendingCount > 0 ? String(fraudPendingCount) : null;
+    }
+    return undefined; // undefined = use static badge from nav definition
+  };
 
   const initials = userProfile?.initials ||
     (userProfile?.full_name
@@ -78,6 +105,8 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
     const childActive = isChildActive(item, currentPath);
     const expanded = isExpanded(item);
     const isActive = !hasChildren && (currentPath === item.href || currentPath?.startsWith(item.href.split('?')[0] + '/'));
+    const badgeOverride = getBadgeOverride(item.href ?? '');
+    const effectiveBadge = badgeOverride !== undefined ? badgeOverride : item.badge;
     const badgeClass = badgeVariantClasses[item.badgeVariant ?? 'default'];
 
     if (hasChildren) {
@@ -150,14 +179,14 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
         >
           <ItemIcon size={18} className="izou-nav-icon shrink-0" />
           {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-          {!collapsed && item.badge && (
+          {!collapsed && effectiveBadge && (
             <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
-              {item.badge}
+              {effectiveBadge}
             </span>
           )}
-          {collapsed && item.badge && (
+          {collapsed && effectiveBadge && (
             <span className={`absolute top-1 right-1 text-xs font-semibold px-1 py-0 rounded-full text-[10px] ${badgeClass}`}>
-              {item.badge}
+              {effectiveBadge}
             </span>
           )}
         </Link>
@@ -165,7 +194,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
             <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
               {item.label}
-              {item.badge && <span className="ml-1 opacity-75">({item.badge})</span>}
+              {effectiveBadge && <span className="ml-1 opacity-75">({effectiveBadge})</span>}
             </div>
           </div>
         )}
