@@ -19,7 +19,6 @@ import {
   Users,
   CheckSquare,
 } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
 
 
 interface ModuleCard {
@@ -43,9 +42,9 @@ const modules: ModuleCard[] = [
     description: 'Manage collateral registry, documents, batch operations, and scheduled jobs.',
     icon: FolderOpen,
     href: '/collateral-management',
-    color: '#1D4ED8',
-    bgGradient: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%)',
-    iconBg: '#2563EB',
+    color: '#007CB3',
+    bgGradient: 'linear-gradient(135deg, #e8f8fd 0%, #cdf0fb 60%, #9be1f7 100%)',
+    iconBg: '#00A9E0',
     stats: 'Registry · Workflows · Documents',
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
@@ -57,7 +56,7 @@ const modules: ModuleCard[] = [
     href: '/obligors',
     color: '#0F766E',
     bgGradient: 'linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 60%, #99F6E4 100%)',
-    iconBg: '#0D9488',
+    iconBg: '#00C2A8',
     stats: 'Profiles · Risk · Exposure',
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
@@ -67,9 +66,9 @@ const modules: ModuleCard[] = [
     description: 'Centralised approval inbox for perfection, document, release, and archive request workflows.',
     icon: CheckSquare,
     href: '/approval-inbox',
-    color: '#1D4ED8',
-    bgGradient: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%)',
-    iconBg: '#3B82F6',
+    color: '#007CB3',
+    bgGradient: 'linear-gradient(135deg, #e8f8fd 0%, #cdf0fb 60%, #9be1f7 100%)',
+    iconBg: '#1AB8E6',
     stats: 'Inbox · Perfection · Archive Requests',
     requiredPermission: PERMISSIONS.PERFECTION_VIEW,
   },
@@ -174,36 +173,38 @@ export default function ModuleHubPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F0F7FF' }}>
-      {/* Top Bar */}
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--izou-bg)' }}>
+      {/* Top Bar — IZOU gradient */}
       <header
-        className="flex items-center justify-between px-6 py-3 shrink-0"
-        style={{ backgroundColor: '#1E3A8A', borderBottom: '1px solid rgba(255,255,255,0.1)' }}
+        className="izou-sidebar-gradient flex items-center justify-between px-6 py-3 shrink-0"
       >
         <div className="flex items-center gap-3">
           <AppLogo size={32} />
           <div>
-            <p className="text-white text-sm font-semibold leading-tight">CollateralMS</p>
-            <p className="text-blue-300 text-xs leading-tight">Module Hub</p>
+            <p className="text-white text-sm font-bold leading-tight">CollateralMS</p>
+            <p className="text-xs leading-tight" style={{ color: 'rgba(255,255,255,0.65)' }}>Module Hub</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: '#2563EB' }}
+              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
             >
-              <span className="text-white text-xs font-semibold">{initials}</span>
+              <span className="text-white text-xs font-bold">{initials}</span>
             </div>
             <div>
-              <p className="text-white text-sm font-medium leading-tight">{displayName}</p>
-              <p className="text-blue-300 text-xs leading-tight">{displayRole}</p>
+              <p className="text-white text-sm font-semibold leading-tight">{displayName}</p>
+              <p className="text-xs leading-tight" style={{ color: 'rgba(255,255,255,0.65)' }}>{displayRole}</p>
             </div>
           </div>
           <button
             onClick={() => signOut?.()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors"
+            style={{ color: 'rgba(255,255,255,0.8)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.8)'; }}
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">Sign out</span>
@@ -214,59 +215,61 @@ export default function ModuleHubPage() {
       {/* Hero */}
       <div className="px-6 pt-10 pb-6 text-center">
         <div
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4"
-          style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4"
+          style={{ backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary-dark)' }}
         >
           <Layers size={12} />
           <span>Select a module to get started</span>
         </div>
-        <h1 className="text-2xl font-bold mb-1" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--izou-text)' }}>
           Welcome back, {displayName.split(' ')[0]}
         </h1>
-        <p className="text-sm" style={{ color: '#3B82F6' }}>
+        <p className="text-sm" style={{ color: 'var(--izou-muted)' }}>
           Choose a module below to begin working
         </p>
       </div>
 
-      {/* Module Cards — Bento-style asymmetric grid */}
+      {/* Module Cards */}
       <div className="flex-1 px-6 pb-10 max-w-6xl mx-auto w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visibleModules.map((mod, idx) => {
-            const Icon = mod.icon;
-            // Make first card span 2 cols on lg for visual hierarchy
+            const ModIcon = mod.icon;
             const isFeature = idx === 0;
             return (
               <button
                 key={mod.id}
                 onClick={() => handleModuleClick(mod.href)}
-                className={`group relative text-left rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                className={`group relative text-left rounded-2xl p-6 transition-all duration-200 hover:-translate-y-1 focus:outline-none ${
                   isFeature ? 'lg:col-span-2' : ''
                 }`}
                 style={{
                   background: mod.bgGradient,
-                  border: `1px solid rgba(0,0,0,0.06)`,
+                  border: '1px solid rgba(0,0,0,0.06)',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  transition: 'transform 0.22s var(--izou-ease), box-shadow 0.22s var(--izou-ease)',
                 }}
+                onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'; }}
+                onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
               >
                 {/* Icon */}
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-110"
                   style={{ backgroundColor: mod.iconBg }}
                 >
-                  <Icon size={22} color="#fff" />
+                  <ModIcon size={22} color="#fff" />
                 </div>
 
                 {/* Content */}
                 <h2 className="text-base font-bold mb-1.5" style={{ color: mod.color }}>
                   {mod.title}
                 </h2>
-                <p className="text-sm leading-relaxed mb-4" style={{ color: '#374151', opacity: 0.85 }}>
+                <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--izou-muted)' }}>
                   {mod.description}
                 </p>
 
                 {/* Stats pill */}
                 <div
-                  className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full"
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
                   style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: mod.color }}
                 >
                   <TrendingUp size={10} />
@@ -288,8 +291,8 @@ export default function ModuleHubPage() {
         {/* Empty state */}
         {!loading && visibleModules.length === 0 && (
           <div className="text-center py-20">
-            <ShieldCheck size={40} className="mx-auto mb-3 opacity-30" style={{ color: '#1D4ED8' }} />
-            <p className="text-sm" style={{ color: '#6B7280' }}>
+            <ShieldCheck size={40} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--izou-primary)' }} />
+            <p className="text-sm" style={{ color: 'var(--izou-muted)' }}>
               No modules are available for your current role. Contact your administrator.
             </p>
           </div>
@@ -297,9 +300,15 @@ export default function ModuleHubPage() {
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-4 text-xs" style={{ color: '#93C5FD' }}>
+      <footer className="text-center py-4 text-xs" style={{ color: 'var(--izou-muted)' }}>
         Powered by{' '}
-        <a href="https://contentpro.co.tz" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+        <a
+          href="https://contentpro.co.tz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold hover:underline"
+          style={{ color: 'var(--izou-primary)' }}
+        >
           Contentpro
         </a>
       </footer>

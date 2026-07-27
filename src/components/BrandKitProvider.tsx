@@ -36,9 +36,12 @@ export default function BrandKitProvider({ children }: { children: React.ReactNo
           const hsl = hexToHsl(primary);
           root.style.setProperty('--primary', hsl);
           root.style.setProperty('--ring', hsl);
+          // Also update IZOU CSS variables for full theme consistency
+          root.style.setProperty('--izou-primary', primary);
         }
         if (accent && /^#[0-9a-f]{6}$/i.test(accent)) {
           root.style.setProperty('--accent', hexToHsl(accent));
+          root.style.setProperty('--izou-teal', accent);
         }
       } catch {
         // silently fail — default CSS vars remain

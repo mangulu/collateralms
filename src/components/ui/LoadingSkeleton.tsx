@@ -6,16 +6,25 @@ interface SkeletonProps {
 
 export function Skeleton({ className = '' }: SkeletonProps) {
   return (
-    <div className={`animate-pulse bg-muted rounded-md ${className}`} />
+    <div
+      className={`animate-pulse rounded-lg ${className}`}
+      style={{ backgroundColor: 'rgba(0,169,224,0.08)' }}
+    />
   );
 }
 
 export function KPICardSkeleton() {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-card border border-border">
+    <div
+      className="bg-white rounded-2xl p-5"
+      style={{
+        border: '1px solid var(--izou-border)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
+      }}
+    >
       <div className="flex items-start justify-between mb-3">
         <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-8 w-8 rounded-md" />
+        <Skeleton className="h-8 w-8 rounded-xl" />
       </div>
       <Skeleton className="h-8 w-24 mb-2" />
       <Skeleton className="h-3 w-40" />
@@ -38,8 +47,8 @@ export function TableRowSkeleton({ cols = 8 }: { cols?: number }) {
 export function ChartSkeleton({ height = 280 }: { height?: number }) {
   return (
     <div
-      className="animate-pulse bg-muted rounded-lg w-full"
-      style={{ height }}
+      className="animate-pulse rounded-xl w-full"
+      style={{ height, backgroundColor: 'rgba(0,169,224,0.08)' }}
     />
   );
 }

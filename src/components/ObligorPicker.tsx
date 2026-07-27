@@ -130,7 +130,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
                   target="_blank"
                   className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
                 >
-                  <Plus size={11} /> Add new obligator
+                  <Plus size={11} /> Add new obligor
                 </Link>
               </div>
             ) : (

@@ -353,11 +353,21 @@ export default function GlobalSearch() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Open global search (Ctrl+K)"
-        className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors w-full max-w-xs"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm w-full max-w-xs transition-all"
+        style={{
+          backgroundColor: 'var(--izou-primary-light)',
+          border: '1px solid rgba(0,169,224,0.2)',
+          color: 'var(--izou-muted)',
+        }}
+        onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.4)'; }}
+        onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.2)'; }}
       >
         <Search size={14} />
         <span className="flex-1 text-left">Search everything…</span>
-        <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white border border-border rounded text-[10px] font-mono">
+        <kbd
+          className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono"
+          style={{ backgroundColor: 'white', border: '1px solid var(--izou-border)' }}
+        >
           ⌘K
         </kbd>
       </button>
@@ -371,15 +381,18 @@ export default function GlobalSearch() {
           aria-modal="true"
           aria-label="Global search"
         >
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div
             className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-            style={{ maxHeight: '80vh' }}
+            style={{ maxHeight: '80vh', border: '1px solid var(--izou-border)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Search Input */}
-            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border shrink-0">
-              <Search size={18} className="text-muted-foreground shrink-0" />
+            <div
+              className="flex items-center gap-3 px-4 py-3.5 shrink-0"
+              style={{ borderBottom: '1px solid var(--izou-border)' }}
+            >
+              <Search size={18} className="shrink-0" style={{ color: 'var(--izou-primary)' }} />
               <input
                 ref={inputRef}
                 type="text"
@@ -387,15 +400,17 @@ export default function GlobalSearch() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search modules, screens, features, records…"
-                className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
+                className="flex-1 text-sm bg-transparent outline-none"
+                style={{ color: 'var(--izou-text)' }}
                 aria-label="Search"
                 autoComplete="off"
               />
-              {loading && <Loader2 size={16} className="text-muted-foreground animate-spin shrink-0" />}
+              {loading && <Loader2 size={16} className="animate-spin shrink-0" style={{ color: 'var(--izou-primary)' }} />}
               {query && (
                 <button
                   onClick={() => setQuery('')}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  className="transition-colors"
+                  style={{ color: 'var(--izou-muted)' }}
                   aria-label="Clear search"
                 >
                   <X size={15} />
@@ -403,7 +418,8 @@ export default function GlobalSearch() {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors ml-1"
+                className="transition-colors ml-1"
+                style={{ color: 'var(--izou-muted)' }}
                 aria-label="Close search"
               >
                 <X size={16} />
@@ -417,25 +433,41 @@ export default function GlobalSearch() {
               {!isSearching && (
                 <div className="px-4 py-4">
                   {/* Quick Actions */}
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <p
+                    className="text-[10px] font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"
+                    style={{ color: 'var(--izou-muted)' }}
+                  >
                     <Sparkles size={10} />
                     Quick Actions
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-4">
-                    {quickActions.map((qa, i) => {
+                    {quickActions.map((qa) => {
                       const QaIcon = qa.icon;
-                      const colors = MODULE_COLORS['quick-actions'];
                       return (
                         <button
                           key={qa.id}
                           onClick={() => navigate(qa.href)}
-                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border hover:border-indigo-200 hover:bg-indigo-50/50 transition-all text-left group"
+                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left group transition-all"
+                          style={{
+                            border: '1px solid var(--izou-border)',
+                          }}
+                          onMouseOver={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
+                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.3)';
+                          }}
+                          onMouseOut={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                            (e.currentTarget as HTMLElement).style.borderColor = 'var(--izou-border)';
+                          }}
                         >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${colors.bg}`}>
-                            <QaIcon size={13} className={colors.text} />
+                          <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary)' }}
+                          >
+                            <QaIcon size={13} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-medium text-foreground truncate group-hover:text-indigo-700 transition-colors">{qa.label}</p>
+                            <p className="text-xs font-medium truncate" style={{ color: 'var(--izou-text)' }}>{qa.label}</p>
                           </div>
                         </button>
                       );
@@ -443,7 +475,10 @@ export default function GlobalSearch() {
                   </div>
 
                   {/* Module grid */}
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <p
+                    className="text-[10px] font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5"
+                    style={{ color: 'var(--izou-muted)' }}
+                  >
                     <Hash size={10} />
                     Browse Modules
                   </p>
@@ -460,23 +495,34 @@ export default function GlobalSearch() {
                       { id: 'archive', label: 'Archive', href: '/archive/vault-management', icon: FolderArchive },
                     ].map((mod) => {
                       const ModIcon = mod.icon;
-                      const colors = MODULE_COLORS[mod.id];
                       return (
                         <button
                           key={mod.id}
                           onClick={() => navigate(mod.href)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border hover:border-border/80 hover:bg-muted/40 transition-all text-left group"
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-left group transition-all"
+                          style={{ border: '1px solid var(--izou-border)' }}
+                          onMouseOver={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
+                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.3)';
+                          }}
+                          onMouseOut={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                            (e.currentTarget as HTMLElement).style.borderColor = 'var(--izou-border)';
+                          }}
                         >
-                          <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${colors.bg}`}>
-                            <ModIcon size={12} className={colors.text} />
+                          <div
+                            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary)' }}
+                          >
+                            <ModIcon size={12} />
                           </div>
-                          <span className="text-xs font-medium text-foreground truncate">{mod.label}</span>
+                          <span className="text-xs font-medium truncate" style={{ color: 'var(--izou-text)' }}>{mod.label}</span>
                         </button>
                       );
                     })}
                   </div>
 
-                  <p className="text-center text-[11px] text-muted-foreground mt-4">
+                  <p className="text-center text-[11px] mt-4" style={{ color: 'var(--izou-muted)' }}>
                     Start typing to search across all screens, features, and records
                   </p>
                 </div>
@@ -485,9 +531,9 @@ export default function GlobalSearch() {
               {/* ── No results ── */}
               {isSearching && !hasResults && !loading && (
                 <div className="px-4 py-10 text-center">
-                  <Search size={24} className="text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">No results for "<strong>{query}</strong>"</p>
-                  <p className="text-xs text-muted-foreground mt-1">Try a module name, screen name, or feature keyword</p>
+                  <Search size={24} className="mx-auto mb-2" style={{ color: 'var(--izou-muted)' }} />
+                  <p className="text-sm font-medium" style={{ color: 'var(--izou-text)' }}>No results for "<strong>{query}</strong>"</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>Try a module name, screen name, or feature keyword</p>
                 </div>
               )}
 
@@ -503,7 +549,7 @@ export default function GlobalSearch() {
                       <div key={moduleName}>
                         <div className="flex items-center gap-2 px-4 py-1.5">
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${colors.dot}`} />
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{moduleName}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--izou-muted)' }}>{moduleName}</p>
                         </div>
                         {items.map((r) => {
                           const RIcon = r.icon;
@@ -512,16 +558,21 @@ export default function GlobalSearch() {
                             <button
                               key={r.id}
                               onClick={() => navigate(r.href)}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${globalIdx === selectedIdx ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                              style={{
+                                backgroundColor: globalIdx === selectedIdx ? 'var(--izou-primary-light)' : 'transparent',
+                              }}
+                              onMouseOver={(e) => { if (globalIdx !== selectedIdx) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+                              onMouseOut={(e) => { if (globalIdx !== selectedIdx) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
                             >
                               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${colors.bg}`}>
                                 <RIcon size={13} className={colors.text} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{r.label}</p>
-                                <p className="text-xs text-muted-foreground truncate">{r.description}</p>
+                                <p className="text-sm font-medium truncate" style={{ color: 'var(--izou-text)' }}>{r.label}</p>
+                                <p className="text-xs truncate" style={{ color: 'var(--izou-muted)' }}>{r.description}</p>
                               </div>
-                              <ArrowRight size={13} className="text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100" />
+                              <ArrowRight size={13} className="shrink-0 opacity-0 group-hover:opacity-100" style={{ color: 'var(--izou-muted)' }} />
                             </button>
                           );
                         })}
@@ -536,7 +587,7 @@ export default function GlobalSearch() {
                       <div key={type}>
                         <div className="flex items-center gap-2 px-4 py-1.5">
                           <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-gray-400" />
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{cfg?.label ?? type}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--izou-muted)' }}>{cfg?.label ?? type}</p>
                         </div>
                         {items.map((r) => {
                           const globalIdx = allResults.indexOf(r);
@@ -544,19 +595,24 @@ export default function GlobalSearch() {
                             <button
                               key={r.id}
                               onClick={() => navigate(r.href)}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${globalIdx === selectedIdx ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                              style={{
+                                backgroundColor: globalIdx === selectedIdx ? 'var(--izou-primary-light)' : 'transparent',
+                              }}
+                              onMouseOver={(e) => { if (globalIdx !== selectedIdx) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+                              onMouseOut={(e) => { if (globalIdx !== selectedIdx) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
                             >
                               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${cfg?.bg ?? 'bg-gray-50'}`}>
                                 <FileText size={13} className={cfg?.text ?? 'text-gray-600'} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{r.title}</p>
-                                <p className="text-xs text-muted-foreground truncate">{r.subtitle}</p>
+                                <p className="text-sm font-medium truncate" style={{ color: 'var(--izou-text)' }}>{r.title}</p>
+                                <p className="text-xs truncate" style={{ color: 'var(--izou-muted)' }}>{r.subtitle}</p>
                               </div>
                               {r.badge && (
                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ${r.badgeColor}`}>{r.badge}</span>
                               )}
-                              <ChevronRight size={13} className="text-muted-foreground shrink-0" />
+                              <ChevronRight size={13} className="shrink-0" style={{ color: 'var(--izou-muted)' }} />
                             </button>
                           );
                         })}
@@ -568,18 +624,37 @@ export default function GlobalSearch() {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2.5 border-t border-border bg-muted/30 flex items-center gap-4 text-[10px] text-muted-foreground shrink-0">
+            <div
+              className="px-4 py-2.5 flex items-center gap-4 text-[10px] shrink-0"
+              style={{
+                borderTop: '1px solid var(--izou-border)',
+                backgroundColor: 'var(--izou-primary-light)',
+                color: 'var(--izou-muted)',
+              }}
+            >
               <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 bg-white border border-border rounded font-mono">↑↓</kbd> Navigate
+                <kbd
+                  className="px-1 py-0.5 rounded font-mono"
+                  style={{ backgroundColor: 'white', border: '1px solid var(--izou-border)' }}
+                >↑↓</kbd> Navigate
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 bg-white border border-border rounded font-mono">↵</kbd> Open
+                <kbd
+                  className="px-1 py-0.5 rounded font-mono"
+                  style={{ backgroundColor: 'white', border: '1px solid var(--izou-border)' }}
+                >↵</kbd> Open
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 bg-white border border-border rounded font-mono">Esc</kbd> Close
+                <kbd
+                  className="px-1 py-0.5 rounded font-mono"
+                  style={{ backgroundColor: 'white', border: '1px solid var(--izou-border)' }}
+                >Esc</kbd> Close
               </span>
               <span className="ml-auto flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-white border border-border rounded font-mono">⌘K</kbd> to toggle
+                <kbd
+                  className="px-1.5 py-0.5 rounded font-mono"
+                  style={{ backgroundColor: 'white', border: '1px solid var(--izou-border)' }}
+                >⌘K</kbd> to toggle
               </span>
             </div>
           </div>

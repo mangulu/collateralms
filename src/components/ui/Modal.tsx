@@ -41,7 +41,6 @@ export default function Modal({
   useEffect(() => {
     if (open) {
       previousFocusRef.current = document.activeElement as HTMLElement;
-      // Move focus into modal on next tick
       const timer = setTimeout(() => {
         const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
         if (focusable && focusable.length > 0) {
@@ -52,7 +51,6 @@ export default function Modal({
       }, 0);
       return () => clearTimeout(timer);
     } else {
-      // Restore focus when modal closes
       previousFocusRef.current?.focus();
     }
   }, [open]);
@@ -104,27 +102,35 @@ export default function Modal({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={`relative bg-white rounded-xl shadow-modal w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col modal-enter outline-none`}
+        className={`relative bg-white rounded-2xl shadow-modal w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col modal-enter outline-none`}
+        style={{ border: '1px solid var(--izou-border)' }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-border shrink-0">
+        <div
+          className="flex items-start justify-between px-6 py-5 shrink-0"
+          style={{ borderBottom: '1px solid var(--izou-border)' }}
+        >
           <div>
             <h2
               id="modal-title"
-              className="text-lg font-600 text-foreground"
+              className="text-lg font-bold"
+              style={{ color: 'var(--izou-text)' }}
             >
               {title}
             </h2>
             {subtitle && (
-              <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>{subtitle}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="w-11 h-11 flex items-center justify-center rounded-md hover:bg-muted transition-colors ml-4 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+            className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors ml-4 shrink-0 focus:outline-none"
+            style={{ color: 'var(--izou-muted)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-muted)'; }}
             aria-label="Close modal"
           >
-            <X size={16} className="text-muted-foreground" aria-hidden="true" />
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
         {/* Body */}
