@@ -496,9 +496,22 @@ export default function SettingsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-0">
+          {/* Page Header */}
+          <div className="px-6 pt-6 pb-0">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Settings size={18} className="text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-700 text-foreground">System Settings</h1>
+                <p className="text-sm text-muted-foreground">Configure document types, registries, notifications, and advanced system options</p>
+              </div>
+            </div>
+          </div>
+
           {/* Tab Bar */}
-          <div className="flex flex-wrap items-end gap-0 border-b border-border overflow-x-auto">
+          <div className="flex flex-wrap items-end gap-0 border-b border-border overflow-x-auto px-6 mt-4">
             {renderTabGroup('Configuration', configTabs)}
             <div className="w-px h-6 bg-border mx-1 self-center" />
             {renderTabGroup('System', systemTabs)}
@@ -511,6 +524,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Tab Content */}
+          <div className="px-6 py-6">
           {activeTab === 'document-types' && <DocumentTypesSettingsContent />}
           {activeTab === 'registries' && <RegistriesSettingsContent />}
           {activeTab === 'collateral-types' && <CollateralTypesSettingsContent />}
@@ -552,6 +566,7 @@ export default function SettingsPage() {
               />
             );
           })()}
+          </div>
         </div>
       )}
     </AppLayout>
