@@ -1,15 +1,17 @@
 'use client';
+import React from 'react';
 import AppLayout from '@/components/AppLayout';
 import ObligorProfileContent from '../components/ObligorProfileContent';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function ObligorProfilePage({ params }: Props) {
+  const { id } = React.use(params);
   return (
     <AppLayout currentPath="/obligors">
-      <ObligorProfileContent id={params.id} />
+      <ObligorProfileContent id={id} />
     </AppLayout>
   );
 }
