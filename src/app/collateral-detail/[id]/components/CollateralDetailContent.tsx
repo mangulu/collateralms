@@ -287,7 +287,22 @@ export default function CollateralDetailContent({
                   <SectionHeader title="Collateral Information" icon={Shield} />
                   <div className="bg-muted/30 rounded-lg px-3 py-1">
                     <DetailRow label="Collateral ID" value={<span className="font-mono font-600 text-primary">{collateral.collateralId}</span>} icon={Shield} />
-                    <DetailRow label="Obligor" value={<div><p className="font-500">{collateral.obligor}</p><p className="text-xs text-muted-foreground font-mono">{collateral.obligorId}</p></div>} icon={Building2} />
+                    <DetailRow label="Obligor" value={
+                      <div>
+                        {collateral.obligorRefId ? (
+                          <Link
+                            href={`/obligors/${collateral.obligorRefId}`}
+                            className="font-500 text-primary hover:underline flex items-center gap-1"
+                          >
+                            {collateral.obligor}
+                            <ExternalLink size={11} className="shrink-0" />
+                          </Link>
+                        ) : (
+                          <p className="font-500">{collateral.obligor}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground font-mono">{collateral.obligorId}</p>
+                      </div>
+                    } icon={Building2} />
                     <DetailRow label="Collateral Type" value={collateral.type} icon={FileText} />
                     <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{collateral.description}</p>} icon={FileText} />
                     <DetailRow label="Collateral Value" value={<span className="font-mono font-600 text-base">TSh {collateral.valueTSh}</span>} icon={Building2} />

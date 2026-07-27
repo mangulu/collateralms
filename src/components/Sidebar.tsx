@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppLogo from './ui/AppLogo';
@@ -17,9 +17,9 @@ interface SidebarProps {
 }
 
 const badgeVariantClasses: Record<string, string> = {
-  default: 'bg-blue-500/20 text-blue-300',
-  danger: 'bg-red-500/20 text-red-300',
-  warning: 'bg-amber-500/20 text-amber-300',
+  default: 'bg-white/20 text-white',
+  danger: 'bg-red-500/30 text-red-100',
+  warning: 'bg-amber-500/30 text-amber-100',
 };
 
 function isChildActive(item: ModuleNavItem, currentPath?: string): boolean {
@@ -33,12 +33,38 @@ function isChildActive(item: ModuleNavItem, currentPath?: string): boolean {
 export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(() => {
-    // Auto-expand parent if a child is active
     return new Set<string>();
   });
+  const [fraudPendingCount, setFraudPendingCount] = useState<number | null>(null);
   const { userProfile, signOut } = useAuth();
   const { hasPermission, loading: permsLoading, isSystemAdmin } = usePermissions();
   const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchFraudCount() {
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { count } = await supabase
+          .from('fraud_alerts')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'PENDING_REVIEW');
+        if (!cancelled) setFraudPendingCount(count ?? 0);
+      } catch { /* silent */ }
+    }
+    fetchFraudCount();
+    const interval = setInterval(fetchFraudCount, 60_000); // refresh every minute
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  const getBadgeOverride = (href: string): string | null | undefined => {
+    if (href === '/fraud-prevention') {
+      if (fraudPendingCount === null) return undefined; // not yet loaded — keep static
+      return fraudPendingCount > 0 ? String(fraudPendingCount) : null;
+    }
+    return undefined; // undefined = use static badge from nav definition
+  };
 
   const initials = userProfile?.initials ||
     (userProfile?.full_name
@@ -69,7 +95,6 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
 
   const isExpanded = (item: ModuleNavItem): boolean => {
     if (!item.children) return false;
-    // Auto-expand if a child is active
     if (isChildActive(item, currentPath)) return true;
     return expandedItems.has(item.label);
   };
@@ -80,6 +105,8 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
     const childActive = isChildActive(item, currentPath);
     const expanded = isExpanded(item);
     const isActive = !hasChildren && (currentPath === item.href || currentPath?.startsWith(item.href.split('?')[0] + '/'));
+    const badgeOverride = getBadgeOverride(item.href ?? '');
+    const effectiveBadge = badgeOverride !== undefined ? badgeOverride : item.badge;
     const badgeClass = badgeVariantClasses[item.badgeVariant ?? 'default'];
 
     if (hasChildren) {
@@ -89,30 +116,17 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
             onClick={() => !collapsed && toggleExpanded(item.label)}
             onMouseEnter={() => setHoveredItem(item.label)}
             onMouseLeave={() => setHoveredItem(null)}
-            className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150 mb-0.5"
-            style={
-              childActive
-                ? { backgroundColor: 'rgba(37,99,235,0.15)', color: '#1E3A8A' }
-                : { color: '#1E3A8A' }
-            }
-            onMouseOver={(e) => {
-              if (!childActive) {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!childActive) {
-                (e.currentTarget as HTMLElement).style.backgroundColor = childActive ? 'rgba(37,99,235,0.15)' : 'transparent';
-              }
-            }}
+            className={`izou-nav-item w-full px-3 py-2.5 text-sm font-medium mb-0.5 ${
+              childActive ? 'izou-nav-active' : ''
+            }`}
           >
-            <ItemIcon size={18} className="shrink-0" />
+            <ItemIcon size={18} className="izou-nav-icon shrink-0" />
             {!collapsed && (
               <>
                 <span className="flex-1 truncate text-left">{item.label}</span>
                 <ChevronDown
                   size={14}
-                  className="shrink-0 transition-transform duration-200"
+                  className="shrink-0 transition-transform duration-200 opacity-70"
                   style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
                 />
               </>
@@ -120,7 +134,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           </button>
           {/* Submenu */}
           {!collapsed && expanded && (
-            <div className="ml-4 pl-3 border-l border-blue-200 mb-1">
+            <div className="ml-4 pl-3 mb-1" style={{ borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
               {item.children!
                 .filter((child) => !child.permission || isSystemAdmin || permsLoading || hasPermission(child.permission))
                 .map((child) => {
@@ -130,25 +144,12 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
                     <Link
                       key={`child-${child.label}`}
                       href={child.href}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all duration-150 mb-0.5"
-                      style={
-                        childIsActive
-                          ? { backgroundColor: '#2563EB', color: '#FFFFFF' }
-                          : { color: '#1E3A8A' }
-                      }
-                      onMouseOver={(e) => {
-                        if (!childIsActive) {
-                          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)';
-                        }
-                      }}
-                      onMouseOut={(e) => {
-                        if (!childIsActive) {
-                          (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                        }
-                      }}
+                      className={`izou-nav-item flex items-center gap-2 px-2.5 py-2 text-xs mb-0.5 ${
+                        childIsActive ? 'izou-nav-active' : ''
+                      }`}
                     >
-                      <ChildIcon size={15} className="shrink-0" />
-                      <span className="flex-1 truncate text-xs">{child.label}</span>
+                      <ChildIcon size={14} className="izou-nav-icon shrink-0" />
+                      <span className="flex-1 truncate">{child.label}</span>
                     </Link>
                   );
                 })}
@@ -157,7 +158,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           {/* Collapsed tooltip */}
           {collapsed && hoveredItem === item.label && (
             <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-              <div className="text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap" style={{ backgroundColor: '#1E293B' }}>
+              <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
                 {item.label}
               </div>
             </div>
@@ -172,43 +173,28 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           href={item.href}
           onMouseEnter={() => setHoveredItem(item.label)}
           onMouseLeave={() => setHoveredItem(null)}
-          className="flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150 group mb-0.5"
-          style={
-            isActive
-              ? { backgroundColor: '#2563EB', color: '#FFFFFF' }
-              : { color: '#1E3A8A' }
-          }
-          onMouseOver={(e) => {
-            if (!isActive) {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)';
-              (e.currentTarget as HTMLElement).style.color = '#1E3A8A';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!isActive) {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-              (e.currentTarget as HTMLElement).style.color = '#1E3A8A';
-            }
-          }}
+          className={`izou-nav-item flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium mb-0.5 ${
+            isActive ? 'izou-nav-active' : ''
+          }`}
         >
-          <ItemIcon size={18} className="shrink-0" />
+          <ItemIcon size={18} className="izou-nav-icon shrink-0" />
           {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-          {!collapsed && item.badge && (
-            <span className={`text-xs font-600 px-1.5 py-0.5 rounded-full ${badgeClass}`}>
-              {item.badge}
+          {!collapsed && effectiveBadge && (
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
+              {effectiveBadge}
             </span>
           )}
-          {collapsed && item.badge && (
-            <span className={`absolute top-1 right-1 text-xs font-600 px-1 py-0 rounded-full text-[10px] ${badgeClass}`}>
-              {item.badge}
+          {collapsed && effectiveBadge && (
+            <span className={`absolute top-1 right-1 text-xs font-semibold px-1 py-0 rounded-full text-[10px] ${badgeClass}`}>
+              {effectiveBadge}
             </span>
           )}
         </Link>
         {collapsed && hoveredItem === item.label && (
           <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-            <div className="text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap" style={{ backgroundColor: '#1E293B' }}>
+            <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
               {item.label}
-              {item.badge && <span className="ml-1 opacity-75">({item.badge})</span>}
+              {effectiveBadge && <span className="ml-1 opacity-75">({effectiveBadge})</span>}
             </div>
           </div>
         )}
@@ -218,19 +204,22 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
 
   return (
     <aside
-      className="relative flex flex-col h-full shrink-0 sidebar-transition z-20"
-      style={{ width: collapsed ? '64px' : '240px', backgroundColor: '#DBEAFE', borderRight: '1px solid rgba(0,0,0,0.08)' }}
+      className="izou-sidebar-gradient relative flex flex-col h-full shrink-0 sidebar-transition z-20"
+      style={{ width: collapsed ? '64px' : '240px' }}
     >
       {/* Logo */}
-      <div className="flex items-center h-16 px-3 shrink-0 overflow-hidden" style={{ borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
-        <div className="flex items-center gap-2 min-w-0">
+      <div
+        className="flex items-center h-16 px-3 shrink-0 overflow-hidden"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
           <AppLogo size={32} />
           {!collapsed && (
             <div className="min-w-0 fade-in">
-              <p className="text-sm font-semibold truncate leading-tight" style={{ color: '#1E40AF' }}>
+              <p className="text-sm font-bold truncate leading-tight text-white">
                 CollateralMS
               </p>
-              <p className="text-xs truncate leading-tight" style={{ color: '#3B82F6' }}>
+              <p className="text-xs truncate leading-tight" style={{ color: 'rgba(255,255,255,0.65)' }}>
                 {activeModule ? activeModule.label : 'EXIM Bank Tanzania'}
               </p>
             </div>
@@ -249,29 +238,16 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           >
             <button
               onClick={() => router.push('/module-hub')}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150"
-              style={
-                currentPath === '/module-hub'
-                  ? { backgroundColor: '#2563EB', color: '#FFFFFF' }
-                  : { color: '#1E3A8A' }
-              }
-              onMouseOver={(e) => {
-                if (currentPath !== '/module-hub') {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (currentPath !== '/module-hub') {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                }
-              }}
+              className={`izou-nav-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium ${
+                currentPath === '/module-hub' ? 'izou-nav-active' : ''
+              }`}
             >
-              <LayoutGrid size={18} className="shrink-0" />
+              <LayoutGrid size={18} className="izou-nav-icon shrink-0" />
               {!collapsed && <span className="flex-1 truncate text-left">Module Hub</span>}
             </button>
             {collapsed && hoveredItem === '__home__' && (
               <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-                <div className="text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap" style={{ backgroundColor: '#1E293B' }}>
+                <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
                   Module Hub
                 </div>
               </div>
@@ -279,35 +255,22 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           </div>
           {/* Onboarding Guide button */}
           <div
-            className="relative mt-1"
+            className="relative mt-0.5"
             onMouseEnter={() => setHoveredItem('__onboarding__')}
             onMouseLeave={() => setHoveredItem(null)}
           >
             <button
               onClick={() => router.push('/onboarding-guide')}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-sm font-medium transition-all duration-150"
-              style={
-                currentPath === '/onboarding-guide'
-                  ? { backgroundColor: '#2563EB', color: '#FFFFFF' }
-                  : { color: '#1E3A8A' }
-              }
-              onMouseOver={(e) => {
-                if (currentPath !== '/onboarding-guide') {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (currentPath !== '/onboarding-guide') {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                }
-              }}
+              className={`izou-nav-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium ${
+                currentPath === '/onboarding-guide' ? 'izou-nav-active' : ''
+              }`}
             >
-              <BookOpen size={18} className="shrink-0" />
+              <BookOpen size={18} className="izou-nav-icon shrink-0" />
               {!collapsed && <span className="flex-1 truncate text-left">Onboarding Guide</span>}
             </button>
             {collapsed && hoveredItem === '__onboarding__' && (
               <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-                <div className="text-white text-xs px-2 py-1 rounded shadow-dropdown whitespace-nowrap" style={{ backgroundColor: '#1E293B' }}>
+                <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
                   Onboarding Guide
                 </div>
               </div>
@@ -315,7 +278,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           </div>
 
           {!collapsed && (
-            <div className="mx-1 mt-2" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }} />
+            <div className="mx-1 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }} />
           )}
         </div>
 
@@ -327,7 +290,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
               : group.items.filter((item) => {
                   if (!item.permission) return true;
                   if (isSystemAdmin) return true;
-                  if (item.children) return true; // always show parent with children
+                  if (item.children) return true;
                   return hasPermission(item.permission);
                 });
 
@@ -336,18 +299,18 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
             return (
               <div key={`group-${group.label}`} className="mb-4">
                 {!collapsed && (
-                  <p className="text-xs font-600 tracking-wider uppercase px-2 mb-1" style={{ color: '#1D4ED8' }}>
+                  <p className="izou-nav-section-label">
                     {group.label}
                   </p>
                 )}
-                {collapsed && <div className="mx-1 mb-2" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }} />}
+                {collapsed && <div className="mx-1 mb-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }} />}
                 {visibleItems.map((item) => renderNavItem(item))}
               </div>
             );
           })
         ) : (
           !collapsed && (
-            <div className="px-2 py-3 text-xs text-center" style={{ color: '#3B82F6' }}>
+            <div className="px-3 py-3 text-xs text-center" style={{ color: 'rgba(255,255,255,0.5)' }}>
               Select a module from the hub to see its pages here.
             </div>
           )
@@ -355,33 +318,34 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
       </nav>
 
       {/* User Profile */}
-      <div className="p-2 shrink-0" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+      <div className="p-2 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
         {!collapsed ? (
           <div
-            className="flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer transition-colors group"
+            className="izou-sidebar-card flex items-center gap-2.5 px-3 py-2.5 cursor-pointer group"
             onClick={() => signOut?.()}
             title="Sign out"
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(37,99,235,0.12)'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
           >
-            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#2563EB' }}>
-              <span className="text-white text-xs font-600">{initials}</span>
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
+            >
+              <span className="text-white text-xs font-bold">{initials}</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-500 truncate" style={{ color: '#1E3A8A' }}>{displayName}</p>
-              <p className="text-xs truncate" style={{ color: '#3B82F6' }}>{displayRole}</p>
+              <p className="text-sm font-semibold truncate text-white">{displayName}</p>
+              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{displayRole}</p>
             </div>
-            <LogOut size={15} className="shrink-0 transition-colors group-hover:text-red-500" style={{ color: '#1D4ED8' }} />
+            <LogOut size={15} className="shrink-0 transition-colors group-hover:text-red-300" style={{ color: 'rgba(255,255,255,0.7)' }} />
           </div>
         ) : (
           <div className="flex justify-center py-1">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-colors"
-              style={{ backgroundColor: '#2563EB' }}
+              className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all"
+              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
               onClick={() => signOut?.()}
               title="Sign out"
             >
-              <span className="text-white text-xs font-600">{initials}</span>
+              <span className="text-white text-xs font-bold">{initials}</span>
             </div>
           </div>
         )}
@@ -390,14 +354,13 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
       {/* Collapse Toggle */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center shadow-card transition-colors z-30"
-        style={{ backgroundColor: '#BFDBFE', border: '1px solid rgba(37,99,235,0.3)' }}
+        className="izou-collapse-btn absolute -right-3.5 top-20 w-7 h-7 z-30"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {collapsed ? (
-          <ChevronRight size={12} style={{ color: '#1E40AF' }} />
+          <ChevronRight size={13} className="text-white" />
         ) : (
-          <ChevronLeft size={12} style={{ color: '#1E40AF' }} />
+          <ChevronLeft size={13} className="text-white" />
         )}
       </button>
     </aside>

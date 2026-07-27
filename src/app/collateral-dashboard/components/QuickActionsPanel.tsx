@@ -10,7 +10,6 @@ import {
   BarChart2,
   ChevronRight,
 } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
 
 
 interface QuickAction {
@@ -18,8 +17,8 @@ interface QuickAction {
   description: string;
   href: string;
   icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
+  iconStyle: React.CSSProperties;
+  iconBgStyle: React.CSSProperties;
 }
 
 const actions: QuickAction[] = [
@@ -28,75 +27,87 @@ const actions: QuickAction[] = [
     description: 'Register a new collateral item',
     href: '/collateral-management',
     icon: FilePlus,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
+    iconBgStyle: { backgroundColor: 'var(--izou-primary-light)' },
+    iconStyle: { color: 'var(--izou-primary)' },
   },
   {
     label: 'Perfection Workflow',
     description: 'Manage pending perfection tasks',
     href: '/perfection-workflow',
     icon: GitBranch,
-    iconBg: 'bg-green-100',
-    iconColor: 'text-green-600',
+    iconBgStyle: { backgroundColor: '#f0fdf4' },
+    iconStyle: { color: '#16a34a' },
   },
   {
     label: 'Compliance Audit',
     description: 'Review compliance status',
     href: '/compliance-audit',
     icon: FileSearch,
-    iconBg: 'bg-purple-100',
-    iconColor: 'text-purple-600',
+    iconBgStyle: { backgroundColor: '#f5f3ff' },
+    iconStyle: { color: '#7c3aed' },
   },
   {
     label: 'Alerts Inbox',
     description: 'View pending alerts & actions',
     href: '/alerts-inbox',
     icon: AlertTriangle,
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
+    iconBgStyle: { backgroundColor: '#fffbeb' },
+    iconStyle: { color: '#d97706' },
   },
   {
     label: 'Bulk Upload',
     description: 'Import collateral data via CSV',
     href: '/bulk-upload',
     icon: Upload,
-    iconBg: 'bg-teal-100',
-    iconColor: 'text-teal-600',
+    iconBgStyle: { backgroundColor: '#f0fdfa' },
+    iconStyle: { color: '#0f766e' },
   },
   {
     label: 'Reports',
     description: 'Generate & export reports',
     href: '/reports',
     icon: BarChart2,
-    iconBg: 'bg-indigo-100',
-    iconColor: 'text-indigo-600',
+    iconBgStyle: { backgroundColor: '#eef2ff' },
+    iconStyle: { color: '#4f46e5' },
   },
 ];
 
 export default function QuickActionsPanel() {
   return (
-    <div className="bg-white rounded-xl shadow-card border border-border p-5 h-full">
+    <div
+      className="rounded-2xl p-5 h-full"
+      style={{
+        backgroundColor: 'var(--izou-card)',
+        border: '1px solid var(--izou-border)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
+      }}
+    >
       <div className="mb-4">
-        <h3 className="text-base font-600 text-foreground">Quick Actions</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Frequently used shortcuts</p>
+        <h3 className="text-base font-bold" style={{ color: 'var(--izou-text)' }}>Quick Actions</h3>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>Frequently used shortcuts</p>
       </div>
       <div className="space-y-1.5">
         {actions.map((action) => {
-          const Icon = action.icon;
+          const ActionIcon = action.icon;
           return (
             <Link
               key={action.href}
               href={action.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group"
+              onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+              onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${action.iconBg}`}>
-                <Icon size={15} className={action.iconColor} />
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
+                style={action.iconBgStyle}
+              >
+                <ActionIcon size={15} style={action.iconStyle} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-500 text-foreground group-hover:text-primary transition-colors">{action.label}</p>
-                <p className="text-xs text-muted-foreground truncate">{action.description}</p>
+                <p className="text-sm font-semibold transition-colors" style={{ color: 'var(--izou-text)' }}>{action.label}</p>
+                <p className="text-xs truncate" style={{ color: 'var(--izou-muted)' }}>{action.description}</p>
               </div>
-              <ChevronRight size={14} className="text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+              <ChevronRight size={14} className="shrink-0 opacity-40 group-hover:opacity-100 transition-all" style={{ color: 'var(--izou-primary)' }} />
             </Link>
           );
         })}

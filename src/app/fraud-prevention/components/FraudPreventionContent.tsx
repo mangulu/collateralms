@@ -65,98 +65,7 @@ interface AIAnalysisResult {
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const mockAlerts: FraudAlert[] = [
-  {
-    id: 'FA-001',
-    collateralId: 'COL-2024-0891',
-    alertType: 'DUPLICATE_TITLE',
-    riskScore: 94.5,
-    confidence: 95.2,
-    severity: 'HIGH',
-    description: 'Title deed TD-00123 already registered under Customer A (LN-001234)',
-    details: { field: 'title_deed_number', value: 'TD-00123', duplicateWith: 'LN-001234' },
-    status: 'PENDING_REVIEW',
-    createdAt: '2024-06-15T08:30:00Z',
-  },
-  {
-    id: 'FA-002',
-    collateralId: 'COL-2024-0756',
-    alertType: 'VALUATION_ANOMALY',
-    riskScore: 78.3,
-    confidence: 82.1,
-    severity: 'HIGH',
-    description: 'Submitted valuation is 47% above market average for this property type and region',
-    details: { field: 'valuation_amount', value: '850,000,000 TZS', expected: '578,000,000 TZS', deviation: '+47%' },
-    status: 'PENDING_REVIEW',
-    createdAt: '2024-06-14T14:22:00Z',
-  },
-  {
-    id: 'FA-003',
-    collateralId: 'COL-2024-0612',
-    alertType: 'IDENTITY_MISMATCH',
-    riskScore: 65.0,
-    confidence: 71.4,
-    severity: 'MEDIUM',
-    description: 'Customer name on title deed does not match national ID document',
-    details: { field: 'customer_name', found: 'John M. Doe', expected: 'Jonathan Doe' },
-    status: 'ESCALATED',
-    reviewedBy: 'Risk Officer A',
-    reviewedAt: '2024-06-14T16:00:00Z',
-    createdAt: '2024-06-13T09:15:00Z',
-  },
-  {
-    id: 'FA-004',
-    collateralId: 'COL-2024-0534',
-    alertType: 'DOCUMENT_FORGERY',
-    riskScore: 88.7,
-    confidence: 79.6,
-    severity: 'HIGH',
-    description: 'AI analysis detected potential tampering in uploaded title deed scan — metadata inconsistency',
-    details: { field: 'document_metadata', found: 'Modified: 2024-06-10', expected: 'Original issue date: 2019-03-15' },
-    status: 'PENDING_REVIEW',
-    createdAt: '2024-06-13T11:45:00Z',
-  },
-  {
-    id: 'FA-005',
-    collateralId: 'COL-2024-0489',
-    alertType: 'EARLY_WARNING',
-    riskScore: 42.1,
-    confidence: 68.3,
-    severity: 'MEDIUM',
-    description: 'Borrower risk indicators changed: 2 new adverse media mentions detected in last 30 days',
-    details: { field: 'adverse_media', value: '2 new mentions', expected: '0 mentions' },
-    status: 'PENDING_REVIEW',
-    createdAt: '2024-06-12T07:00:00Z',
-  },
-  {
-    id: 'FA-006',
-    collateralId: 'COL-2024-0321',
-    alertType: 'IDENTITY_MISMATCH',
-    riskScore: 31.5,
-    confidence: 55.0,
-    severity: 'LOW',
-    description: 'Minor discrepancy in address between ID document and collateral registration form',
-    details: { field: 'address', found: 'Plot 45, Kinondoni', expected: 'Plot 45A, Kinondoni' },
-    status: 'FALSE_POSITIVE',
-    reviewedBy: 'Risk Officer B',
-    reviewedAt: '2024-06-11T13:30:00Z',
-    createdAt: '2024-06-10T10:00:00Z',
-  },
-  {
-    id: 'FA-007',
-    collateralId: 'COL-2024-0290',
-    alertType: 'DUPLICATE_TITLE',
-    riskScore: 91.2,
-    confidence: 93.8,
-    severity: 'HIGH',
-    description: 'Title deed TD-00456 appears in two active loan applications simultaneously',
-    details: { field: 'title_deed_number', value: 'TD-00456', duplicateWith: 'LN-002891' },
-    status: 'RESOLVED',
-    reviewedBy: 'Risk Manager',
-    reviewedAt: '2024-06-09T15:00:00Z',
-    createdAt: '2024-06-08T09:00:00Z',
-  },
-];
+// mockAlerts removed — all alerts are loaded exclusively from the database
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -744,7 +653,7 @@ Rules:
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FraudPreventionContent() {
-  const [alerts, setAlerts] = useState<FraudAlert[]>(mockAlerts);
+  const [alerts, setAlerts] = useState<FraudAlert[]>([]);
   const [dbAlerts, setDbAlerts] = useState<FraudAlert[]>([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');

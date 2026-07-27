@@ -1,12 +1,13 @@
 'use client';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database } from 'lucide-react';
+import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database, CreditCard } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { CollateralRecord as Collateral, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { documentTypeSettingsService, DocumentTypeSetting } from '@/lib/supabase/documentTypeSettingsService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
+import { loanService, Loan } from '@/lib/supabase/loanService';
 import { useAuth } from '@/contexts/AuthContext';
 import ObligorPicker from '@/components/ObligorPicker';
 import LocationPicker from '@/components/LocationPicker';
@@ -60,6 +61,11 @@ export default function AddEditCollateralModal({
   // Obligor picker state
   const [selectedObligor, setSelectedObligor] = useState<{ id: string; name: string; code: string } | null>(null);
   const [obligorError, setObligorError] = useState<string | null>(null);
+
+  // Loan picker state
+  const [availableLoans, setAvailableLoans] = useState<Loan[]>([]);
+  const [selectedLoanId, setSelectedLoanId] = useState<string>('');
+  const [loansLoading, setLoansLoading] = useState(false);
 
   // Location picker state
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
@@ -179,6 +185,23 @@ export default function AddEditCollateralModal({
     }
   }, [open]);
 
+  // Load loans when obligor changes
+  useEffect(() => {
+    if (selectedObligor?.id) {
+      setLoansLoading(true);
+      loanService.getByObligorId(selectedObligor.id).then((ls) => {
+        setAvailableLoans(ls);
+        setLoansLoading(false);
+      }).catch(() => {
+        setAvailableLoans([]);
+        setLoansLoading(false);
+      });
+    } else {
+      setAvailableLoans([]);
+      setSelectedLoanId('');
+    }
+  }, [selectedObligor?.id]);
+
   useEffect(() => {
     if (editItem) {
       reset({
@@ -200,6 +223,8 @@ export default function AddEditCollateralModal({
       } else {
         setSelectedObligor(null);
       }
+      // Restore loan selection
+      setSelectedLoanId((editItem as any).loanId ?? '');
       // Restore location
       if (editItem.latitude != null && editItem.longitude != null) {
         setLocation({ lat: editItem.latitude, lng: editItem.longitude, address: editItem.locationAddress ?? `${editItem.latitude}, ${editItem.longitude}` });
@@ -213,6 +238,7 @@ export default function AddEditCollateralModal({
         assignedOfficer: '', requiresPerfection: true,
       });
       setSelectedObligor(null);
+      setSelectedLoanId('');
       setLocation(null);
     }
   }, [editItem, open, reset]);
@@ -322,7 +348,8 @@ export default function AddEditCollateralModal({
       latitude: location?.lat ?? null,
       longitude: location?.lng ?? null,
       locationAddress: location?.address ?? null,
-    };
+      ...(selectedLoanId ? { loanId: selectedLoanId } : { loanId: null }),
+    } as any;
 
     setSaveError(null);
     setBrelaError(null);
@@ -556,6 +583,44 @@ export default function AddEditCollateralModal({
                   </p>
                 )}
               </div>
+
+              {/* Loan Selector */}
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-500 text-foreground mb-1">
+                  Linked Loan Facility
+                </label>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  {selectedObligor ? 'Select the loan this collateral secures' : 'Select an obligor first to see their loans'}
+                </p>
+                <div className="relative">
+                  <CreditCard size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <select
+                    value={selectedLoanId}
+                    onChange={(e) => setSelectedLoanId(e.target.value)}
+                    disabled={!selectedObligor || loansLoading}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">No loan linked (optional)</option>
+                    {availableLoans.map((loan) => (
+                      <option key={loan.id} value={loan.id}>
+                        {loan.loanNumber} — {loan.facilityType} ({loan.loanStatus})
+                        {loan.facilityAmount ? ` · TSh ${(loan.facilityAmount / 1e6).toFixed(1)}M` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {loansLoading && (
+                    <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin" />
+                  )}
+                </div>
+                {selectedObligor && availableLoans.length === 0 && !loansLoading && (
+                  <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                    <AlertCircle size={11} className="text-amber-500" />
+                    No loans found for this obligor.{' '}
+                    <a href="/loans" target="_blank" className="text-primary hover:underline">Create a loan first</a>
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-500 text-foreground mb-1">
                   Facility / Loan ID <span className="text-destructive">*</span>

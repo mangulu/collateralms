@@ -22,6 +22,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { geocodeAddress, validateAddressPair } from '@/lib/googleMaps/geocodingService';
+import Icon from '@/components/ui/AppIcon';
+
 
 declare const google: any;
 
@@ -137,6 +139,72 @@ export default function GeomappingContent() {
     googleMapsApiKey: hasValidKey ? apiKey : '',
     libraries: LIBRARIES,
   });
+
+  // ─── API Key Warning State ────────────────────────────────────────────────
+  if (!hasValidKey) {
+    return (
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+            <Map size={18} className="text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-xl font-700 text-foreground">Geomapping & Address Validation</h1>
+            <p className="text-sm text-muted-foreground">Collateral location intelligence and address risk scoring</p>
+          </div>
+        </div>
+
+        {/* Warning Banner */}
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+              <AlertTriangle size={22} className="text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-base font-700 text-amber-900 mb-1">Google Maps API Key Not Configured</h2>
+              <p className="text-sm text-amber-800 mb-4">
+                The Geomapping feature requires a valid <strong>Google Maps JavaScript API</strong> key to render maps,
+                display collateral pins, and run address validation. The current key is a placeholder.
+              </p>
+              <div className="bg-white border border-amber-200 rounded-lg p-4 space-y-3 text-sm text-amber-900">
+                <p className="font-600">To enable Geomapping:</p>
+                <ol className="list-decimal list-inside space-y-1.5 text-amber-800">
+                  <li>Go to <span className="font-mono bg-amber-100 px-1 rounded">Google Cloud Console → APIs &amp; Services → Credentials</span></li>
+                  <li>Create or copy an API key with <strong>Maps JavaScript API</strong> and <strong>Geocoding API</strong> enabled</li>
+                  <li>Open your <span className="font-mono bg-amber-100 px-1 rounded">.env</span> file and set:<br />
+                    <span className="font-mono bg-amber-100 px-2 py-0.5 rounded text-xs mt-1 inline-block">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-actual-key-here</span>
+                  </li>
+                  <li>Restart the development server</li>
+                </ol>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-xs text-amber-700">
+                <Info size={13} className="shrink-0" />
+                <span>Collateral location data is stored in Supabase and will be available once the map is configured.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Preview */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { icon: MapPin, title: 'Risk-Coded Pins', desc: 'Collateral locations color-coded by risk zone (Low / Medium / High)' },
+            { icon: Layers, title: 'Heatmap Layer', desc: 'Density heatmap overlay showing portfolio concentration by area' },
+            { icon: Shield, title: 'Address Validation', desc: 'Cross-reference ID address vs collateral address with match scoring' },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="bg-white border border-border rounded-xl p-4 shadow-card opacity-60">
+              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center mb-3">
+                <Icon size={16} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm font-600 text-foreground mb-1">{title}</p>
+              <p className="text-xs text-muted-foreground">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');

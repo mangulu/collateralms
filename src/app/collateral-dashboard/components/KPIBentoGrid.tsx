@@ -11,8 +11,9 @@ import {
   Scale,
 } from 'lucide-react';
 import { dashboardService } from '@/lib/supabase/collateralService';
-import Icon from '@/components/ui/AppIcon';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import Icon from '@/components/ui/AppIcon';
+
 
 
 interface KPICardProps {
@@ -32,46 +33,63 @@ function KPICard({
   icon: Icon,
   variant = 'default',
 }: KPICardProps) {
-  const variantStyles = {
-    default: 'bg-white border-border',
-    alert: 'bg-red-50 border-red-200',
-    warning: 'bg-amber-50 border-amber-200',
-    success: 'bg-green-50 border-green-200',
+  const variantStyles: Record<string, React.CSSProperties> = {
+    default: { backgroundColor: '#ffffff', border: '1px solid var(--izou-border)' },
+    alert: { backgroundColor: '#fef2f2', border: '1px solid #fecaca' },
+    warning: { backgroundColor: '#fffbeb', border: '1px solid #fde68a' },
+    success: { backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' },
   };
-  const iconBg = {
-    default: 'bg-primary/10 text-primary',
-    alert: 'bg-red-100 text-red-600',
-    warning: 'bg-amber-100 text-amber-600',
-    success: 'bg-green-100 text-green-600',
+  const iconBg: Record<string, React.CSSProperties> = {
+    default: { backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary)' },
+    alert: { backgroundColor: '#fee2e2', color: '#dc2626' },
+    warning: { backgroundColor: '#fef3c7', color: '#d97706' },
+    success: { backgroundColor: '#dcfce7', color: '#16a34a' },
   };
-  const valueColor = {
-    default: 'text-foreground',
-    alert: 'text-red-700',
-    warning: 'text-amber-700',
-    success: 'text-green-700',
+  const valueColor: Record<string, string> = {
+    default: 'var(--izou-text)',
+    alert: '#b91c1c',
+    warning: '#b45309',
+    success: '#15803d',
   };
 
   return (
-    <div className={`rounded-xl p-5 shadow-card border ${variantStyles[variant]}`}>
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        ...variantStyles[variant],
+        boxShadow: '0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)',
+        transition: 'box-shadow 0.22s var(--izou-ease), border-color 0.22s var(--izou-ease)',
+      }}
+    >
       <div className="flex items-start justify-between mb-3">
-        <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider leading-tight pr-2">
+        <p
+          className="text-xs font-semibold uppercase tracking-wider leading-tight pr-2"
+          style={{ color: 'var(--izou-muted)' }}
+        >
           {label}
         </p>
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${iconBg[variant]}`}>
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={iconBg[variant]}
+        >
           <Icon size={18} />
         </div>
       </div>
-      <p className={`text-3xl font-700 tabular-nums mb-1 font-mono ${valueColor[variant]}`}>
+      <p
+        className="text-3xl font-bold tabular-nums mb-1 font-mono"
+        style={{ color: valueColor[variant] }}
+      >
         {value}
       </p>
       <div className="flex items-center gap-2 flex-wrap">
-        <p className="text-xs text-muted-foreground">{subtext}</p>
+        <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{subtext}</p>
         {trend && (
           <span
-            className={`inline-flex items-center gap-0.5 text-xs font-500 ${
-              trend.direction === 'up' ?'text-green-600'
-                : trend.direction === 'down' ?'text-red-600' :'text-muted-foreground'
-            }`}
+            className="inline-flex items-center gap-0.5 text-xs font-semibold"
+            style={{
+              color: trend.direction === 'up' ? '#16a34a'
+                : trend.direction === 'down'? '#dc2626' :'var(--izou-muted)'
+            }}
           >
             {trend.direction === 'up' ? (
               <TrendingUp size={12} />
@@ -112,7 +130,6 @@ export default function KPIBentoGrid() {
     loadStats();
   }, []);
 
-  // Real-time: refresh KPIs whenever collateral records change
   useCollateralRealtime({
     onCollateralChange: () => {
       dashboardService.getKPIStats().then((data) => setStats(data)).catch(() => {});
@@ -123,7 +140,11 @@ export default function KPIBentoGrid() {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={`kpi-skel-${i}`} className="rounded-xl p-5 shadow-card border bg-white animate-pulse h-28" />
+          <div
+            key={`kpi-skel-${i}`}
+            className="rounded-2xl p-5 animate-pulse h-28"
+            style={{ backgroundColor: 'rgba(0,169,224,0.06)', border: '1px solid var(--izou-border)' }}
+          />
         ))}
       </div>
     );
@@ -131,12 +152,15 @@ export default function KPIBentoGrid() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+      <div
+        className="rounded-2xl p-6 flex items-center gap-3"
+        style={{ border: '1px solid #fecaca', backgroundColor: '#fef2f2' }}
+      >
+        <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
           <AlertTriangle size={18} className="text-red-600" />
         </div>
         <div>
-          <p className="text-sm font-600 text-red-700">Unable to load KPI data</p>
+          <p className="text-sm font-semibold text-red-700">Unable to load KPI data</p>
           <p className="text-xs text-red-600 mt-0.5">{error}</p>
         </div>
       </div>

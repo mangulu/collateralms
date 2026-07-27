@@ -11,7 +11,7 @@ import {
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
-import Icon from '@/components/ui/AppIcon';
+
 
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
@@ -230,7 +230,9 @@ function RequestDetailDrawer({ request, statusLog, onClose }: RequestDetailDrawe
               { label: 'Raised On', value: formatDateTime(request.createdAt), icon: Calendar },
               { label: 'Expected Return', value: request.expectedReturnDate ? formatDate(request.expectedReturnDate) : '—', icon: Calendar },
               { label: 'Actual Return', value: request.actualReturnDate ? formatDate(request.actualReturnDate) : '—', icon: Calendar },
-            ].map(({ label, value, icon: FieldIcon }) => (
+            ].map(({ label, value, icon }) => {
+              const FieldIcon = icon as React.ElementType;
+              return (
               <div key={label} className="flex items-start gap-2">
                 <FieldIcon size={13} className="mt-0.5 shrink-0" style={{ color: '#9CA3AF' }} />
                 <div>
@@ -238,7 +240,8 @@ function RequestDetailDrawer({ request, statusLog, onClose }: RequestDetailDrawe
                   <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>{value}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
             {request.rejectionReason && (
               <div className="p-3 rounded-xl" style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3' }}>
                 <p className="text-xs font-medium mb-1" style={{ color: '#BE123C' }}>Rejection Reason</p>
@@ -408,7 +411,7 @@ export default function RequestStatusTrackerContent() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
         {(['pending', 'approved', 'checked_out', 'returned', 'rejected'] as RequestStatus[]).map((s) => {
           const sc = STATUS_CONFIG[s];
-          const Icon = sc.icon;
+          const StatusIcon = sc.icon;
           return (
             <button key={s} onClick={() => setStatusFilter(statusFilter === s ? 'all' : s)}
               className="rounded-xl p-3 text-left transition-all"
@@ -416,7 +419,7 @@ export default function RequestStatusTrackerContent() {
                 backgroundColor: statusFilter === s ? sc.bg : '#F8FAFF',
                 border: `1px solid ${statusFilter === s ? sc.border : '#DBEAFE'}`,
               }}>
-              <Icon size={15} style={{ color: sc.text }} className="mb-1" />
+              <StatusIcon size={15} style={{ color: sc.text }} className="mb-1" />
               <p className="text-xl font-bold" style={{ color: sc.text }}>{counts[s] ?? 0}</p>
               <p className="text-xs font-medium" style={{ color: '#6B7280' }}>{sc.label}</p>
             </button>
@@ -493,7 +496,7 @@ export default function RequestStatusTrackerContent() {
                 <div className="flex items-start gap-3 p-4">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ backgroundColor: sc.bg, border: `1px solid ${sc.border}` }}>
-                    {sc.icon} {sc.label}
+                    {React.createElement(sc.icon, { size: 18, style: { color: sc.text } })}
                   </div>
 
                   <div className="flex-1 min-w-0">

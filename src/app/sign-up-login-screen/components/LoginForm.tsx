@@ -3,17 +3,18 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw, ShieldCheck, BadgeCheck, Globe } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import Icon from '@/components/ui/AppIcon';
+
 
 interface LoginFormData {
   email: string;
   password: string;
   rememberMe: boolean;
 }
-
 
 export default function LoginForm() {
   const router = useRouter();
@@ -33,7 +34,6 @@ export default function LoginForm() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     defaultValues: { rememberMe: false },
@@ -45,7 +45,6 @@ export default function LoginForm() {
       const result = await signIn(data.email, data.password);
       const supabase = createClient();
 
-      // Check if 2FA is enabled for this user
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('two_fa_enabled, phone, full_name')
@@ -53,7 +52,6 @@ export default function LoginForm() {
         .single();
 
       if (profile?.two_fa_enabled && profile?.phone) {
-        // Sign out temporarily and require 2FA
         await supabase.auth.signOut();
         setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name });
         await sendOTP(profile.phone, result.user?.id);
@@ -62,7 +60,7 @@ export default function LoginForm() {
         return;
       }
 
-      toast.success(`Welcome back`);
+      toast.success('Welcome back');
       router.push('/module-hub');
       router.refresh();
     } catch (err: any) {
@@ -116,8 +114,6 @@ export default function LoginForm() {
         throw new Error('Invalid code');
       }
       await supabase.from('otp_verifications').update({ verified_at: new Date().toISOString() }).eq('id', otpId);
-
-      // Re-sign in
       await signIn(pendingUser.email, pendingUser.password);
       toast.success('Welcome back — 2FA verified');
       router.push('/module-hub');
@@ -132,62 +128,95 @@ export default function LoginForm() {
   // 2FA verification screen
   if (twoFARequired) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative px-4 overflow-hidden">
-        {/* Blurred background */}
+      <div
+        className="min-h-screen grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]"
+        style={{ backgroundColor: 'var(--izou-bg)' }}
+      >
+        {/* Left panel - gradient */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="relative flex min-h-screen flex-col overflow-hidden"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80')`,
-            filter: 'blur(6px)',
-            transform: 'scale(1.1)',
+            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
           }}
-        />
-        <div className="absolute inset-0 bg-slate-900/60" />
-
-        <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8">
-          <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-              <Smartphone size={24} className="text-primary" />
+        >
+          <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} />
+          <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-12">
+            <div className="text-center">
+              <AppLogo size={48} />
+              <h2 className="mt-6 text-3xl font-bold text-white">CollateralMS</h2>
+              <p className="mt-2 text-white/70 text-sm">EXIM Bank Tanzania</p>
             </div>
-            <h2 className="text-xl font-bold text-foreground">Two-Factor Verification</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Enter the 6-digit code sent to <strong>{pendingUser?.phone}</strong>
-            </p>
           </div>
+        </div>
 
-          {otpError && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-              <AlertCircle size={14} className="text-red-600 shrink-0" />
-              <p className="text-xs text-red-700">{otpError}</p>
-            </div>
-          )}
+        {/* Right panel */}
+        <div className="flex items-center justify-center px-8 py-12" style={{ backgroundColor: '#f8fafc' }}>
+          <div className="w-full max-w-sm">
+            <div className="bg-white rounded-2xl shadow-xl p-8" style={{ border: '1px solid var(--izou-border)' }}>
+              <div className="text-center mb-6">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={{ backgroundColor: 'var(--izou-primary-light)' }}
+                >
+                  <Smartphone size={24} style={{ color: 'var(--izou-primary)' }} />
+                </div>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--izou-text)' }}>Two-Factor Verification</h2>
+                <p className="text-sm mt-1" style={{ color: 'var(--izou-muted)' }}>
+                  Enter the 6-digit code sent to <strong>{pendingUser?.phone}</strong>
+                </p>
+              </div>
 
-          <div className="space-y-4">
-            <input
-              type="text"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="000000"
-              maxLength={6}
-              className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <button
-              onClick={verifyOTP}
-              disabled={otpLoading || otp.length !== 6}
-              className="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {otpLoading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-              Verify & Sign In
-            </button>
-            <div className="flex items-center justify-between text-sm">
-              <button onClick={() => { setTwoFARequired(false); setPendingUser(null); setOtp(''); }} className="text-muted-foreground hover:text-foreground">
-                ← Back to login
-              </button>
-              {countdown > 0 ? (
-                <p className="text-muted-foreground">Resend in {countdown}s</p>
-              ) : (
-                <button onClick={() => sendOTP(pendingUser?.phone)} className="text-primary hover:underline">Resend code</button>
+              {otpError && (
+                <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
+                  <AlertCircle size={14} className="text-red-600 shrink-0" />
+                  <p className="text-xs text-red-700">{otpError}</p>
+                </div>
               )}
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest rounded-xl focus:outline-none focus:ring-2"
+                  style={{
+                    border: '1px solid var(--izou-border)',
+                    backgroundColor: 'var(--izou-primary-light)',
+                    color: 'var(--izou-text)'
+                  }}
+                />
+                <button
+                  onClick={verifyOTP}
+                  disabled={otpLoading || otp.length !== 6}
+                  className="izou-btn-primary w-full py-3 font-semibold rounded-xl disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {otpLoading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                  Verify & Sign In
+                </button>
+                <div className="flex items-center justify-between text-sm">
+                  <button
+                    onClick={() => { setTwoFARequired(false); setPendingUser(null); setOtp(''); }}
+                    style={{ color: 'var(--izou-muted)' }}
+                    className="hover:underline"
+                  >
+                    ← Back to login
+                  </button>
+                  {countdown > 0 ? (
+                    <p style={{ color: 'var(--izou-muted)' }}>Resend in {countdown}s</p>
+                  ) : (
+                    <button
+                      onClick={() => sendOTP(pendingUser?.phone)}
+                      style={{ color: 'var(--izou-primary)' }}
+                      className="hover:underline font-semibold"
+                    >
+                      Resend code
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -196,84 +225,119 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative px-4 py-8 overflow-hidden">
-      {/* Blurred banking/collateral background */}
+    <div className="min-h-screen grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
+      {/* Left panel — IZOU-style gradient */}
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="relative flex min-h-screen flex-col overflow-hidden"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80')`,
-          filter: 'blur(6px)',
-          transform: 'scale(1.1)',
+          background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
         }}
-      />
-      {/* Dark overlay for contrast */}
-      <div className="absolute inset-0 bg-slate-900/65" />
+      >
+        {/* Decorative blobs */}
+        <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} aria-hidden="true" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} aria-hidden="true" />
+        {/* Decorative lines */}
+        <svg className="pointer-events-none absolute bottom-0 left-0 h-[55%] w-[70%] text-white/20" viewBox="0 0 400 320" fill="none" preserveAspectRatio="xMinYMax slice" aria-hidden="true">
+          <path d="M-20 280 C 60 220, 140 240, 200 200 C 260 160, 300 180, 380 120" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M-40 320 C 40 260, 120 280, 180 240 C 240 200, 280 220, 360 160" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+          <path d="M0 300 C 80 250, 160 260, 220 220 C 280 180, 320 200, 400 150" stroke="currentColor" strokeWidth="0.75" opacity="0.35" />
+        </svg>
 
-      {/* Centered login card */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Card header with brand */}
-          <div className="bg-primary px-8 pt-8 pb-6 text-center">
-            <div className="flex items-center justify-center gap-3 mb-3">
+        {/* Main content */}
+        <main className="relative z-10 flex flex-1 flex-col justify-center px-8 py-12 sm:px-10">
+          <div className="mx-auto w-full max-w-sm">
+            <header className="mb-8">
               <AppLogo size={40} />
-              <div className="text-left">
-                <p className="text-white font-bold text-lg leading-tight">CollateralMS</p>
-                <p className="text-white/70 text-xs">Powered by Contentpro</p>
-              </div>
-            </div>
-            <h1 className="text-white text-xl font-bold mt-2">Sign in to your account</h1>
-            <p className="text-white/70 text-sm mt-1">
-              Enter your bank credentials to continue
-            </p>
-          </div>
+              <h1 className="mt-5 text-2xl font-bold tracking-tight text-white sm:text-[1.75rem]">Welcome back</h1>
+              <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                Sign in to your <span className="font-semibold text-white">CollateralMS</span> account
+              </p>
+            </header>
 
-          {/* Form body */}
-          <div className="px-8 py-6">
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            {/* Trust badges */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-8">
+              {[
+                { icon: ShieldCheck, label: 'Secure' },
+                { icon: BadgeCheck, label: 'Reliable' },
+                { icon: Globe, label: 'Built for Africa' },
+              ].map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium text-white/90">
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                  >
+                    <Icon size={11} className="text-white" aria-hidden="true" />
+                  </span>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Right panel — login form */}
+      <aside
+        className="relative flex min-h-screen items-center justify-center px-6 py-10 lg:px-10"
+        style={{ backgroundColor: '#f8fafc' }}
+      >
+        <div className="w-full max-w-[30rem]">
+          <div
+            className="bg-white rounded-2xl shadow-xl p-8 sm:p-9"
+            style={{ border: '1px solid var(--izou-border)' }}
+          >
+            <div className="mb-6">
+              <h2 className="text-xl font-bold" style={{ color: 'var(--izou-text)' }}>Sign in</h2>
+              <p className="text-sm mt-1" style={{ color: 'var(--izou-muted)' }}>Enter your credentials to access the system</p>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
               {/* Email */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="yourname@bank.co.tz"
-                  className={`w-full px-3 py-2.5 rounded-lg border text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-                    errors.email ? 'border-destructive focus:ring-destructive/30' : 'border-border hover:border-primary/40'
-                  }`}
-                  {...register('email', {
-                    required: 'Email address is required',
-                    pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
-                  })}
-                />
+              <label className="group block">
+                <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--izou-text)' }}>Email address</span>
+                <div className="relative">
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="yourname@bank.co.tz"
+                    className="w-full rounded-xl px-3.5 text-sm outline-none transition h-12 focus:ring-2"
+                    style={{
+                      border: errors.email ? '1px solid #dc2626' : '1px solid var(--izou-border)',
+                      backgroundColor: 'var(--izou-primary-light)',
+                      color: 'var(--izou-text)',
+                    }}
+                    {...register('email', {
+                      required: 'Email address is required',
+                      pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
+                    })}
+                  />
+                </div>
                 {errors.email && (
-                  <p className="mt-1.5 text-xs text-destructive flex items-center gap-1">
+                  <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
                     <AlertCircle size={12} />{errors.email.message}
                   </p>
                 )}
-              </div>
+              </label>
 
               {/* Password */}
-              <div>
+              <label className="group block">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="password" className="block text-sm font-medium text-foreground">
-                    Password
-                  </label>
-                  <button type="button" className="text-xs text-primary hover:underline">
+                  <span className="block text-sm font-medium" style={{ color: 'var(--izou-text)' }}>Password</span>
+                  <button type="button" className="text-xs font-semibold hover:underline" style={{ color: 'var(--izou-primary)' }}>
                     Forgot password?
                   </button>
                 </div>
                 <div className="relative">
                   <input
-                    id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    placeholder="••••••••••••"
-                    className={`w-full px-3 py-2.5 pr-10 rounded-lg border text-sm bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-                      errors.password ? 'border-destructive focus:ring-destructive/30' : 'border-border hover:border-primary/40'
-                    }`}
+                    placeholder="Enter your password"
+                    className="w-full rounded-xl px-3.5 pr-10 text-sm outline-none transition h-12 focus:ring-2"
+                    style={{
+                      border: errors.password ? '1px solid #dc2626' : '1px solid var(--izou-border)',
+                      backgroundColor: 'var(--izou-primary-light)',
+                      color: 'var(--izou-text)',
+                    }}
                     {...register('password', {
                       required: 'Password is required',
                       minLength: { value: 6, message: 'Password must be at least 6 characters' },
@@ -282,28 +346,30 @@ export default function LoginForm() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 transition-colors focus:outline-none"
+                    style={{ color: 'var(--izou-muted)' }}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1.5 text-xs text-destructive flex items-center gap-1">
+                  <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
                     <AlertCircle size={12} />{errors.password.message}
                   </p>
                 )}
-              </div>
+              </label>
 
               {/* Remember me */}
               <div className="flex items-center gap-2">
                 <input
                   id="rememberMe"
                   type="checkbox"
-                  className="w-4 h-4 rounded border-border accent-primary"
+                  className="w-4 h-4 rounded"
+                  style={{ accentColor: 'var(--izou-primary)' }}
                   {...register('rememberMe')}
                 />
-                <label htmlFor="rememberMe" className="text-sm text-muted-foreground">
+                <label htmlFor="rememberMe" className="text-sm" style={{ color: 'var(--izou-muted)' }}>
                   Keep me signed in for 8 hours
                 </label>
               </div>
@@ -312,7 +378,7 @@ export default function LoginForm() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg text-sm hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+                className="izou-btn-primary inline-flex items-center justify-center gap-2 rounded-xl font-semibold h-12 w-full text-base disabled:opacity-50 disabled:cursor-not-allowed mt-1"
               >
                 {isLoading ? (
                   <><RefreshCw size={16} className="animate-spin" /> Signing in…</>
@@ -321,25 +387,45 @@ export default function LoginForm() {
                 )}
               </button>
             </form>
+
+            {/* Trust indicators */}
+            <div
+              className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6 pt-5"
+              style={{ borderTop: '1px solid var(--izou-border)' }}
+            >
+              {[
+                { icon: ShieldCheck, label: 'Secure' },
+                { icon: BadgeCheck, label: 'Reliable' },
+                { icon: Globe, label: 'Built for Africa' },
+              ].map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--izou-text)' }}>
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary)' }}
+                  >
+                    <Icon size={11} aria-hidden="true" />
+                  </span>
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Footer */}
-          <div className="px-8 py-4 bg-muted/30 border-t border-border text-center">
-            <p className="text-[11px] text-muted-foreground">
-              A product by{' '}
-              <a
-                href="https://www.contentpro.co.tz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline font-medium"
-              >
-                Contentpro
-              </a>
-              {' '}· Deployable for any bank
-            </p>
-          </div>
+          <p className="mt-4 text-center text-xs" style={{ color: 'var(--izou-muted)' }}>
+            A product by{' '}
+            <a
+              href="https://www.contentpro.co.tz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold hover:underline"
+              style={{ color: 'var(--izou-primary)' }}
+            >
+              Contentpro
+            </a>
+            {' '}· Deployable for any bank
+          </p>
         </div>
-      </div>
+      </aside>
     </div>
   );
 }

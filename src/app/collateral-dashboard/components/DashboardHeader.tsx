@@ -16,7 +16,6 @@ export default function DashboardHeader() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Backend integration point: GET /api/dashboard/refresh
     await new Promise((r) => setTimeout(r, 1200));
     setRefreshing(false);
     setLastUpdated(new Date()?.toLocaleString('en-TZ', {
@@ -30,13 +29,16 @@ export default function DashboardHeader() {
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <h1 className="text-2xl font-700 text-foreground">Collateral Dashboard</h1>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-500 rounded-full">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-text)' }}>Collateral Dashboard</h1>
+          <span
+            className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full"
+            style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}
+          >
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
             Live
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm" style={{ color: 'var(--izou-muted)' }}>
           Portfolio health overview · EXIM Bank Tanzania
           {lastUpdated && (
             <span className="ml-2 text-xs">· Last updated: {lastUpdated}</span>
@@ -44,21 +46,35 @@ export default function DashboardHeader() {
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:border-primary/40 cursor-pointer transition-colors">
+        <div
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm cursor-pointer transition-colors"
+          style={{
+            backgroundColor: 'var(--izou-card)',
+            border: '1px solid var(--izou-border)',
+            color: 'var(--izou-muted)',
+          }}
+        >
           <Calendar size={14} />
           <span>Apr 2026</span>
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-60"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm transition-colors disabled:opacity-60"
+          style={{
+            backgroundColor: 'var(--izou-card)',
+            border: '1px solid var(--izou-border)',
+            color: 'var(--izou-muted)',
+          }}
+          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+          onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-card)'; }}
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
           <span>Refresh</span>
         </button>
         <button
           onClick={() => toast?.info('Export report — PDF generation queued')}
-          className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-md text-sm font-500 hover:bg-primary/90 transition-all active:scale-95"
+          className="izou-btn-primary flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
         >
           <Download size={14} />
           <span>Export Report</span>

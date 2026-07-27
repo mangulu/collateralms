@@ -257,7 +257,8 @@ function rowToCollateral(row: any): CollateralRecord {
     latitude: row.latitude != null ? parseFloat(row.latitude) : null,
     longitude: row.longitude != null ? parseFloat(row.longitude) : null,
     locationAddress: row.location_address ?? null,
-  };
+    loanId: row.loan_id ?? null,
+  } as any;
 }
 
 function collateralToRow(data: Partial<CollateralRecord>) {
@@ -281,6 +282,7 @@ function collateralToRow(data: Partial<CollateralRecord>) {
   if (data.latitude !== undefined) row.latitude = data.latitude;
   if (data.longitude !== undefined) row.longitude = data.longitude;
   if (data.locationAddress !== undefined) row.location_address = data.locationAddress;
+  if ((data as any).loanId !== undefined) row.loan_id = (data as any).loanId;
   return row;
 }
 

@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, Brain, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -66,6 +66,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Obligor Management',
         items: [
           { label: 'Obligors', icon: Users, href: '/obligors', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Loan Facilities', icon: Landmark, href: '/loans', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -153,7 +154,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Live Activity Stream', icon: Radio, href: '/live-activity', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Center', icon: DatabaseZap, href: '/audit-center', permission: PERMISSIONS.AUDIT_LOG_VIEW },
-          { label: 'Security & Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
+          { label: 'Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Report', icon: BookOpen, href: '/audit-report', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Archive Audit Log', icon: FileStack, href: '/archive/audit-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
         ],
@@ -175,11 +176,11 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Administration',
         items: [
           { label: 'User Management', icon: Users, href: '/user-management', permission: PERMISSIONS.USER_MANAGEMENT_VIEW },
+          { label: 'Officer Management', icon: UserCog, href: '/officer-management', permission: PERMISSIONS.USER_MANAGEMENT_MANAGE },
           { label: 'Officer Permissions', icon: KeyRound, href: '/officer-permissions', permission: PERMISSIONS.USER_MANAGEMENT_MANAGE },
           { label: 'Client Bank Accounts', icon: Landmark, href: '/client-bank-accounts', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Settings', icon: Settings, href: '/settings', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Alert Thresholds', icon: SlidersHorizontal, href: '/alert-thresholds', permission: PERMISSIONS.SETTINGS_VIEW },
-          { label: 'System Config', icon: Brain, href: '/system-config', permission: PERMISSIONS.SETTINGS_MANAGE },
         ],
       },
     ],
@@ -233,17 +234,17 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/document-management': 'archive',
   '/document-approval': 'approvals',
   '/obligors': 'obligors',
+  '/loans': 'obligors',
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'approvals',
   '/perfection-workflow': 'approvals',
   '/release-approval': 'approvals',
-  '/audit-log': 'audit',
-  '/activity-log': 'audit',
   '/performance-export': 'reports',
   '/reports-dashboard': 'reports',
   '/collateral-reports': 'reports',
   '/onboarding-guide': 'administration',
+  '/officer-management': 'administration',
 };
 
 /**

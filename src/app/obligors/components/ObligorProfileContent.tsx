@@ -1,15 +1,12 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft, Building2, User, MapPin, Phone, Mail, Shield, Edit2,
-  AlertTriangle, CheckCircle2, Loader2, RefreshCw, FileText, CreditCard,
-  ExternalLink, Hash, Globe, UserCheck, AlertCircle, TrendingUp, TrendingDown,
-  BarChart2, Activity, Target, Percent, Clock, XCircle,
-} from 'lucide-react';
+import { ArrowLeft, Building2, User, MapPin, Phone, Mail, Shield, Edit2, AlertTriangle, CheckCircle2, Loader2, RefreshCw, FileText, CreditCard, ExternalLink, Hash, Globe, UserCheck, AlertCircle, TrendingUp, TrendingDown, BarChart2, Activity, Target, Percent, Clock, XCircle,  } from 'lucide-react';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
+import { loanService, Loan } from '@/lib/supabase/loanService';
 import ObligorFormModal from '../components/ObligorFormModal';
 import Icon from '@/components/ui/AppIcon';
+import PledgeDocumentsPanel from './PledgeDocumentsPanel';
 
 
 interface Props { id: string; }
@@ -89,6 +86,7 @@ function ScoreGauge({ score }: { score: number }) {
 export default function ObligorProfileContent({ id }: Props) {
   const [obligor, setObligor] = useState<Obligor | null>(null);
   const [collaterals, setCollaterals] = useState<any[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
@@ -97,13 +95,15 @@ export default function ObligorProfileContent({ id }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [obl, cols] = await Promise.all([
+      const [obl, cols, lns] = await Promise.all([
         obligorService.getById(id),
         obligorService.getLinkedCollaterals(id),
+        loanService.getByObligorId(id),
       ]);
       if (!obl) { setError('Obligor not found.'); }
       else { setObligor(obl); }
       setCollaterals(cols);
+      setLoans(lns);
     } catch {
       setError('Failed to load obligor profile.');
     } finally {
@@ -146,6 +146,22 @@ export default function ObligorProfileContent({ id }: Props) {
 
   const perfectedCount = collaterals.filter((c) => c.status === 'Perfected').length;
   const overdueCount = collaterals.filter((c) => c.status === 'Overdue').length;
+
+  // ── Portfolio LTV ──────────────────────────────────────────────────────────
+  const totalOutstanding = loans.reduce((s, l) => s + (l.outstandingBalance ?? 0), 0);
+  const avgLtv = totalCollateralValue > 0 && totalOutstanding > 0
+    ? Math.min(200, (totalOutstanding / totalCollateralValue) * 100)
+    : null;
+
+  // Status breakdown for portfolio cards
+  const statusBreakdown = [
+    { label: 'Perfected', count: collaterals.filter((c) => c.status === 'Perfected').length, color: 'bg-green-500' },
+    { label: 'Monitoring', count: collaterals.filter((c) => c.status === 'Monitoring').length, color: 'bg-teal-500' },
+    { label: 'Under Review', count: collaterals.filter((c) => c.status === 'Under Review').length, color: 'bg-blue-500' },
+    { label: 'Overdue', count: collaterals.filter((c) => c.status === 'Overdue').length, color: 'bg-red-500' },
+    { label: 'Draft', count: collaterals.filter((c) => c.status === 'Draft').length, color: 'bg-gray-400' },
+    { label: 'Released', count: collaterals.filter((c) => c.status === 'Released').length, color: 'bg-slate-300' },
+  ].filter((s) => s.count > 0);
 
   // ── Credit Risk Score ──────────────────────────────────────────────────────
   const baseScore = riskConfig[obligor.riskRating ?? 'MEDIUM'].score;
@@ -245,6 +261,110 @@ export default function ObligorProfileContent({ id }: Props) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ── Portfolio Summary Cards ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Collateral Value */}
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <CreditCard size={15} className="text-blue-600" />
+            </div>
+            <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Total Collateral Value</p>
+          </div>
+          <p className="text-2xl font-800 text-blue-700">
+            {totalCollateralValue >= 1e9
+              ? `TSh ${(totalCollateralValue / 1e9).toFixed(1)}B`
+              : totalCollateralValue >= 1e6
+              ? `TSh ${(totalCollateralValue / 1e6).toFixed(1)}M`
+              : totalCollateralValue > 0
+              ? `TSh ${totalCollateralValue.toLocaleString()}`
+              : '—'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">Across {collaterals.length} pledge{collaterals.length !== 1 ? 's' : ''}</p>
+        </div>
+
+        {/* Collateral Count */}
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Shield size={15} className="text-primary" />
+            </div>
+            <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Collateral Count</p>
+          </div>
+          <p className="text-2xl font-800 text-foreground">{collaterals.length}</p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="text-[10px] text-green-700 font-600">{perfectedCount} perfected</span>
+            {overdueCount > 0 && <span className="text-[10px] text-red-700 font-600">{overdueCount} overdue</span>}
+          </div>
+        </div>
+
+        {/* Status Breakdown */}
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+              <BarChart2 size={15} className="text-purple-600" />
+            </div>
+            <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Status Breakdown</p>
+          </div>
+          {statusBreakdown.length > 0 ? (
+            <>
+              <div className="flex h-2 rounded-full overflow-hidden gap-0.5 mb-2">
+                {statusBreakdown.map((s) => (
+                  <div
+                    key={s.label}
+                    className={`${s.color} transition-all`}
+                    style={{ width: `${(s.count / collaterals.length) * 100}%` }}
+                    title={`${s.label}: ${s.count}`}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                {statusBreakdown.map((s) => (
+                  <div key={s.label} className="flex items-center gap-1">
+                    <div className={`w-2 h-2 rounded-sm ${s.color}`} />
+                    <span className="text-[10px] text-muted-foreground">{s.label} ({s.count})</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">No collaterals yet</p>
+          )}
+        </div>
+
+        {/* Average LTV */}
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+              <Percent size={15} className="text-amber-600" />
+            </div>
+            <p className="text-xs font-600 text-muted-foreground uppercase tracking-wide">Avg. LTV Ratio</p>
+          </div>
+          {avgLtv !== null ? (
+            <>
+              <p className={`text-2xl font-800 ${avgLtv >= 80 ? 'text-red-700' : avgLtv >= 60 ? 'text-amber-700' : 'text-green-700'}`}>
+                {avgLtv.toFixed(1)}%
+              </p>
+              <div className="mt-1.5 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(avgLtv, 100)}%`,
+                    background: avgLtv >= 80 ? '#dc2626' : avgLtv >= 60 ? '#d97706' : '#16a34a',
+                  }}
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Outstanding vs. collateral value</p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-800 text-muted-foreground">—</p>
+              <p className="text-[10px] text-muted-foreground mt-1">No outstanding loan data</p>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -686,6 +806,9 @@ export default function ObligorProfileContent({ id }: Props) {
               ))}
             </div>
           </div>
+
+          {/* Pledge Documents */}
+          <PledgeDocumentsPanel obligorId={id} />
         </div>
       </div>
 

@@ -159,7 +159,7 @@ export const obligorService = {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('collateral_records')
-      .select('id, collateral_id, collateral_type, description, value_tsh, status, facility_id, registration_date')
+      .select('id, collateral_id, collateral_type, description, value_tsh, status, facility_id, registration_date, obligor_ref_id')
       .eq('obligor_ref_id', obligorId)
       .order('created_at', { ascending: false });
     if (error) { console.error('obligorService.getLinkedCollaterals:', error.message); return []; }

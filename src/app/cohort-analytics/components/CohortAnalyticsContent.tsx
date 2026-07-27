@@ -530,6 +530,10 @@ export default function CohortAnalyticsContent() {
                   />
                   <Tooltip
                     formatter={(v: number, name: string) => [`${v}%`, typeLabels[name] ?? name]}
+                    labelFormatter={(label) => {
+                      const point = perfTrends.find(p => p.month === label);
+                      return point?.forecast ? `${label} (Projected — linear estimate)` : label;
+                    }}
                     contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
                   />
                   <ReferenceLine y={80} stroke="#dc2626" strokeDasharray="4 4" strokeWidth={1.5}
@@ -550,6 +554,16 @@ export default function CohortAnalyticsContent() {
                   )}
                 </LineChart>
               </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Forecast disclaimer */}
+          {!loading && perfTrends.some(p => p.forecast) && (
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground italic">
+                <span className="inline-block w-6 border-t-2 border-dashed border-slate-400" />
+                Projected — linear estimate based on recent trend. Not a statistical model.
+              </span>
             </div>
           )}
         </div>
@@ -687,6 +701,10 @@ export default function CohortAnalyticsContent() {
                         ltvPct(v),
                         name === 'avgLTV' ? 'Avg LTV' : name === 'p75LTV' ? 'P75 LTV' : 'P90 LTV',
                       ]}
+                      labelFormatter={(label) => {
+                        const point = ltvDrift.find(p => p.month === label);
+                        return point?.forecast ? `${label} (Projected — linear estimate)` : label;
+                      }}
                       contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
                     />
                     <ReferenceLine y={0.80} stroke="#dc2626" strokeDasharray="4 4" strokeWidth={1.5}
@@ -704,7 +722,7 @@ export default function CohortAnalyticsContent() {
 
             {/* Legend */}
             {!loading && (
-              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1.5">
                   <span className="w-5 h-0.5 bg-blue-600 inline-block" />Avg LTV
                 </span>
@@ -714,8 +732,18 @@ export default function CohortAnalyticsContent() {
                 <span className="flex items-center gap-1.5">
                   <span className="w-5 h-0.5 bg-red-600 inline-block" />P90
                 </span>
-                <span className="flex items-center gap-1.5 ml-auto">
-                  <span className="text-muted-foreground italic">Dashed = forecast</span>
+                <span className="flex items-center gap-1.5 ml-auto italic">
+                  Dashed = Projected — linear estimate
+                </span>
+              </div>
+            )}
+
+            {/* Forecast disclaimer */}
+            {!loading && ltvDrift.some(p => p.forecast) && (
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground italic">
+                  <span className="inline-block w-6 border-t-2 border-dashed border-slate-400" />
+                  Projected — linear estimate based on recent trend. Not a statistical model.
                 </span>
               </div>
             )}

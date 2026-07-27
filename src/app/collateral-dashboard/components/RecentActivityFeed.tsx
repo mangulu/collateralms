@@ -2,22 +2,21 @@
 import React, { useEffect, useState } from 'react';
 import { FileCheck, FilePlus, AlertCircle, CheckCircle2, ArrowUpRight } from 'lucide-react';
 import { auditService, AuditLog } from '@/lib/supabase/collateralService';
-import Icon from '@/components/ui/AppIcon';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 
 
 const activityConfig: Record<
   string,
-  { icon: React.ElementType; iconClass: string; dotClass: string }
+  { icon: React.ElementType; iconStyle: React.CSSProperties; dotClass: string }
 > = {
-  perfected: { icon: CheckCircle2, iconClass: 'text-green-600', dotClass: 'bg-green-500' },
-  created: { icon: FilePlus, iconClass: 'text-blue-600', dotClass: 'bg-blue-500' },
-  overdue: { icon: AlertCircle, iconClass: 'text-red-600', dotClass: 'bg-red-500' },
-  submitted: { icon: FileCheck, iconClass: 'text-indigo-600', dotClass: 'bg-indigo-500' },
-  released: { icon: ArrowUpRight, iconClass: 'text-teal-600', dotClass: 'bg-teal-500' },
-  updated: { icon: FileCheck, iconClass: 'text-blue-600', dotClass: 'bg-blue-500' },
-  status_changed: { icon: FileCheck, iconClass: 'text-purple-600', dotClass: 'bg-purple-500' },
-  deleted: { icon: AlertCircle, iconClass: 'text-gray-600', dotClass: 'bg-gray-500' },
+  perfected: { icon: CheckCircle2, iconStyle: { color: '#16a34a' }, dotClass: 'bg-green-500' },
+  created: { icon: FilePlus, iconStyle: { color: 'var(--izou-primary)' }, dotClass: 'bg-blue-500' },
+  overdue: { icon: AlertCircle, iconStyle: { color: '#dc2626' }, dotClass: 'bg-red-500' },
+  submitted: { icon: FileCheck, iconStyle: { color: '#6366f1' }, dotClass: 'bg-indigo-500' },
+  released: { icon: ArrowUpRight, iconStyle: { color: 'var(--izou-teal)' }, dotClass: 'bg-teal-500' },
+  updated: { icon: FileCheck, iconStyle: { color: 'var(--izou-primary)' }, dotClass: 'bg-blue-500' },
+  status_changed: { icon: FileCheck, iconStyle: { color: '#7c3aed' }, dotClass: 'bg-purple-500' },
+  deleted: { icon: AlertCircle, iconStyle: { color: '#6b7280' }, dotClass: 'bg-gray-500' },
 };
 
 function timeAgo(dateStr: string): string {
@@ -50,7 +49,6 @@ export default function RecentActivityFeed() {
     loadActivities();
   }, []);
 
-  // Real-time: refresh feed whenever a new audit log entry arrives
   useCollateralRealtime({
     onAuditChange: () => {
       auditService.getRecent(8).then((data) => setActivities(data)).catch(() => {});
@@ -58,10 +56,20 @@ export default function RecentActivityFeed() {
   });
 
   return (
-    <div className="bg-white rounded-xl shadow-card border border-border h-full">
-      <div className="px-5 py-4 border-b border-border">
-        <h3 className="text-base font-600 text-foreground">Recent Activity</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
+    <div
+      className="rounded-2xl h-full"
+      style={{
+        backgroundColor: 'var(--izou-card)',
+        border: '1px solid var(--izou-border)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.07)'
+      }}
+    >
+      <div
+        className="px-5 py-4"
+        style={{ borderBottom: '1px solid var(--izou-border)' }}
+      >
+        <h3 className="text-base font-bold" style={{ color: 'var(--izou-text)' }}>Recent Activity</h3>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>
           Audit trail — last 24 hours
         </p>
       </div>
@@ -69,10 +77,13 @@ export default function RecentActivityFeed() {
         <div className="p-4 space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={`skel-${i}`} className="flex gap-3 items-start">
-              <div className="w-7 h-7 rounded-lg bg-muted animate-pulse shrink-0" />
+              <div
+                className="w-7 h-7 rounded-xl animate-pulse shrink-0"
+                style={{ backgroundColor: 'rgba(0,169,224,0.08)' }}
+              />
               <div className="flex-1 space-y-1.5">
-                <div className="h-3 bg-muted animate-pulse rounded w-3/4" />
-                <div className="h-2.5 bg-muted animate-pulse rounded w-1/2" />
+                <div className="h-3 animate-pulse rounded-lg w-3/4" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
+                <div className="h-2.5 animate-pulse rounded-lg w-1/2" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
               </div>
             </div>
           ))}
@@ -80,40 +91,46 @@ export default function RecentActivityFeed() {
       ) : error ? (
         <div className="px-5 py-8 flex flex-col items-center gap-2 text-center">
           <AlertCircle size={24} className="text-red-400" />
-          <p className="text-sm font-500 text-red-600">Could not load activity</p>
-          <p className="text-xs text-muted-foreground">{error}</p>
+          <p className="text-sm font-semibold text-red-600">Could not load activity</p>
+          <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{error}</p>
         </div>
       ) : (
-        <div className="divide-y divide-border">
+        <div style={{ borderTop: 'none' }}>
           {activities.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+            <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--izou-muted)' }}>
               No recent activity found
             </div>
           ) : (
             activities.map((activity) => {
               const config = activityConfig[activity.action] ?? activityConfig.created;
-              const Icon = config.icon;
+              const ActivityIcon = config.icon;
               return (
                 <div
                   key={`activity-${activity.id}`}
-                  className="flex items-start gap-3 px-5 py-3 hover:bg-muted/30 transition-colors"
+                  className="flex items-start gap-3 px-5 py-3 transition-colors"
+                  style={{ borderBottom: '1px solid var(--izou-border)' }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
                 >
-                  <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                    <Icon size={14} className={config.iconClass} />
+                  <div
+                    className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ backgroundColor: 'var(--izou-primary-light)' }}
+                  >
+                    <ActivityIcon size={14} style={config.iconStyle} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-500 text-foreground leading-snug truncate">
+                    <p className="text-sm font-semibold leading-snug truncate" style={{ color: 'var(--izou-text)' }}>
                       {activity.message}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <p className="text-xs truncate mt-0.5" style={{ color: 'var(--izou-muted)' }}>
                       {activity.detail}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-[10px]" style={{ color: 'var(--izou-muted)' }}>
                         {timeAgo(activity.createdAt)}
                       </span>
-                      <span className="text-[10px] text-muted-foreground">·</span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-[10px]" style={{ color: 'var(--izou-muted)' }}>·</span>
+                      <span className="text-[10px]" style={{ color: 'var(--izou-muted)' }}>
                         {activity.performedByName || 'System'}
                       </span>
                     </div>

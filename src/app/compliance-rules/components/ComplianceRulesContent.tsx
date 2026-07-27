@@ -1,9 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Scale, Plus, Edit2, Trash2, CheckCircle2, XCircle, AlertTriangle, Shield, Clock, ToggleLeft, ToggleRight, Save, X, Search, Info, Send, MessageSquare, Loader2 } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
+
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
 import { buildDeadlineMessage, PERFECTION_AUTHORITIES } from '@/lib/perfectionAuthorities';
+import { complianceRulesService, type ComplianceRuleDB } from '@/lib/supabase/complianceRulesService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,120 +38,21 @@ interface RuleFormData {
   message: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── DB ↔ UI mapping ──────────────────────────────────────────────────────────
 
-const initialRules: ComplianceRule[] = [
-  {
-    id: 'RULE-001',
-    ruleName: 'LTV Supervisor Approval',
-    ruleType: 'LTV',
-    condition: { field: 'ltv_ratio', operator: '>', value: 0.70 },
-    action: 'BLOCK',
-    message: 'LTV exceeds 70% limit. Supervisor approval required before proceeding.',
-    isActive: true,
-    createdAt: '2024-01-15',
-    triggeredCount: 23,
-  },
-  {
-    id: 'RULE-002',
-    ruleName: 'BRELA 42-Day Deadline Warning',
-    ruleType: 'DEADLINE',
-    condition: { field: 'days_to_brela_deadline', operator: '<=', value: 7 },
-    action: 'WARN',
-    message: 'BRELA submission deadline is within 7 days. Immediate action required.',
-    isActive: true,
-    createdAt: '2024-01-15',
-    triggeredCount: 87,
-  },
-  {
-    id: 'RULE-003',
-    ruleName: 'Overdue BRELA Filing Block',
-    ruleType: 'DEADLINE',
-    condition: { field: 'days_to_brela_deadline', operator: '<', value: 0 },
-    action: 'BLOCK',
-    message: 'BRELA filing deadline has passed. Escalate to compliance team immediately.',
-    isActive: true,
-    createdAt: '2024-01-15',
-    triggeredCount: 12,
-  },
-  {
-    id: 'RULE-004',
-    ruleName: 'High LTV Audit Log',
-    ruleType: 'LTV',
-    condition: { field: 'ltv_ratio', operator: '>', value: 0.60 },
-    action: 'LOG',
-    message: 'LTV above 60% — logged for audit trail review.',
-    isActive: true,
-    createdAt: '2024-02-01',
-    triggeredCount: 156,
-  },
-  {
-    id: 'RULE-005',
-    ruleName: 'New Customer Eligibility Check',
-    ruleType: 'ELIGIBILITY',
-    condition: { field: 'customer_relationship_years', operator: '<', value: 1 },
-    action: 'WARN',
-    message: 'Customer relationship is less than 1 year. Enhanced due diligence required.',
-    isActive: true,
-    createdAt: '2024-02-15',
-    triggeredCount: 34,
-  },
-  {
-    id: 'RULE-006',
-    ruleName: 'Maximum LTV Hard Cap',
-    ruleType: 'LTV',
-    condition: { field: 'ltv_ratio', operator: '>', value: 0.85 },
-    action: 'BLOCK',
-    message: 'LTV exceeds absolute maximum of 85%. Loan cannot proceed.',
-    isActive: false,
-    createdAt: '2024-03-01',
-    triggeredCount: 3,
-  },
-  {
-    id: 'RULE-007',
-    ruleName: 'Lands Registry 60-Day Deadline',
-    ruleType: 'DEADLINE',
-    condition: { field: 'days_to_lands_deadline', operator: '<=', value: 14 },
-    action: 'WARN',
-    message: 'Lands Registry submission due within 14 days.',
-    isActive: true,
-    createdAt: '2024-03-10',
-    triggeredCount: 41,
-  },
-  {
-    id: 'RULE-008',
-    ruleName: 'TRA Deadline Warning',
-    ruleType: 'DEADLINE',
-    condition: { field: 'days_to_tra_deadline', operator: '<=', value: 7 },
-    action: 'WARN',
-    message: 'TRA submission deadline is within 7 days. Ensure tax clearance is in order.',
-    isActive: true,
-    createdAt: '2024-04-01',
-    triggeredCount: 18,
-  },
-  {
-    id: 'RULE-009',
-    ruleName: 'DSE Securities Deadline',
-    ruleType: 'DEADLINE',
-    condition: { field: 'days_to_dse_deadline', operator: '<=', value: 5 },
-    action: 'WARN',
-    message: 'DSE pledge registration deadline approaching. Contact DSE registrar immediately.',
-    isActive: true,
-    createdAt: '2024-04-15',
-    triggeredCount: 7,
-  },
-  {
-    id: 'RULE-010',
-    ruleName: 'TASAC Vessel Mortgage Overdue',
-    ruleType: 'DEADLINE',
-    condition: { field: 'days_to_tasac_deadline', operator: '<', value: 0 },
-    action: 'BLOCK',
-    message: 'TASAC vessel mortgage registration is overdue. Escalate to legal team immediately.',
-    isActive: true,
-    createdAt: '2024-05-01',
-    triggeredCount: 2,
-  },
-];
+function dbToUi(r: ComplianceRuleDB): ComplianceRule {
+  return {
+    id: r.id,
+    ruleName: r.rule_name,
+    ruleType: r.rule_type,
+    condition: r.condition,
+    action: r.action,
+    message: r.message ?? '',
+    isActive: r.is_active,
+    createdAt: r.created_at.split('T')[0],
+    triggeredCount: r.triggered_count ?? 0,
+  };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -214,8 +116,6 @@ function SmsNotifyModal({ rule, onClose }: SmsNotifyModalProps) {
 
   const buildMessage = (): string => {
     if (rule.ruleType === 'DEADLINE') {
-      const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      // Detect which authority the field belongs to
       const authority = PERFECTION_AUTHORITIES.find(a => a.deadlineField === rule.condition.field);
       if (authority && authority.code !== 'N/A') {
         const daysLeft = Number(rule.condition.value);
@@ -223,7 +123,6 @@ function SmsNotifyModal({ rule, onClose }: SmsNotifyModalProps) {
       }
       return smsAlertService.buildOverdueMessage(collateralId || 'N/A', 0, appUrl);
     }
-    const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
     return `[CollateralMS ALERT] Rule "${rule.ruleName}" triggered for ${collateralId || 'N/A'}. Action required: ${appUrl}/compliance-rules`;
   };
 
@@ -267,7 +166,6 @@ function SmsNotifyModal({ rule, onClose }: SmsNotifyModalProps) {
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Rule summary */}
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-xs font-600 text-amber-800 uppercase tracking-wide mb-0.5">Triggering Rule</p>
             <p className="text-sm font-600 text-amber-900">{rule.ruleName}</p>
@@ -308,7 +206,6 @@ function SmsNotifyModal({ rule, onClose }: SmsNotifyModalProps) {
             />
           </div>
 
-          {/* Message preview */}
           <div>
             <label className="block text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">Message Preview</label>
             <div className="p-3 bg-muted/30 rounded-lg border border-border">
@@ -376,7 +273,7 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, onNotify }: {
                 </span>
                 {!rule.isActive && <span className="text-xs font-600 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">Inactive</span>}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">{rule.id} · {ruleTypeConfig[rule.ruleType].label} · Triggered {rule.triggeredCount}×</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{ruleTypeConfig[rule.ruleType].label} · Triggered {rule.triggeredCount}×</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {canNotify && (
@@ -400,7 +297,6 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, onNotify }: {
             </div>
           </div>
 
-          {/* Condition */}
           <div className="flex items-center gap-2 mt-2 p-2 bg-muted/30 rounded-lg">
             <code className="text-xs font-mono text-foreground">
               IF <span className="text-primary font-700">{rule.condition.field}</span>{' '}
@@ -419,12 +315,13 @@ function RuleCard({ rule, onToggle, onEdit, onDelete, onNotify }: {
 
 // ─── Rule Form Modal ──────────────────────────────────────────────────────────
 
-function RuleFormModal({ form, setForm, onSave, onClose, isEdit }: {
+function RuleFormModal({ form, setForm, onSave, onClose, isEdit, saving }: {
   form: RuleFormData;
   setForm: React.Dispatch<React.SetStateAction<RuleFormData>>;
   onSave: () => void;
   onClose: () => void;
   isEdit: boolean;
+  saving: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -513,16 +410,16 @@ function RuleFormModal({ form, setForm, onSave, onClose, isEdit }: {
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border bg-muted/20">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors">
+          <button onClick={onClose} disabled={saving} className="px-4 py-2 text-sm font-500 text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors">
             Cancel
           </button>
           <button
             onClick={onSave}
-            disabled={!form.ruleName || !form.value || !form.message}
+            disabled={!form.ruleName || !form.value || !form.message || saving}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-600 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save size={14} />
-            {isEdit ? 'Save Changes' : 'Create Rule'}
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Rule'}
           </button>
         </div>
       </div>
@@ -533,7 +430,9 @@ function RuleFormModal({ form, setForm, onSave, onClose, isEdit }: {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ComplianceRulesContent() {
-  const [rules, setRules] = useState<ComplianceRule[]>(initialRules);
+  const [rules, setRules] = useState<ComplianceRule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [actionFilter, setActionFilter] = useState('All');
@@ -548,9 +447,34 @@ export default function ComplianceRulesContent() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleToggle = (id: string) => {
-    setRules((prev) => prev.map((r) => r.id === id ? { ...r, isActive: !r.isActive } : r));
-    showToast('Rule status updated');
+  const loadRules = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await complianceRulesService.fetchAll();
+      setRules(data.map(dbToUi));
+    } catch (err: any) {
+      showToast(err?.message ?? 'Failed to load rules', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRules();
+  }, [loadRules]);
+
+  const handleToggle = async (id: string) => {
+    const rule = rules.find((r) => r.id === id);
+    if (!rule) return;
+    const newActive = !rule.isActive;
+    setRules((prev) => prev.map((r) => r.id === id ? { ...r, isActive: newActive } : r));
+    try {
+      await complianceRulesService.toggleActive(id, newActive);
+      showToast('Rule status updated');
+    } catch (err: any) {
+      setRules((prev) => prev.map((r) => r.id === id ? { ...r, isActive: !newActive } : r));
+      showToast(err?.message ?? 'Failed to update rule', 'error');
+    }
   };
 
   const handleEdit = (rule: ComplianceRule) => {
@@ -567,50 +491,63 @@ export default function ComplianceRulesContent() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== id));
-    showToast('Rule deleted');
+  const handleDelete = async (id: string) => {
+    const prev = rules;
+    setRules((r) => r.filter((x) => x.id !== id));
+    try {
+      await complianceRulesService.delete(id);
+      showToast('Rule deleted');
+    } catch (err: any) {
+      setRules(prev);
+      showToast(err?.message ?? 'Failed to delete rule', 'error');
+    }
   };
 
-  const handleSave = () => {
-    if (editingRule) {
-      setRules((prev) => prev.map((r) => r.id === editingRule.id ? {
-        ...r,
-        ruleName: form.ruleName,
-        ruleType: form.ruleType,
-        condition: { field: form.field, operator: form.operator, value: isNaN(Number(form.value)) ? form.value : Number(form.value) },
-        action: form.action,
-        message: form.message,
-      } : r));
-      showToast('Rule updated successfully');
-    } else {
-      const newRule: ComplianceRule = {
-        id: `RULE-${String(rules.length + 1).padStart(3, '0')}`,
-        ruleName: form.ruleName,
-        ruleType: form.ruleType,
-        condition: { field: form.field, operator: form.operator, value: isNaN(Number(form.value)) ? form.value : Number(form.value) },
-        action: form.action,
-        message: form.message,
-        isActive: true,
-        createdAt: new Date().toISOString().split('T')[0],
-        triggeredCount: 0,
-      };
-      setRules((prev) => [newRule, ...prev]);
-      showToast('Rule created successfully');
+  const handleSave = async () => {
+    setSaving(true);
+    const conditionValue = isNaN(Number(form.value)) ? form.value : Number(form.value);
+    try {
+      if (editingRule) {
+        const updated = await complianceRulesService.update(editingRule.id, {
+          rule_name: form.ruleName,
+          rule_type: form.ruleType,
+          condition: { field: form.field, operator: form.operator, value: conditionValue },
+          action: form.action,
+          message: form.message,
+        });
+        setRules((prev) => prev.map((r) => r.id === editingRule.id ? dbToUi(updated) : r));
+        showToast('Rule updated successfully');
+      } else {
+        const created = await complianceRulesService.create({
+          rule_name: form.ruleName,
+          rule_type: form.ruleType,
+          condition: { field: form.field, operator: form.operator, value: conditionValue },
+          action: form.action,
+          message: form.message,
+          is_active: true,
+        });
+        setRules((prev) => [dbToUi(created), ...prev]);
+        showToast('Rule created successfully');
+      }
+      setShowForm(false);
+      setEditingRule(null);
+      setForm(defaultForm);
+    } catch (err: any) {
+      showToast(err?.message ?? 'Failed to save rule', 'error');
+    } finally {
+      setSaving(false);
     }
-    setShowForm(false);
-    setEditingRule(null);
-    setForm(defaultForm);
   };
 
   const handleCloseForm = () => {
+    if (saving) return;
     setShowForm(false);
     setEditingRule(null);
     setForm(defaultForm);
   };
 
   const filtered = rules.filter((r) => {
-    const matchSearch = !search || r.ruleName.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || r.ruleName.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === 'All' || r.ruleType === typeFilter;
     const matchAction = actionFilter === 'All' || r.action === actionFilter;
     return matchSearch && matchType && matchAction;
@@ -656,7 +593,7 @@ export default function ComplianceRulesContent() {
           { label: 'Active Rules', value: activeCount, sub: 'Currently enforced', icon: CheckCircle2, variant: 'success' as const },
           { label: 'Block Rules', value: blockCount, sub: 'Hard stops active', icon: XCircle, variant: 'danger' as const },
           { label: 'Total Triggered', value: totalTriggered, sub: 'All-time violations', icon: AlertTriangle, variant: 'warning' as const },
-        ].map(({ label, value, sub, icon: Icon, variant }) => {
+        ].map(({ label, value, sub, icon: IconComp, variant }) => {
           const bg = { default: 'bg-white border-border', success: 'bg-green-50 border-green-200', danger: 'bg-red-50 border-red-200', warning: 'bg-amber-50 border-amber-200' };
           const iconBg = { default: 'bg-primary/10 text-primary', success: 'bg-green-100 text-green-600', danger: 'bg-red-100 text-red-600', warning: 'bg-amber-100 text-amber-600' };
           const valColor = { default: 'text-foreground', success: 'text-green-700', danger: 'text-red-700', warning: 'text-amber-700' };
@@ -665,7 +602,7 @@ export default function ComplianceRulesContent() {
               <div className="flex items-start justify-between mb-2">
                 <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider">{label}</p>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${iconBg[variant]}`}>
-                  <Icon size={15} />
+                  {React.createElement(IconComp as React.ElementType, { size: 15 })}
                 </div>
               </div>
               <p className={`text-2xl font-700 tabular-nums font-mono ${valColor[variant]}`}>{value}</p>
@@ -715,10 +652,15 @@ export default function ComplianceRulesContent() {
 
       {/* Rules List */}
       <div className="space-y-3">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 size={24} className="animate-spin text-primary" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading rules…</span>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Scale size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No rules match your filters</p>
+            <p className="text-sm">{rules.length === 0 ? 'No compliance rules yet. Create your first rule.' : 'No rules match your filters'}</p>
           </div>
         ) : (
           filtered.map((rule) => (
@@ -755,6 +697,7 @@ export default function ComplianceRulesContent() {
           onSave={handleSave}
           onClose={handleCloseForm}
           isEdit={!!editingRule}
+          saving={saving}
         />
       )}
 

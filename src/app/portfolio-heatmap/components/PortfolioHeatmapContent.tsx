@@ -256,6 +256,7 @@ function CustomBarTooltip({ active, payload, label }: any) {
 export default function PortfolioHeatmapContent() {
   const [regions, setRegions] = useState<RegionData[]>(MOCK_REGIONS);
   const [loading, setLoading] = useState(true);
+  const [isSampleData, setIsSampleData] = useState(true);
   const [metric, setMetric] = useState<HeatmapMetric>('concentration');
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'concentration' | 'avgLTV' | 'overdueRate' | 'collateralCount'>('concentration');
@@ -315,7 +316,9 @@ export default function PortfolioHeatmapContent() {
 
           if (liveRegions.length >= 3) {
             setRegions(liveRegions);
+            setIsSampleData(false);
           }
+          // else: fewer than 3 geo-tagged regions — keep mock data with sample label
         }
         setLoading(false);
       })
@@ -354,6 +357,12 @@ export default function PortfolioHeatmapContent() {
               <Map className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-xl font-bold text-slate-900">Portfolio Heatmap</h1>
+            {isSampleData && !loading && (
+              <span className="inline-flex items-center gap-1 text-xs font-600 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                <Info className="w-3 h-3" />
+                Sample Data
+              </span>
+            )}
           </div>
           <p className="text-sm text-slate-500 ml-10">Regional risk analysis — collateral concentration, LTV, and overdue rates by geography</p>
         </div>
@@ -401,6 +410,20 @@ export default function PortfolioHeatmapContent() {
             </p>
             <p className="text-xs text-red-600 mt-0.5">
               {regions.filter((r) => r.riskLevel === 'HIGH').map((r) => r.region).join(', ')} — elevated overdue rates or LTV above threshold
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Sample Data Notice */}
+      {isSampleData && !loading && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-600 text-amber-900">Showing Sample Data</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              No geo-tagged collateral records were found in the database. The map below displays illustrative regional data.
+              To see live data, ensure collateral records include <span className="font-mono bg-amber-100 px-1 rounded">location_address</span> values matching Tanzania regions.
             </p>
           </div>
         </div>

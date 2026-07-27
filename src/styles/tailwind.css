@@ -2,28 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @layer base {
   :root {
-    --primary: 221 83% 53%;
+    /* IZOU Design Tokens */
+    --izou-primary: #00a9e0;
+    --izou-primary-dark: #007cb3;
+    --izou-primary-light: #d6f0fb;
+    --izou-cyan: #35c8f3;
+    --izou-teal: #00c2a8;
+    --izou-bg: #eef1f6;
+    --izou-card: #fff;
+    --izou-text: #0d1c2e;
+    --izou-muted: #4b5a6e;
+    --izou-border: #c8cdd6;
+    --izou-success: #16a34a;
+    --izou-warning: #f59e0b;
+    --izou-danger: #dc2626;
+    --izou-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Tailwind CSS variable mappings */
+    --primary: 196 100% 44%;
     --primary-foreground: 0 0% 100%;
-    --accent: 142 71% 45%;
+    --accent: 172 100% 38%;
     --accent-foreground: 0 0% 100%;
-    --background: 210 40% 98%;
+    --background: 214 18% 92%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --border: 214 32% 91%;
-    --muted: 214 32% 95%;
-    --muted-foreground: 215 16% 47%;
+    --card-foreground: 210 60% 11%;
+    --border: 216 12% 78%;
+    --muted: 214 18% 90%;
+    --muted-foreground: 215 16% 35%;
     --destructive: 0 72% 51%;
     --warning: 38 92% 50%;
     --success: 142 71% 45%;
-    --foreground: 222 47% 11%;
-    --ring: 221 83% 53%;
-    --field-bg: 214 32% 97%;
-    --sidebar-bg: #0F172A;
-    --sidebar-fg: #F8FAFC;
+    --foreground: 210 60% 11%;
+    --ring: 196 100% 44%;
+    --field-bg: 196 60% 94%;
+    --sidebar-bg: #007CB3;
+    --sidebar-fg: #FFFFFF;
   }
 
   * {
@@ -32,25 +49,260 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--izou-bg);
+    color: var(--izou-text);
   }
 
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,
   select {
-    background-color: #EFF6FF;
+    background-color: var(--izou-primary-light);
   }
 
   input:disabled,
   textarea:disabled,
   select:disabled,
   [disabled] {
-    background-color: #DBEAFE !important;
+    background-color: #cdf0fb !important;
     opacity: 0.6;
   }
 
   .font-mono {
     font-family: 'IBM Plex Mono', monospace;
+  }
+}
+
+@layer components {
+  /* IZOU Sidebar Gradient */
+  .izou-sidebar-gradient {
+    background: radial-gradient(circle at 12% 8%, rgba(255,255,255,0.18), rgba(0,0,0,0) 26%),
+                radial-gradient(circle at 88% 18%, rgba(255,255,255,0.08), rgba(0,0,0,0) 35%),
+                radial-gradient(circle at 50% 120%, rgba(0,0,0,0.1), rgba(0,0,0,0) 60%),
+                linear-gradient(rgb(23,185,237), rgb(8,171,227) 22%, rgb(0,155,213) 48%, rgb(0,136,197) 72%, rgb(0,115,174));
+    box-shadow: rgba(255,255,255,0.22) -1px 0px inset, rgba(255,255,255,0.08) 0px 1px inset;
+    position: relative;
+  }
+
+  .izou-sidebar-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(rgba(255,255,255,0.14) 1px, rgba(0,0,0,0) 0px),
+      radial-gradient(rgba(255,255,255,0.06) 1px, rgba(0,0,0,0) 0px);
+    background-position: 0px 0px, 9px 9px;
+    background-size: 18px 18px, 18px 18px;
+    mix-blend-mode: soft-light;
+    opacity: 0.55;
+  }
+
+  .izou-sidebar-gradient::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: linear-gradient(rgba(255,255,255,0.06), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 78%, rgba(0,40,70,0.12));
+  }
+
+  .izou-sidebar-gradient > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* IZOU Nav Item */
+  .izou-nav-item {
+    align-items: center;
+    border: 1px solid rgba(0,0,0,0);
+    border-radius: 14px;
+    color: rgba(255,255,255,0.82);
+    display: flex;
+    gap: 12px;
+    position: relative;
+    transition: background 0.22s var(--izou-ease), border-color 0.22s var(--izou-ease), color 0.22s var(--izou-ease), box-shadow 0.22s var(--izou-ease);
+  }
+
+  .izou-nav-item .izou-nav-icon {
+    opacity: 0.85;
+    transition: transform 0.22s var(--izou-ease), opacity 0.22s var(--izou-ease);
+  }
+
+  .izou-nav-item:hover {
+    background: rgba(255,255,255,0.1);
+    color: rgb(255,255,255);
+  }
+
+  .izou-nav-item:hover .izou-nav-icon {
+    opacity: 1;
+    transform: translateX(4px);
+  }
+
+  /* IZOU Active Nav Item */
+  .izou-nav-active {
+    backdrop-filter: blur(10px) saturate(1.2);
+    background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.1));
+    border: 1px solid rgba(255,255,255,0.16);
+    box-shadow: rgba(255,255,255,0.22) 0px 1px 0px inset, rgba(255,255,255,0.08) 0px 0px 20px;
+    color: rgb(255,255,255);
+    font-weight: 600;
+    text-shadow: rgba(255,255,255,0.25) 0px 0px 18px;
+  }
+
+  .izou-nav-active .izou-nav-icon {
+    opacity: 1;
+  }
+
+  .izou-nav-active::before {
+    animation: izouNavIndicator 0.24s var(--izou-ease) forwards;
+    background: rgb(255,255,255);
+    border-radius: 0px 3px 3px 0px;
+    bottom: 18%;
+    box-shadow: rgba(255,255,255,0.55) 0px 0px 10px;
+    content: '';
+    left: 0px;
+    position: absolute;
+    top: 18%;
+    transform: scaleY(0);
+    transform-origin: center center;
+    width: 3px;
+  }
+
+  /* IZOU Sidebar Card */
+  .izou-sidebar-card {
+    backdrop-filter: blur(12px) saturate(1.2);
+    background: linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 14px;
+    box-shadow: rgba(255,255,255,0.28) 0px 1px 0px inset, rgba(0,50,80,0.12) 0px 4px 16px;
+    transition: background 0.22s var(--izou-ease), border-color 0.22s var(--izou-ease), box-shadow 0.22s var(--izou-ease);
+  }
+
+  .izou-sidebar-card:hover {
+    background: linear-gradient(160deg, rgba(255,255,255,0.24), rgba(255,255,255,0.12));
+    border-color: rgba(255,255,255,0.28);
+  }
+
+  /* IZOU Collapse Button */
+  .izou-collapse-btn {
+    align-items: center;
+    backdrop-filter: blur(14px) saturate(1.35);
+    background: linear-gradient(145deg, rgba(255,255,255,0.28), rgba(255,255,255,0.1));
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 9999px;
+    box-shadow: rgba(255,255,255,0.45) 0px 1px 0px inset, rgba(255,255,255,0.06) 0px -1px 0px inset, rgba(0,60,90,0.18) 0px 4px 14px;
+    color: rgba(255,255,255,0.95);
+    display: inline-flex;
+    justify-content: center;
+    transition: background 0.22s var(--izou-ease), border-color 0.22s var(--izou-ease), box-shadow 0.22s var(--izou-ease), transform 0.22s var(--izou-ease);
+  }
+
+  .izou-collapse-btn:hover {
+    background: linear-gradient(145deg, rgba(255,255,255,0.38), rgba(255,255,255,0.16));
+    border-color: rgba(255,255,255,0.42);
+    box-shadow: rgba(255,255,255,0.55) 0px 1px 0px inset, rgba(255,255,255,0.08) 0px -1px 0px inset, rgba(0,60,90,0.22) 0px 6px 18px;
+    color: rgb(255,255,255);
+    transform: scale(1.04);
+  }
+
+  /* IZOU Primary Button */
+  .izou-btn-primary {
+    background-color: var(--izou-primary);
+    color: #ffffff;
+    box-shadow: 0 8px 24px rgba(0,169,224,0.25);
+    transition: background-color 0.22s var(--izou-ease), box-shadow 0.22s var(--izou-ease), transform 0.15s var(--izou-ease);
+  }
+
+  .izou-btn-primary:hover {
+    background-color: var(--izou-primary-dark);
+    box-shadow: 0 10px 28px rgba(0,169,224,0.32);
+    color: #ffffff;
+  }
+
+  .izou-btn-primary:active {
+    background-color: #005f8a;
+    box-shadow: 0 4px 12px rgba(0,169,224,0.2);
+    color: #ffffff;
+    transform: scale(0.98);
+  }
+
+  .izou-btn-primary:disabled {
+    background-color: var(--izou-primary);
+    color: #ffffff;
+    opacity: 0.65;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .izou-btn-primary:focus-visible {
+    outline: 2px solid var(--izou-primary);
+    outline-offset: 2px;
+    color: #ffffff;
+  }
+
+  /* IZOU Card */
+  .izou-card {
+    background: var(--izou-card);
+    border: 1px solid var(--izou-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.09), 0 1px 2px rgba(0,0,0,0.05);
+    transition: box-shadow 0.22s var(--izou-ease), border-color 0.22s var(--izou-ease);
+  }
+
+  .izou-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.07);
+    border-color: rgba(0,169,224,0.35);
+  }
+
+  /* IZOU Badge */
+  .izou-badge-primary {
+    background-color: rgba(0,169,224,0.12);
+    color: var(--izou-primary-dark);
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.6rem;
+  }
+
+  .izou-badge-success {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.6rem;
+  }
+
+  .izou-badge-warning {
+    background-color: #fffbeb;
+    color: #d97706;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.6rem;
+  }
+
+  .izou-badge-danger {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.6rem;
+  }
+
+  /* IZOU Section Label */
+  .izou-nav-section-label {
+    color: rgba(255,255,255,0.45);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    padding: 0px 12px 8px;
+    text-transform: uppercase;
   }
 }
 
@@ -96,7 +348,20 @@
 
   @keyframes pulseHighlight {
     0% { background-color: transparent; }
-    30% { background-color: hsl(221 83% 93%); }
+    30% { background-color: rgba(0,169,224,0.12); }
     100% { background-color: transparent; }
+  }
+
+  @keyframes izouNavIndicator {
+    100% { transform: scaleY(1); }
+  }
+
+  @keyframes izouFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .izou-float {
+    animation: izouFloat 6s ease-in-out infinite;
   }
 }

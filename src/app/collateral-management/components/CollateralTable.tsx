@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
@@ -211,7 +212,18 @@ export default function CollateralTable({
                     </td>
                     {/* Obligor */}
                     <td className="px-4 py-3 max-w-[160px]">
-                      <p className="text-sm font-500 text-foreground truncate">{item.obligor}</p>
+                      {item.obligorRefId ? (
+                        <Link
+                          href={`/obligors/${item.obligorRefId}`}
+                          className="text-sm font-500 text-primary hover:underline truncate block"
+                          title={item.obligor}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {item.obligor}
+                        </Link>
+                      ) : (
+                        <p className="text-sm font-500 text-foreground truncate">{item.obligor}</p>
+                      )}
                       <p className="text-xs text-muted-foreground font-mono truncate">{item.obligorId}</p>
                     </td>
                     {/* Type */}

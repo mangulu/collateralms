@@ -15,20 +15,19 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  // Always use the real pathname from the router; fall back to the prop only if pathname is unavailable
   const activePath = pathname || currentPath;
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--izou-bg)' }}>
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar — hidden on mobile unless open */}
+      {/* Sidebar */}
       <div className={`
         fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
         transform transition-transform duration-300 ease-in-out
@@ -43,13 +42,23 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
 
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Mobile top bar */}
-        <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-border shrink-0">
+        <div
+          className="lg:hidden flex items-center gap-3 px-4 py-3 shrink-0"
+          style={{
+            backgroundColor: 'var(--izou-card)',
+            borderBottom: '1px solid var(--izou-border)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
+          }}
+        >
           <button
             onClick={() => setMobileSidebarOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-muted transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style={{ color: 'var(--izou-text)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
             aria-label="Open menu"
           >
-            <Menu size={18} className="text-foreground" />
+            <Menu size={18} />
           </button>
           <div className="flex-1">
             <GlobalSearch />
@@ -57,7 +66,14 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
         </div>
 
         {/* Desktop search bar */}
-        <div className="hidden lg:flex items-center gap-3 px-6 py-2.5 bg-white border-b border-border shrink-0">
+        <div
+          className="hidden lg:flex items-center gap-3 px-6 py-2.5 shrink-0"
+          style={{
+            backgroundColor: 'var(--izou-card)',
+            borderBottom: '1px solid var(--izou-border)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
+          }}
+        >
           <div className="flex-1 max-w-sm">
             <GlobalSearch />
           </div>

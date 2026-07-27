@@ -180,7 +180,7 @@ export default function AlertThresholdsContent() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6 max-w-5xl">
+      <div className="p-6 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <SlidersHorizontal size={20} className="text-primary" />
@@ -204,7 +204,7 @@ export default function AlertThresholdsContent() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-6 space-y-6">
       {/* Page header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">

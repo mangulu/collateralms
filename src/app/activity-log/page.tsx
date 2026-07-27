@@ -1,11 +1,5 @@
-'use client';
-import AppLayout from '@/components/AppLayout';
-import ActivityLogContent from './components/ActivityLogContent';
+import { redirect } from 'next/navigation';
 
 export default function ActivityLogPage() {
-  return (
-    <AppLayout>
-      <ActivityLogContent />
-    </AppLayout>
-  );
+  redirect('/audit-center');
 }
