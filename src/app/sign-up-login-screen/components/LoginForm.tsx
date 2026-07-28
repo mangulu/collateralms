@@ -26,6 +26,15 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 2FA setup required notice (for sensitive roles without phone)
+  const searchParams = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : null;
+  const [show2FASetupNotice] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('require_2fa_setup') === '1';
+  });
+
   // Password reset state
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -64,13 +73,31 @@ export default function LoginForm() {
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('two_fa_enabled, phone, full_name')
+        .select('two_fa_enabled, two_fa_enforced, phone, full_name, role')
         .eq('id', result.user?.id)
         .single();
 
-      if (profile?.two_fa_enabled && profile?.phone) {
+      // Determine if 2FA is required:
+      // - Enforced for sensitive roles (system_admin, supervisor) regardless of opt-in
+      // - Also triggered if user has voluntarily enabled it
+      const SENSITIVE_ROLES = ['system_admin', 'supervisor'];
+      const roleRequires2FA = SENSITIVE_ROLES.includes(profile?.role ?? '');
+      const needs2FA = roleRequires2FA || profile?.two_fa_enabled;
+
+      if (needs2FA) {
+        // If sensitive role but no phone set up yet, sign out and prompt setup
+        if (!profile?.phone) {
+          await supabase.auth.signOut();
+          setIsLoading(false);
+          toast.error(
+            'Your role requires Two-Factor Authentication. Please contact your administrator to set up 2FA on your account.',
+            { duration: 8000 }
+          );
+          return;
+        }
+
         await supabase.auth.signOut();
-        setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name });
+        setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name, role: profile.role });
         await sendOTP(profile.phone, result.user?.id);
         setTwoFARequired(true);
         setIsLoading(false);
@@ -332,6 +359,17 @@ export default function LoginForm() {
                 <h2 className="text-xl font-bold" style={{ color: 'var(--izou-text)' }}>Sign in</h2>
                 <p className="text-sm mt-1" style={{ color: 'var(--izou-muted)' }}>Enter your credentials to access the system</p>
               </div>
+
+              {/* 2FA setup required notice */}
+              {show2FASetupNotice && (
+                <div className="flex items-start gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div>
+                    <p className="text-xs font-semibold text-orange-800">Two-Factor Authentication Required</p>
+                    <p className="text-xs text-orange-700 mt-0.5">Your role requires 2FA. Please sign in and contact your administrator to register a phone number for SMS verification.</p>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
                 {/* Email */}
