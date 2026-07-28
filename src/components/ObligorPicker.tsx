@@ -94,7 +94,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
         ) : (
           <>
             <Search size={13} className="text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground flex-1">Search obligor by name or code…</span>
+            <span className="text-muted-foreground flex-1">Search Obligor by name or code…</span>
             <ChevronDown size={13} className="text-muted-foreground shrink-0" />
           </>
         )}
@@ -130,7 +130,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
                   target="_blank"
                   className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
                 >
-                  <Plus size={11} /> Add new obligor
+                  <Plus size={11} /> Add new Obligor
                 </Link>
               </div>
             ) : (
