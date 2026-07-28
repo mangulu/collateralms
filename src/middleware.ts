@@ -55,7 +55,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
 };
 
 // Public routes that never require auth
-const PUBLIC_ROUTES = ['/sign-up-login-screen', '/auth/callback'];
+const PUBLIC_ROUTES = ['/sign-up-login-screen', '/auth/callback', '/auth/reset-password'];
 
 // Authenticated-but-no-permission-check routes
 const AUTH_ONLY_ROUTES = ['/module-hub'];
