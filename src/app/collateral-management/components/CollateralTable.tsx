@@ -266,7 +266,17 @@ export default function CollateralTable({
                     </td>
                     {/* Facility */}
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-muted-foreground">{item.facilityId}</span>
+                      {item.facilityId ? (
+                        <Link
+                          href={`/loans?facility=${encodeURIComponent(item.facilityId)}`}
+                          className="font-mono text-xs text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {item.facilityId}
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                     {/* Status */}
                     <td className="px-4 py-3">

@@ -306,7 +306,19 @@ export default function CollateralDetailContent({
                     <DetailRow label="Collateral Type" value={collateral.type} icon={FileText} />
                     <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{collateral.description}</p>} icon={FileText} />
                     <DetailRow label="Collateral Value" value={<span className="font-mono font-600 text-base">TSh {collateral.valueTSh}</span>} icon={Building2} />
-                    <DetailRow label="Facility ID" value={<span className="font-mono text-xs">{collateral.facilityId}</span>} icon={FileText} />
+                    <DetailRow label="Facility ID" value={
+                      collateral.facilityId ? (
+                        <Link
+                          href={`/loans?facility=${encodeURIComponent(collateral.facilityId)}`}
+                          className="font-mono text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          {collateral.facilityId}
+                          <ExternalLink size={11} className="shrink-0" />
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                      )
+                    } icon={FileText} />
                     <DetailRow label="Assigned Officer" value={collateral.assignedOfficer} icon={User} />
                   </div>
                 </div>
