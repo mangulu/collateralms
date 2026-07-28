@@ -39,7 +39,7 @@ export default function CollateralDashboardPage() {
           </p>
         </div>
       ) : (
-        <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto space-y-5">
+        <div className="px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 max-w-screen-2xl mx-auto space-y-4 sm:space-y-5">
           {/* Header */}
           <Suspense fallback={<Skeleton className="h-16 w-full" />}>
             <DashboardHeader />

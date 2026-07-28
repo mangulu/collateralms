@@ -383,7 +383,7 @@ export default function ComplianceAuditContent() {
 
   if (isLoading) {
     return (
-      <div className="px-6 lg:px-8 xl:px-10 py-6 max-w-screen-2xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 max-w-screen-2xl mx-auto">
         <div className="h-8 w-64 bg-muted animate-pulse rounded mb-2" />
         <div className="h-4 w-96 bg-muted animate-pulse rounded mb-8" />
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
@@ -398,21 +398,21 @@ export default function ComplianceAuditContent() {
   }
 
   return (
-    <div className="px-6 lg:px-8 xl:px-10 py-6 max-w-screen-2xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 max-w-screen-2xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-7">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5 sm:mb-7">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <ClipboardList size={18} className="text-primary" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">Compliance & Audit Trail</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground">Compliance & Audit Trail</h1>
           </div>
-          <p className="text-sm text-muted-foreground ml-10.5">
-            Legal officer review · Regulatory submission records · Multi-authority perfection deadline enforcement
+          <p className="text-xs sm:text-sm text-muted-foreground ml-10">
+            Legal officer review · Regulatory submission records · Deadline enforcement
           </p>
           {lastRefreshed && (
-            <p className="text-xs text-muted-foreground ml-10.5 mt-1">
+            <p className="text-xs text-muted-foreground ml-10 mt-1 hidden sm:block">
               Last refreshed: {formatDateTime(lastRefreshed.toISOString())}
             </p>
           )}
@@ -437,7 +437,7 @@ export default function ComplianceAuditContent() {
       </div>
 
       {/* ── Summary KPIs ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <SummaryCard label="Total Collateral Items" value={summary?.totalCollateral ?? 0} sub="Active items in registry" icon={Building2} variant="default" />
         <SummaryCard label="Compliant (Perfected)" value={summary?.compliant ?? 0} sub={`${summary?.perfectionRate ?? '0.0'}% perfection rate`} icon={CheckCircle2} variant="success" />
         <SummaryCard label="Non-Compliant" value={summary?.nonCompliant ?? 0} sub="Overdue or rejected items" icon={XCircle} variant="danger" />

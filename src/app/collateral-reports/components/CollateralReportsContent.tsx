@@ -477,14 +477,14 @@ export default function CollateralReportsContent() {
   return (
     <div className="flex flex-col h-full min-h-0 bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 border-b border-border bg-white shrink-0 gap-3">
         <div>
           <h1 className="text-lg font-700 text-foreground">Collateral Performance Reports</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Monthly perfection trends, registry compliance, and overdue summary
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={loadData}
             disabled={loading}
@@ -504,7 +504,7 @@ export default function CollateralReportsContent() {
           <button
             onClick={() => handleExport('pdf')}
             disabled={loading || !reportData || exporting !== null}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-600 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg text-sm font-600 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
             {exporting === 'pdf' ? <RefreshCw size={14} className="animate-spin" /> : <FileText size={14} />}
             Export PDF
@@ -514,25 +514,25 @@ export default function CollateralReportsContent() {
 
       {/* Banners */}
       {exportSuccess && (
-        <div className="mx-6 mt-3 flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
+        <div className="mx-4 sm:mx-6 mt-3 flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
           <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span><span className="font-600">{exportSuccess}</span> downloaded successfully.</span>
-          <button onClick={() => setExportSuccess(null)} className="ml-auto text-emerald-600 hover:text-emerald-800">✕</button>
+          <span className="truncate"><span className="font-600">{exportSuccess}</span> downloaded successfully.</span>
+          <button onClick={() => setExportSuccess(null)} className="ml-auto text-emerald-600 hover:text-emerald-800 shrink-0">✕</button>
         </div>
       )}
       {exportError && (
-        <div className="mx-6 mt-3 flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+        <div className="mx-4 sm:mx-6 mt-3 flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
           <AlertTriangle size={16} className="text-red-600 shrink-0" />
-          <span>{exportError}</span>
-          <button onClick={() => setExportError(null)} className="ml-auto text-red-600 hover:text-red-800">✕</button>
+          <span className="flex-1 min-w-0">{exportError}</span>
+          <button onClick={() => setExportError(null)} className="ml-auto text-red-600 hover:text-red-800 shrink-0">✕</button>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-5">
         {/* Date Range + Summary KPIs */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           {/* Date filters */}
-          <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-4 shrink-0">
+          <div className="bg-white rounded-xl border border-border p-3 sm:p-4 flex flex-wrap items-center gap-3">
             <Calendar size={16} className="text-muted-foreground shrink-0" />
             <div className="flex items-center gap-2">
               <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
@@ -559,26 +559,26 @@ export default function CollateralReportsContent() {
 
           {/* KPI summary */}
           {loading ? (
-            <div className="flex-1 grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted animate-pulse rounded-xl" />)}
             </div>
           ) : summaryStats && (
-            <div className="flex-1 grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-xl border border-border p-3">
-                <p className="text-xs text-muted-foreground mb-0.5">Avg Perfection Rate</p>
-                <p className={`text-xl font-700 tabular-nums ${parseFloat(summaryStats.avgPerfectionRate) >= 80 ? 'text-emerald-700' : parseFloat(summaryStats.avgPerfectionRate) >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="bg-white rounded-xl border border-border p-2.5 sm:p-3">
+                <p className="text-xs text-muted-foreground mb-0.5 leading-tight">Avg Perfection</p>
+                <p className={`text-lg sm:text-xl font-700 tabular-nums ${parseFloat(summaryStats.avgPerfectionRate) >= 80 ? 'text-emerald-700' : parseFloat(summaryStats.avgPerfectionRate) >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
                   {summaryStats.avgPerfectionRate}%
                 </p>
               </div>
-              <div className="bg-white rounded-xl border border-border p-3">
-                <p className="text-xs text-muted-foreground mb-0.5">Compliant Registries</p>
-                <p className="text-xl font-700 tabular-nums text-foreground">
-                  {summaryStats.compliantRegistries}<span className="text-sm font-400 text-muted-foreground">/{summaryStats.totalRegistries}</span>
+              <div className="bg-white rounded-xl border border-border p-2.5 sm:p-3">
+                <p className="text-xs text-muted-foreground mb-0.5 leading-tight">Compliant</p>
+                <p className="text-lg sm:text-xl font-700 tabular-nums text-foreground">
+                  {summaryStats.compliantRegistries}<span className="text-xs sm:text-sm font-400 text-muted-foreground">/{summaryStats.totalRegistries}</span>
                 </p>
               </div>
-              <div className={`rounded-xl border p-3 ${summaryStats.overdueCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-border'}`}>
-                <p className={`text-xs mb-0.5 ${summaryStats.overdueCount > 0 ? 'text-red-700' : 'text-muted-foreground'}`}>Overdue Items</p>
-                <p className={`text-xl font-700 tabular-nums ${summaryStats.overdueCount > 0 ? 'text-red-700' : 'text-foreground'}`}>
+              <div className={`rounded-xl border p-2.5 sm:p-3 ${summaryStats.overdueCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-border'}`}>
+                <p className={`text-xs mb-0.5 leading-tight ${summaryStats.overdueCount > 0 ? 'text-red-700' : 'text-muted-foreground'}`}>Overdue</p>
+                <p className={`text-lg sm:text-xl font-700 tabular-nums ${summaryStats.overdueCount > 0 ? 'text-red-700' : 'text-foreground'}`}>
                   {summaryStats.overdueCount}
                 </p>
               </div>
@@ -587,7 +587,7 @@ export default function CollateralReportsContent() {
         </div>
 
         {/* Report Type Selector */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {REPORT_DEFS.map((def) => {
             const Icon = def.icon;
             const isActive = activeReport === def.id;
@@ -595,17 +595,17 @@ export default function CollateralReportsContent() {
               <button
                 key={def.id}
                 onClick={() => setActiveReport(def.id)}
-                className={`text-left p-4 rounded-xl border-2 transition-all ${
+                className={`text-left p-3 sm:p-4 rounded-xl border-2 transition-all ${
                   isActive
                     ? `${def.bg} ${def.border} shadow-sm`
                     : 'bg-white border-border hover:border-primary/30 hover:bg-muted/20'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${isActive ? def.bg : 'bg-muted'}`}>
-                  <Icon size={16} className={isActive ? def.accent : 'text-muted-foreground'} />
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-2 ${isActive ? def.bg : 'bg-muted'}`}>
+                  <Icon size={15} className={isActive ? def.accent : 'text-muted-foreground'} />
                 </div>
-                <p className={`text-sm font-600 mb-1 ${isActive ? def.accent : 'text-foreground'}`}>{def.label}</p>
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{def.description}</p>
+                <p className={`text-xs sm:text-sm font-600 mb-1 ${isActive ? def.accent : 'text-foreground'}`}>{def.label}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 hidden sm:block">{def.description}</p>
               </button>
             );
           })}
@@ -614,19 +614,19 @@ export default function CollateralReportsContent() {
         {/* Report Preview Panel */}
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           {/* Panel header */}
-          <div className={`flex items-center justify-between px-5 py-3.5 border-b border-border ${activeReportDef.bg}`}>
-            <div className="flex items-center gap-2.5">
+          <div className={`flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 border-b border-border gap-2 ${activeReportDef.bg}`}>
+            <div className="flex items-center gap-2.5 min-w-0">
               <activeReportDef.icon size={16} className={activeReportDef.accent} />
-              <span className={`text-sm font-600 ${activeReportDef.accent}`}>{activeReportDef.label}</span>
+              <span className={`text-sm font-600 truncate ${activeReportDef.accent}`}>{activeReportDef.label}</span>
               {reportData && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground hidden sm:inline">
                   — {dateFrom} to {dateTo}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {reportData && (
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <span className="text-xs text-muted-foreground flex items-center gap-1 hidden sm:flex">
                   <Clock size={11} />
                   {new Date(reportData.generatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -674,7 +674,7 @@ export default function CollateralReportsContent() {
 
           {/* Panel footer */}
           {reportData && !loading && (
-            <div className="px-5 py-3 border-t border-border bg-muted/30 flex items-center justify-between">
+            <div className="px-4 sm:px-5 py-3 border-t border-border bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground">
                 {activeReport === 'monthly_perfection' && `${reportData.monthlyTrend.length} months of data`}
                 {activeReport === 'registry_compliance' && `${reportData.registryCompliance.length} registries tracked`}

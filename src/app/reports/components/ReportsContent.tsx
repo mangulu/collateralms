@@ -574,16 +574,16 @@ export default function ReportsContent() {
   ];
 
   return (
-    <div className="px-6 lg:px-8 xl:px-10 py-6 max-w-screen-2xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 max-w-screen-2xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-2xl font-700 text-foreground">Reports</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Compliance summaries, deadline tracking, and collateral utilization</p>
+          <h1 className="text-xl sm:text-2xl font-700 text-foreground">Reports</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Compliance summaries, deadline tracking, and collateral utilization</p>
         </div>
         <button
           onClick={loadData}
-          className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors self-start sm:self-auto"
         >
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           Refresh
@@ -591,23 +591,23 @@ export default function ReportsContent() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-1 mb-6 border-b border-border overflow-x-auto">
+      <div className="flex items-center gap-0.5 sm:gap-1 mb-4 sm:mb-6 border-b border-border overflow-x-auto scrollbar-hide">
         {[
-          { key: 'dashboard', label: 'Analytics Dashboard', icon: TrendingUp },
-          { key: 'summary', label: 'Compliance Summary', icon: Shield },
-          { key: 'calendar', label: 'Deadline Calendar', icon: CalendarDays },
-          { key: 'deadlines', label: 'Upcoming Deadlines', icon: AlertTriangle },
-          { key: 'utilization', label: 'Collateral Utilization', icon: PieChartIcon },
+          { key: 'dashboard', label: 'Analytics', icon: TrendingUp },
+          { key: 'summary', label: 'Compliance', icon: Shield },
+          { key: 'calendar', label: 'Calendar', icon: CalendarDays },
+          { key: 'deadlines', label: 'Deadlines', icon: AlertTriangle },
+          { key: 'utilization', label: 'Utilization', icon: PieChartIcon },
         ].map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as typeof activeTab)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px whitespace-nowrap ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-500 border-b-2 transition-colors -mb-px whitespace-nowrap ${
               activeTab === tab.key
                 ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <tab.icon size={13} />
+            <tab.icon size={12} />
             {tab.label}
           </button>
         ))}

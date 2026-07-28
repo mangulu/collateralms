@@ -478,17 +478,17 @@ export default function PerformanceExportContent() {
   return (
     <div className="flex flex-col h-full min-h-0 bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 border-b border-border bg-white shrink-0 gap-3">
         <div>
           <h1 className="text-lg font-700 text-foreground">Performance Export</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Export collateral performance summaries, trend PDFs, and compliance metrics
           </p>
         </div>
         <button
           onClick={handleExport}
           disabled={exporting || statsLoading || !stats}
-          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-600 hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary text-white rounded-lg text-sm font-600 hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm self-start sm:self-auto"
         >
           {exporting ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} />}
           {exporting ? 'Generating…' : `Export ${FORMAT_META[config.format].label}`}
@@ -512,11 +512,11 @@ export default function PerformanceExportContent() {
       )}
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto px-6 py-5">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 max-w-7xl mx-auto">
 
           {/* Left: Config */}
-          <div className="lg:col-span-2 flex flex-col gap-5">
+          <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-5">
 
             {/* Report Category */}
             <section className="bg-white rounded-xl border border-border p-5">

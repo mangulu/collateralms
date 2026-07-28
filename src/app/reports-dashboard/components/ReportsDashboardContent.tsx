@@ -434,18 +434,18 @@ export default function ReportsDashboardContent() {
   const generatedAt = new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="px-6 lg:px-8 xl:px-10 py-6 max-w-screen-2xl mx-auto space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 max-w-screen-2xl mx-auto space-y-4 sm:space-y-6">
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-700 text-foreground">Regulatory Reports Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Registry compliance status · Perfection trend analysis · Officer workload · Audit trail exports
+          <h1 className="text-xl sm:text-2xl font-700 text-foreground">Regulatory Reports Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Registry compliance · Perfection trend · Officer workload · Audit trail
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1.5 rounded-md">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1.5 rounded-md hidden sm:inline">
             Generated: {generatedAt}
           </span>
           <button
@@ -459,7 +459,7 @@ export default function ReportsDashboardContent() {
       </div>
 
       {/* ── Portfolio KPIs ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <KPITile
           label="Total Collateral"
           value={loading ? '—' : collateral.length}
