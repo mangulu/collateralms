@@ -122,7 +122,7 @@ function KpiCard({ label, value, icon: IconComp, color, sub }: {
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-start gap-3">
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
-        <IconComp size={18} className="" />
+        {React.createElement(IconComp as React.ComponentType<{ size?: number; className?: string }>, { size: 18, className: "" })}
       </div>
       <div className="min-w-0">
         <p className="text-2xl font-bold tabular-nums text-foreground font-mono">{value}</p>

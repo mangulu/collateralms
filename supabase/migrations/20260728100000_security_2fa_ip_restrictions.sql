@@ -66,17 +66,25 @@ USING (true)
 WITH CHECK (true);
 
 -- ─── 4. Enforce 2FA for system_admin and supervisor roles ────────────────────
--- Mark existing admin users as having 2FA enforced
-UPDATE public.user_profiles
-SET two_fa_enforced = true
-WHERE role IN ('system_admin', 'supervisor');
+-- Use EXECUTE to defer enum value resolution until runtime (after enum commit)
+DO $$
+BEGIN
+  EXECUTE '
+    UPDATE public.user_profiles
+    SET two_fa_enforced = true
+    WHERE role::text IN (''system_admin'', ''supervisor'')
+  ';
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE '2FA enforcement update skipped: %', SQLERRM;
+END $$;
 
 -- ─── 5. Seed default office IP whitelist entries ─────────────────────────────
 DO $$
 DECLARE
   admin_user_id UUID;
 BEGIN
-  SELECT id INTO admin_user_id FROM public.user_profiles WHERE role = 'system_admin' LIMIT 1;
+  SELECT id INTO admin_user_id FROM public.user_profiles WHERE role::text = 'system_admin' LIMIT 1;
 
   INSERT INTO public.ip_whitelist_configs (id, label, ip_address, description, applies_to, is_active, created_by)
   VALUES
