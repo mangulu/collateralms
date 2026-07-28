@@ -1,6 +1,18 @@
 -- ─── Security: 2FA Enforcement & IP-Based Session Restrictions ───────────────
 -- Migration: 20260728100000_security_2fa_ip_restrictions.sql
 
+-- ─── 0. Extend user_role enum with supervisor value ──────────────────────────
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_enum
+    WHERE enumlabel = 'supervisor'
+      AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role')
+  ) THEN
+    ALTER TYPE public.user_role ADD VALUE 'supervisor';
+  END IF;
+END $$;
+
 -- ─── 1. Add 2FA enforcement flag to user_profiles ────────────────────────────
 ALTER TABLE public.user_profiles
   ADD COLUMN IF NOT EXISTS two_fa_enforced BOOLEAN DEFAULT false;
