@@ -121,10 +121,157 @@ export default function CollateralTable({
   ];
 
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+  // On mobile show max 5 page buttons
+  const visiblePages = totalPages <= 5 ? pageNumbers : pageNumbers.slice(
+    Math.max(0, currentPage - 3),
+    Math.min(totalPages, currentPage + 2)
+  );
+
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-card border border-border overflow-hidden">
+        <EmptyState
+          icon={FolderOpen}
+          title="No collateral records found"
+          description="No records match your current filters. Adjust the search or filters above, or register a new collateral item."
+          actionLabel="Register Collateral"
+          onAction={() => {}}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-card border border-border overflow-hidden">
-      <div className="overflow-x-auto">
+      {/* ── Mobile card layout ── */}
+      <div className="block md:hidden divide-y divide-border">
+        {data.map((item) => {
+          const isSelected = selectedIds.includes(item.id);
+          const isOverdue = item.status === 'Overdue' || (item.daysToDeadline !== null && item.daysToDeadline < 0);
+          const isApproaching = item.daysToDeadline !== null && item.daysToDeadline >= 0 && item.daysToDeadline <= 7;
+
+          return (
+            <div
+              key={`card-${item.id}`}
+              className={`p-4 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
+            >
+              {/* Card header */}
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleRow(item.id)}
+                    className="w-4 h-4 rounded border-border accent-primary cursor-pointer shrink-0"
+                  />
+                  <Link
+                    href={`/collateral-detail/${item.id}`}
+                    className="font-mono text-xs font-600 text-primary hover:underline"
+                  >
+                    {item.collateralId}
+                  </Link>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => router.push(`/collateral-detail/${item.id}`)}
+                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground"
+                    aria-label="View"
+                  >
+                    <Eye size={14} />
+                  </button>
+                  <button
+                    onClick={() => onEdit(item)}
+                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground"
+                    aria-label="Edit"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Obligor */}
+              <div className="mb-2">
+                {item.obligorRefId ? (
+                  <Link href={`/obligors/${item.obligorRefId}`} className="text-sm font-600 text-primary hover:underline">
+                    {item.obligor}
+                  </Link>
+                ) : (
+                  <p className="text-sm font-600 text-foreground">{item.obligor}</p>
+                )}
+                <p className="text-xs text-muted-foreground font-mono">{item.obligorId}</p>
+              </div>
+
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Type: </span>
+                  <span className="text-foreground font-500">{item.type}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Value: </span>
+                  <span className="font-mono font-600 text-foreground">TSh {item.valueTSh}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Registry: </span>
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-500 ${registryColors[item.registry] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {item.registry}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Facility: </span>
+                  {item.facilityId ? (
+                    <Link href={`/loans?facility=${encodeURIComponent(item.facilityId)}`} className="font-mono text-xs text-primary hover:underline">
+                      {item.facilityId}
+                    </Link>
+                  ) : <span className="text-muted-foreground">—</span>}
+                </div>
+                {item.perfectionDeadline && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Deadline: </span>
+                    <span className={`font-500 ${isOverdue ? 'text-red-600' : isApproaching ? 'text-amber-600' : 'text-foreground'}`}>
+                      {item.perfectionDeadline}
+                    </span>
+                    {item.daysToDeadline !== null && (
+                      <span className={`ml-1.5 inline-flex items-center gap-0.5 text-[10px] ${isOverdue ? 'text-red-500' : isApproaching ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                        {isOverdue ? <><AlertTriangle size={9} />{Math.abs(item.daysToDeadline)}d overdue</> : isApproaching ? <><Clock size={9} />{item.daysToDeadline}d left</> : <>{item.daysToDeadline}d remaining</>}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Status + Officer */}
+              <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-border">
+                <div className="relative">
+                  <button
+                    onClick={() => setStatusDropdown(statusDropdown === item.id ? null : item.id)}
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    <Badge variant={statusBadgeMap[item.status]} label={item.status} />
+                  </button>
+                  {statusDropdown === item.id && (
+                    <div className="absolute z-30 top-full mt-1 left-0 bg-white border border-border rounded-lg shadow-dropdown min-w-[140px]">
+                      {statusOptions.map((s) => (
+                        <button
+                          key={`status-opt-m-${item.id}-${s}`}
+                          onClick={() => { onStatusChange(item.id, s); setStatusDropdown(null); }}
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg ${item.status === s ? 'bg-primary/5 font-600 text-primary' : 'text-foreground'}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground">{item.assignedOfficer}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop table layout ── */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm min-w-[1100px]">
           <thead>
             <tr className="bg-muted/60 border-b border-border">
@@ -149,18 +296,8 @@ export default function CollateralTable({
                     {col.label}
                     {col.sortable && (
                       <span className="flex flex-col -space-y-1">
-                        <ChevronUp
-                          size={10}
-                          className={
-                            sortKey === col.key && sortDir === 'asc' ?'text-primary' :'text-muted-foreground/40'
-                          }
-                        />
-                        <ChevronDown
-                          size={10}
-                          className={
-                            sortKey === col.key && sortDir === 'desc' ?'text-primary' :'text-muted-foreground/40'
-                          }
-                        />
+                        <ChevronUp size={10} className={sortKey === col.key && sortDir === 'asc' ? 'text-primary' : 'text-muted-foreground/40'} />
+                        <ChevronDown size={10} className={sortKey === col.key && sortDir === 'desc' ? 'text-primary' : 'text-muted-foreground/40'} />
                       </span>
                     )}
                   </div>
@@ -172,205 +309,159 @@ export default function CollateralTable({
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={12}>
-                  <EmptyState
-                    icon={FolderOpen}
-                    title="No collateral records found"
-                    description="No records match your current filters. Adjust the search or filters above, or register a new collateral item."
-                    actionLabel="Register Collateral"
-                    onAction={() => {}}
-                  />
-                </td>
-              </tr>
-            ) : (
-              data.map((item, i) => {
-                const isSelected = selectedIds.includes(item.id);
-                const isOverdue = item.status === 'Overdue' || (item.daysToDeadline !== null && item.daysToDeadline < 0);
-                const isApproaching = item.daysToDeadline !== null && item.daysToDeadline >= 0 && item.daysToDeadline <= 7;
+            {data.map((item, i) => {
+              const isSelected = selectedIds.includes(item.id);
+              const isOverdue = item.status === 'Overdue' || (item.daysToDeadline !== null && item.daysToDeadline < 0);
+              const isApproaching = item.daysToDeadline !== null && item.daysToDeadline >= 0 && item.daysToDeadline <= 7;
 
-                return (
-                  <tr
-                    key={`row-${item.id}`}
-                    className={`border-b border-border last:border-0 transition-colors group ${
-                      isSelected ? 'bg-primary/5' : i % 2 === 0 ? 'bg-white' : 'bg-muted/20'
-                    } hover:bg-primary/5`}
-                  >
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleRow(item.id)}
-                        className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                        aria-label={`Select ${item.id}`}
-                      />
-                    </td>
-                    {/* ID */}
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs font-600 text-primary">{item.collateralId}</span>
-                    </td>
-                    {/* Obligor */}
-                    <td className="px-4 py-3 max-w-[160px]">
-                      {item.obligorRefId ? (
-                        <Link
-                          href={`/obligors/${item.obligorRefId}`}
-                          className="text-sm font-500 text-primary hover:underline truncate block"
-                          title={item.obligor}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {item.obligor}
-                        </Link>
-                      ) : (
-                        <p className="text-sm font-500 text-foreground truncate">{item.obligor}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground font-mono truncate">{item.obligorId}</p>
-                    </td>
-                    {/* Type */}
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">
-                      {item.type}
-                    </td>
-                    {/* Description */}
-                    <td className="px-4 py-3 max-w-[200px]">
-                      <p className="text-xs text-muted-foreground truncate" title={item.description}>
-                        {item.description}
-                      </p>
-                    </td>
-                    {/* Value */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="font-mono text-xs font-600 text-foreground">
-                        TSh {item.valueTSh}
-                      </span>
-                      {/* Financial health inline indicators */}
-                      {(item.ltvRatio != null || item.availableEquity != null) && (
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {item.ltvRatio != null && (
-                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-600 px-1.5 py-0.5 rounded ${
-                              item.ltvRatio >= 0.8 ? 'bg-red-100 text-red-700' :
-                              item.ltvRatio >= 0.65 ? 'bg-amber-100 text-amber-700': 'bg-green-100 text-green-700'
-                            }`}>
-                              <TrendingUp size={8} />
-                              LTV {Math.round(item.ltvRatio * 100)}%
-                            </span>
-                          )}
-                          {item.availableEquity != null && (
-                            <span className={`text-[10px] font-500 px-1.5 py-0.5 rounded ${
-                              item.availableEquity <= 0 ? 'bg-red-100 text-red-700' :
-                              item.maxSecurableAmount && (item.availableEquity / item.maxSecurableAmount) < 0.2 ? 'bg-amber-100 text-amber-700': 'bg-blue-50 text-blue-700'
-                            }`}>
-                              Eq: TSh {fmtTShCompact(item.availableEquity)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    {/* Facility */}
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-muted-foreground">{item.facilityId}</span>
-                    </td>
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <div className="relative">
-                        <button
-                          onClick={() =>
-                            setStatusDropdown(
-                              statusDropdown === item.id ? null : item.id
-                            )
-                          }
-                          className="cursor-pointer hover:opacity-80 transition-opacity"
-                          aria-label={`Change status for ${item.id}`}
-                        >
-                          <Badge
-                            variant={statusBadgeMap[item.status]}
-                            label={item.status}
-                          />
-                        </button>
-                        {statusDropdown === item.id && (
-                          <div className="absolute z-30 top-full mt-1 left-0 bg-white border border-border rounded-lg shadow-dropdown min-w-[140px]">
-                            {statusOptions.map((s) => (
-                              <button
-                                key={`status-opt-${item.id}-${s}`}
-                                onClick={() => {
-                                  onStatusChange(item.id, s);
-                                  setStatusDropdown(null);
-                                }}
-                                className={`w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                                  item.status === s ? 'bg-primary/5 font-600 text-primary' : 'text-foreground'
-                                }`}
-                              >
-                                {s}
-                              </button>
-                            ))}
-                          </div>
+              return (
+                <tr
+                  key={`row-${item.id}`}
+                  className={`border-b border-border last:border-0 transition-colors group ${
+                    isSelected ? 'bg-primary/5' : i % 2 === 0 ? 'bg-white' : 'bg-muted/20'
+                  } hover:bg-primary/5`}
+                >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleRow(item.id)}
+                      className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                      aria-label={`Select ${item.id}`}
+                    />
+                  </td>
+                  {/* ID */}
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/collateral-detail/${item.id}`}
+                      className="font-mono text-xs font-600 text-primary hover:underline cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {item.collateralId}
+                    </Link>
+                  </td>
+                  {/* Obligor */}
+                  <td className="px-4 py-3 max-w-[160px]">
+                    {item.obligorRefId ? (
+                      <Link
+                        href={`/obligors/${item.obligorRefId}`}
+                        className="text-sm font-500 text-primary hover:underline truncate block"
+                        title={item.obligor}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {item.obligor}
+                      </Link>
+                    ) : (
+                      <p className="text-sm font-500 text-foreground truncate">{item.obligor}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground font-mono truncate">{item.obligorId}</p>
+                  </td>
+                  {/* Type */}
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-foreground">{item.type}</td>
+                  {/* Description */}
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <p className="text-xs text-muted-foreground truncate" title={item.description}>{item.description}</p>
+                  </td>
+                  {/* Value */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="font-mono text-xs font-600 text-foreground">TSh {item.valueTSh}</span>
+                    {(item.ltvRatio != null || item.availableEquity != null) && (
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {item.ltvRatio != null && (
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-600 px-1.5 py-0.5 rounded ${item.ltvRatio >= 0.8 ? 'bg-red-100 text-red-700' : item.ltvRatio >= 0.65 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                            <TrendingUp size={8} />LTV {Math.round(item.ltvRatio * 100)}%
+                          </span>
+                        )}
+                        {item.availableEquity != null && (
+                          <span className={`text-[10px] font-500 px-1.5 py-0.5 rounded ${item.availableEquity <= 0 ? 'bg-red-100 text-red-700' : item.maxSecurableAmount && (item.availableEquity / item.maxSecurableAmount) < 0.2 ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>
+                            Eq: TSh {fmtTShCompact(item.availableEquity)}
+                          </span>
                         )}
                       </div>
-                    </td>
-                    {/* Registry */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-500 ${
-                          registryColors[item.registry] ?? 'bg-gray-100 text-gray-600'
-                        }`}
+                    )}
+                  </td>
+                  {/* Facility */}
+                  <td className="px-4 py-3">
+                    {item.facilityId ? (
+                      <Link href={`/loans?facility=${encodeURIComponent(item.facilityId)}`} className="font-mono text-xs text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                        {item.facilityId}
+                      </Link>
+                    ) : (
+                      <span className="font-mono text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  {/* Status */}
+                  <td className="px-4 py-3">
+                    <div className="relative">
+                      <button
+                        onClick={() => setStatusDropdown(statusDropdown === item.id ? null : item.id)}
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        aria-label={`Change status for ${item.id}`}
                       >
-                        {item.registry}
-                      </span>
-                    </td>
-                    {/* Deadline */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {item.perfectionDeadline ? (
-                        <div>
-                          <p className={`text-xs font-500 ${isOverdue ? 'text-red-600' : isApproaching ? 'text-amber-600' : 'text-foreground'}`}>
-                            {item.perfectionDeadline}
-                          </p>
-                          {item.daysToDeadline !== null && (
-                            <p className={`text-[10px] flex items-center gap-0.5 ${
-                              isOverdue ? 'text-red-500' : isApproaching ? 'text-amber-500' : 'text-muted-foreground'
-                            }`}>
-                              {isOverdue ? (
-                                <><AlertTriangle size={9} />{Math.abs(item.daysToDeadline)}d overdue</>
-                              ) : isApproaching ? (
-                                <><Clock size={9} />{item.daysToDeadline}d left</>
-                              ) : (
-                                <>{item.daysToDeadline}d remaining</>
-                              )}
-                            </p>
-                          )}
+                        <Badge variant={statusBadgeMap[item.status]} label={item.status} />
+                      </button>
+                      {statusDropdown === item.id && (
+                        <div className="absolute z-30 top-full mt-1 left-0 bg-white border border-border rounded-lg shadow-dropdown min-w-[140px]">
+                          {statusOptions.map((s) => (
+                            <button
+                              key={`status-opt-${item.id}-${s}`}
+                              onClick={() => { onStatusChange(item.id, s); setStatusDropdown(null); }}
+                              className={`w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg ${item.status === s ? 'bg-primary/5 font-600 text-primary' : 'text-foreground'}`}
+                            >
+                              {s}
+                            </button>
+                          ))}
                         </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">N/A</span>
                       )}
-                    </td>
-                    {/* Officer */}
-                    <td className="px-4 py-3 text-sm text-foreground whitespace-nowrap">
-                      {item.assignedOfficer}
-                    </td>
-                    {/* Actions */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="relative group/btn">
-                          <button
-                            onClick={() => router.push(`/collateral-detail/${item.id}`)}
-                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            aria-label="View collateral details"
-                          >
-                            <Eye size={14} />
-                          </button>
-                        </div>
-                        <div className="relative group/btn">
-                          <button
-                            onClick={() => onEdit(item)}
-                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            aria-label="Edit collateral record"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        </div>
+                    </div>
+                  </td>
+                  {/* Registry */}
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-500 ${registryColors[item.registry] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {item.registry}
+                    </span>
+                  </td>
+                  {/* Deadline */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {item.perfectionDeadline ? (
+                      <div>
+                        <p className={`text-xs font-500 ${isOverdue ? 'text-red-600' : isApproaching ? 'text-amber-600' : 'text-foreground'}`}>
+                          {item.perfectionDeadline}
+                        </p>
+                        {item.daysToDeadline !== null && (
+                          <p className={`text-[10px] flex items-center gap-0.5 ${isOverdue ? 'text-red-500' : isApproaching ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                            {isOverdue ? <><AlertTriangle size={9} />{Math.abs(item.daysToDeadline)}d overdue</> : isApproaching ? <><Clock size={9} />{item.daysToDeadline}d left</> : <>{item.daysToDeadline}d remaining</>}
+                          </p>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
+                    ) : (
+                      <span className="text-xs text-muted-foreground">N/A</span>
+                    )}
+                  </td>
+                  {/* Officer */}
+                  <td className="px-4 py-3 text-sm text-foreground whitespace-nowrap">{item.assignedOfficer}</td>
+                  {/* Actions */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => router.push(`/collateral-detail/${item.id}`)}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        aria-label="View collateral details"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        onClick={() => onEdit(item)}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        aria-label="Edit collateral record"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -380,11 +471,10 @@ export default function CollateralTable({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-border bg-muted/30">
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground">
-              Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)}–
-              {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
+              {Math.min((currentPage - 1) * itemsPerPage + 1, totalCount)}–{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
             </span>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Per page:</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">Per page:</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
@@ -406,13 +496,12 @@ export default function CollateralTable({
             >
               <ChevronLeft size={13} />
             </button>
-            {pageNumbers.map((n) => (
+            {visiblePages.map((n) => (
               <button
                 key={`page-${n}`}
                 onClick={() => onPageChange(n)}
                 className={`w-7 h-7 flex items-center justify-center rounded border text-xs font-500 transition-colors ${
-                  n === currentPage
-                    ? 'bg-primary text-white border-primary' :'bg-white border-border hover:bg-muted text-foreground'
+                  n === currentPage ? 'bg-primary text-white border-primary' : 'bg-white border-border hover:bg-muted text-foreground'
                 }`}
               >
                 {n}

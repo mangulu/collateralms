@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw, ShieldCheck, BadgeCheck, Globe } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw, ShieldCheck, BadgeCheck, Globe, Mail, ArrowLeft } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -16,11 +16,30 @@ interface LoginFormData {
   rememberMe: boolean;
 }
 
+interface ResetFormData {
+  resetEmail: string;
+}
+
 export default function LoginForm() {
   const router = useRouter();
   const { signIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // 2FA setup required notice (for sensitive roles without phone)
+  const searchParams = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : null;
+  const [show2FASetupNotice] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('require_2fa_setup') === '1';
+  });
+
+  // Password reset state
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // 2FA state
   const [twoFARequired, setTwoFARequired] = useState(false);
@@ -39,6 +58,13 @@ export default function LoginForm() {
     defaultValues: { rememberMe: false },
   });
 
+  const {
+    register: registerReset,
+    handleSubmit: handleResetSubmit,
+    formState: { errors: resetErrors },
+    reset: resetResetForm,
+  } = useForm<ResetFormData>();
+
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
@@ -47,13 +73,31 @@ export default function LoginForm() {
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('two_fa_enabled, phone, full_name')
+        .select('two_fa_enabled, two_fa_enforced, phone, full_name, role')
         .eq('id', result.user?.id)
         .single();
 
-      if (profile?.two_fa_enabled && profile?.phone) {
+      // Determine if 2FA is required:
+      // - Enforced for sensitive roles (system_admin, supervisor) regardless of opt-in
+      // - Also triggered if user has voluntarily enabled it
+      const SENSITIVE_ROLES = ['system_admin', 'supervisor'];
+      const roleRequires2FA = SENSITIVE_ROLES.includes(profile?.role ?? '');
+      const needs2FA = roleRequires2FA || profile?.two_fa_enabled;
+
+      if (needs2FA) {
+        // If sensitive role but no phone set up yet, sign out and prompt setup
+        if (!profile?.phone) {
+          await supabase.auth.signOut();
+          setIsLoading(false);
+          toast.error(
+            'Your role requires Two-Factor Authentication. Please contact your administrator to set up 2FA on your account.',
+            { duration: 8000 }
+          );
+          return;
+        }
+
         await supabase.auth.signOut();
-        setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name });
+        setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name, role: profile.role });
         await sendOTP(profile.phone, result.user?.id);
         setTwoFARequired(true);
         setIsLoading(false);
@@ -67,6 +111,30 @@ export default function LoginForm() {
       setIsLoading(false);
       toast.error(err?.message ?? 'Invalid credentials — please try again');
     }
+  };
+
+  const onResetSubmit = async (data: ResetFormData) => {
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(data.resetEmail, {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+    } catch (err: any) {
+      setResetError(err?.message ?? 'Failed to send reset email. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const closeResetModal = () => {
+    setShowResetModal(false);
+    setResetSent(false);
+    setResetError(null);
+    resetResetForm();
   };
 
   const sendOTP = async (phone: string, userId?: string) => {
@@ -225,207 +293,321 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
-      {/* Left panel — IZOU-style gradient */}
-      <div
-        className="relative flex min-h-screen flex-col overflow-hidden"
-        style={{
-          background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
-        }}
-      >
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} aria-hidden="true" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} aria-hidden="true" />
-        {/* Decorative lines */}
-        <svg className="pointer-events-none absolute bottom-0 left-0 h-[55%] w-[70%] text-white/20" viewBox="0 0 400 320" fill="none" preserveAspectRatio="xMinYMax slice" aria-hidden="true">
-          <path d="M-20 280 C 60 220, 140 240, 200 200 C 260 160, 300 180, 380 120" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M-40 320 C 40 260, 120 280, 180 240 C 240 200, 280 220, 360 160" stroke="currentColor" strokeWidth="1" opacity="0.6" />
-          <path d="M0 300 C 80 250, 160 260, 220 220 C 280 180, 320 200, 400 150" stroke="currentColor" strokeWidth="0.75" opacity="0.35" />
-        </svg>
+    <>
+      <div className="min-h-screen grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
+        {/* Left panel — IZOU-style gradient */}
+        <div
+          className="relative flex min-h-screen flex-col overflow-hidden"
+          style={{
+            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+          }}
+        >
+          {/* Decorative blobs */}
+          <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} aria-hidden="true" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} aria-hidden="true" />
+          {/* Decorative lines */}
+          <svg className="pointer-events-none absolute bottom-0 left-0 h-[55%] w-[70%] text-white/20" viewBox="0 0 400 320" fill="none" preserveAspectRatio="xMinYMax slice" aria-hidden="true">
+            <path d="M-20 280 C 60 220, 140 240, 200 200 C 260 160, 300 180, 380 120" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M-40 320 C 40 260, 120 280, 180 240 C 240 200, 280 220, 360 160" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+            <path d="M0 300 C 80 250, 160 260, 220 220 C 280 180, 320 200, 400 150" stroke="currentColor" strokeWidth="0.75" opacity="0.35" />
+          </svg>
 
-        {/* Main content */}
-        <main className="relative z-10 flex flex-1 flex-col justify-center px-8 py-12 sm:px-10">
-          <div className="mx-auto w-full max-w-sm">
-            <header className="mb-8">
-              <AppLogo size={40} />
-              <h1 className="mt-5 text-2xl font-bold tracking-tight text-white sm:text-[1.75rem]">Welcome back</h1>
-              <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                Sign in to your <span className="font-semibold text-white">CollateralMS</span> account
-              </p>
-            </header>
+          {/* Main content */}
+          <main className="relative z-10 flex flex-1 flex-col justify-center px-8 py-12 sm:px-10">
+            <div className="mx-auto w-full max-w-sm">
+              <header className="mb-8">
+                <AppLogo size={40} />
+                <h1 className="mt-5 text-2xl font-bold tracking-tight text-white sm:text-[1.75rem]">Welcome back</h1>
+                <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  Sign in to your <span className="font-semibold text-white">CollateralMS</span> account
+                </p>
+              </header>
 
-            {/* Trust badges */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-8">
-              {[
-                { icon: ShieldCheck, label: 'Secure' },
-                { icon: BadgeCheck, label: 'Reliable' },
-                { icon: Globe, label: 'Built for Africa' },
-              ].map(({ icon: Icon, label }) => (
-                <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium text-white/90">
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-                  >
-                    <Icon size={11} className="text-white" aria-hidden="true" />
+              {/* Trust badges */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-8">
+                {[
+                  { icon: ShieldCheck, label: 'Secure' },
+                  { icon: BadgeCheck, label: 'Reliable' },
+                  { icon: Globe, label: 'Built for Africa' },
+                ].map(({ icon: Icon, label }) => (
+                  <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium text-white/90">
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                    >
+                      <Icon size={11} className="text-white" aria-hidden="true" />
+                    </span>
+                    {label}
                   </span>
-                  {label}
-                </span>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </main>
-      </div>
+          </main>
+        </div>
 
-      {/* Right panel — login form */}
-      <aside
-        className="relative flex min-h-screen items-center justify-center px-6 py-10 lg:px-10"
-        style={{ backgroundColor: '#f8fafc' }}
-      >
-        <div className="w-full max-w-[30rem]">
-          <div
-            className="bg-white rounded-2xl shadow-xl p-8 sm:p-9"
-            style={{ border: '1px solid var(--izou-border)' }}
-          >
-            <div className="mb-6">
-              <h2 className="text-xl font-bold" style={{ color: 'var(--izou-text)' }}>Sign in</h2>
-              <p className="text-sm mt-1" style={{ color: 'var(--izou-muted)' }}>Enter your credentials to access the system</p>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
-              {/* Email */}
-              <label className="group block">
-                <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--izou-text)' }}>Email address</span>
-                <div className="relative">
-                  <input
-                    type="email"
-                    autoComplete="email"
-                    placeholder="yourname@bank.co.tz"
-                    className="w-full rounded-xl px-3.5 text-sm outline-none transition h-12 focus:ring-2"
-                    style={{
-                      border: errors.email ? '1px solid #dc2626' : '1px solid var(--izou-border)',
-                      backgroundColor: 'var(--izou-primary-light)',
-                      color: 'var(--izou-text)',
-                    }}
-                    {...register('email', {
-                      required: 'Email address is required',
-                      pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
-                    })}
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle size={12} />{errors.email.message}
-                  </p>
-                )}
-              </label>
-
-              {/* Password */}
-              <label className="group block">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="block text-sm font-medium" style={{ color: 'var(--izou-text)' }}>Password</span>
-                  <button type="button" className="text-xs font-semibold hover:underline" style={{ color: 'var(--izou-primary)' }}>
-                    Forgot password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder="Enter your password"
-                    className="w-full rounded-xl px-3.5 pr-10 text-sm outline-none transition h-12 focus:ring-2"
-                    style={{
-                      border: errors.password ? '1px solid #dc2626' : '1px solid var(--izou-border)',
-                      backgroundColor: 'var(--izou-primary-light)',
-                      color: 'var(--izou-text)',
-                    }}
-                    {...register('password', {
-                      required: 'Password is required',
-                      minLength: { value: 6, message: 'Password must be at least 6 characters' },
-                    })}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 transition-colors focus:outline-none"
-                    style={{ color: 'var(--izou-muted)' }}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle size={12} />{errors.password.message}
-                  </p>
-                )}
-              </label>
-
-              {/* Remember me */}
-              <div className="flex items-center gap-2">
-                <input
-                  id="rememberMe"
-                  type="checkbox"
-                  className="w-4 h-4 rounded"
-                  style={{ accentColor: 'var(--izou-primary)' }}
-                  {...register('rememberMe')}
-                />
-                <label htmlFor="rememberMe" className="text-sm" style={{ color: 'var(--izou-muted)' }}>
-                  Keep me signed in for 8 hours
-                </label>
+        {/* Right panel — login form */}
+        <aside
+          className="relative flex min-h-screen items-center justify-center px-6 py-10 lg:px-10"
+          style={{ backgroundColor: '#f8fafc' }}
+        >
+          <div className="w-full max-w-[30rem]">
+            <div
+              className="bg-white rounded-2xl shadow-xl p-8 sm:p-9"
+              style={{ border: '1px solid var(--izou-border)' }}
+            >
+              <div className="mb-6">
+                <h2 className="text-xl font-bold" style={{ color: 'var(--izou-text)' }}>Sign in</h2>
+                <p className="text-sm mt-1" style={{ color: 'var(--izou-muted)' }}>Enter your credentials to access the system</p>
               </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="izou-btn-primary inline-flex items-center justify-center gap-2 rounded-xl font-semibold h-12 w-full text-base disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+              {/* 2FA setup required notice */}
+              {show2FASetupNotice && (
+                <div className="flex items-start gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: '#fff7ed', border: '1px solid #fed7aa' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div>
+                    <p className="text-xs font-semibold text-orange-800">Two-Factor Authentication Required</p>
+                    <p className="text-xs text-orange-700 mt-0.5">Your role requires 2FA. Please sign in and contact your administrator to register a phone number for SMS verification.</p>
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-4">
+                {/* Email */}
+                <label className="group block">
+                  <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--izou-text)' }}>Email address</span>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      placeholder="yourname@bank.co.tz"
+                      className="w-full rounded-xl px-3.5 text-sm outline-none transition h-12 focus:ring-2"
+                      style={{
+                        border: errors.email ? '1px solid #dc2626' : '1px solid var(--izou-border)',
+                        backgroundColor: 'var(--izou-primary-light)',
+                        color: 'var(--izou-text)',
+                      }}
+                      {...register('email', {
+                        required: 'Email address is required',
+                        pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
+                      })}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle size={12} />{errors.email.message}
+                    </p>
+                  )}
+                </label>
+
+                {/* Password */}
+                <label className="group block">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="block text-sm font-medium" style={{ color: 'var(--izou-text)' }}>Password</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowResetModal(true)}
+                      className="text-xs font-semibold hover:underline"
+                      style={{ color: 'var(--izou-primary)' }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="Enter your password"
+                      className="w-full rounded-xl px-3.5 pr-10 text-sm outline-none transition h-12 focus:ring-2"
+                      style={{
+                        border: errors.password ? '1px solid #dc2626' : '1px solid var(--izou-border)',
+                        backgroundColor: 'var(--izou-primary-light)',
+                        color: 'var(--izou-text)',
+                      }}
+                      {...register('password', {
+                        required: 'Password is required',
+                        minLength: { value: 6, message: 'Password must be at least 6 characters' },
+                      })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 transition-colors focus:outline-none"
+                      style={{ color: 'var(--izou-muted)' }}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle size={12} />{errors.password.message}
+                    </p>
+                  )}
+                </label>
+
+                {/* Remember me */}
+                <div className="flex items-center gap-2">
+                  <input
+                    id="rememberMe"
+                    type="checkbox"
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: 'var(--izou-primary)' }}
+                    {...register('rememberMe')}
+                  />
+                  <label htmlFor="rememberMe" className="text-sm" style={{ color: 'var(--izou-muted)' }}>
+                    Keep me signed in for 8 hours
+                  </label>
+                </div>
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="izou-btn-primary inline-flex items-center justify-center gap-2 rounded-xl font-semibold h-12 w-full text-base disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+                >
+                  {isLoading ? (
+                    <><RefreshCw size={16} className="animate-spin" /> Signing in…</>
+                  ) : (
+                    'Sign In'
+                  )}
+                </button>
+              </form>
+
+              {/* Trust indicators */}
+              <div
+                className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6 pt-5"
+                style={{ borderTop: '1px solid var(--izou-border)' }}
               >
-                {isLoading ? (
-                  <><RefreshCw size={16} className="animate-spin" /> Signing in…</>
-                ) : (
-                  'Sign In'
-                )}
-              </button>
-            </form>
-
-            {/* Trust indicators */}
-            <div
-              className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-6 pt-5"
-              style={{ borderTop: '1px solid var(--izou-border)' }}
-            >
-              {[
-                { icon: ShieldCheck, label: 'Secure' },
-                { icon: BadgeCheck, label: 'Reliable' },
-                { icon: Globe, label: 'Built for Africa' },
-              ].map(({ icon: Icon, label }) => (
-                <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--izou-text)' }}>
-                  <span
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                    style={{ backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary)' }}
-                  >
-                    <Icon size={11} aria-hidden="true" />
+                {[
+                  { icon: ShieldCheck, label: 'Secure' },
+                  { icon: BadgeCheck, label: 'Reliable' },
+                  { icon: Globe, label: 'Built for Africa' },
+                ].map(({ icon: Icon, label }) => (
+                  <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--izou-text)' }}>
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary)' }}
+                    >
+                      <Icon size={11} aria-hidden="true" />
+                    </span>
+                    {label}
                   </span>
-                  {label}
-                </span>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <p className="mt-4 text-center text-xs" style={{ color: 'var(--izou-muted)' }}>
-            A product by{' '}
-            <a
-              href="https://www.contentpro.co.tz"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold hover:underline"
-              style={{ color: 'var(--izou-primary)' }}
-            >
-              Contentpro
-            </a>
-            {' '}· Deployable for any bank
-          </p>
+            <p className="mt-4 text-center text-xs" style={{ color: 'var(--izou-muted)' }}>
+              A product by{' '}
+              <a
+                href="https://www.contentpro.co.tz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold hover:underline"
+                style={{ color: 'var(--izou-primary)' }}
+              >
+                Contentpro
+              </a>
+              {' '}· Deployable for any bank
+            </p>
+          </div>
+        </aside>
+      </div>
+
+      {/* Password Reset Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8" style={{ border: '1px solid var(--izou-border)' }}>
+            {!resetSent ? (
+              <>
+                <div className="flex items-center gap-3 mb-6">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: 'var(--izou-primary-light)' }}
+                  >
+                    <Mail size={18} style={{ color: 'var(--izou-primary)' }} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: 'var(--izou-text)' }}>Reset your password</h3>
+                    <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>We'll send a recovery link to your email</p>
+                  </div>
+                </div>
+
+                {resetError && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
+                    <AlertCircle size={14} className="text-red-600 shrink-0" />
+                    <p className="text-xs text-red-700">{resetError}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleResetSubmit(onResetSubmit)} noValidate className="space-y-4">
+                  <label className="block">
+                    <span className="block text-sm font-medium mb-1.5" style={{ color: 'var(--izou-text)' }}>Email address</span>
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      placeholder="yourname@bank.co.tz"
+                      className="w-full rounded-xl px-3.5 text-sm outline-none transition h-12 focus:ring-2"
+                      style={{
+                        border: resetErrors.resetEmail ? '1px solid #dc2626' : '1px solid var(--izou-border)',
+                        backgroundColor: 'var(--izou-primary-light)',
+                        color: 'var(--izou-text)',
+                      }}
+                      {...registerReset('resetEmail', {
+                        required: 'Email address is required',
+                        pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
+                      })}
+                    />
+                    {resetErrors.resetEmail && (
+                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle size={12} />{resetErrors.resetEmail.message}
+                      </p>
+                    )}
+                  </label>
+
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={closeResetModal}
+                      className="flex-1 h-11 rounded-xl font-semibold text-sm transition-colors"
+                      style={{ border: '1px solid var(--izou-border)', color: 'var(--izou-muted)', backgroundColor: 'white' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={resetLoading}
+                      className="flex-1 izou-btn-primary h-11 rounded-xl font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {resetLoading ? <RefreshCw size={14} className="animate-spin" /> : null}
+                      Send Reset Link
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: '#f0fdf4' }}
+                >
+                  <CheckCircle2 size={28} className="text-green-600" />
+                </div>
+                <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--izou-text)' }}>Check your inbox</h3>
+                <p className="text-sm mb-6" style={{ color: 'var(--izou-muted)' }}>
+                  A password reset link has been sent to your email address. The link expires in 1 hour.
+                </p>
+                <button
+                  onClick={closeResetModal}
+                  className="izou-btn-primary px-6 h-11 rounded-xl font-semibold text-sm flex items-center gap-2 mx-auto"
+                >
+                  <ArrowLeft size={14} />
+                  Back to Sign In
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </aside>
-    </div>
+      )}
+    </>
   );
 }

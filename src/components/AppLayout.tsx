@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import GlobalSearch from './GlobalSearch';
-import { Menu } from 'lucide-react';
+import { Menu, HelpCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -77,6 +78,18 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
           <div className="flex-1 max-w-sm">
             <GlobalSearch />
           </div>
+          {/* Global Help / Guide icon */}
+          <Link
+            href="/onboarding-guide"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
+            style={{ color: 'var(--izou-primary)', border: '1px solid var(--izou-border)' }}
+            title="Open Onboarding Guide"
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+          >
+            <HelpCircle size={15} />
+            <span>Guide</span>
+          </Link>
         </div>
 
         <div className="flex-1 overflow-y-auto">

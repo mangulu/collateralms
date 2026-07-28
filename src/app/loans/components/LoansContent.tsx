@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Plus, Search, X, Loader2, AlertCircle, RefreshCw, Building2, CreditCard, Calendar, CheckCircle2, XCircle, Clock, Edit2, Trash2, BarChart2,  } from 'lucide-react';
 import { loanService, Loan } from '@/lib/supabase/loanService';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
@@ -50,6 +51,7 @@ function formatTsh(val: number | null | undefined): string {
 
 export default function LoansContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [obligors, setObligors] = useState<Obligor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +82,12 @@ export default function LoansContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Pre-filter by facility query param
+  useEffect(() => {
+    const facility = searchParams.get('facility');
+    if (facility) setSearch(facility);
+  }, [searchParams]);
 
   const filtered = loans.filter((l) => {
     const q = search.toLowerCase();

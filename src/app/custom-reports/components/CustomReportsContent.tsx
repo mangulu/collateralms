@@ -622,25 +622,25 @@ export default function CustomReportsContent() {
   const unscheduledReports = reports.filter((r) => !r.isScheduled);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-500 fade-in ${
+        <div className={`fixed top-5 right-4 sm:right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg text-sm font-500 fade-in max-w-xs sm:max-w-sm ${
           toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
         }`}>
           {toast.type === 'success' ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
-          {toast.msg}
-          <button onClick={() => setToast(null)} className="ml-1 opacity-70 hover:opacity-100">
+          <span className="flex-1 min-w-0 truncate">{toast.msg}</span>
+          <button onClick={() => setToast(null)} className="ml-1 opacity-70 hover:opacity-100 shrink-0">
             <X size={13} />
           </button>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-black text-foreground">Custom Reports</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-lg sm:text-xl font-black text-foreground">Custom Reports</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Build, save, and schedule tailored collateral reports with custom filters and export formats
           </p>
         </div>
@@ -656,10 +656,11 @@ export default function CustomReportsContent() {
           {!showForm && (
             <button
               onClick={() => { setEditingReport(null); setShowForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-600 rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white text-sm font-600 rounded-lg hover:bg-primary/90 transition-colors"
             >
               <Plus size={15} />
-              New Report
+              <span className="hidden xs:inline">New Report</span>
+              <span className="xs:hidden">New</span>
             </button>
           )}
         </div>

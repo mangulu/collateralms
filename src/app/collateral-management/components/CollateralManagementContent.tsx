@@ -316,17 +316,17 @@ export default function CollateralManagementContent() {
   }
 
   return (
-    <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 max-w-screen-2xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6">
         <div>
-          <h1 className="text-2xl font-700 text-foreground">Collateral Registry</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-700 text-foreground">Collateral Registry</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {collateralData.length} total records · {filtered.length} shown ·{' '}
             {collateralData.filter((c) => c.status === 'Overdue').length} overdue
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative" ref={exportMenuRef}>
             <button
               onClick={() => setExportMenuOpen((v) => !v)}
@@ -361,13 +361,14 @@ export default function CollateralManagementContent() {
             className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-md text-sm font-600 hover:bg-primary/90 transition-all active:scale-95"
           >
             <Plus size={14} />
-            Register Collateral
+            <span className="hidden xs:inline">Register Collateral</span>
+            <span className="xs:hidden">Register</span>
           </button>
         </div>
       </div>
 
       {/* Search + Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
         <div className="relative flex-1">
           <Search
             size={14}
@@ -375,7 +376,7 @@ export default function CollateralManagementContent() {
           />
           <input
             type="text"
-            placeholder="Search by obligor, collateral ID, facility ID, or description..."
+            placeholder="Search by obligor, ID, or description..."
             value={filters.search}
             onChange={(e) => {
               setFilters((f) => ({ ...f, search: e.target.value }));
@@ -436,7 +437,7 @@ export default function CollateralManagementContent() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => toast.info('Assign officer — bulk update dialog coming')}
-              className="px-3 py-1.5 text-xs font-500 bg-white/20 hover:bg-white/30 rounded transition-colors"
+              className="px-3 py-1.5 text-xs font-500 bg-white/20 hover:bg-white/30 rounded transition-colors hidden sm:block"
             >
               Assign Officer
             </button>
@@ -444,7 +445,7 @@ export default function CollateralManagementContent() {
               onClick={handleBulkDelete}
               className="px-3 py-1.5 text-xs font-500 bg-red-500 hover:bg-red-600 rounded transition-colors"
             >
-              Remove Selected
+              Remove
             </button>
             <button
               onClick={() => setSelectedIds([])}

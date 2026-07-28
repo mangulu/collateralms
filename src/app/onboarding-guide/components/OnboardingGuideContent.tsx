@@ -1,6 +1,7 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   FolderOpen, Users, CheckSquare, Brain, Bell, BarChart2, ShieldCheck, Settings, Archive,
   ChevronRight, ChevronDown, Zap, Map, ShieldAlert, ScanSearch, Target, LineChart, TrendingUp,
@@ -630,8 +631,26 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function OnboardingGuideContent() {
+  const searchParams = useSearchParams();
+  const moduleParam = searchParams?.get('module');
+
   const [activeModule, setActiveModule] = useState<string | null>('collaterals');
   const [search, setSearch] = useState('');
+
+  // Deep-link: if ?module=xxx is provided, open that module panel
+  useEffect(() => {
+    if (moduleParam) {
+      const found = MODULES.find((m) => m.id === moduleParam);
+      if (found) {
+        setActiveModule(found.id);
+        // Scroll to the module panel after a short delay for render
+        setTimeout(() => {
+          const el = document.getElementById(`module-panel-${found.id}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+      }
+    }
+  }, [moduleParam]);
 
   const filtered = search.trim()
     ? MODULES.filter(
@@ -678,7 +697,7 @@ export default function OnboardingGuideContent() {
               { label: 'Step-by-step workflows', icon: Play },
             ].map(({ label, icon: StatIcon }) => (
               <div key={label} className="flex items-center gap-1.5">
-                <StatIcon size={13} className="text-blue-300" />
+                {React.createElement(StatIcon, { size: 13, className: "text-blue-300" })}
                 <span className="text-blue-100 text-xs font-medium">{label}</span>
               </div>
             ))}
@@ -721,12 +740,13 @@ export default function OnboardingGuideContent() {
             </div>
           ) : (
             filtered.map((mod) => (
-              <ModulePanel
-                key={mod.id}
-                module={mod}
-                isActive={activeModule === mod.id}
-                onToggle={() => toggleModule(mod.id)}
-              />
+              <div key={mod.id} id={`module-panel-${mod.id}`}>
+                <ModulePanel
+                  module={mod}
+                  isActive={activeModule === mod.id}
+                  onToggle={() => toggleModule(mod.id)}
+                />
+              </div>
             ))
           )}
         </div>

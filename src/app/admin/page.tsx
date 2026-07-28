@@ -5,15 +5,16 @@ import AppLayout from '@/components/AppLayout';
 import AccessDenied from '@/components/AccessDenied';
 import AdminUsersTab from './components/AdminUsersTab';
 import AdminRolesTab from './components/AdminRolesTab';
+import IpWhitelistContent from './components/IpWhitelistContent';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
-import { Users, Shield, Settings2 } from 'lucide-react';
+import { Users, Shield, Settings2, Network } from 'lucide-react';
 
-type Tab = 'users' | 'roles';
+type Tab = 'users' | 'roles' | 'ip_whitelist';
 
 export default function AdminPage() {
   const pathname = usePathname();
   const [activeTab, setActiveTab] = useState<Tab>('users');
-  const { hasPermission, loading } = usePermissions();
+  const { hasPermission, loading, isSystemAdmin } = usePermissions();
 
   const canView = hasPermission(PERMISSIONS.USER_MANAGEMENT_VIEW);
   const canManageRoles = hasPermission(PERMISSIONS.ROLES_VIEW);
@@ -49,7 +50,7 @@ export default function AdminPage() {
           <button
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              activeTab === 'users' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              activeTab === 'users' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             }`}
           >
             <Users size={15} />
@@ -59,11 +60,22 @@ export default function AdminPage() {
             <button
               onClick={() => setActiveTab('roles')}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                activeTab === 'roles' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                activeTab === 'roles' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
               }`}
             >
               <Shield size={15} />
               Roles &amp; Permissions
+            </button>
+          )}
+          {!loading && isSystemAdmin && (
+            <button
+              onClick={() => setActiveTab('ip_whitelist')}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === 'ip_whitelist' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+            >
+              <Network size={15} />
+              IP Whitelist
             </button>
           )}
         </div>
@@ -76,6 +88,13 @@ export default function AdminPage() {
               <AdminRolesTab />
             ) : (
               <AccessDenied title="role management" />
+            )
+          )}
+          {activeTab === 'ip_whitelist' && (
+            isSystemAdmin ? (
+              <IpWhitelistContent />
+            ) : (
+              <AccessDenied title="IP whitelist management" />
             )
           )}
         </div>

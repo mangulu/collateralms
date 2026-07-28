@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -54,6 +54,15 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Batch Release', icon: Unlock, href: '/batch-release', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Bulk Upload', icon: Upload, href: '/bulk-upload', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Scheduled Jobs', icon: CalendarClock, href: '/scheduled-jobs', permission: PERMISSIONS.COLLATERAL_EDIT },
+        ],
+      },
+      {
+        label: 'Loan Operations',
+        items: [
+          { label: 'Valuation Workflow', icon: RefreshCw, href: '/valuation-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Collateral Substitution', icon: ArrowLeftRight, href: '/collateral-substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Covenant Tracking', icon: Scale, href: '/covenant-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Insurance Tracking', icon: Shield, href: '/insurance-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -127,6 +136,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Alerts Inbox', icon: Inbox, href: '/alerts-inbox', permission: PERMISSIONS.DASHBOARD_VIEW },
           { label: 'Deadline Reminders', icon: AlarmClock, href: '/deadline-reminders', permission: PERMISSIONS.DASHBOARD_VIEW },
           { label: 'Alert Delivery Log', icon: SendHorizonal, href: '/alerts-delivery', permission: PERMISSIONS.DASHBOARD_VIEW },
+          { label: 'SMS Notification Rules', icon: MessageSquare, href: '/sms-notification-rules', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
     ],
@@ -141,6 +151,14 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Reports Hub', icon: BarChart2, href: '/reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Custom Reports', icon: ScrollText, href: '/custom-reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Export', icon: Download, href: '/export', permission: PERMISSIONS.REPORTS_VIEW },
+        ],
+      },
+      {
+        label: 'Reporting & Compliance',
+        items: [
+          { label: 'Scheduled Report Delivery', icon: Mail, href: '/scheduled-report-delivery', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Regulatory Submission Tracking', icon: FileCheck, href: '/regulatory-submission-tracking', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'LTV Breach Alerts', icon: TrendingDown, href: '/ltv-breach-alerts', permission: PERMISSIONS.REPORTS_VIEW },
         ],
       },
     ],
@@ -231,6 +249,10 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-record': 'collaterals',
   '/collateral-library': 'collaterals',
   '/collateral-history': 'collaterals',
+  '/valuation-workflow': 'collaterals',
+  '/collateral-substitution': 'collaterals',
+  '/covenant-tracking': 'collaterals',
+  '/insurance-tracking': 'collaterals',
   '/document-management': 'archive',
   '/document-approval': 'approvals',
   '/obligors': 'obligors',

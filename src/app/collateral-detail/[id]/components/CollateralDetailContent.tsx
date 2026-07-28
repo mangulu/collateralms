@@ -1,15 +1,13 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft, Pencil, ExternalLink, Shield, FileText, Calendar, User, Building2,
-  AlertTriangle, CheckCircle2, Clock, Files, History, ShieldAlert, RefreshCw,
-  Activity, PieChart, BookOpen, TrendingUp, Layers, MapPin, ChevronRight,
-} from 'lucide-react';
+import { ArrowLeft, Pencil, ExternalLink, Shield, FileText, Calendar, User, Building2, AlertTriangle, CheckCircle2, Clock, Files, History, ShieldAlert, RefreshCw, Activity, PieChart, BookOpen, TrendingUp, Layers, MapPin, ChevronRight, Banknote, Star,  } from 'lucide-react';
 import { toast } from 'sonner';
 import Badge from '@/components/ui/Badge';
 import { CollateralRecord, CollateralStatus, auditService, collateralService } from '@/lib/supabase/collateralService';
 import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
+import { obligorService, Obligor } from '@/lib/supabase/obligorService';
+import { loanService, Loan } from '@/lib/supabase/loanService';
 import AddEditCollateralModal from '@/app/collateral-management/components/AddEditCollateralModal';
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralUtilizationTab from './CollateralUtilizationTab';
@@ -20,6 +18,9 @@ import DocumentsSection from './DocumentsSection';
 import AuditTrailSection from './AuditTrailSection';
 import LegalSignOffSection from './LegalSignOffSection';
 import RiskComplianceSidebarCard from './RiskComplianceSidebarCard';
+import ChangeHistoryTab from './ChangeHistoryTab';
+import MandatoryDocumentsCard from './MandatoryDocumentsCard';
+import ProcessLaunchersPanel from './ProcessLaunchersPanel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,13 +134,59 @@ export default function CollateralDetailContent({
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history' | 'change-history'>('profile');
   const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
+  const [obligorData, setObligorData] = useState<Obligor | null>(null);
+  const [loanData, setLoanData] = useState<Loan | null>(null);
 
   useEffect(() => {
     if (!collateral?.id) return;
     collateralLinkService.getUtilization(collateral.id).then(setUtilization).catch(() => {});
   }, [collateral?.id]);
+
+  useEffect(() => {
+    if (!collateral?.obligorRefId) { setObligorData(null); return; }
+    obligorService.getById(collateral.obligorRefId).then(setObligorData).catch(() => {});
+  }, [collateral?.obligorRefId]);
+
+  useEffect(() => {
+    if (!collateral?.facilityId) { setLoanData(null); return; }
+    // Search loans by loan_number matching facilityId
+    const supabase = (async () => {
+      const { createClient } = await import('@/lib/supabase/client');
+      const client = createClient();
+      const { data } = await client
+        .from('loans')
+        .select('*, obligors(full_name, obligor_code)')
+        .eq('loan_number', collateral.facilityId)
+        .maybeSingle();
+      if (data) {
+        const { loanService: ls } = await import('@/lib/supabase/loanService');
+        // map manually
+        setLoanData({
+          id: data.id,
+          loanNumber: data.loan_number,
+          obligorId: data.obligor_id,
+          facilityType: data.facility_type,
+          facilityAmount: data.facility_amount != null ? parseFloat(data.facility_amount) : 0,
+          outstandingBalance: data.outstanding_balance != null ? parseFloat(data.outstanding_balance) : null,
+          currency: data.currency ?? 'TZS',
+          interestRate: data.interest_rate != null ? parseFloat(data.interest_rate) : null,
+          disbursementDate: data.disbursement_date,
+          maturityDate: data.maturity_date,
+          repaymentFrequency: data.repayment_frequency ?? 'Monthly',
+          loanStatus: data.loan_status ?? 'Active',
+          purpose: data.purpose,
+          notes: data.notes,
+          createdBy: data.created_by,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          obligorName: data.obligors?.full_name,
+          obligorCode: data.obligors?.obligor_code,
+        });
+      }
+    })();
+  }, [collateral?.facilityId]);
 
   const handleSave = async (data: Partial<CollateralRecord>) => {
     if (!collateral) return;
@@ -269,8 +316,9 @@ export default function CollateralDetailContent({
           { key: 'charges', label: 'Charges & Loans', icon: PieChart },
           { key: 'documents', label: 'Documents & History', icon: Files },
           { key: 'history', label: 'History', icon: History },
+          { key: 'change-history', label: 'Change History', icon: Activity },
         ].map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history')}
+          <button key={tab.key} onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history' | 'change-history')}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${activeTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             <tab.icon size={13} /> {tab.label}
           </button>
@@ -306,7 +354,19 @@ export default function CollateralDetailContent({
                     <DetailRow label="Collateral Type" value={collateral.type} icon={FileText} />
                     <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{collateral.description}</p>} icon={FileText} />
                     <DetailRow label="Collateral Value" value={<span className="font-mono font-600 text-base">TSh {collateral.valueTSh}</span>} icon={Building2} />
-                    <DetailRow label="Facility ID" value={<span className="font-mono text-xs">{collateral.facilityId}</span>} icon={FileText} />
+                    <DetailRow label="Facility ID" value={
+                      collateral.facilityId ? (
+                        <Link
+                          href={`/loans?facility=${encodeURIComponent(collateral.facilityId)}`}
+                          className="font-mono text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          {collateral.facilityId}
+                          <ExternalLink size={11} className="shrink-0" />
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                      )
+                    } icon={FileText} />
                     <DetailRow label="Assigned Officer" value={collateral.assignedOfficer} icon={User} />
                   </div>
                 </div>
@@ -355,8 +415,129 @@ export default function CollateralDetailContent({
           </div>
 
           <div className="space-y-6">
+            <ProcessLaunchersPanel collateral={collateral} onProcessStarted={onRefresh} />
             <QuickActionsPanel collateral={collateral} onSignOffComplete={onRefresh} />
             <RiskComplianceSidebarCard collateral={collateral} />
+
+            {/* Obligor Context Card */}
+            {(obligorData || collateral.obligor) && (
+              <div className="bg-white rounded-xl border border-border shadow-card p-5">
+                <SectionHeader title="Obligor Context" icon={Building2} />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Building2 size={16} className="text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      {collateral.obligorRefId ? (
+                        <Link href={`/obligors/${collateral.obligorRefId}`} className="text-sm font-600 text-primary hover:underline flex items-center gap-1 truncate">
+                          {obligorData?.fullName ?? collateral.obligor}
+                          <ExternalLink size={11} className="shrink-0" />
+                        </Link>
+                      ) : (
+                        <p className="text-sm font-600 text-foreground truncate">{obligorData?.fullName ?? collateral.obligor}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground font-mono">{obligorData?.obligorCode ?? collateral.obligorId ?? '—'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2.5 bg-muted/20 rounded-lg">
+                      <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Obligor ID</p>
+                      <p className="text-xs font-600 font-mono text-foreground truncate">{obligorData?.obligorCode ?? collateral.obligorId ?? '—'}</p>
+                    </div>
+                    <div className="p-2.5 bg-muted/20 rounded-lg">
+                      <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Entity Type</p>
+                      <p className="text-xs font-600 text-foreground capitalize">{obligorData?.entityType ?? '—'}</p>
+                    </div>
+                    <div className="p-2.5 bg-muted/20 rounded-lg col-span-2">
+                      <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-1">Credit Rating</p>
+                      {obligorData?.riskRating ? (
+                        <span className={`inline-flex items-center gap-1 text-xs font-700 px-2 py-0.5 rounded-full ${
+                          obligorData.riskRating === 'LOW' ? 'bg-green-100 text-green-700' :
+                          obligorData.riskRating === 'MEDIUM'? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          <Star size={10} />
+                          {obligorData.riskRating} RISK
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not rated</span>
+                      )}
+                    </div>
+                    {obligorData?.creditLimit != null && (
+                      <div className="p-2.5 bg-muted/20 rounded-lg col-span-2">
+                        <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Credit Limit</p>
+                        <p className="text-xs font-600 font-mono text-foreground">
+                          TZS {obligorData.creditLimit.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Linked Facility Summary Card */}
+            {collateral.facilityId && (
+              <div className="bg-white rounded-xl border border-border shadow-card p-5">
+                <SectionHeader title="Linked Facility" icon={Banknote} />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2 p-3 bg-muted/30 rounded-lg">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/loans?facility=${encodeURIComponent(collateral.facilityId)}`}
+                        className="text-sm font-700 font-mono text-primary hover:underline flex items-center gap-1"
+                      >
+                        {collateral.facilityId}
+                        <ExternalLink size={11} className="shrink-0" />
+                      </Link>
+                      {loanData?.facilityType && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{loanData.facilityType}</p>
+                      )}
+                    </div>
+                    {loanData?.loanStatus && (
+                      <span className={`text-[10px] font-700 px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0 ${
+                        loanData.loanStatus.toLowerCase() === 'active' ? 'bg-green-100 text-green-700' :
+                        loanData.loanStatus.toLowerCase() === 'closed' ? 'bg-gray-100 text-gray-600' :
+                        loanData.loanStatus.toLowerCase() === 'npl'? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {loanData.loanStatus}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2.5 bg-muted/20 rounded-lg col-span-2">
+                      <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Facility Amount</p>
+                      <p className="text-sm font-700 font-mono text-foreground">
+                        {loanData ? `${loanData.currency} ${loanData.facilityAmount.toLocaleString()}` : <span className="text-muted-foreground text-xs">—</span>}
+                      </p>
+                    </div>
+                    <div className="p-2.5 bg-muted/20 rounded-lg">
+                      <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Disbursed</p>
+                      <p className="text-xs font-600 text-foreground">{loanData?.disbursementDate ?? '—'}</p>
+                    </div>
+                    <div className="p-2.5 bg-muted/20 rounded-lg">
+                      <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Maturity</p>
+                      <p className="text-xs font-600 text-foreground">{loanData?.maturityDate ?? '—'}</p>
+                    </div>
+                    {loanData?.outstandingBalance != null && (
+                      <div className="p-2.5 bg-muted/20 rounded-lg col-span-2">
+                        <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Outstanding Balance</p>
+                        <p className="text-xs font-600 font-mono text-foreground">
+                          {loanData.currency} {loanData.outstandingBalance.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    {loanData?.interestRate != null && (
+                      <div className="p-2.5 bg-muted/20 rounded-lg col-span-2">
+                        <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide mb-0.5">Interest Rate</p>
+                        <p className="text-xs font-600 text-foreground">{loanData.interestRate}% p.a.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-xl border border-border shadow-card p-5">
               <SectionHeader title="Quick Links" icon={ExternalLink} />
               <div className="space-y-2">
@@ -377,6 +558,7 @@ export default function CollateralDetailContent({
                 ))}
               </div>
             </div>
+            <MandatoryDocumentsCard collateral={collateral} />
           </div>
         </div>
       )}
@@ -395,6 +577,9 @@ export default function CollateralDetailContent({
 
       {/* Tab: History */}
       {activeTab === 'history' && <CollateralHistoryTab collateral={collateral} />}
+
+      {/* Tab: Change History (SOX) */}
+      {activeTab === 'change-history' && <ChangeHistoryTab collateral={collateral} />}
 
       {/* Edit Modal */}
       <AddEditCollateralModal

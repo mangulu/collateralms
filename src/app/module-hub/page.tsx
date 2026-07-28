@@ -18,6 +18,8 @@ import {
   Archive,
   Users,
   CheckSquare,
+  BookOpen,
+  HelpCircle,
 } from 'lucide-react';
 
 
@@ -174,37 +176,55 @@ export default function ModuleHubPage() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--izou-bg)' }}>
-      {/* Top Bar — IZOU gradient */}
+      {/* Top Bar — light card style */}
       <header
-        className="izou-sidebar-gradient flex items-center justify-between px-6 py-3 shrink-0"
+        className="flex items-center justify-between px-6 py-3 shrink-0"
+        style={{
+          backgroundColor: 'var(--izou-card)',
+          borderBottom: '1px solid var(--izou-border)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        }}
       >
         <div className="flex items-center gap-3">
           <AppLogo size={32} />
           <div>
-            <p className="text-white text-sm font-bold leading-tight">CollateralMS</p>
-            <p className="text-xs leading-tight" style={{ color: 'rgba(255,255,255,0.65)' }}>Module Hub</p>
+            <p className="text-sm font-bold leading-tight" style={{ color: 'var(--izou-text)' }}>CollateralMS</p>
+            <p className="text-xs leading-tight" style={{ color: 'var(--izou-muted)' }}>Module Hub</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Help / Guide icon */}
+          <button
+            onClick={() => router.push('/onboarding-guide')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors"
+            style={{ color: 'var(--izou-primary)', border: '1px solid var(--izou-border)' }}
+            title="Open Onboarding Guide"
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+          >
+            <HelpCircle size={16} />
+            <span className="hidden sm:inline text-xs font-medium">Guide</span>
+          </button>
+
           <div className="hidden sm:flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
+              style={{ background: 'var(--izou-primary)', border: '1px solid var(--izou-border)' }}
             >
               <span className="text-white text-xs font-bold">{initials}</span>
             </div>
             <div>
-              <p className="text-white text-sm font-semibold leading-tight">{displayName}</p>
-              <p className="text-xs leading-tight" style={{ color: 'rgba(255,255,255,0.65)' }}>{displayRole}</p>
+              <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--izou-text)' }}>{displayName}</p>
+              <p className="text-xs leading-tight" style={{ color: 'var(--izou-muted)' }}>{displayRole}</p>
             </div>
           </div>
           <button
             onClick={() => signOut?.()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors"
-            style={{ color: 'rgba(255,255,255,0.8)' }}
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.8)'; }}
+            style={{ color: 'var(--izou-muted)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-muted)'; }}
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">Sign out</span>
@@ -297,6 +317,43 @@ export default function ModuleHubPage() {
             </p>
           </div>
         )}
+
+        {/* Onboarding Guide Section */}
+        <div
+          className="mt-10 rounded-2xl p-6"
+          style={{
+            background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%)',
+            border: '1px solid rgba(37,99,235,0.15)',
+          }}
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: '#2563EB' }}
+            >
+              <BookOpen size={22} color="#fff" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold mb-1" style={{ color: '#1D4ED8' }}>
+                New to CollateralMS? Start with the Onboarding Guide
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: '#3B82F6' }}>
+                Step-by-step walkthroughs for all 9 modules — from registering collateral to running compliance audits. Includes role-based user journeys and quick shortcuts.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/onboarding-guide')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shrink-0 transition-all"
+              style={{ backgroundColor: '#2563EB', color: '#fff' }}
+              onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8'; }}
+              onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB'; }}
+            >
+              <BookOpen size={15} />
+              Open Guide
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Footer */}

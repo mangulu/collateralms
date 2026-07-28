@@ -575,10 +575,10 @@ export default function SystemConfigContent() {
 
 
 
-      // silently fail — show empty form
-    } finally {setLoading(false);}}, [applyBrandCssVars]);
 
-  useEffect(() => {
+
+      // silently fail — show empty form
+    } finally {setLoading(false);}}, [applyBrandCssVars]);useEffect(() => {
     loadConfigs();
   }, [loadConfigs]);
 

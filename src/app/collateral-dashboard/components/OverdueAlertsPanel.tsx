@@ -48,23 +48,23 @@ export default function OverdueAlertsPanel() {
       }}
     >
       <div
-        className="flex items-center justify-between px-5 py-4"
+        className="flex items-center justify-between px-4 sm:px-5 py-4"
         style={{ borderBottom: '1px solid var(--izou-border)' }}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#fef2f2' }}>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#fef2f2' }}>
             <AlertTriangle size={16} className="text-red-600" />
           </div>
-          <div>
-            <h3 className="text-base font-bold" style={{ color: 'var(--izou-text)' }}>Overdue Perfection Actions</h3>
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-base font-bold truncate" style={{ color: 'var(--izou-text)' }}>Overdue Perfection Actions</h3>
             <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
-              {isLoading ? 'Loading...' : error ? 'Error loading data' : `${overdueItems.length} items past their registry submission deadline`}
+              {isLoading ? 'Loading...' : error ? 'Error loading data' : `${overdueItems.length} items past deadline`}
             </p>
           </div>
         </div>
         <Link
           href="/collateral-management"
-          className="flex items-center gap-1 text-xs font-semibold hover:underline"
+          className="flex items-center gap-1 text-xs font-semibold hover:underline shrink-0 ml-2"
           style={{ color: 'var(--izou-primary)' }}
         >
           View all <ChevronRight size={12} />
@@ -72,7 +72,7 @@ export default function OverdueAlertsPanel() {
       </div>
 
       {isLoading ? (
-        <div className="p-6 space-y-3">
+        <div className="p-4 sm:p-6 space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={`skel-${i}`} className="h-10 animate-pulse rounded-xl" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
           ))}
@@ -83,29 +83,54 @@ export default function OverdueAlertsPanel() {
           <p className="text-sm font-semibold text-red-600">Could not load overdue items</p>
           <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{error}</p>
         </div>
+      ) : overdueItems.length === 0 ? (
+        <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--izou-muted)' }}>
+          No overdue items — great work!
+        </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ backgroundColor: 'var(--izou-primary-light)', borderBottom: '1px solid var(--izou-border)' }}>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Collateral ID</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Obligor</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Type</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Registry</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Days Overdue</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Value</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Assigned</th>
-              </tr>
-            </thead>
-            <tbody>
-              {overdueItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--izou-muted)' }}>
-                    No overdue items — great work!
-                  </td>
+        <>
+          {/* Mobile card layout */}
+          <div className="block sm:hidden divide-y" style={{ borderColor: 'var(--izou-border)' }}>
+            {overdueItems.map((item) => (
+              <div key={`overdue-m-${item.id}`} className="px-4 py-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-semibold" style={{ color: 'var(--izou-primary)' }}>{item.collateralId}</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700">
+                    <Clock size={11} />
+                    {item.daysToDeadline !== null ? `${Math.abs(item.daysToDeadline)}d overdue` : 'Overdue'}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--izou-text)' }}>{item.obligor}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>{item.type}</span>
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                    style={registryBadgeStyles[item.registry] ?? { backgroundColor: '#f3f4f6', color: '#4b5563' }}
+                  >
+                    {item.registry}
+                  </span>
+                  <span className="font-mono text-xs font-semibold" style={{ color: 'var(--izou-text)' }}>TSh {item.valueTSh}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: 'var(--izou-primary-light)', borderBottom: '1px solid var(--izou-border)' }}>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Collateral ID</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Obligor</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Type</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Registry</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Days Overdue</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Value</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--izou-muted)' }}>Assigned</th>
                 </tr>
-              ) : (
-                overdueItems.map((item, i) => (
+              </thead>
+              <tbody>
+                {overdueItems.map((item, i) => (
                   <tr
                     key={`overdue-${item.id}`}
                     className="transition-colors cursor-pointer"
@@ -140,11 +165,11 @@ export default function OverdueAlertsPanel() {
                     </td>
                     <td className="px-4 py-3 text-xs" style={{ color: 'var(--izou-muted)' }}>{item.assignedOfficer}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

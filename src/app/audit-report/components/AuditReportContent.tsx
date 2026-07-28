@@ -324,16 +324,16 @@ export default function AuditReportContent() {
   return (
     <div className="flex flex-col h-full min-h-0 bg-background">
       {/* Page Header */}
-      <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-border bg-white shrink-0">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-border bg-white shrink-0 gap-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <FileText size={18} className="text-primary" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">Regulatory Audit Report</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground">Regulatory Audit Report</h1>
           </div>
-          <p className="text-sm text-muted-foreground ml-10">
-            Consolidated fraud alerts, compliance violations, and geomapped collateral for regulator submission
+          <p className="text-xs sm:text-sm text-muted-foreground ml-10">
+            Fraud alerts, compliance violations, and geomapped collateral for regulator submission
           </p>
           {lastRefreshed && (
             <p className="text-xs text-muted-foreground ml-10 mt-1">
@@ -341,22 +341,22 @@ export default function AuditReportContent() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           {/* Date range */}
-          <div className="flex items-center gap-1.5 bg-gray-50 border border-border rounded-lg px-3 py-1.5">
-            <Calendar size={13} className="text-muted-foreground" />
+          <div className="flex items-center gap-1 sm:gap-1.5 bg-gray-50 border border-border rounded-lg px-2 sm:px-3 py-1.5">
+            <Calendar size={13} className="text-muted-foreground shrink-0" />
             <input
               type="date"
               value={reportDateFrom}
               onChange={(e) => setReportDateFrom(e.target.value)}
-              className="text-xs bg-transparent border-none outline-none text-foreground"
+              className="text-xs bg-transparent border-none outline-none text-foreground w-28 sm:w-auto"
             />
             <span className="text-xs text-muted-foreground">–</span>
             <input
               type="date"
               value={reportDateTo}
               onChange={(e) => setReportDateTo(e.target.value)}
-              className="text-xs bg-transparent border-none outline-none text-foreground"
+              className="text-xs bg-transparent border-none outline-none text-foreground w-28 sm:w-auto"
             />
           </div>
           <button
@@ -370,29 +370,30 @@ export default function AuditReportContent() {
           <button
             onClick={handleExportPDF}
             disabled={isExporting || isLoading}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 shadow-sm"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 text-xs font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 shadow-sm"
           >
             {isExporting ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
               <Download size={13} />
             )}
-            {isExporting ? 'Generating PDF…' : 'Export PDF for Regulator'}
+            <span className="hidden sm:inline">{isExporting ? 'Generating PDF…' : 'Export PDF for Regulator'}</span>
+            <span className="sm:hidden">{isExporting ? 'Generating…' : 'Export PDF'}</span>
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-6">
         {/* Report Metadata Banner */}
-        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-3">
+        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 sm:px-5 py-3">
           <Building2 size={16} className="text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-primary">EXIM Bank Tanzania — Regulatory Submission</p>
-            <p className="text-xs text-muted-foreground">
-              Report Period: {reportDateFrom ? formatDate(reportDateFrom) : '—'} to {reportDateTo ? formatDate(reportDateTo) : '—'} &nbsp;·&nbsp; Generated: {summary?.reportDate ?? '—'} &nbsp;·&nbsp; Classification: Confidential
+            <p className="text-xs text-muted-foreground truncate">
+              Period: {reportDateFrom ? formatDate(reportDateFrom) : '—'} to {reportDateTo ? formatDate(reportDateTo) : '—'} · Generated: {summary?.reportDate ?? '—'}
             </p>
           </div>
-          <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full shrink-0">
+          <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full shrink-0 hidden sm:inline">
             For Regulator Use
           </span>
         </div>
@@ -419,38 +420,38 @@ export default function AuditReportContent() {
 
         {/* KPI Summary */}
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-xl p-5 border border-border bg-white animate-pulse h-28" />
+              <div key={i} className="rounded-xl p-4 sm:p-5 border border-border bg-white animate-pulse h-24 sm:h-28" />
             ))}
           </div>
         ) : summary && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <SummaryCard
               label="Total Fraud Alerts"
               value={summary.totalFraudAlerts}
-              sub={`${summary.highRiskAlerts} high risk · ${summary.pendingReview} pending review`}
+              sub={`${summary.highRiskAlerts} high risk · ${summary.pendingReview} pending`}
               icon={ShieldAlert}
               variant={summary.highRiskAlerts > 0 ? 'danger' : 'default'}
             />
             <SummaryCard
               label="Rule Violations"
               value={summary.ruleViolations}
-              sub={`${summary.activeViolations} blocking violations`}
+              sub={`${summary.activeViolations} blocking`}
               icon={Scale}
               variant={summary.activeViolations > 0 ? 'warning' : 'default'}
             />
             <SummaryCard
-              label="Geomapped Collateral"
+              label="Geomapped"
               value={summary.geoCollateral}
-              sub={`${summary.unverifiedLocations} unverified locations`}
+              sub={`${summary.unverifiedLocations} unverified`}
               icon={Map}
               variant={summary.unverifiedLocations > 0 ? 'warning' : 'success'}
             />
             <SummaryCard
-              label="Compliance Status"
+              label="Compliance"
               value={summary.activeViolations > 2 ? 'At Risk' : 'Monitored'}
-              sub="Based on active violations"
+              sub="Based on violations"
               icon={Activity}
               variant={summary.activeViolations > 2 ? 'danger' : 'warning'}
             />
@@ -459,7 +460,7 @@ export default function AuditReportContent() {
 
         {/* Tabs */}
         <div className="bg-white rounded-xl border border-border shadow-card overflow-hidden">
-          <div className="flex border-b border-border">
+          <div className="flex border-b border-border overflow-x-auto">
             {tabs.map((tab) => {
               const TabIcon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -467,13 +468,14 @@ export default function AuditReportContent() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
                     isActive
                       ? 'border-primary text-primary bg-primary/5' :'border-transparent text-muted-foreground hover:text-foreground hover:bg-gray-50'
                   }`}
                 >
-                  <TabIcon size={15} />
-                  {tab.label}
+                  <TabIcon size={14} />
+                  <span className="hidden xs:inline">{tab.label}</span>
+                  <span className="xs:hidden">{tab.label.split(' ')[0]}</span>
                   <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
                     isActive ? 'bg-primary/15 text-primary' : 'bg-gray-100 text-muted-foreground'
                   }`}>
