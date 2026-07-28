@@ -19,6 +19,8 @@ import AuditTrailSection from './AuditTrailSection';
 import LegalSignOffSection from './LegalSignOffSection';
 import RiskComplianceSidebarCard from './RiskComplianceSidebarCard';
 import ChangeHistoryTab from './ChangeHistoryTab';
+import MandatoryDocumentsCard from './MandatoryDocumentsCard';
+import ProcessLaunchersPanel from './ProcessLaunchersPanel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -413,6 +415,7 @@ export default function CollateralDetailContent({
           </div>
 
           <div className="space-y-6">
+            <ProcessLaunchersPanel collateral={collateral} onProcessStarted={onRefresh} />
             <QuickActionsPanel collateral={collateral} onSignOffComplete={onRefresh} />
             <RiskComplianceSidebarCard collateral={collateral} />
 
@@ -555,6 +558,7 @@ export default function CollateralDetailContent({
                 ))}
               </div>
             </div>
+            <MandatoryDocumentsCard collateral={collateral} />
           </div>
         </div>
       )}

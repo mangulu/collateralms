@@ -208,7 +208,13 @@ export default function CollateralTable({
                     </td>
                     {/* ID */}
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs font-600 text-primary">{item.collateralId}</span>
+                      <Link
+                        href={`/collateral-detail/${item.id}`}
+                        className="font-mono text-xs font-600 text-primary hover:underline cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {item.collateralId}
+                      </Link>
                     </td>
                     {/* Obligor */}
                     <td className="px-4 py-3 max-w-[160px]">
