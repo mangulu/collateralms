@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File } from 'lucide-react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus, PerfectionStatusHistory } from '@/lib/supabase/perfectionService';
+import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
 
@@ -485,8 +486,120 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   const [commentText, setCommentText] = useState('');
   const [decisionNotes, setDecisionNotes] = useState('');
   const [activeAction, setActiveAction] = useState<'perfected' | 'reject' | 'return' | 'review' | 'comment' | null>(null);
-  const [activeTab, setActiveTab] = useState<'activity' | 'history'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'history' | 'documents'>('activity');
   const [showSmsModal, setShowSmsModal] = useState(false);
+
+  // ── Document upload state ──────────────────────────────────────────────────
+  const [documents, setDocuments] = useState<CollateralDocument[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<{ file: File; docType: string; notes: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp',
+    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+  const PERFECTION_DOC_TYPES = [
+    'Title Deed', 'Charge Certificate', 'Valuation Report', 'BRELA Confirmation',
+    'Insurance Certificate', 'Board Resolution', 'Other',
+  ];
+
+  // Load documents when documents tab is opened and collateralRecordId is available
+  useEffect(() => {
+    if (activeTab === 'documents' && request.collateralRecordId) {
+      setDocsLoading(true);
+      documentService.getByCollateralId(request.collateralRecordId).then((docs) => {
+        setDocuments(docs);
+        setDocsLoading(false);
+      }).catch(() => setDocsLoading(false));
+    }
+  }, [activeTab, request.collateralRecordId]);
+
+  const validateFile = (file: File): string | null => {
+    if (!ACCEPTED_TYPES.includes(file.type)) return `${file.name}: Unsupported type. Use PDF, JPG, PNG, or DOCX.`;
+    if (file.size > MAX_FILE_SIZE) return `${file.name}: Exceeds 10MB limit.`;
+    return null;
+  };
+
+  const addPendingFiles = (files: FileList | File[]) => {
+    setUploadError(null);
+    const errs: string[] = [];
+    const valid: { file: File; docType: string; notes: string }[] = [];
+    Array.from(files).forEach((f) => {
+      const err = validateFile(f);
+      if (err) errs.push(err);
+      else valid.push({ file: f, docType: 'Other', notes: '' });
+    });
+    if (errs.length) setUploadError(errs.join(' '));
+    if (valid.length) setPendingFiles((prev) => [...prev, ...valid]);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    addPendingFiles(e.dataTransfer.files);
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) addPendingFiles(e.target.files);
+    e.target.value = '';
+  };
+
+  const handleUploadPending = async () => {
+    if (!pendingFiles.length || !userId) return;
+    if (!request.collateralRecordId) {
+      setUploadError('This perfection request is not linked to a collateral record. Open the collateral record directly to upload documents.');
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    const results = await Promise.all(
+      pendingFiles.map((pf) =>
+        documentService.upload(
+          pf.file,
+          request.collateralRecordId!,
+          request.collateralId,
+          pf.docType as DocumentType,
+          pf.notes,
+          userId,
+          userName
+        )
+      )
+    );
+    const uploaded = results.filter((r) => 'doc' in r && r.doc).map((r) => (r as any).doc as CollateralDocument);
+    const errors = results.filter((r) => 'error' in r && r.error).map((r) => (r as any).error as string);
+    if (uploaded.length) {
+      setDocuments((prev) => [...uploaded, ...prev]);
+      toast.success(`${uploaded.length} document${uploaded.length > 1 ? 's' : ''} uploaded`);
+    }
+    if (errors.length) {
+      setUploadError(errors.join(' '));
+    }
+    setPendingFiles([]);
+    setUploading(false);
+  };
+
+  const handleDeleteDocument = async (doc: CollateralDocument) => {
+    const ok = await documentService.delete(doc);
+    if (ok) {
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+      toast.success('Document removed');
+    } else {
+      toast.error('Failed to remove document');
+    }
+  };
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType?.includes('pdf')) return <FileType2 size={15} className="text-red-500" />;
+    if (mimeType?.includes('image')) return <FileImage size={15} className="text-blue-500" />;
+    if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={15} className="text-indigo-500" />;
+    return <FileText size={15} className="text-slate-500" />;
+  };
+
+  // ── End document upload state ──────────────────────────────────────────────
 
   const statusCfg = STATUS_CONFIG[request.requestStatus] ?? STATUS_CONFIG.Draft;
   const priorityCfg = PRIORITY_CONFIG[request.priority] ?? PRIORITY_CONFIG.Normal;
@@ -638,6 +751,17 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                 )}
               </button>
               <button
+                onClick={() => setActiveTab('documents')}
+                className={`flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === 'documents' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Upload size={15} /> Documents
+                {(documents.length > 0 || pendingFiles.length > 0) && (
+                  <span className="ml-1 bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">{documents.length + pendingFiles.length}</span>
+                )}
+              </button>
+              <button
                 onClick={() => setActiveTab('history')}
                 className={`flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -684,6 +808,172 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                     </div>
                   )}
                 </>
+              ) : activeTab === 'documents' ? (
+                <div className="space-y-5">
+                  {/* Upload zone */}
+                  {!request.collateralRecordId ? (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                      <AlertCircle size={15} className="text-amber-600 mt-0.5 shrink-0" />
+                      <p className="text-sm text-amber-800">
+                        This request is not linked to a collateral record. Documents must be uploaded from the{' '}
+                        <a href={`/collateral-management`} className="underline font-medium hover:text-amber-900">Collateral Registry</a>{' '}
+                        by editing the collateral record directly.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                          <Upload size={14} className="text-primary" />
+                          Upload Perfection Documents
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Attach receipts, deed scans, BRELA confirmations, and other perfection proofs.
+                        </p>
+                        <div
+                          onDrop={handleDrop}
+                          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                          onDragLeave={() => setDragOver(false)}
+                          onClick={() => fileInputRef.current?.click()}
+                          className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
+                            dragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/40'
+                          }`}
+                        >
+                          <Upload size={20} className="mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm font-medium text-muted-foreground mb-0.5">Drag & drop files here, or click to browse</p>
+                          <p className="text-xs text-muted-foreground">PDF, JPG, PNG, DOCX — max 10MB each</p>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                            className="hidden"
+                            onChange={handleFileInput}
+                          />
+                        </div>
+
+                        {uploadError && (
+                          <div className="mt-2 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
+                            <AlertCircle size={13} className="text-destructive mt-0.5 shrink-0" />
+                            <p className="text-xs text-destructive">{uploadError}</p>
+                          </div>
+                        )}
+
+                        {/* Pending files queue */}
+                        {pendingFiles.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs font-semibold text-foreground">Ready to upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
+                            {pendingFiles.map((pf, idx) => (
+                              <div key={`pf-${idx}`} className="flex items-start gap-2 p-2.5 bg-white border border-border rounded-lg">
+                                <span className="mt-0.5">{getFileIcon(pf.file.type)}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium text-foreground truncate">{pf.file.name}</p>
+                                  <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
+                                  <div className="mt-1.5 flex gap-2">
+                                    <select
+                                      value={pf.docType}
+                                      onChange={(e) => setPendingFiles((prev) => prev.map((p, i) => i === idx ? { ...p, docType: e.target.value } : p))}
+                                      className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                    >
+                                      {PERFECTION_DOC_TYPES.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
+                                    </select>
+                                    <input
+                                      type="text"
+                                      placeholder="Notes (optional)"
+                                      value={pf.notes}
+                                      onChange={(e) => setPendingFiles((prev) => prev.map((p, i) => i === idx ? { ...p, notes: e.target.value } : p))}
+                                      className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                    />
+                                  </div>
+                                </div>
+                                <button type="button" onClick={() => setPendingFiles((prev) => prev.filter((_, i) => i !== idx))} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
+                                  <X size={13} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={handleUploadPending}
+                              disabled={uploading}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                            >
+                              {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : <><Upload size={14} /> Upload {pendingFiles.length} File{pendingFiles.length > 1 ? 's' : ''}</>}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Uploaded documents list */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                          <FileText size={14} className="text-primary" />
+                          Uploaded Documents
+                          {documents.length > 0 && <span className="ml-auto text-xs font-normal text-muted-foreground">{documents.length} file{documents.length !== 1 ? 's' : ''}</span>}
+                        </h4>
+                        {docsLoading ? (
+                          <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+                            <Loader2 size={15} className="animate-spin" />
+                            <span className="text-sm">Loading documents...</span>
+                          </div>
+                        ) : documents.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+                            <FileText size={24} className="mx-auto mb-2 opacity-40" />
+                            <p className="text-sm">No documents uploaded yet</p>
+                            <p className="text-xs mt-1">Upload title deeds, receipts, and perfection proofs above</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {documents.map((doc) => (
+                              <div key={doc.id} className="flex items-start gap-3 p-3 bg-white border border-border rounded-lg hover:border-primary/30 transition-colors group">
+                                <span className="mt-0.5">{getFileIcon(doc.mimeType)}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-medium text-foreground truncate max-w-[180px]">{doc.fileName}</p>
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                      {doc.documentType}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">v{doc.version}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                                    <span className="text-xs text-muted-foreground">·</span>
+                                    <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
+                                    <span className="text-xs text-muted-foreground">·</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </span>
+                                  </div>
+                                  {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {doc.signedUrl && (
+                                    <a
+                                      href={doc.signedUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                                      title="Download"
+                                    >
+                                      <Download size={13} />
+                                    </a>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDocument(doc)}
+                                    className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               ) : (
                 <StatusHistoryPanel history={history} />
               )}
