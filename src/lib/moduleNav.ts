@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -151,6 +151,14 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Reports Hub', icon: BarChart2, href: '/reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Custom Reports', icon: ScrollText, href: '/custom-reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Export', icon: Download, href: '/export', permission: PERMISSIONS.REPORTS_VIEW },
+        ],
+      },
+      {
+        label: 'Reporting & Compliance',
+        items: [
+          { label: 'Scheduled Report Delivery', icon: Mail, href: '/scheduled-report-delivery', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Regulatory Submission Tracking', icon: FileCheck, href: '/regulatory-submission-tracking', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'LTV Breach Alerts', icon: TrendingDown, href: '/ltv-breach-alerts', permission: PERMISSIONS.REPORTS_VIEW },
         ],
       },
     ],
