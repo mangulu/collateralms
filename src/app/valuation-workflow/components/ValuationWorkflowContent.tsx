@@ -13,6 +13,7 @@ import {
   type ValuationStatus,
 } from '@/lib/supabase/valuationService';
 import { useAuth } from '@/contexts/AuthContext';
+import { triggerOverdueActionSms } from '@/lib/supabase/smsNotificationRulesService';
 
 const STATUS_COLORS: Record<ValuationStatus, string> = {
   Scheduled: 'bg-blue-100 text-blue-700',
@@ -86,6 +87,17 @@ export default function ValuationWorkflowContent() {
       ]);
       setValuations(data);
       setStats(s);
+      // Fire SMS for any newly detected overdue valuations (fire-and-forget)
+      const overdueItems = data.filter((v) => v.valuationStatus === 'Overdue');
+      overdueItems.forEach((v) => {
+        triggerOverdueActionSms({
+          actionType: 'Valuation',
+          collateralId: v.collateralId,
+          collateralDescription: v.collateralDescription,
+          scheduledDate: v.scheduledDate,
+          daysOverdue: agingDays(v.scheduledDate),
+        });
+      });
     } catch (e: any) {
       setError(e.message ?? 'Failed to load valuations');
     } finally {

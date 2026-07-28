@@ -13,6 +13,7 @@ import {
   type CovenantType,
 } from '@/lib/supabase/covenantService';
 import { useAuth } from '@/contexts/AuthContext';
+import { triggerCovenantBreachSms } from '@/lib/supabase/smsNotificationRulesService';
 
 const STATUS_COLORS: Record<CovenantStatus, string> = {
   Active: 'bg-green-100 text-green-700',
@@ -126,11 +127,22 @@ export default function CovenantTrackingContent() {
     if (!showMeasureModal || !measureForm.currentValue) return;
     setActionLoading(true);
     try {
-      await updateCovenantMeasurement(showMeasureModal.id, {
+      const updated = await updateCovenantMeasurement(showMeasureModal.id, {
         currentValue: parseFloat(measureForm.currentValue),
         measurementDate: measureForm.measurementDate,
         notes: measureForm.notes,
       });
+      // Fire SMS if the update caused a breach
+      if (updated.covenantStatus === 'Breached') {
+        triggerCovenantBreachSms({
+          covenantName: updated.covenantName,
+          loanNumber: updated.loanNumber ?? updated.loanId,
+          obligorName: updated.obligorName ?? 'Unknown Obligor',
+          thresholdValue: updated.thresholdValue,
+          currentValue: updated.currentValue,
+          unit: updated.thresholdUnit,
+        });
+      }
       setShowMeasureModal(null);
       await load();
     } catch (e: any) {
