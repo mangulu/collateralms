@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppLogo from './ui/AppLogo';
-import { ChevronLeft, ChevronRight, LogOut, LayoutGrid, ChevronDown, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, LayoutGrid, ChevronDown, BookOpen, HelpCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/lib/rbac';
 import { MODULE_DEFINITIONS, getModuleForPath, ModuleNavItem } from '@/lib/moduleNav';
@@ -284,30 +284,58 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
 
         {/* Module-contextual nav groups */}
         {activeModule ? (
-          activeModule.groups.map((group) => {
-            const visibleItems = permsLoading
-              ? group.items
-              : group.items.filter((item) => {
-                  if (!item.permission) return true;
-                  if (isSystemAdmin) return true;
-                  if (item.children) return true;
-                  return hasPermission(item.permission);
-                });
+          <>
+            {activeModule.groups.map((group) => {
+              const visibleItems = permsLoading
+                ? group.items
+                : group.items.filter((item) => {
+                    if (!item.permission) return true;
+                    if (isSystemAdmin) return true;
+                    if (item.children) return true;
+                    return hasPermission(item.permission);
+                  });
 
-            if (visibleItems.length === 0) return null;
+              if (visibleItems.length === 0) return null;
 
-            return (
-              <div key={`group-${group.label}`} className="mb-4">
-                {!collapsed && (
-                  <p className="izou-nav-section-label">
-                    {group.label}
-                  </p>
+              return (
+                <div key={`group-${group.label}`} className="mb-4">
+                  {!collapsed && (
+                    <p className="izou-nav-section-label">
+                      {group.label}
+                    </p>
+                  )}
+                  {collapsed && <div className="mx-1 mb-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }} />}
+                  {visibleItems.map((item) => renderNavItem(item))}
+                </div>
+              );
+            })}
+
+            {/* Module-specific guide link */}
+            <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+              <div
+                className="relative"
+                onMouseEnter={() => setHoveredItem('__module_guide__')}
+                onMouseLeave={() => setHoveredItem(null)}
+              >
+                <Link
+                  href={`/onboarding-guide?module=${activeModule.id}`}
+                  className="izou-nav-item flex items-center gap-2.5 px-3 py-2 text-xs font-medium opacity-80 hover:opacity-100"
+                >
+                  <HelpCircle size={15} className="izou-nav-icon shrink-0" />
+                  {!collapsed && (
+                    <span className="flex-1 truncate">{activeModule.label} Guide</span>
+                  )}
+                </Link>
+                {collapsed && hoveredItem === '__module_guide__' && (
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
+                    <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
+                      {activeModule.label} Guide
+                    </div>
+                  </div>
                 )}
-                {collapsed && <div className="mx-1 mb-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }} />}
-                {visibleItems.map((item) => renderNavItem(item))}
               </div>
-            );
-          })
+            </div>
+          </>
         ) : (
           !collapsed && (
             <div className="px-3 py-3 text-xs text-center" style={{ color: 'rgba(255,255,255,0.5)' }}>
