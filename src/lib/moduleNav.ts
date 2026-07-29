@@ -87,6 +87,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'Approval Workflows',
         items: [
+          { label: 'Approvals', icon: ShieldCheck, href: '/approvals', permission: PERMISSIONS.PERFECTION_REVIEW },
           { label: 'Approval Inbox', icon: MailCheck, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Perfection Approval', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
