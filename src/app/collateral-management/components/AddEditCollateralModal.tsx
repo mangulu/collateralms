@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database, CreditCard } from 'lucide-react';
+import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database, CreditCard, UserPlus } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { CollateralRecord as Collateral, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
@@ -16,7 +16,6 @@ interface FormData {
   type: string;
   description: string;
   valueTS: string;
-  facilityId: string;
   registry: string;
   registrationDate: string;
   perfectionDeadline: string;
@@ -36,6 +35,28 @@ const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/web
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 type ActiveTab = 'details' | 'documents';
+
+/** Suggest a document type based on file name keywords */
+function suggestDocType(fileName: string, docTypeNames: string[]): string {
+  const lower = fileName.toLowerCase();
+  const keywords: { pattern: RegExp; type: string }[] = [
+    { pattern: /title.?deed|deed.?of.?transfer/i, type: 'Title Deed' },
+    { pattern: /charge.?cert|certificate.?of.?charge/i, type: 'Charge Certificate' },
+    { pattern: /valuation|appraisal/i, type: 'Valuation Report' },
+    { pattern: /brela|debenture/i, type: 'BRELA Confirmation' },
+    { pattern: /insurance|policy/i, type: 'Insurance Certificate' },
+    { pattern: /board.?res|resolution/i, type: 'Board Resolution' },
+    { pattern: /incorporation|cert.?of.?inc/i, type: 'Certificate of Incorporation' },
+    { pattern: /passport|national.?id|id.?card/i, type: 'Other' },
+  ];
+  for (const { pattern, type } of keywords) {
+    if (pattern.test(lower)) {
+      // Return matched type if it exists in docTypeNames, else fall through
+      if (docTypeNames.includes(type)) return type;
+    }
+  }
+  return docTypeNames[0] || 'Other';
+}
 
 export default function AddEditCollateralModal({
   open,
@@ -77,7 +98,11 @@ export default function AddEditCollateralModal({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<{ file: File; docType: string; notes: string }[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Inline upload zone on details tab
+  const [detailsDragOver, setDetailsDragOver] = useState(false);
+  const detailsFileInputRef = useRef<HTMLInputElement>(null);
 
   // Document type settings from DB
   const [docTypeSettings, setDocTypeSettings] = useState<DocumentTypeSetting[]>([]);
@@ -92,7 +117,6 @@ export default function AddEditCollateralModal({
 
   useEffect(() => {
     if (open) {
-      // Load officers, collateral types, and registries in parallel
       Promise.all([
         collateralLookupsService.getOfficerNames(),
         collateralLookupsService.getCollateralTypeNames(),
@@ -101,9 +125,7 @@ export default function AddEditCollateralModal({
         setOfficers(officerNames);
         setCollateralTypes(typeNames);
         setRegistries(registryNames);
-      }).catch(() => {
-        // Fallbacks are handled inside the service
-      });
+      }).catch(() => {});
     }
   }, [open]);
 
@@ -129,7 +151,6 @@ export default function AddEditCollateralModal({
         setDocTypeNames(active.map((s) => s.name));
         setRequiredDocTypes(active.filter((s) => s.required));
       }).catch(() => {
-        // Fallback to hardcoded types if DB unavailable
         const fallback = [
           'Title Deed', 'Charge Certificate', 'Valuation Report', 'BRELA Confirmation',
           'Insurance Certificate', 'Board Resolution', 'Other',
@@ -176,6 +197,7 @@ export default function AddEditCollateralModal({
     if (open) {
       setActiveTab('details');
       setPendingFiles([]);
+      setUploadProgress({});
       setUploadError(null);
       setBrelaError(null);
       setSaveError(null);
@@ -208,14 +230,12 @@ export default function AddEditCollateralModal({
         type: editItem.type,
         description: editItem.description,
         valueTS: editItem.valueTSh,
-        facilityId: editItem.facilityId,
         registry: editItem.registry,
         registrationDate: editItem.registrationDate,
         perfectionDeadline: editItem.perfectionDeadline,
         assignedOfficer: editItem.assignedOfficer,
         requiresPerfection: editItem.requiresPerfection,
       });
-      // Restore obligor picker
       if (editItem.obligorRefId) {
         setSelectedObligor({ id: editItem.obligorRefId, name: editItem.obligor, code: editItem.obligorId });
       } else if (editItem.obligor) {
@@ -223,9 +243,7 @@ export default function AddEditCollateralModal({
       } else {
         setSelectedObligor(null);
       }
-      // Restore loan selection
       setSelectedLoanId((editItem as any).loanId ?? '');
-      // Restore location
       if (editItem.latitude != null && editItem.longitude != null) {
         setLocation({ lat: editItem.latitude, lng: editItem.longitude, address: editItem.locationAddress ?? `${editItem.latitude}, ${editItem.longitude}` });
       } else {
@@ -234,7 +252,7 @@ export default function AddEditCollateralModal({
     } else {
       reset({
         type: '', description: '', valueTS: '',
-        facilityId: '', registry: '', registrationDate: '', perfectionDeadline: '',
+        registry: '', registrationDate: '', perfectionDeadline: '',
         assignedOfficer: '', requiresPerfection: true,
       });
       setSelectedObligor(null);
@@ -262,7 +280,7 @@ export default function AddEditCollateralModal({
     fileArray.forEach((file) => {
       const err = validateFile(file);
       if (err) errs.push(err);
-      else valid.push({ file, docType: docTypeNames[0] || 'Other', notes: '' });
+      else valid.push({ file, docType: suggestDocType(file.name, docTypeNames), notes: '' });
     });
 
     if (errs.length > 0) setUploadError(errs.join(' '));
@@ -275,6 +293,12 @@ export default function AddEditCollateralModal({
     addPendingFiles(e.dataTransfer.files);
   }, [addPendingFiles]);
 
+  const handleDetailsDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDetailsDragOver(false);
+    addPendingFiles(e.dataTransfer.files);
+  }, [addPendingFiles]);
+
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) addPendingFiles(e.target.files);
     e.target.value = '';
@@ -282,6 +306,11 @@ export default function AddEditCollateralModal({
 
   const removePending = (idx: number) => {
     setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
+    setUploadProgress((prev) => {
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
   };
 
   const updatePendingDocType = (idx: number, docType: string) => {
@@ -296,19 +325,39 @@ export default function AddEditCollateralModal({
     if (!pendingFiles.length || !user) return;
     setUploading(true);
     const userName = userProfile?.full_name || user.email || 'Unknown';
-    const results = await Promise.all(
-      pendingFiles.map((pf) =>
-        documentService.upload(
+
+    // Upload sequentially so we can track per-file progress
+    const uploaded: CollateralDocument[] = [];
+    for (let i = 0; i < pendingFiles.length; i++) {
+      setUploadProgress((prev) => ({ ...prev, [i]: 10 }));
+      const pf = pendingFiles[i];
+      // Simulate progress increments while uploading
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          const current = prev[i] ?? 10;
+          if (current < 85) return { ...prev, [i]: current + 15 };
+          return prev;
+        });
+      }, 300);
+      try {
+        const result = await documentService.upload(
           pf.file, collateralRecordId, collateralId,
           pf.docType as DocumentType, pf.notes, user.id, userName
-        )
-      )
-    );
-    const uploaded = results.filter(Boolean) as CollateralDocument[];
+        );
+        clearInterval(progressInterval);
+        setUploadProgress((prev) => ({ ...prev, [i]: 100 }));
+        if (result) uploaded.push(result);
+      } catch {
+        clearInterval(progressInterval);
+        setUploadProgress((prev) => ({ ...prev, [i]: -1 })); // -1 = error
+      }
+    }
+
     if (uploaded.length > 0) {
       setDocuments((prev) => [...uploaded, ...prev]);
     }
     setPendingFiles([]);
+    setUploadProgress({});
     setUploading(false);
   };
 
@@ -324,8 +373,19 @@ export default function AddEditCollateralModal({
   ]);
   const missingRequiredTypes = requiredDocTypes.filter((rt) => !uploadedDocTypes.has(rt.name));
 
+  // Progress indicator: count filled sections
+  const detailsProgress = (() => {
+    const steps = [
+      !!selectedObligor,
+      !!(watch('type')),
+      !!(watch('description')),
+      !!(watch('valueTS')),
+      !!(watch('registrationDate')),
+    ];
+    return Math.round((steps.filter(Boolean).length / steps.length) * 100);
+  })();
+
   const onSubmit = async (data: FormData) => {
-    // Validate obligor
     if (!selectedObligor) {
       setObligorError('Please select an obligor.');
       return;
@@ -339,7 +399,7 @@ export default function AddEditCollateralModal({
       type: data.type as Collateral['type'],
       description: data.description,
       valueTSh: data.valueTS,
-      facilityId: data.facilityId,
+      facilityId: selectedLoanId || '',
       registry: data.registry as Collateral['registry'],
       registrationDate: data.registrationDate,
       perfectionDeadline: data.requiresPerfection ? data.perfectionDeadline : '',
@@ -354,7 +414,6 @@ export default function AddEditCollateralModal({
     setSaveError(null);
     setBrelaError(null);
 
-    // Store for retry
     lastSubmitDataRef.current = {
       data: savedData,
       pendingFiles: editItem?.id ? undefined : pendingFiles,
@@ -435,11 +494,16 @@ export default function AddEditCollateralModal({
   };
   const getBadgeColor = (type: string) => docBadgeColors[type] ?? 'bg-gray-100 text-gray-600';
 
+  // Modal title: show collateralId for edit, not UUID
+  const modalTitle = editItem
+    ? `Edit Collateral — ${editItem.collateralId || editItem.id}`
+    : 'Register New Collateral';
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={editItem ? `Edit Collateral — ${editItem.id}` : 'Register New Collateral'}
+      title={modalTitle}
       subtitle={
         editItem
           ? `Updating record for ${editItem.obligor}`
@@ -447,6 +511,20 @@ export default function AddEditCollateralModal({
       }
       size="xl"
     >
+      {/* ── Progress Indicator ── */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-muted-foreground font-500">Form completion</span>
+          <span className="text-xs font-600 text-primary">{detailsProgress}%</span>
+        </div>
+        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary rounded-full transition-all duration-500"
+            style={{ width: `${detailsProgress}%` }}
+          />
+        </div>
+      </div>
+
       {/* BRELA / Validation Error Banner */}
       {brelaError && (
         <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
@@ -464,9 +542,9 @@ export default function AddEditCollateralModal({
       {/* Save / Write Error Banner */}
       {saveError && (
         <div className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${
-          saveError.kind === 'network' ?'bg-amber-50 border-amber-300'
-            : saveError.kind === 'auth' ?'bg-red-50 border-red-300'
-            : saveError.kind === 'constraint' ?'bg-orange-50 border-orange-300' :'bg-destructive/10 border-destructive/30'
+          saveError.kind === 'network' ? 'bg-amber-50 border-amber-300'
+            : saveError.kind === 'auth' ? 'bg-red-50 border-red-300'
+            : saveError.kind === 'constraint' ? 'bg-orange-50 border-orange-300' : 'bg-destructive/10 border-destructive/30'
         }`}>
           {saveError.kind === 'network' ? (
             <WifiOff size={15} className="text-amber-600 mt-0.5 shrink-0" />
@@ -481,17 +559,17 @@ export default function AddEditCollateralModal({
             <p className={`text-sm font-600 ${
               saveError.kind === 'network' ? 'text-amber-800'
               : saveError.kind === 'auth' ? 'text-red-800'
-              : saveError.kind === 'constraint'? 'text-orange-800' :'text-destructive'
+              : saveError.kind === 'constraint' ? 'text-orange-800' : 'text-destructive'
             }`}>
               {saveError.kind === 'network' ? 'Network Error'
                 : saveError.kind === 'auth' ? 'Permission Denied'
                 : saveError.kind === 'constraint' ? 'Data Conflict'
-                : saveError.kind === 'schema'? 'Configuration Error' :'Save Failed'}
+                : saveError.kind === 'schema' ? 'Configuration Error' : 'Save Failed'}
             </p>
             <p className={`text-xs mt-0.5 ${
               saveError.kind === 'network' ? 'text-amber-700'
               : saveError.kind === 'auth' ? 'text-red-700'
-              : saveError.kind === 'constraint'? 'text-orange-700' :'text-destructive'
+              : saveError.kind === 'constraint' ? 'text-orange-700' : 'text-destructive'
             }`}>
               {saveError.message}
             </p>
@@ -582,9 +660,22 @@ export default function AddEditCollateralModal({
                     <AlertCircle size={11} />{obligorError}
                   </p>
                 )}
+                {/* Create New Obligor quick-link */}
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Obligor not listed?{' '}
+                  <a
+                    href="/obligors"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline font-500"
+                  >
+                    <UserPlus size={11} />
+                    Create new obligor
+                  </a>
+                </p>
               </div>
 
-              {/* Loan Selector */}
+              {/* Loan Selector — only field for facility linkage */}
               <div className="sm:col-span-2">
                 <label className="block text-sm font-500 text-foreground mb-1">
                   Linked Loan Facility
@@ -621,23 +712,7 @@ export default function AddEditCollateralModal({
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-500 text-foreground mb-1">
-                  Facility / Loan ID <span className="text-destructive">*</span>
-                </label>
-                <p className="text-xs text-muted-foreground mb-1.5">The loan facility this collateral secures (e.g. TZ-FAC-2025-0441)</p>
-                <input
-                  type="text"
-                  placeholder="TZ-FAC-YYYY-NNNN"
-                  className={`w-full px-3 py-2.5 rounded-md border text-sm bg-white font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors ${errors.facilityId ? 'border-destructive' : 'border-border hover:border-primary/40'}`}
-                  {...register('facilityId', {
-                    required: 'Facility ID is required',
-                    pattern: { value: /^TZ-FAC-\d{4}-\d{4}$/, message: 'Format must be TZ-FAC-YYYY-NNNN' },
-                  })}
-                />
-                {errors.facilityId && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{errors.facilityId.message}</p>}
-              </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-500 text-foreground mb-1">
                   Assigned Credit Officer <span className="text-destructive">*</span>
                 </label>
@@ -792,8 +867,7 @@ export default function AddEditCollateralModal({
             )}
           </div>
 
-          {/* Required Documents Checklist (shown on details tab) */}
-          {/* Section 4: Location */}
+          {/* Section 4: Geolocation */}
           <div className="mb-6">
             <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">4</span>
@@ -803,13 +877,14 @@ export default function AddEditCollateralModal({
             <LocationPicker value={location} onChange={setLocation} />
           </div>
 
+          {/* Section 5: Required Documents Checklist */}
           {requiredDocTypes.length > 0 && (
-            <div className="mb-2">
+            <div className="mb-6">
               <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">4</span>
+                <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">5</span>
                 Required Documents Checklist
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                 {requiredDocTypes.map((rt) => {
                   const isSatisfied = uploadedDocTypes.has(rt.name);
                   return (
@@ -817,7 +892,7 @@ export default function AddEditCollateralModal({
                       key={rt.id}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
                         isSatisfied
-                          ? 'bg-green-50 border-green-200 text-green-800' :'bg-amber-50 border-amber-200 text-amber-800'
+                          ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'
                       }`}
                     >
                       {isSatisfied ? (
@@ -826,24 +901,197 @@ export default function AddEditCollateralModal({
                         <AlertTriangle size={14} className="text-amber-500 shrink-0" />
                       )}
                       <span className="font-500">{rt.name}</span>
-                      {!isSatisfied && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('documents')}
-                          className="ml-auto text-xs text-amber-700 underline hover:text-amber-900"
-                        >
-                          Upload
-                        </button>
-                      )}
                     </div>
                   );
                 })}
               </div>
               {missingRequiredTypes.length > 0 && (
-                <p className="mt-2 text-xs text-amber-700 flex items-center gap-1">
+                <p className="mb-3 text-xs text-amber-700 flex items-center gap-1">
                   <AlertTriangle size={11} />
-                  {missingRequiredTypes.length} required document{missingRequiredTypes.length > 1 ? 's' : ''} missing. You can still save and upload later.
+                  {missingRequiredTypes.length} required document{missingRequiredTypes.length > 1 ? 's' : ''} missing — upload below or save and upload later.
                 </p>
+              )}
+
+              {/* Inline compact upload zone on Details tab */}
+              <div
+                onDrop={handleDetailsDrop}
+                onDragOver={(e) => { e.preventDefault(); setDetailsDragOver(true); }}
+                onDragLeave={() => setDetailsDragOver(false)}
+                onClick={() => detailsFileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                  detailsDragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/40'
+                }`}
+              >
+                <Upload size={16} className="mx-auto mb-1.5 text-muted-foreground" />
+                <p className="text-xs font-500 text-muted-foreground">
+                  Drag & drop documents here, or <span className="text-primary">click to browse</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">PDF, JPG, PNG, DOCX — max 10MB each</p>
+                <input
+                  ref={detailsFileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  className="hidden"
+                  onChange={handleFileInput}
+                />
+              </div>
+
+              {uploadError && (
+                <div className="mt-2 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
+                  <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
+                  <p className="text-xs text-destructive">{uploadError}</p>
+                </div>
+              )}
+
+              {/* Pending files with progress bars */}
+              {pendingFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs font-600 text-foreground">Ready to upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
+                  {pendingFiles.map((pf, idx) => {
+                    const progress = uploadProgress[idx];
+                    const isError = progress === -1;
+                    const isDone = progress === 100;
+                    return (
+                      <div key={`pending-details-${idx}`} className="p-2.5 bg-white border border-border rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg leading-none mt-0.5">{getFileIcon(pf.file.type)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-500 text-foreground truncate">{pf.file.name}</p>
+                            <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
+                            <div className="mt-1.5 flex gap-2">
+                              <select
+                                value={pf.docType}
+                                onChange={(e) => updatePendingDocType(idx, e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                              >
+                                {docTypeNames.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
+                              </select>
+                              <input
+                                type="text"
+                                placeholder="Notes (optional)"
+                                value={pf.notes}
+                                onChange={(e) => updatePendingNotes(idx, e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                              />
+                            </div>
+                            {/* Per-file progress bar */}
+                            {progress !== undefined && (
+                              <div className="mt-1.5">
+                                <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${isError ? 'bg-destructive' : isDone ? 'bg-green-500' : 'bg-primary'}`}
+                                    style={{ width: `${isError ? 100 : progress}%` }}
+                                  />
+                                </div>
+                                <p className={`text-xs mt-0.5 ${isError ? 'text-destructive' : isDone ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                  {isError ? 'Upload failed' : isDone ? 'Uploaded ✓' : `${progress}%`}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <button type="button" onClick={() => removePending(idx)} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* If no required doc types, still show compact upload zone */}
+          {requiredDocTypes.length === 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">5</span>
+                Documents <span className="text-xs font-400 text-muted-foreground ml-1">(optional)</span>
+              </h3>
+              <div
+                onDrop={handleDetailsDrop}
+                onDragOver={(e) => { e.preventDefault(); setDetailsDragOver(true); }}
+                onDragLeave={() => setDetailsDragOver(false)}
+                onClick={() => detailsFileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                  detailsDragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/40'
+                }`}
+              >
+                <Upload size={16} className="mx-auto mb-1.5 text-muted-foreground" />
+                <p className="text-xs font-500 text-muted-foreground">
+                  Drag & drop documents here, or <span className="text-primary">click to browse</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">PDF, JPG, PNG, DOCX — max 10MB each</p>
+                <input
+                  ref={detailsFileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  className="hidden"
+                  onChange={handleFileInput}
+                />
+              </div>
+
+              {uploadError && (
+                <div className="mt-2 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
+                  <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
+                  <p className="text-xs text-destructive">{uploadError}</p>
+                </div>
+              )}
+
+              {pendingFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs font-600 text-foreground">Ready to upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
+                  {pendingFiles.map((pf, idx) => {
+                    const progress = uploadProgress[idx];
+                    const isError = progress === -1;
+                    const isDone = progress === 100;
+                    return (
+                      <div key={`pending-details2-${idx}`} className="p-2.5 bg-white border border-border rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg leading-none mt-0.5">{getFileIcon(pf.file.type)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-500 text-foreground truncate">{pf.file.name}</p>
+                            <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
+                            <div className="mt-1.5 flex gap-2">
+                              <select
+                                value={pf.docType}
+                                onChange={(e) => updatePendingDocType(idx, e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                              >
+                                {docTypeNames.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
+                              </select>
+                              <input
+                                type="text"
+                                placeholder="Notes (optional)"
+                                value={pf.notes}
+                                onChange={(e) => updatePendingNotes(idx, e.target.value)}
+                                className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                              />
+                            </div>
+                            {progress !== undefined && (
+                              <div className="mt-1.5">
+                                <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${isError ? 'bg-destructive' : isDone ? 'bg-green-500' : 'bg-primary'}`}
+                                    style={{ width: `${isError ? 100 : progress}%` }}
+                                  />
+                                </div>
+                                <p className={`text-xs mt-0.5 ${isError ? 'text-destructive' : isDone ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                  {isError ? 'Upload failed' : isDone ? 'Uploaded ✓' : `${progress}%`}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <button type="button" onClick={() => removePending(idx)} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
@@ -879,7 +1127,7 @@ export default function AddEditCollateralModal({
             </div>
           )}
 
-          {/* Upload Zone — available for both new and edit */}
+          {/* Upload Zone */}
           <div className="mb-5">
             <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
               <Upload size={14} className="text-primary" />
@@ -927,38 +1175,59 @@ export default function AddEditCollateralModal({
               </div>
             )}
 
-            {/* Pending Files Queue */}
+            {/* Pending Files Queue with progress bars */}
             {pendingFiles.length > 0 && (
               <div className="mt-3 space-y-2">
                 <p className="text-xs font-600 text-foreground">Ready to upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
-                {pendingFiles.map((pf, idx) => (
-                  <div key={`pending-${idx}`} className="flex items-start gap-2 p-2.5 bg-white border border-border rounded-lg">
-                    <span className="text-lg leading-none mt-0.5">{getFileIcon(pf.file.type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-500 text-foreground truncate">{pf.file.name}</p>
-                      <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
-                      <div className="mt-1.5 flex gap-2">
-                        <select
-                          value={pf.docType}
-                          onChange={(e) => updatePendingDocType(idx, e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                        >
-                          {docTypeNames.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
-                        </select>
-                        <input
-                          type="text"
-                          placeholder="Notes (optional)"
-                          value={pf.notes}
-                          onChange={(e) => updatePendingNotes(idx, e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                        />
+                {pendingFiles.map((pf, idx) => {
+                  const progress = uploadProgress[idx];
+                  const isError = progress === -1;
+                  const isDone = progress === 100;
+                  return (
+                    <div key={`pending-${idx}`} className="p-2.5 bg-white border border-border rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="text-lg leading-none mt-0.5">{getFileIcon(pf.file.type)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-500 text-foreground truncate">{pf.file.name}</p>
+                          <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
+                          <div className="mt-1.5 flex gap-2">
+                            <select
+                              value={pf.docType}
+                              onChange={(e) => updatePendingDocType(idx, e.target.value)}
+                              className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            >
+                              {docTypeNames.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
+                            </select>
+                            <input
+                              type="text"
+                              placeholder="Notes (optional)"
+                              value={pf.notes}
+                              onChange={(e) => updatePendingNotes(idx, e.target.value)}
+                              className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            />
+                          </div>
+                          {/* Per-file progress bar */}
+                          {progress !== undefined && (
+                            <div className="mt-1.5">
+                              <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${isError ? 'bg-destructive' : isDone ? 'bg-green-500' : 'bg-primary'}`}
+                                  style={{ width: `${isError ? 100 : progress}%` }}
+                                />
+                              </div>
+                              <p className={`text-xs mt-0.5 ${isError ? 'text-destructive' : isDone ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                {isError ? 'Upload failed' : isDone ? 'Uploaded ✓' : `${progress}%`}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <button type="button" onClick={() => removePending(idx)} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
+                          <X size={14} />
+                        </button>
                       </div>
                     </div>
-                    <button type="button" onClick={() => removePending(idx)} className="text-muted-foreground hover:text-destructive transition-colors mt-0.5">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
