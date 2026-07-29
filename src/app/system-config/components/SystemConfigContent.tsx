@@ -578,9 +578,9 @@ export default function SystemConfigContent() {
 
 
 
+
       // silently fail — show empty form
-    } finally {setLoading(false);}}, [applyBrandCssVars]);useEffect(() => {loadConfigs();
-    }, [loadConfigs]);
+    } finally {setLoading(false);}}, [applyBrandCssVars]);useEffect(() => {loadConfigs();}, [loadConfigs]);
 
   const handleChange = (category: ConfigCategory, key: string, value: unknown) => {
     setLocalValues((prev) => ({
