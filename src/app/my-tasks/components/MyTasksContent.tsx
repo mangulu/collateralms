@@ -1,7 +1,8 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, Clock, FileUp, GitBranch, ShieldCheck, RefreshCw, X, ChevronRight, Loader2, ClipboardList, CheckCheck, Filter } from 'lucide-react';
+import { CheckCircle2, Clock, FileUp, GitBranch, ShieldCheck, RefreshCw, X, ChevronRight, Loader2, ClipboardList, CheckCheck, Filter, LayoutGrid } from 'lucide-react';
+import Link from 'next/link';
 import { userTaskService, UserTask, TaskType, TaskStatus } from '@/lib/supabase/userTaskService';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -137,6 +138,13 @@ export default function MyTasksContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Link href="/workflows" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
+              <LayoutGrid size={11} /> Workflows
+            </Link>
+            <ChevronRight size={11} className="text-muted-foreground" />
+            <span className="text-xs text-foreground font-medium">My Tasks</span>
+          </div>
           <h1 className="text-xl sm:text-2xl font-700 text-foreground">My Tasks</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Your assigned workflow steps, document uploads, and pending actions

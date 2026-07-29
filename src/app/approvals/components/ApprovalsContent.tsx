@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, Eye, Search, Loader2, Calendar, User, RefreshCw, ShieldCheck, X, ChevronRight, AlertTriangle, Scale, CreditCard, FileCheck, ArrowRight, Send, Lock, Unlock, CornerDownRight, Info, RotateCcw, TrendingUp,  } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, Search, Loader2, Calendar, User, RefreshCw, ShieldCheck, X, ChevronRight, AlertTriangle, Scale, CreditCard, FileCheck, ArrowRight, Send, Lock, Unlock, CornerDownRight, Info, RotateCcw, TrendingUp, LayoutGrid } from 'lucide-react';
+import Link from 'next/link';
 import { collateralApprovalService, CollateralApprovalRequest, ApprovalComment, ApprovalPipelineLog, ApprovalRequestStatus, ApproverRole } from '@/lib/supabase/collateralApprovalService';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/AppIcon';
@@ -379,8 +380,15 @@ export default function ApprovalsContent() {
               <ShieldCheck size={18} className="text-indigo-700" />
             </div>
             <div>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Link href="/workflows" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors">
+                  <LayoutGrid size={11} /> Workflows
+                </Link>
+                <ChevronRight size={11} className="text-gray-300" />
+                <span className="text-xs text-gray-600 font-medium">Approvals</span>
+              </div>
               <h1 className="text-lg font-semibold text-gray-900">Approvals</h1>
-              <p className="text-sm text-gray-500">Legal Officers & Credit Managers — review routed collaterals, leave comments, and approve with compliance attestation</p>
+              <p className="text-sm text-gray-500">Legal Officers &amp; Credit Managers — review routed collaterals, leave comments, and approve with compliance attestation</p>
             </div>
           </div>
           <button

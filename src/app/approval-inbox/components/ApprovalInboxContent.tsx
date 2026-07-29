@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send, TrendingUp, TrendingDown, Minus, BarChart2, Timer, Layers, Sparkles, ShieldAlert, ListChecks, FileText, Bell, Smartphone, Wifi, WifiOff } from 'lucide-react';
+import { CheckCircle, XCircle, RotateCcw, Clock, Eye, Search, Filter, ChevronDown, ChevronRight, MessageSquare, AlertCircle, Loader2, Building2, Calendar, User, Tag, RefreshCw, CheckSquare, X, Send, TrendingUp, TrendingDown, Minus, BarChart2, Timer, Layers, Sparkles, ShieldAlert, ListChecks, FileText, Bell, Smartphone, Wifi, WifiOff, LayoutGrid } from 'lucide-react';
+import Link from 'next/link';
 import { perfectionService, PerfectionRequest, PerfectionRequestStatus } from '@/lib/supabase/perfectionService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -981,8 +982,15 @@ export default function ApprovalInboxContent() {
       <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Link href="/workflows" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors">
+                <LayoutGrid size={11} /> Workflows
+              </Link>
+              <ChevronRight size={11} className="text-gray-300" />
+              <span className="text-xs text-gray-600 font-medium">Perfection Queue</span>
+            </div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold text-gray-900">Approval Inbox</h1>
+              <h1 className="text-xl font-bold text-gray-900">Perfection Queue</h1>
               {/* Realtime status indicator */}
               <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border ${realtimeConnected ? 'text-green-700 bg-green-50 border-green-200' : 'text-gray-500 bg-gray-50 border-gray-200'}`}>
                 {realtimeConnected
