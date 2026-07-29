@@ -7,6 +7,7 @@ import DocumentTypesSettingsContent from './components/DocumentTypesSettingsCont
 import CollateralTypesSettingsContent from './components/CollateralTypesSettingsContent';
 import NotificationSettingsContent from './components/NotificationSettingsContent';
 import EmailProviderSettingsContent from './components/EmailProviderSettingsContent';
+import CollateralTypeDocumentsSettingsContent from './components/CollateralTypeDocumentsSettingsContent';
 import { usePathname } from 'next/navigation';
 import {
   Settings,
@@ -338,7 +339,7 @@ function ConfigSection({ tab, values, onChange, onSave, saving, saved, error, la
 
 type SettingsTab =
   | 'document-types'
-  | 'registries' |'collateral-types' |'notifications' |'email-provider' |'registry-integrations' |'bank' |'registry' |'notifications-config' |'thresholds' |'retention';
+  | 'collateral-type-documents' |'registries' |'collateral-types' |'notifications' |'email-provider' |'registry-integrations' |'bank' |'registry' |'notifications-config' |'thresholds' |'retention';
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -439,6 +440,7 @@ export default function SettingsPage() {
 
   const configTabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: 'document-types', label: 'Document Types', icon: <FileText size={15} /> },
+    { id: 'collateral-type-documents', label: 'Required Documents', icon: <Layers size={15} /> },
     { id: 'registries', label: 'Registries', icon: <Building2 size={15} /> },
     { id: 'collateral-types', label: 'Collateral Types', icon: <Layers size={15} /> },
   ];
@@ -526,6 +528,7 @@ export default function SettingsPage() {
           {/* Tab Content */}
           <div className="px-6 py-6">
           {activeTab === 'document-types' && <DocumentTypesSettingsContent />}
+          {activeTab === 'collateral-type-documents' && <CollateralTypeDocumentsSettingsContent />}
           {activeTab === 'registries' && <RegistriesSettingsContent />}
           {activeTab === 'collateral-types' && <CollateralTypesSettingsContent />}
           {activeTab === 'notifications' && <NotificationSettingsContent />}
