@@ -21,10 +21,16 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
 
   // Load all obligors once on mount for quick filtering
   useEffect(() => {
+    let isMounted = true;
     obligorService
       .getAll()
-      .then(setAllLoaded)
+      .then((data) => {
+        if (isMounted) setAllLoaded(data);
+      })
       .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -96,7 +102,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
               <Building2 size={11} className="text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="font-500 text-foreground truncate block">{value.name}</span>
+              <span className="font-medium text-foreground truncate block">{value.name}</span>
             </div>
             <span className="text-xs text-muted-foreground font-mono shrink-0">{value.code}</span>
             <button
@@ -170,12 +176,12 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-500 text-foreground truncate">{o.fullName}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{o.fullName}</p>
                     <p className="text-xs text-muted-foreground font-mono">{o.obligorCode}</p>
                   </div>
                   {o.riskRating && (
                     <span
-                      className={`text-xs font-600 px-1.5 py-0.5 rounded shrink-0 ${
+                      className={`text-xs font-semibold px-1.5 py-0.5 rounded shrink-0 ${
                         o.riskRating === 'HIGH'
                           ? 'bg-red-100 text-red-700'
                           : o.riskRating === 'MEDIUM'
