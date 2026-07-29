@@ -85,8 +85,20 @@ export default function LoginForm() {
       const needs2FA = roleRequires2FA || profile?.two_fa_enabled;
 
       if (needs2FA) {
-        // If sensitive role but no phone set up yet, sign out and prompt setup
+        // If sensitive role but no phone set up yet:
+        // - system_admin can log in and set up 2FA from within the dashboard
+        // - other sensitive roles (supervisor) are blocked until admin sets up their 2FA
         if (!profile?.phone) {
+          if (profile?.role === 'system_admin') {
+            // Allow admin to log in — they need to configure 2FA themselves
+            toast.warning(
+              'Two-Factor Authentication is required for your account. Please set it up from your profile settings.',
+              { duration: 8000 }
+            );
+            router.push('/module-hub');
+            router.refresh();
+            return;
+          }
           await supabase.auth.signOut();
           setIsLoading(false);
           toast.error(
