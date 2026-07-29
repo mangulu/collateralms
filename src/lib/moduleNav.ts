@@ -89,7 +89,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Workflows Dashboard', icon: LayoutGrid, href: '/workflows', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Task List', icon: CheckSquare, href: '/workflows/tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'My Tasks', icon: CheckSquare, href: '/my-tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
