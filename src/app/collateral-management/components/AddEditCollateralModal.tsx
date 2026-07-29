@@ -11,6 +11,8 @@ import { loanService, Loan } from '@/lib/supabase/loanService';
 import { useAuth } from '@/contexts/AuthContext';
 import ObligorPicker from '@/components/ObligorPicker';
 import LocationPicker from '@/components/LocationPicker';
+import ObligorFormModal from '@/app/obligors/components/ObligorFormModal';
+import { Obligor } from '@/lib/supabase/obligorService';
 
 interface FormData {
   type: string;
@@ -103,6 +105,14 @@ export default function AddEditCollateralModal({
   // Inline upload zone on details tab
   const [detailsDragOver, setDetailsDragOver] = useState(false);
   const detailsFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Per-slot upload popup state
+  const [slotUploadTarget, setSlotUploadTarget] = useState<string | null>(null); // docType name
+  const [slotDragOver, setSlotDragOver] = useState(false);
+  const slotFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Inline new obligor modal state
+  const [showNewObligorModal, setShowNewObligorModal] = useState(false);
 
   // Document type settings from DB
   const [docTypeSettings, setDocTypeSettings] = useState<DocumentTypeSetting[]>([]);
@@ -499,6 +509,43 @@ export default function AddEditCollateralModal({
     ? `Edit Collateral — ${editItem.collateralId || editItem.id}`
     : 'Register New Collateral';
 
+  // Helper: get pending file for a specific doc type slot
+  const getPendingForSlot = (docTypeName: string) =>
+    pendingFiles.find((pf) => pf.docType === docTypeName) ?? null;
+
+  // Helper: get uploaded doc for a specific doc type slot
+  const getUploadedForSlot = (docTypeName: string) =>
+    documents.find((d) => d.documentType === docTypeName) ?? null;
+
+  // Handle file selected via slot popup
+  const handleSlotFileSelected = useCallback((files: FileList | File[]) => {
+    if (!slotUploadTarget) return;
+    setUploadError(null);
+    const fileArray = Array.from(files);
+    const errs: string[] = [];
+    const valid: { file: File; docType: string; notes: string }[] = [];
+    fileArray.forEach((file) => {
+      const err = validateFile(file);
+      if (err) errs.push(err);
+      else valid.push({ file, docType: slotUploadTarget, notes: '' });
+    });
+    if (errs.length > 0) setUploadError(errs.join(' '));
+    if (valid.length > 0) {
+      // Replace any existing pending file for this slot
+      setPendingFiles((prev) => [
+        ...prev.filter((pf) => pf.docType !== slotUploadTarget),
+        ...valid,
+      ]);
+    }
+    setSlotUploadTarget(null);
+  }, [slotUploadTarget]);
+
+  const handleSlotDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setSlotDragOver(false);
+    handleSlotFileSelected(e.dataTransfer.files);
+  }, [handleSlotFileSelected]);
+
   return (
     <Modal
       open={open}
@@ -511,6 +558,70 @@ export default function AddEditCollateralModal({
       }
       size="xl"
     >
+      {/* Inline New Obligor Modal */}
+      {showNewObligorModal && (
+        <ObligorFormModal
+          editItem={null}
+          onClose={() => setShowNewObligorModal(false)}
+          onSaved={(saved: Obligor) => {
+            setSelectedObligor({ id: saved.id, name: saved.fullName, code: saved.obligorCode ?? '' });
+            setObligorError(null);
+            setShowNewObligorModal(false);
+          }}
+        />
+      )}
+
+      {/* Per-slot upload popup */}
+      {slotUploadTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div>
+                <h3 className="text-sm font-700 text-foreground">Upload Document</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{slotUploadTarget}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSlotUploadTarget(null)}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors"
+              >
+                <X size={15} className="text-muted-foreground" />
+              </button>
+            </div>
+            <div className="p-5">
+              <div
+                onDrop={handleSlotDrop}
+                onDragOver={(e) => { e.preventDefault(); setSlotDragOver(true); }}
+                onDragLeave={() => setSlotDragOver(false)}
+                onClick={() => slotFileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                  slotDragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/40'
+                }`}
+              >
+                <Upload size={24} className="mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm font-500 text-foreground mb-1">
+                  Drop your file here, or <span className="text-primary">click to browse</span>
+                </p>
+                <p className="text-xs text-muted-foreground">PDF, JPG, PNG, DOCX — max 10MB</p>
+                <input
+                  ref={slotFileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files) handleSlotFileSelected(e.target.files); e.target.value = ''; }}
+                />
+              </div>
+              {uploadError && (
+                <div className="mt-3 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
+                  <AlertCircle size={13} className="text-destructive mt-0.5 shrink-0" />
+                  <p className="text-xs text-destructive">{uploadError}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Progress Indicator ── */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
@@ -660,18 +771,17 @@ export default function AddEditCollateralModal({
                     <AlertCircle size={11} />{obligorError}
                   </p>
                 )}
-                {/* Create New Obligor quick-link */}
+                {/* Create New Obligor quick-link — opens inline popup */}
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   Obligor not listed?{' '}
-                  <a
-                    href="/obligors"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => setShowNewObligorModal(true)}
                     className="inline-flex items-center gap-1 text-primary hover:underline font-500"
                   >
                     <UserPlus size={11} />
                     Create new obligor
-                  </a>
+                  </button>
                 </p>
               </div>
 
@@ -877,105 +987,99 @@ export default function AddEditCollateralModal({
             <LocationPicker value={location} onChange={setLocation} />
           </div>
 
-          {/* Section 5: Required Documents Checklist */}
+          {/* Section 5: Required Documents */}
           {requiredDocTypes.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">5</span>
-                Required Documents Checklist
+                Required Documents
+                {missingRequiredTypes.length > 0 && (
+                  <span className="ml-auto text-xs font-500 text-amber-600 flex items-center gap-1">
+                    <AlertTriangle size={11} />
+                    {missingRequiredTypes.length} missing
+                  </span>
+                )}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+
+              {/* Tray slots — one per required doc type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 {requiredDocTypes.map((rt) => {
-                  const isSatisfied = uploadedDocTypes.has(rt.name);
+                  const pending = getPendingForSlot(rt.name);
+                  const uploaded = getUploadedForSlot(rt.name);
+                  const isSatisfied = !!pending || !!uploaded;
+
+                  if (isSatisfied) {
+                    // Filled slot — green file icon + label
+                    const fileName = pending?.file.name ?? uploaded?.fileName ?? rt.name;
+                    return (
+                      <div
+                        key={rt.id}
+                        className="flex items-center gap-3 px-3 py-3 rounded-lg border border-green-200 bg-green-50"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                          <FileText size={18} className="text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-600 text-green-800 truncate">{rt.name}</p>
+                          <p className="text-xs text-green-600 truncate">{fileName}</p>
+                        </div>
+                        <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+                      </div>
+                    );
+                  }
+
+                  // Empty slot — warning icon, clickable to open upload popup
                   return (
-                    <div
+                    <button
                       key={rt.id}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
-                        isSatisfied
-                          ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800'
-                      }`}
+                      type="button"
+                      onClick={() => { setUploadError(null); setSlotUploadTarget(rt.name); }}
+                      className="flex items-center gap-3 px-3 py-3 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 transition-colors text-left group"
                     >
-                      {isSatisfied ? (
-                        <CheckCircle2 size={14} className="text-green-600 shrink-0" />
-                      ) : (
-                        <AlertTriangle size={14} className="text-amber-500 shrink-0" />
-                      )}
-                      <span className="font-500">{rt.name}</span>
-                    </div>
+                      <div className="w-9 h-9 rounded-lg bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center shrink-0 transition-colors">
+                        <AlertTriangle size={18} className="text-amber-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-600 text-amber-800">{rt.name}</p>
+                        <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
+                          <Upload size={10} />
+                          Click to upload
+                        </p>
+                      </div>
+                    </button>
                   );
                 })}
               </div>
-              {missingRequiredTypes.length > 0 && (
-                <p className="mb-3 text-xs text-amber-700 flex items-center gap-1">
-                  <AlertTriangle size={11} />
-                  {missingRequiredTypes.length} required document{missingRequiredTypes.length > 1 ? 's' : ''} missing — upload below or save and upload later.
-                </p>
-              )}
 
-              {/* Inline compact upload zone on Details tab */}
-              <div
-                onDrop={handleDetailsDrop}
-                onDragOver={(e) => { e.preventDefault(); setDetailsDragOver(true); }}
-                onDragLeave={() => setDetailsDragOver(false)}
-                onClick={() => detailsFileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  detailsDragOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/40'
-                }`}
-              >
-                <Upload size={16} className="mx-auto mb-1.5 text-muted-foreground" />
-                <p className="text-xs font-500 text-muted-foreground">
-                  Drag & drop documents here, or <span className="text-primary">click to browse</span>
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">PDF, JPG, PNG, DOCX — max 10MB each</p>
-                <input
-                  ref={detailsFileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                  className="hidden"
-                  onChange={handleFileInput}
-                />
-              </div>
-
-              {uploadError && (
+              {uploadError && !slotUploadTarget && (
                 <div className="mt-2 p-2.5 bg-destructive/10 border border-destructive/20 rounded-md flex items-start gap-2">
                   <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
                   <p className="text-xs text-destructive">{uploadError}</p>
                 </div>
               )}
 
-              {/* Pending files with progress bars */}
+              {/* Pending files queued via slots */}
               {pendingFiles.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  <p className="text-xs font-600 text-foreground">Ready to upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
+                  <p className="text-xs font-600 text-foreground">Queued for upload ({pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''}):</p>
                   {pendingFiles.map((pf, idx) => {
                     const progress = uploadProgress[idx];
                     const isError = progress === -1;
                     const isDone = progress === 100;
                     return (
-                      <div key={`pending-details-${idx}`} className="p-2.5 bg-white border border-border rounded-lg">
+                      <div key={`pending-slot-${idx}`} className="p-2.5 bg-white border border-border rounded-lg">
                         <div className="flex items-start gap-2">
                           <span className="text-lg leading-none mt-0.5">{getFileIcon(pf.file.type)}</span>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-500 text-foreground truncate">{pf.file.name}</p>
-                            <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)}</p>
-                            <div className="mt-1.5 flex gap-2">
-                              <select
-                                value={pf.docType}
-                                onChange={(e) => updatePendingDocType(idx, e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                              >
-                                {docTypeNames.map((dt) => <option key={dt} value={dt}>{dt}</option>)}
-                              </select>
-                              <input
-                                type="text"
-                                placeholder="Notes (optional)"
-                                value={pf.notes}
-                                onChange={(e) => updatePendingNotes(idx, e.target.value)}
-                                className="flex-1 px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
-                              />
-                            </div>
-                            {/* Per-file progress bar */}
+                            <p className="text-xs text-muted-foreground">{documentService.formatFileSize(pf.file.size)} · {pf.docType}</p>
+                            <input
+                              type="text"
+                              placeholder="Notes (optional)"
+                              value={pf.notes}
+                              onChange={(e) => updatePendingNotes(idx, e.target.value)}
+                              className="mt-1.5 w-full px-2 py-1 text-xs border border-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            />
                             {progress !== undefined && (
                               <div className="mt-1.5">
                                 <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
