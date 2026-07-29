@@ -268,6 +268,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-reports': 'reports',
   '/onboarding-guide': 'administration',
   '/officer-management': 'administration',
+  '/user-profile': 'administration',
 };
 
 /**

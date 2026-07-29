@@ -348,33 +348,52 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
       {/* User Profile */}
       <div className="p-2 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
         {!collapsed ? (
-          <div
-            className="izou-sidebar-card flex items-center gap-2.5 px-3 py-2.5 cursor-pointer group"
-            onClick={() => signOut?.()}
-            title="Sign out"
-          >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
+          <div className="space-y-1">
+            <Link
+              href="/user-profile"
+              className={`izou-sidebar-card flex items-center gap-2.5 px-3 py-2.5 cursor-pointer group hover:opacity-90 transition-opacity ${
+                currentPath === '/user-profile' ? 'izou-nav-active' : ''
+              }`}
+              title="My Profile"
             >
-              <span className="text-white text-xs font-bold">{initials}</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold truncate text-white">{displayName}</p>
-              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{displayRole}</p>
-            </div>
-            <LogOut size={15} className="shrink-0 transition-colors group-hover:text-red-300" style={{ color: 'rgba(255,255,255,0.7)' }} />
-          </div>
-        ) : (
-          <div className="flex justify-center py-1">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all"
-              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
+              >
+                <span className="text-white text-xs font-bold">{initials}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate text-white">{displayName}</p>
+                <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{displayRole}</p>
+              </div>
+            </Link>
+            <button
               onClick={() => signOut?.()}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors hover:bg-white/10"
+              style={{ color: 'rgba(255,255,255,0.65)' }}
               title="Sign out"
             >
+              <LogOut size={13} className="shrink-0" />
+              <span>Sign out</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1 py-1">
+            <Link
+              href="/user-profile"
+              className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all hover:opacity-80"
+              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
+              title="My Profile"
+            >
               <span className="text-white text-xs font-bold">{initials}</span>
-            </div>
+            </Link>
+            <button
+              onClick={() => signOut?.()}
+              className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all hover:bg-white/10"
+              title="Sign out"
+            >
+              <LogOut size={13} style={{ color: 'rgba(255,255,255,0.7)' }} />
+            </button>
           </div>
         )}
       </div>
