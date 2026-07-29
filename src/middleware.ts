@@ -165,9 +165,9 @@ export async function middleware(request: NextRequest) {
   const isSensitiveRole = SENSITIVE_ROLES.has(userRole);
 
   // ─── 2FA enforcement: redirect to login if 2FA not set up for sensitive roles ─
-  // The login flow handles 2FA challenge; here we just ensure 2FA is enabled
-  // for sensitive roles. If not, redirect to login with a flag.
-  if (isSensitiveRole && !profile.two_fa_enabled) {
+  // system_admin is exempt — they must be able to log in to configure 2FA.
+  // Only non-admin sensitive roles (e.g. supervisor) are hard-blocked here.
+  if (isSensitiveRole && userRole !== 'system_admin' && !profile.two_fa_enabled) {
     const url = request.nextUrl.clone();
     url.pathname = '/sign-up-login-screen';
     url.searchParams.set('require_2fa_setup', '1');

@@ -27,9 +27,6 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
 
   // 2FA setup required notice (for sensitive roles without phone)
-  const searchParams = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search)
-    : null;
   const [show2FASetupNotice] = useState(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('require_2fa_setup') === '1';
@@ -378,7 +375,7 @@ export default function LoginForm() {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <div>
                     <p className="text-xs font-semibold text-orange-800">Two-Factor Authentication Required</p>
-                    <p className="text-xs text-orange-700 mt-0.5">Your role requires 2FA. Please sign in and contact your administrator to register a phone number for SMS verification.</p>
+                    <p className="text-xs text-orange-700 mt-0.5">Your role requires 2FA. Please sign in and set up your phone number for SMS verification from your profile settings.</p>
                   </div>
                 </div>
               )}
