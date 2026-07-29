@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppLogo from './ui/AppLogo';
-import { ChevronLeft, ChevronRight, LogOut, LayoutGrid, ChevronDown, BookOpen, HelpCircle } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { ChevronLeft, ChevronRight, LayoutGrid, ChevronDown, BookOpen, HelpCircle } from 'lucide-react';
+
 import { usePermissions } from '@/lib/rbac';
 import { MODULE_DEFINITIONS, getModuleForPath, ModuleNavItem } from '@/lib/moduleNav';
 
@@ -36,7 +36,6 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
     return new Set<string>();
   });
   const [fraudPendingCount, setFraudPendingCount] = useState<number | null>(null);
-  const { userProfile, signOut } = useAuth();
   const { hasPermission, loading: permsLoading, isSystemAdmin } = usePermissions();
   const router = useRouter();
 
@@ -65,16 +64,6 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
     }
     return undefined; // undefined = use static badge from nav definition
   };
-
-  const initials = userProfile?.initials ||
-    (userProfile?.full_name
-      ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-      : 'U');
-
-  const displayName = userProfile?.full_name || userProfile?.email || 'User';
-  const displayRole = userProfile?.role
-    ? userProfile.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
-    : '';
 
   const activeModuleId = currentPath ? getModuleForPath(currentPath) : null;
   const activeModule = activeModuleId
@@ -344,40 +333,6 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           )
         )}
       </nav>
-
-      {/* User Profile */}
-      <div className="p-2 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-        {!collapsed ? (
-          <div
-            className="izou-sidebar-card flex items-center gap-2.5 px-3 py-2.5 cursor-pointer group"
-            onClick={() => signOut?.()}
-            title="Sign out"
-          >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
-            >
-              <span className="text-white text-xs font-bold">{initials}</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold truncate text-white">{displayName}</p>
-              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.6)' }}>{displayRole}</p>
-            </div>
-            <LogOut size={15} className="shrink-0 transition-colors group-hover:text-red-300" style={{ color: 'rgba(255,255,255,0.7)' }} />
-          </div>
-        ) : (
-          <div className="flex justify-center py-1">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all"
-              style={{ background: 'rgba(255,255,255,0.22)', border: '1px solid rgba(255,255,255,0.3)' }}
-              onClick={() => signOut?.()}
-              title="Sign out"
-            >
-              <span className="text-white text-xs font-bold">{initials}</span>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Collapse Toggle */}
       <button

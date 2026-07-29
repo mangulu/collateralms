@@ -12,13 +12,11 @@ import AddEditCollateralModal from '@/app/collateral-management/components/AddEd
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralUtilizationTab from './CollateralUtilizationTab';
 import QuickActionsPanel from './QuickActionsPanel';
-import CollateralHistoryTab from './CollateralHistoryTab';
 import GeoSection from './GeoSection';
 import DocumentsSection from './DocumentsSection';
-import AuditTrailSection from './AuditTrailSection';
 import LegalSignOffSection from './LegalSignOffSection';
 import RiskComplianceSidebarCard from './RiskComplianceSidebarCard';
-import ChangeHistoryTab from './ChangeHistoryTab';
+import HistoryAuditTab from './HistoryAuditTab';
 import MandatoryDocumentsCard from './MandatoryDocumentsCard';
 import ProcessLaunchersPanel from './ProcessLaunchersPanel';
 
@@ -134,7 +132,7 @@ export default function CollateralDetailContent({
   const { user } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history' | 'change-history'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history-audit'>('profile');
   const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
   const [obligorData, setObligorData] = useState<Obligor | null>(null);
   const [loanData, setLoanData] = useState<Loan | null>(null);
@@ -314,11 +312,10 @@ export default function CollateralDetailContent({
         {[
           { key: 'profile', label: 'Profile', icon: Shield },
           { key: 'charges', label: 'Charges & Loans', icon: PieChart },
-          { key: 'documents', label: 'Documents & History', icon: Files },
-          { key: 'history', label: 'History', icon: History },
-          { key: 'change-history', label: 'Change History', icon: Activity },
+          { key: 'documents', label: 'Documents', icon: Files },
+          { key: 'history-audit', label: 'History & Audit', icon: History },
         ].map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history' | 'change-history')}
+          <button key={tab.key} onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history-audit')}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${activeTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             <tab.icon size={13} /> {tab.label}
           </button>
@@ -566,20 +563,16 @@ export default function CollateralDetailContent({
       {/* Tab: Charges & Loans */}
       {activeTab === 'charges' && <CollateralUtilizationTab collateral={collateral} />}
 
-      {/* Tab: Documents & History */}
+      {/* Tab: Documents */}
       {activeTab === 'documents' && (
         <div className="space-y-6">
           <DocumentsSection collateral={collateral} />
           <LegalSignOffSection collateral={collateral} />
-          <AuditTrailSection collateral={collateral} />
         </div>
       )}
 
-      {/* Tab: History */}
-      {activeTab === 'history' && <CollateralHistoryTab collateral={collateral} />}
-
-      {/* Tab: Change History (SOX) */}
-      {activeTab === 'change-history' && <ChangeHistoryTab collateral={collateral} />}
+      {/* Tab: History & Audit */}
+      {activeTab === 'history-audit' && <HistoryAuditTab collateral={collateral} />}
 
       {/* Edit Modal */}
       <AddEditCollateralModal

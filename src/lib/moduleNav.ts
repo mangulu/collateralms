@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, MailCheck, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, CheckSquare, LayoutGrid } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -85,18 +85,28 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     label: 'Workflows',
     groups: [
       {
-        label: 'Approval Workflows',
+        label: 'Overview',
         items: [
-          { label: 'Approval Inbox', icon: MailCheck, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Perfection Approval', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Workflows Dashboard', icon: LayoutGrid, href: '/workflows', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Task List', icon: CheckSquare, href: '/workflows/tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'Approvals',
+        items: [
+          { label: 'Approvals', icon: ShieldCheck, href: '/approvals', permission: PERMISSIONS.PERFECTION_REVIEW },
+          { label: 'Perfection Queue', icon: GitBranch, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Perfection Workflow', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Release Approval', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
         ],
       },
       {
-        label: 'Archive Workflows',
+        label: 'Workflow Processes',
         items: [
-          { label: 'Archive Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Valuation Reviews', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Archive Request Workflow', icon: FolderArchive, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -171,6 +181,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Audit',
         items: [
           { label: 'Live Activity Stream', icon: Radio, href: '/live-activity', permission: PERMISSIONS.AUDIT_LOG_VIEW },
+          { label: 'Activity Log', icon: Activity, href: '/activity-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Center', icon: DatabaseZap, href: '/audit-center', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Report', icon: BookOpen, href: '/audit-report', permission: PERMISSIONS.AUDIT_LOG_VIEW },
@@ -253,6 +264,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-substitution': 'collaterals',
   '/covenant-tracking': 'collaterals',
   '/insurance-tracking': 'collaterals',
+  '/workflows': 'approvals',
   '/document-management': 'archive',
   '/document-approval': 'approvals',
   '/obligors': 'obligors',
@@ -267,6 +279,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-reports': 'reports',
   '/onboarding-guide': 'administration',
   '/officer-management': 'administration',
+  '/user-profile': 'administration',
 };
 
 /**

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2, Package, MapPin } from 'lucide-react';
-import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
+import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2, Package, MapPin, ShieldCheck, ArrowUpDown } from 'lucide-react';
+import { documentService, CollateralDocument, DocumentType, DocumentVersionAudit } from '@/lib/supabase/documentService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
@@ -13,6 +13,9 @@ import DocumentVersionHistoryModal from '@/components/DocumentVersionHistoryModa
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DOCUMENT_TYPES: DocumentType[] = [
+  'Deed',
+  'Appraisal',
+  'Insurance Policy',
   'Title Deed',
   'Charge Certificate',
   'Valuation Report',
@@ -23,6 +26,9 @@ const DOCUMENT_TYPES: DocumentType[] = [
 ];
 
 const DOC_TYPE_META: Record<DocumentType, { color: string; bg: string; border: string }> = {
+  'Deed':                  { color: 'text-blue-800',    bg: 'bg-blue-100',   border: 'border-blue-300' },
+  'Appraisal':             { color: 'text-orange-700',  bg: 'bg-orange-50',  border: 'border-orange-200' },
+  'Insurance Policy':      { color: 'text-teal-700',    bg: 'bg-teal-50',    border: 'border-teal-200' },
   'Title Deed':            { color: 'text-blue-700',    bg: 'bg-blue-50',    border: 'border-blue-200' },
   'Charge Certificate':    { color: 'text-purple-700',  bg: 'bg-purple-50',  border: 'border-purple-200' },
   'Valuation Report':      { color: 'text-amber-700',   bg: 'bg-amber-50',   border: 'border-amber-200' },
@@ -623,6 +629,224 @@ function DocumentRow({
   );
 }
 
+// ─── Audit Trail Tab ──────────────────────────────────────────────────────────
+
+interface AuditTrailTabProps {
+  collateralRecords: CollateralRecord[];
+}
+
+function AuditTrailTab({ collateralRecords }: AuditTrailTabProps) {
+  const [auditEntries, setAuditEntries] = useState<DocumentVersionAudit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [filterAction, setFilterAction] = useState<string>('All');
+  const [filterCollateral, setFilterCollateral] = useState<string>('All');
+
+  const recordMap = React.useMemo(() => {
+    const m: Record<string, CollateralRecord> = {};
+    collateralRecords.forEach((r) => { m[r.id] = r; });
+    return m;
+  }, [collateralRecords]);
+
+  const fetchAudit = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const entries = await documentService.getAllVersionAudit(500);
+      setAuditEntries(entries);
+    } catch {
+      setError('Failed to load audit trail.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchAudit(); }, [fetchAudit]);
+
+  const filtered = React.useMemo(() => {
+    return auditEntries.filter((e) => {
+      const matchSearch =
+        !search ||
+        e.fileName.toLowerCase().includes(search.toLowerCase()) ||
+        e.performedByName.toLowerCase().includes(search.toLowerCase()) ||
+        e.collateralId.toLowerCase().includes(search.toLowerCase()) ||
+        recordMap[e.collateralRecordId]?.obligor?.toLowerCase().includes(search.toLowerCase());
+      const matchAction = filterAction === 'All' || e.action === filterAction;
+      const matchCollateral = filterCollateral === 'All' || e.collateralRecordId === filterCollateral;
+      return matchSearch && matchAction && matchCollateral;
+    });
+  }, [auditEntries, search, filterAction, filterCollateral, recordMap]);
+
+  const actionBadge = (action: string) => {
+    if (action === 'upload') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (action === 'rollback') return 'bg-amber-100 text-amber-700 border-amber-200';
+    if (action === 'delete') return 'bg-red-100 text-red-700 border-red-200';
+    return 'bg-slate-100 text-slate-600 border-slate-200';
+  };
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-white shrink-0 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search file, officer, collateral…"
+            className="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <X size={13} className="text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
+        <div className="relative">
+          <select
+            value={filterAction}
+            onChange={(e) => setFilterAction(e.target.value)}
+            className="appearance-none border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="All">All Actions</option>
+            <option value="upload">Upload</option>
+            <option value="rollback">Rollback</option>
+            <option value="delete">Delete</option>
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        </div>
+
+        <div className="relative">
+          <select
+            value={filterCollateral}
+            onChange={(e) => setFilterCollateral(e.target.value)}
+            className="appearance-none border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 max-w-[200px]"
+          >
+            <option value="All">All Collaterals</option>
+            {collateralRecords.map((r) => (
+              <option key={r.id} value={r.id}>{r.collateralId} — {r.obligor}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        </div>
+
+        <button
+          onClick={fetchAudit}
+          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          title="Refresh audit trail"
+        >
+          <RefreshCw size={15} className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
+        </button>
+
+        <span className="ml-auto text-xs text-muted-foreground">
+          {loading ? 'Loading…' : `${filtered.length} event${filtered.length !== 1 ? 's' : ''}`}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto">
+        {error && (
+          <div className="m-6 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            <AlertCircle size={15} className="shrink-0" /> {error}
+          </div>
+        )}
+
+        {loading && (
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-12 bg-muted/50 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+              <ShieldCheck size={24} className="text-muted-foreground" />
+            </div>
+            <h3 className="text-base font-semibold text-foreground mb-1">No audit events found</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              {search || filterAction !== 'All' || filterCollateral !== 'All' ?'Try adjusting your filters.' :'Document actions (uploads, rollbacks, deletes) will appear here.'}
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length > 0 && (
+          <table className="w-full text-left">
+            <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm z-10">
+              <tr>
+                {['Timestamp', 'Action', 'File', 'Version', 'Collateral', 'Officer', 'Notes'].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((entry) => {
+                const record = recordMap[entry.collateralRecordId];
+                return (
+                  <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <p className="text-xs font-medium text-foreground">{formatDateTime(entry.performedAt)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${actionBadge(entry.action)}`}>
+                        {entry.action}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-muted-foreground shrink-0" />
+                        <p className="text-xs font-medium text-foreground truncate max-w-[180px]">{entry.fileName}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{documentService.formatFileSize(entry.fileSize)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {entry.fromVersion !== null && (
+                          <>
+                            <span className="font-medium text-foreground">v{entry.fromVersion}</span>
+                            <ArrowUpDown size={11} />
+                          </>
+                        )}
+                        <span className="font-semibold text-primary">v{entry.toVersion}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {record ? (
+                        <div>
+                          <p className="text-xs font-medium text-foreground">{record.collateralId}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[130px]">{record.obligor}</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{entry.collateralId}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-xs font-medium text-foreground">{entry.performedByName || 'System'}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      {entry.notes ? (
+                        <p className="text-xs text-muted-foreground truncate max-w-[160px]" title={entry.notes}>{entry.notes}</p>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface DocumentWithRecord extends CollateralDocument {
@@ -651,7 +875,7 @@ export default function CollateralDocumentsContent() {
   const [versionModal, setVersionModal] = useState<{ docs: CollateralDocument[]; fileName: string } | null>(null);
   const [deleteModal, setDeleteModal] = useState<CollateralDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [activeView, setActiveView] = useState<'documents' | 'pockets'>('documents');
+  const [activeView, setActiveView] = useState<'documents' | 'pockets' | 'audit'>('documents');
   const [selectedPocketCollateral, setSelectedPocketCollateral] = useState<CollateralRecord | null>(null);
 
   const userId = user?.id ?? '';
@@ -799,6 +1023,14 @@ export default function CollateralDocumentsContent() {
             >
               <Package size={13} /> Security Pockets
             </button>
+            <button
+              onClick={() => setActiveView('audit')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'audit' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ShieldCheck size={13} /> Audit Trail
+            </button>
           </div>
           <button
             onClick={fetchData}
@@ -929,7 +1161,7 @@ export default function CollateralDocumentsContent() {
       </div>
 
       {/* Table */}
-      <div className={`flex-1 overflow-auto ${activeView === 'pockets' ? 'hidden' : ''}`}>
+      <div className={`flex-1 overflow-auto ${activeView !== 'documents' ? 'hidden' : ''}`}>
         {/* Error state */}
         {error && !loading && (
           <div className="m-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
@@ -1108,6 +1340,13 @@ export default function CollateralDocumentsContent() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Audit Trail View */}
+      {activeView === 'audit' && (
+        <div className="flex-1 overflow-auto flex flex-col min-h-0">
+          <AuditTrailTab collateralRecords={collateralRecords} />
         </div>
       )}
 

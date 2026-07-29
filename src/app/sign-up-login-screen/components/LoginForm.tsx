@@ -27,9 +27,6 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
 
   // 2FA setup required notice (for sensitive roles without phone)
-  const searchParams = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search)
-    : null;
   const [show2FASetupNotice] = useState(() => {
     if (typeof window === 'undefined') return false;
     return new URLSearchParams(window.location.search).get('require_2fa_setup') === '1';
@@ -46,6 +43,8 @@ export default function LoginForm() {
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [otp, setOtp] = useState('');
   const [otpId, setOtpId] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState<string | null>(null); // store generated code for unauthenticated verification
+  const [otpExpiry, setOtpExpiry] = useState<string | null>(null); // store expiry for local check
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
@@ -85,8 +84,20 @@ export default function LoginForm() {
       const needs2FA = roleRequires2FA || profile?.two_fa_enabled;
 
       if (needs2FA) {
-        // If sensitive role but no phone set up yet, sign out and prompt setup
+        // If sensitive role but no phone set up yet:
+        // - system_admin can log in and set up 2FA from within the dashboard
+        // - other sensitive roles (supervisor) are blocked until admin sets up their 2FA
         if (!profile?.phone) {
+          if (profile?.role === 'system_admin') {
+            // Allow admin to log in — they need to configure 2FA themselves
+            toast.warning(
+              'Two-Factor Authentication is required for your account. Please set it up from your profile settings.',
+              { duration: 8000 }
+            );
+            router.push('/module-hub');
+            router.refresh();
+            return;
+          }
           await supabase.auth.signOut();
           setIsLoading(false);
           toast.error(
@@ -96,9 +107,10 @@ export default function LoginForm() {
           return;
         }
 
+        await sendOTP(profile.phone, result.user?.id);
+        // Sign out AFTER storing OTP so the insert succeeds under the authenticated session
         await supabase.auth.signOut();
         setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name, role: profile.role });
-        await sendOTP(profile.phone, result.user?.id);
         setTwoFARequired(true);
         setIsLoading(false);
         return;
@@ -142,13 +154,15 @@ export default function LoginForm() {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const supabase = createClient();
 
-    const { data: otpRow } = await supabase
+    const { data: otpRow, error: insertError } = await supabase
       .from('otp_verifications')
       .insert({ user_id: userId, phone, otp_code: code, expires_at: expiresAt })
       .select()
       .single();
 
     setOtpId(otpRow?.id ?? null);
+    setOtpCode(code);
+    setOtpExpiry(expiresAt);
 
     const smsRes = await fetch('/api/sms/send-alert', {
       method: 'POST',
@@ -166,6 +180,9 @@ export default function LoginForm() {
     const interval = setInterval(() => {
       setCountdown((c) => { if (c <= 1) { clearInterval(interval); return 0; } return c - 1; });
     }, 1000);
+
+    // Return the inserted row id so the caller can confirm it was stored
+    return otpRow?.id ?? null;
   };
 
   const verifyOTP = async () => {
@@ -173,9 +190,28 @@ export default function LoginForm() {
     setOtpLoading(true);
     setOtpError(null);
     try {
+      // Primary verification: use locally stored code (user is unauthenticated at this point,
+      // so RLS blocks direct DB queries — local state is the reliable source of truth)
+      if (otpCode && otpExpiry) {
+        if (new Date(otpExpiry) < new Date()) throw new Error('OTP expired. Please sign in again.');
+        if (otpCode !== otp) throw new Error('Invalid code');
+        // Code matched — sign the user back in
+        await signIn(pendingUser.email, pendingUser.password);
+        // Best-effort: mark OTP as verified in DB (may fail if still unauthenticated, that's OK)
+        if (otpId) {
+          const supabase = createClient();
+          await supabase.from('otp_verifications').update({ verified_at: new Date().toISOString() }).eq('id', otpId);
+        }
+        toast.success('Welcome back — 2FA verified');
+        router.push('/module-hub');
+        router.refresh();
+        return;
+      }
+
+      // Fallback: try DB lookup (works if session is still active)
       const supabase = createClient();
       const { data: otpRow } = await supabase.from('otp_verifications').select('*').eq('id', otpId).single();
-      if (!otpRow) throw new Error('OTP not found');
+      if (!otpRow) throw new Error('OTP not found. Please go back and sign in again.');
       if (new Date(otpRow.expires_at) < new Date()) throw new Error('OTP expired. Please sign in again.');
       if (otpRow.otp_code !== otp) {
         await supabase.from('otp_verifications').update({ attempts: (otpRow.attempts ?? 0) + 1 }).eq('id', otpId);
@@ -366,7 +402,7 @@ export default function LoginForm() {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <div>
                     <p className="text-xs font-semibold text-orange-800">Two-Factor Authentication Required</p>
-                    <p className="text-xs text-orange-700 mt-0.5">Your role requires 2FA. Please sign in and contact your administrator to register a phone number for SMS verification.</p>
+                    <p className="text-xs text-orange-700 mt-0.5">Your role requires 2FA. Please sign in and set up your phone number for SMS verification from your profile settings.</p>
                   </div>
                 </div>
               )}

@@ -67,12 +67,29 @@ if (typeof window !== 'undefined' && !(window as any).__sb_patched__) {
   (window as any).__sb_patched__ = true;
   const orig = window.fetch.bind(window);
   window.fetch = (input, init) => {
-    const token = getToken();
-    const url = typeof input === 'string' ? input
-      : input instanceof URL ? input.href
-      : (input as Request).url;
-    if (token && (url.startsWith('/') || url.startsWith(window.location.origin))) {
-      init = { ...(init || {}), headers: { ...(init?.headers || {}), 'x-sb-token': token } };
+    try {
+      const token = getToken();
+      const url = typeof input === 'string' ? input
+        : input instanceof URL ? input.href
+        : (input as Request).url;
+      if (token && (url.startsWith('/') || url.startsWith(window.location.origin))) {
+        // Merge headers from Request object if input is a Request
+        const existingHeaders: Record<string, string> = {};
+        if (input instanceof Request) {
+          input.headers.forEach((value, key) => { existingHeaders[key] = value; });
+        }
+        const initHeaders = init?.headers
+          ? (init.headers instanceof Headers
+              ? Object.fromEntries((init.headers as Headers).entries())
+              : (init.headers as Record<string, string>))
+          : {};
+        init = {
+          ...(init || {}),
+          headers: { ...existingHeaders, ...initHeaders, 'x-sb-token': token },
+        };
+      }
+    } catch {
+      // If patching fails for any reason, fall through to original fetch
     }
     return orig(input, init);
   };

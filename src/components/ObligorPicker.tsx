@@ -98,7 +98,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
             <ChevronDown size={13} className="text-muted-foreground shrink-0" />
           </>
         )}
-      </button>
+      </div>
 
       {/* Dropdown */}
       {open && (

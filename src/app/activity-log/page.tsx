@@ -1,5 +1,10 @@
-import { redirect } from 'next/navigation';
+import AppLayout from '@/components/AppLayout';
+import ActivityLogContent from './components/ActivityLogContent';
 
 export default function ActivityLogPage() {
-  redirect('/audit-center');
+  return (
+    <AppLayout currentPath="/activity-log">
+      <ActivityLogContent />
+    </AppLayout>
+  );
 }
