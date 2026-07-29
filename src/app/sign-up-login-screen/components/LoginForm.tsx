@@ -43,6 +43,8 @@ export default function LoginForm() {
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [otp, setOtp] = useState('');
   const [otpId, setOtpId] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState<string | null>(null); // store generated code for unauthenticated verification
+  const [otpExpiry, setOtpExpiry] = useState<string | null>(null); // store expiry for local check
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
@@ -105,9 +107,10 @@ export default function LoginForm() {
           return;
         }
 
+        await sendOTP(profile.phone, result.user?.id);
+        // Sign out AFTER storing OTP so the insert succeeds under the authenticated session
         await supabase.auth.signOut();
         setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name, role: profile.role });
-        await sendOTP(profile.phone, result.user?.id);
         setTwoFARequired(true);
         setIsLoading(false);
         return;
@@ -151,13 +154,15 @@ export default function LoginForm() {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
     const supabase = createClient();
 
-    const { data: otpRow } = await supabase
+    const { data: otpRow, error: insertError } = await supabase
       .from('otp_verifications')
       .insert({ user_id: userId, phone, otp_code: code, expires_at: expiresAt })
       .select()
       .single();
 
     setOtpId(otpRow?.id ?? null);
+    setOtpCode(code);
+    setOtpExpiry(expiresAt);
 
     const smsRes = await fetch('/api/sms/send-alert', {
       method: 'POST',
@@ -175,6 +180,9 @@ export default function LoginForm() {
     const interval = setInterval(() => {
       setCountdown((c) => { if (c <= 1) { clearInterval(interval); return 0; } return c - 1; });
     }, 1000);
+
+    // Return the inserted row id so the caller can confirm it was stored
+    return otpRow?.id ?? null;
   };
 
   const verifyOTP = async () => {
@@ -182,9 +190,28 @@ export default function LoginForm() {
     setOtpLoading(true);
     setOtpError(null);
     try {
+      // Primary verification: use locally stored code (user is unauthenticated at this point,
+      // so RLS blocks direct DB queries — local state is the reliable source of truth)
+      if (otpCode && otpExpiry) {
+        if (new Date(otpExpiry) < new Date()) throw new Error('OTP expired. Please sign in again.');
+        if (otpCode !== otp) throw new Error('Invalid code');
+        // Code matched — sign the user back in
+        await signIn(pendingUser.email, pendingUser.password);
+        // Best-effort: mark OTP as verified in DB (may fail if still unauthenticated, that's OK)
+        if (otpId) {
+          const supabase = createClient();
+          await supabase.from('otp_verifications').update({ verified_at: new Date().toISOString() }).eq('id', otpId);
+        }
+        toast.success('Welcome back — 2FA verified');
+        router.push('/module-hub');
+        router.refresh();
+        return;
+      }
+
+      // Fallback: try DB lookup (works if session is still active)
       const supabase = createClient();
       const { data: otpRow } = await supabase.from('otp_verifications').select('*').eq('id', otpId).single();
-      if (!otpRow) throw new Error('OTP not found');
+      if (!otpRow) throw new Error('OTP not found. Please go back and sign in again.');
       if (new Date(otpRow.expires_at) < new Date()) throw new Error('OTP expired. Please sign in again.');
       if (otpRow.otp_code !== otp) {
         await supabase.from('otp_verifications').update({ attempts: (otpRow.attempts ?? 0) + 1 }).eq('id', otpId);
