@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Shield, Plus, Trash2, Edit2, Save, X, RefreshCw, CheckCircle2, AlertCircle, Network, Clock, Ban, ChevronDown, ChevronUp,  } from 'lucide-react';
+import { Shield, Plus, Trash2, Edit2, Save, X, RefreshCw, CheckCircle2, AlertCircle, Network, Clock, Ban, ChevronDown, ChevronUp, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
   fetchIpWhitelistConfigs,
   createIpWhitelistConfig,
@@ -10,6 +10,7 @@ import {
   IpWhitelistConfig,
   IpAccessLogEntry,
 } from '@/lib/supabase/ipWhitelistService';
+import { fetchConfigByKey, updateSystemConfig } from '@/lib/supabase/systemConfigService';
 import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -216,6 +217,8 @@ export default function IpWhitelistContent() {
   const [editTarget, setEditTarget] = useState<IpWhitelistConfig | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [ipRestrictionsEnabled, setIpRestrictionsEnabled] = useState(false);
+  const [togglingRestrictions, setTogglingRestrictions] = useState(false);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -225,9 +228,14 @@ export default function IpWhitelistContent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [cfgs, log] = await Promise.all([fetchIpWhitelistConfigs(), fetchIpAccessLog(30)]);
+      const [cfgs, log, configVal] = await Promise.all([
+        fetchIpWhitelistConfigs(),
+        fetchIpAccessLog(30),
+        fetchConfigByKey('ip_restrictions_enabled'),
+      ]);
       setConfigs(cfgs);
       setAccessLog(log);
+      setIpRestrictionsEnabled(configVal?.enabled === true);
     } catch {
       showToast('Failed to load IP whitelist data', 'error');
     } finally {
@@ -236,6 +244,21 @@ export default function IpWhitelistContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleToggleRestrictions = async () => {
+    if (!user?.id) return;
+    setTogglingRestrictions(true);
+    const newValue = !ipRestrictionsEnabled;
+    try {
+      await updateSystemConfig('ip_restrictions_enabled', { enabled: newValue }, user.id);
+      setIpRestrictionsEnabled(newValue);
+      showToast(newValue ? 'IP restrictions enabled — only whitelisted IPs can access' : 'IP restrictions disabled — all IPs can access');
+    } catch {
+      showToast('Failed to update IP restriction setting', 'error');
+    } finally {
+      setTogglingRestrictions(false);
+    }
+  };
 
   const handleSave = async (form: FormState) => {
     setSaving(true);
@@ -327,6 +350,58 @@ export default function IpWhitelistContent() {
         </button>
       </div>
 
+      {/* Global IP Restrictions Toggle */}
+      <div
+        className="flex items-center justify-between p-5 rounded-xl"
+        style={{
+          border: `2px solid ${ipRestrictionsEnabled ? '#fca5a5' : '#bbf7d0'}`,
+          backgroundColor: ipRestrictionsEnabled ? '#fef2f2' : '#f0fdf4',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ backgroundColor: ipRestrictionsEnabled ? '#fee2e2' : '#dcfce7' }}
+          >
+            {ipRestrictionsEnabled
+              ? <Shield size={18} className="text-red-600" />
+              : <Shield size={18} className="text-green-600" />}
+          </div>
+          <div>
+            <p className="text-sm font-bold" style={{ color: 'var(--izou-text)' }}>
+              IP Restrictions are currently{' '}
+              <span className={ipRestrictionsEnabled ? 'text-red-600' : 'text-green-600'}>
+                {ipRestrictionsEnabled ? 'ENABLED' : 'DISABLED'}
+              </span>
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>
+              {ipRestrictionsEnabled
+                ? 'Only whitelisted IPs can access the dashboard for restricted roles.'
+                : 'All IP addresses are allowed. Enable to enforce whitelist rules.'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleToggleRestrictions}
+          disabled={togglingRestrictions}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60"
+          style={
+            ipRestrictionsEnabled
+              ? { backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5' }
+              : { backgroundColor: '#dcfce7', color: '#16a34a', border: '1px solid #86efac' }
+          }
+        >
+          {togglingRestrictions ? (
+            <RefreshCw size={15} className="animate-spin" />
+          ) : ipRestrictionsEnabled ? (
+            <ToggleRight size={18} />
+          ) : (
+            <ToggleLeft size={18} />
+          )}
+          {ipRestrictionsEnabled ? 'Disable Restrictions' : 'Enable Restrictions'}
+        </button>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -352,8 +427,8 @@ export default function IpWhitelistContent() {
         <div>
           <p className="text-sm font-semibold text-blue-800">How IP Restrictions Work</p>
           <p className="text-xs text-blue-700 mt-0.5">
-            When active rules exist for a role, users with that role can only access the dashboard from whitelisted IPs or CIDR ranges.
-            Blocked attempts are logged below. If no rules are configured for a role, access is unrestricted.
+            When IP restrictions are <strong>enabled</strong> and active rules exist for a role, users with that role can only access the dashboard from whitelisted IPs or CIDR ranges.
+            When <strong>disabled</strong>, all IPs are allowed regardless of whitelist entries. Blocked attempts are logged below.
           </p>
         </div>
       </div>

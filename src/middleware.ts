@@ -176,60 +176,75 @@ export async function middleware(request: NextRequest) {
 
   // ─── IP-based session restriction for sensitive roles ─────────────────────
   if (isSensitiveRole) {
-    const clientIp = getClientIp(request);
-
-    // Fetch active IP whitelist entries that apply to this role
-    let allowedEntries: any[] = [];
+    // First check if IP restrictions are globally enabled
+    let ipRestrictionsEnabled = false;
     try {
-      const { data } = await supabase
-        .from('ip_whitelist_configs')
-        .select('ip_address, applies_to')
-        .eq('is_active', true);
-      allowedEntries = (data ?? []).filter((entry: any) =>
-        Array.isArray(entry.applies_to) && entry.applies_to.includes(userRole)
-      );
+      const { data: configRow } = await supabase
+        .from('system_config')
+        .select('config_value')
+        .eq('config_key', 'ip_restrictions_enabled')
+        .single();
+      ipRestrictionsEnabled = configRow?.config_value?.enabled === true;
     } catch {
-      allowedEntries = [];
+      ipRestrictionsEnabled = false;
     }
 
-    // If whitelist is configured, enforce it
-    if (allowedEntries.length > 0) {
-      const isAllowed = allowedEntries.some((entry: any) =>
-        ipMatchesCidr(clientIp, entry.ip_address)
-      );
+    if (ipRestrictionsEnabled) {
+      const clientIp = getClientIp(request);
 
-      if (!isAllowed) {
-        // Log the blocked access attempt (best-effort, non-blocking)
+      // Fetch active IP whitelist entries that apply to this role
+      let allowedEntries: any[] = [];
+      try {
+        const { data } = await supabase
+          .from('ip_whitelist_configs')
+          .select('ip_address, applies_to')
+          .eq('is_active', true);
+        allowedEntries = (data ?? []).filter((entry: any) =>
+          Array.isArray(entry.applies_to) && entry.applies_to.includes(userRole)
+        );
+      } catch {
+        allowedEntries = [];
+      }
+
+      // If whitelist is configured, enforce it
+      if (allowedEntries.length > 0) {
+        const isAllowed = allowedEntries.some((entry: any) =>
+          ipMatchesCidr(clientIp, entry.ip_address)
+        );
+
+        if (!isAllowed) {
+          // Log the blocked access attempt (best-effort, non-blocking)
+          try {
+            await supabase.from('ip_access_log').insert({
+              user_id: user.id,
+              ip_address: clientIp,
+              user_role: userRole,
+              access_result: 'blocked',
+              route: pathname,
+            });
+          } catch {
+            // Non-critical — don't block the redirect
+          }
+
+          const url = request.nextUrl.clone();
+          url.pathname = '/access-denied';
+          url.searchParams.set('reason', 'ip_restricted');
+          url.searchParams.set('ip', clientIp);
+          return NextResponse.redirect(url);
+        }
+
+        // Log allowed access (best-effort)
         try {
           await supabase.from('ip_access_log').insert({
             user_id: user.id,
             ip_address: clientIp,
             user_role: userRole,
-            access_result: 'blocked',
+            access_result: 'allowed',
             route: pathname,
           });
         } catch {
-          // Non-critical — don't block the redirect
+          // Non-critical
         }
-
-        const url = request.nextUrl.clone();
-        url.pathname = '/access-denied';
-        url.searchParams.set('reason', 'ip_restricted');
-        url.searchParams.set('ip', clientIp);
-        return NextResponse.redirect(url);
-      }
-
-      // Log allowed access (best-effort)
-      try {
-        await supabase.from('ip_access_log').insert({
-          user_id: user.id,
-          ip_address: clientIp,
-          user_role: userRole,
-          access_result: 'allowed',
-          route: pathname,
-        });
-      } catch {
-        // Non-critical
       }
     }
   }
