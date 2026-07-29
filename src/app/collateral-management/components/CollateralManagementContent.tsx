@@ -7,9 +7,11 @@ import { documentService } from '@/lib/supabase/documentService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import { userTaskService } from '@/lib/supabase/userTaskService';
 import CollateralTable from './CollateralTable';
 import CollateralFilters from './CollateralFilters';
 import AddEditCollateralModal from './AddEditCollateralModal';
+import NextStepsBanner from './NextStepsBanner';
 
 export interface FilterState {
   search: string;
@@ -43,6 +45,7 @@ export default function CollateralManagementContent() {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const [newlyCreated, setNewlyCreated] = useState<CollateralRecord | null>(null);
 
   // Live lookup data for filter dropdowns
   const [filterCollateralTypes, setFilterCollateralTypes] = useState<string[]>([]);
@@ -239,8 +242,70 @@ export default function CollateralManagementContent() {
         // audit log failure is non-blocking
       }
 
+      // Create next-step tasks for the assigned officer / current user
+      if (user?.id) {
+        try {
+          const assignedUserId = user.id;
+          const tasks = [
+            {
+              assignedTo: assignedUserId,
+              collateralRecordId: created.id,
+              collateralId: created.collateralId,
+              taskType: 'document_upload' as const,
+              title: `Upload required documents for ${created.collateralId}`,
+              description: `Attach all mandatory documents (Title Deed, Valuation Report, etc.) for ${created.obligor} – ${created.type}.`,
+              actionUrl: `/collateral-management`,
+              actionLabel: 'Upload Docs',
+              priority: 'high' as const,
+              createdBy: user.id,
+            },
+            ...(created.requiresPerfection ? [{
+              assignedTo: assignedUserId,
+              collateralRecordId: created.id,
+              collateralId: created.collateralId,
+              taskType: 'perfection' as const,
+              title: `Submit perfection request for ${created.collateralId}`,
+              description: `Perfection deadline: ${created.perfectionDeadline || 'not set'}. Submit the perfection workflow for ${created.obligor}.`,
+              actionUrl: '/perfection-workflow',
+              actionLabel: 'Start Perfection',
+              priority: 'high' as const,
+              dueDate: created.perfectionDeadline || undefined,
+              createdBy: user.id,
+            }] : []),
+            {
+              assignedTo: assignedUserId,
+              collateralRecordId: created.id,
+              collateralId: created.collateralId,
+              taskType: 'approval' as const,
+              title: `Route documents for approval – ${created.collateralId}`,
+              description: `After uploading documents, submit them for officer review and approval.`,
+              actionUrl: '/document-approval',
+              actionLabel: 'Go to Approvals',
+              priority: 'normal' as const,
+              createdBy: user.id,
+            },
+            {
+              assignedTo: assignedUserId,
+              collateralRecordId: created.id,
+              collateralId: created.collateralId,
+              taskType: 'valuation' as const,
+              title: `Schedule valuation for ${created.collateralId}`,
+              description: `Initiate a valuation workflow to confirm the market value of ${created.type} for ${created.obligor}.`,
+              actionUrl: '/valuation-workflow',
+              actionLabel: 'Valuation Workflow',
+              priority: 'normal' as const,
+              createdBy: user.id,
+            },
+          ];
+          await userTaskService.createMany(tasks);
+        } catch {
+          // task creation failure is non-blocking
+        }
+      }
+
       toast.success('Collateral record created');
       setAddModalOpen(false);
+      setNewlyCreated(created);
       fetchData();
     }
   };
@@ -540,6 +605,14 @@ export default function CollateralManagementContent() {
         }}
         onSave={handleSave}
       />
+
+      {/* Next Steps Banner */}
+      {newlyCreated && (
+        <NextStepsBanner
+          collateral={newlyCreated}
+          onDismiss={() => setNewlyCreated(null)}
+        />
+      )}
     </div>
   );
 }
