@@ -171,6 +171,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Audit',
         items: [
           { label: 'Live Activity Stream', icon: Radio, href: '/live-activity', permission: PERMISSIONS.AUDIT_LOG_VIEW },
+          { label: 'Activity Log', icon: Activity, href: '/activity-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Center', icon: DatabaseZap, href: '/audit-center', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Report', icon: BookOpen, href: '/audit-report', permission: PERMISSIONS.AUDIT_LOG_VIEW },
