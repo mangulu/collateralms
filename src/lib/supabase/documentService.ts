@@ -3,7 +3,8 @@
 import { createClient } from '@/lib/supabase/client';
 
 export type DocumentType =
-  | 'Title Deed' |'Charge Certificate' |'Valuation Report' |'BRELA Confirmation' |'Insurance Certificate' |'Board Resolution' |'Other';
+  | 'Title Deed' |'Charge Certificate' |'Valuation Report' |'BRELA Confirmation' |'Insurance Certificate' |'Board Resolution'
+  | 'Deed'| 'Appraisal' | 'Insurance Policy' |'Other';
 
 export interface CollateralDocument {
   id: string;
@@ -367,6 +368,30 @@ export const documentService = {
       return (data ?? []).map(rowToAudit);
     } catch (err: any) {
       console.error('Version audit fetch failed:', err.message);
+      return [];
+    }
+  },
+
+  /**
+   * Fetch the full version audit trail across ALL collateral records.
+   * Used for the global audit trail tab in CollateralDocumentsContent.
+   */
+  async getAllVersionAudit(limit = 200): Promise<DocumentVersionAudit[]> {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('document_version_audit')
+        .select('*')
+        .order('performed_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Fetch all version audit error:', error.message);
+        return [];
+      }
+      return (data ?? []).map(rowToAudit);
+    } catch (err: any) {
+      console.error('getAllVersionAudit failed:', err.message);
       return [];
     }
   },
