@@ -561,13 +561,6 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
         </div>
       )}
 
-      {/* Trigger Rules Builder Modal */}
-      {triggerRulesTemplate && (
-        <TriggerRulesBuilderModal
-          template={triggerRulesTemplate}
-          onClose={() => setTriggerRulesTemplate(null)}
-        />
-      )}
     </div>
   );
 }
@@ -1003,6 +996,14 @@ export default function WorkflowTemplatesContent() {
             />
           ))}
         </div>
+      )}
+
+      {/* Trigger Rules Builder Modal */}
+      {triggerRulesTemplate && (
+        <TriggerRulesBuilderModal
+          template={triggerRulesTemplate}
+          onClose={() => setTriggerRulesTemplate(null)}
+        />
       )}
     </div>
   );
