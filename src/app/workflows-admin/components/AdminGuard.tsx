@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { usePermissions } from '@/lib/rbac';
 import AccessDenied from '@/components/AccessDenied';
 
-const ADMIN_ROLES = ['system_admin', 'legal_manager', 'credit_manager'];
+const ADMIN_ROLES = ['system_admin', 'legal_officer', 'credit_officer', 'credit_manager', 'legal_manager'];
 
 interface AdminGuardProps {
   children: React.ReactNode;
