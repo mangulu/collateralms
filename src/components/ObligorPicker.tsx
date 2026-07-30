@@ -1,6 +1,5 @@
 'use client';
-
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Building2, User, X, Loader2, ChevronDown, Plus } from 'lucide-react';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
 import Link from 'next/link';
@@ -23,12 +22,15 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
   // Load all obligors once on mount for quick filtering
   useEffect(() => {
     let isMounted = true;
-    obligorService.getAll()
-      .then(data => {
+    obligorService
+      .getAll()
+      .then((data) => {
         if (isMounted) setAllLoaded(data);
       })
       .catch(() => {});
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -71,12 +73,25 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
     onChange(null);
   };
 
+  const toggleOpen = () => {
+    setOpen((v) => !v);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
   return (
     <div ref={containerRef} className="relative">
       {/* Trigger */}
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setTimeout(() => inputRef.current?.focus(), 50); }}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={toggleOpen}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleOpen();
+          }
+        }}
         className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-md border text-sm bg-white text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
           error ? 'border-destructive' : 'border-border hover:border-primary/40'
         }`}
@@ -105,14 +120,17 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
             <ChevronDown size={13} className="text-muted-foreground shrink-0" />
           </>
         )}
-      </button> {/* <-- This closing tag was missing! */}
+      </div>
 
       {/* Dropdown */}
       {open && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
           <div className="p-2 border-b border-border">
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                size={13}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -148,20 +166,29 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
                   onClick={() => handleSelect(o)}
                   className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
                 >
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${o.entityType === 'company' ? 'bg-blue-100' : 'bg-purple-100'}`}>
-                    {o.entityType === 'company'
-                      ? <Building2 size={12} className="text-blue-600" />
-                      : <User size={12} className="text-purple-600" />}
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${o.entityType === 'company' ? 'bg-blue-100' : 'bg-purple-100'}`}
+                  >
+                    {o.entityType === 'company' ? (
+                      <Building2 size={12} className="text-blue-600" />
+                    ) : (
+                      <User size={12} className="text-purple-600" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{o.fullName}</p>
                     <p className="text-xs text-muted-foreground font-mono">{o.obligorCode}</p>
                   </div>
                   {o.riskRating && (
-                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded shrink-0 ${
-                      o.riskRating === 'HIGH' ? 'bg-red-100 text-red-700'
-                        : o.riskRating === 'MEDIUM'? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                    }`}>
+                    <span
+                      className={`text-xs font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+                        o.riskRating === 'HIGH'
+                          ? 'bg-red-100 text-red-700'
+                          : o.riskRating === 'MEDIUM'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-green-100 text-green-700'
+                      }`}
+                    >
                       {o.riskRating}
                     </span>
                   )}
