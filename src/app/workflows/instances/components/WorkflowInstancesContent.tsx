@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase/workflowEngineService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { sendEscalationEmails } from '@/lib/supabase/escalationEmailService';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -366,6 +367,21 @@ export default function WorkflowInstancesContent() {
     }
   }
 
+  const filteredInstances = instances.filter((inst) => {
+    if (filterStatus !== 'all' && inst.instanceStatus !== filterStatus) return false;
+    if (filterTemplate !== 'all' && inst.templateId !== filterTemplate) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!(inst.referenceLabel ?? '').toLowerCase().includes(q) &&
+          !inst.referenceId.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const selectedTemplate = selectedInstance
+    ? templates.find((t) => t.id === selectedInstance.templateId) ?? null
+    : null;
+
   async function handleAction(action: 'approve' | 'reject' | 'return' | 'skip' | 'escalate' | 'cancel' | 'hold', comment: string) {
     if (!selectedInstance || !userProfile) return;
     setActing(true);
@@ -379,6 +395,28 @@ export default function WorkflowInstancesContent() {
         comment: comment || undefined,
       });
       toast.success(`Action recorded: ${action}`);
+
+      // Send escalation email notifications for notify_manager / notify_and_hold actions
+      if (action === 'escalate' && selectedTemplate) {
+        const currentStep = selectedTemplate.steps.find((s) => s.id === selectedInstance.currentStepId);
+        if (currentStep && (currentStep.escalationAction === 'notify_manager' || currentStep.escalationAction === 'notify_and_hold')) {
+          sendEscalationEmails({
+            escalationAction: currentStep.escalationAction,
+            workflowName: selectedTemplate.name,
+            stepName: currentStep.name,
+            referenceLabel: selectedInstance.referenceLabel,
+            referenceType: selectedInstance.referenceType,
+            instanceId: selectedInstance.id,
+            triggeredBy: userProfile.full_name ?? userProfile.email ?? 'User',
+            slaHours: currentStep.slaHours,
+            comment: comment || undefined,
+            notifyRoles: currentStep.escalationNotifyRoles?.length
+              ? currentStep.escalationNotifyRoles
+              : ['credit_manager'],
+          }).catch((err) => console.error('[escalation email]', err));
+        }
+      }
+
       // Refresh instance
       const updated = await workflowInstanceService.getById(selectedInstance.id);
       if (updated) {
@@ -395,21 +433,6 @@ export default function WorkflowInstancesContent() {
       setActing(false);
     }
   }
-
-  const filteredInstances = instances.filter((inst) => {
-    if (filterStatus !== 'all' && inst.instanceStatus !== filterStatus) return false;
-    if (filterTemplate !== 'all' && inst.templateId !== filterTemplate) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!(inst.referenceLabel ?? '').toLowerCase().includes(q) &&
-          !inst.referenceId.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
-
-  const selectedTemplate = selectedInstance
-    ? templates.find((t) => t.id === selectedInstance.templateId) ?? null
-    : null;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-6 max-w-screen-xl mx-auto">
