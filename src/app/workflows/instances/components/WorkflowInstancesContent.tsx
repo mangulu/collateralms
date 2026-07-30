@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { sendEscalationEmails } from '@/lib/supabase/escalationEmailService';
 import { useEscalationRealtime } from '@/lib/hooks/useEscalationRealtime';
+import { useWorkflowInstancesRealtime } from '@/lib/hooks/useWorkflowInstancesRealtime';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -807,6 +808,7 @@ export default function WorkflowInstancesContent() {
   const [stats, setStats] = useState({ active: 0, completed: 0, escalated: 0, onHold: 0, cancelled: 0 });
   const [newEscalationCount, setNewEscalationCount] = useState(0);
   const [reassignInstance, setReassignInstance] = useState<WorkflowInstance | null>(null);
+  const [realtimeBadge, setRealtimeBadge] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -828,6 +830,58 @@ export default function WorkflowInstancesContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // ─── Realtime workflow instances subscription ─────────────────────────────
+  useWorkflowInstancesRealtime({
+    onInstanceChange: (change) => {
+      if (change.event === 'INSERT') {
+        // New instance created — reload full list to get joined data
+        workflowInstanceService.getAll().then((data) => {
+          setInstances(data);
+          setRealtimeBadge((c) => c + 1);
+        }).catch(() => {});
+        workflowInstanceService.getStats().then((s) => setStats(s)).catch(() => {});
+        toast.info('New workflow instance started', { duration: 4000 });
+      } else if (change.event === 'UPDATE') {
+        // Instance status changed — refresh the specific instance
+        const instanceId: string = change.record?.id;
+        if (instanceId) {
+          workflowInstanceService.getById(instanceId).then((updated) => {
+            if (updated) {
+              setInstances((prev) => prev.map((i) => i.id === updated.id ? updated : i));
+              // If this instance is currently open in the detail panel, refresh it
+              setSelectedInstance((prev) => prev?.id === updated.id ? updated : prev);
+            }
+          }).catch(() => {});
+          workflowInstanceService.getStats().then((s) => setStats(s)).catch(() => {});
+        }
+      }
+    },
+    onStepChange: (change) => {
+      // A step was updated (e.g. completed, reassigned) — refresh the parent instance
+      const instanceId: string = change.record?.instance_id;
+      if (instanceId) {
+        workflowInstanceService.getById(instanceId).then((updated) => {
+          if (updated) {
+            setInstances((prev) => prev.map((i) => i.id === updated.id ? updated : i));
+            setSelectedInstance((prev) => prev?.id === updated.id ? updated : prev);
+          }
+        }).catch(() => {});
+      }
+    },
+    onTaskAssigned: (change) => {
+      // A new task was assigned — show a toast notification
+      const task = change.record;
+      if (task) {
+        const title: string = task.title ?? 'New task assigned';
+        toast.info(`📋 ${title}`, {
+          description: task.description ?? 'A new workflow task has been assigned to you',
+          duration: 6000,
+        });
+        setRealtimeBadge((c) => c + 1);
+      }
+    },
+  });
 
   // ─── Realtime escalation subscription ────────────────────────────────────────
   useEscalationRealtime({
@@ -960,11 +1014,16 @@ export default function WorkflowInstancesContent() {
           </p>
         </div>
         <button
-          onClick={() => load()}
+          onClick={() => { load(); setRealtimeBadge(0); }}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors shrink-0"
+          className="relative flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors shrink-0"
         >
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+          {realtimeBadge > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-indigo-500 text-white text-[10px] font-700 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+              {realtimeBadge > 9 ? '9+' : realtimeBadge}
+            </span>
+          )}
         </button>
       </div>
 
