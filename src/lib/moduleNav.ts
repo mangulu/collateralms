@@ -141,6 +141,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Active Instances', icon: Activity, href: '/workflows-admin/instances', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Efficiency KPIs', icon: BarChart3, href: '/workflows-admin/kpis', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Process Analytics', icon: TrendingUp, href: '/workflows-admin/process-analytics', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
       {
