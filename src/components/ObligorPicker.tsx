@@ -67,36 +67,40 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
   return (
     <div ref={containerRef} className="relative">
       {/* Trigger */}
-      <button
-        type="button"
-        onClick={() => { setOpen((v) => !v); setTimeout(() => inputRef.current?.focus(), 50); }}
-        className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-md border text-sm bg-white text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-          error ? 'border-destructive' : 'border-border hover:border-primary/40'
-        }`}
-      >
-        {value ? (
-          <>
-            <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-              <Building2 size={11} className="text-blue-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-500 text-foreground truncate block">{value.name}</span>
-            </div>
-            <span className="text-xs text-muted-foreground font-mono shrink-0">{value.code}</span>
-            <button
-              type="button"
-              onClick={handleClear}
-              className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
-            >
-              <X size={12} />
-            </button>
-          </>
-        ) : (
-          <>
-            <Search size={13} className="text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground flex-1">Search Obligor by name or code…</span>
-            <ChevronDown size={13} className="text-muted-foreground shrink-0" />
-          </>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => { setOpen((v) => !v); setTimeout(() => inputRef.current?.focus(), 50); }}
+          className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-md border text-sm bg-white text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+            error ? 'border-destructive' : 'border-border hover:border-primary/40'
+          }`}
+        >
+          {value ? (
+            <>
+              <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <Building2 size={11} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0 pr-10">
+                <span className="font-500 text-foreground truncate block">{value.name}</span>
+              </div>
+              <span className="text-xs text-muted-foreground font-mono shrink-0 pr-6">{value.code}</span>
+            </>
+          ) : (
+            <>
+              <Search size={13} className="text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground flex-1">Search obligor by name or code…</span>
+              <ChevronDown size={13} className="text-muted-foreground shrink-0" />
+            </>
+          )}
+        </button>
+        {value && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
+          >
+            <X size={12} />
+          </button>
         )}
       </div>
 
@@ -130,7 +134,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
                   target="_blank"
                   className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
                 >
-                  <Plus size={11} /> Add new Obligor
+                  <Plus size={11} /> Add new obligor
                 </Link>
               </div>
             ) : (

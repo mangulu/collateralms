@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, CheckSquare, GitBranch, TrendingUp, ArrowLeftRight, FolderArchive, Clock, AlertTriangle, ChevronRight, RefreshCw, Loader2, CheckCircle2, XCircle, BarChart3, Zap } from 'lucide-react';
+import { ShieldCheck, CheckSquare, GitBranch, TrendingUp, ArrowLeftRight, FolderArchive, Clock, AlertTriangle, ChevronRight, RefreshCw, Loader2, CheckCircle2, XCircle, BarChart3, Zap, Activity, Layers } from 'lucide-react';
 import { collateralApprovalService } from '@/lib/supabase/collateralApprovalService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { userTaskService } from '@/lib/supabase/userTaskService';
@@ -280,6 +280,48 @@ export default function WorkflowsDashboardContent() {
         {cards.map((card) => (
           <WorkflowCardItem key={card.id} card={card} />
         ))}
+      </div>
+
+      {/* Engine Section */}
+      <div className="border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-violet-50/40 rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <Zap size={12} className="text-white" />
+          </div>
+          <h2 className="text-sm font-700 text-foreground">Workflow Engine</h2>
+          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-700 border border-indigo-200">Admin</span>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Configure workflow templates, define steps and actors, set visual conditions, and monitor live instances.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Link
+            href="/workflows/templates"
+            className="flex items-center gap-3 p-4 bg-white border border-indigo-100 rounded-xl hover:border-indigo-300 hover:shadow-sm transition-all group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+              <Layers size={16} className="text-indigo-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-600 text-foreground">Workflow Templates</p>
+              <p className="text-xs text-muted-foreground">Define steps, actors, and rules</p>
+            </div>
+            <ChevronRight size={14} className="text-muted-foreground group-hover:text-indigo-600 transition-colors" />
+          </Link>
+          <Link
+            href="/workflows/instances"
+            className="flex items-center gap-3 p-4 bg-white border border-indigo-100 rounded-xl hover:border-indigo-300 hover:shadow-sm transition-all group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+              <Activity size={16} className="text-violet-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-600 text-foreground">Active Instances</p>
+              <p className="text-xs text-muted-foreground">Monitor and act on live workflows</p>
+            </div>
+            <ChevronRight size={14} className="text-muted-foreground group-hover:text-violet-600 transition-colors" />
+          </Link>
+        </div>
       </div>
 
       {/* Quick Links */}
