@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, Settings2, Users, GitBranch, AlertTriangle, Loader2, X, Edit2, ToggleLeft, ToggleRight, Info, ChevronRight, Bell, Clock, UserCheck, CreditCard, ShieldAlert } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, Settings2, Users, GitBranch, AlertTriangle, Loader2, X, Edit2, ToggleLeft, ToggleRight, Info, ChevronRight, Bell, Clock, UserCheck, CreditCard, ShieldAlert, Zap } from 'lucide-react';
 import {
   workflowTemplateService,
   WorkflowTemplate, WorkflowStep, WorkflowStepActor, WorkflowStepCondition,
@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase/workflowEngineService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import TriggerRulesBuilderModal from './TriggerRulesBuilderModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -559,6 +560,14 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
           </div>
         </div>
       )}
+
+      {/* Trigger Rules Builder Modal */}
+      {triggerRulesTemplate && (
+        <TriggerRulesBuilderModal
+          template={triggerRulesTemplate}
+          onClose={() => setTriggerRulesTemplate(null)}
+        />
+      )}
     </div>
   );
 }
@@ -569,9 +578,10 @@ interface TemplateCardProps {
   template: WorkflowTemplate;
   onEdit: () => void;
   onToggle: () => void;
+  onManageTriggers: () => void;
 }
 
-function TemplateCard({ template, onEdit, onToggle }: TemplateCardProps) {
+function TemplateCard({ template, onEdit, onToggle, onManageTriggers }: TemplateCardProps) {
   const escalatedSteps = template.steps.filter((s) => s.escalationAction && s.slaHours);
   return (
     <div className={`bg-white border-2 rounded-2xl p-5 transition-all ${template.isActive ? 'border-border hover:border-indigo-200' : 'border-dashed border-border opacity-60'}`}>
@@ -629,12 +639,21 @@ function TemplateCard({ template, onEdit, onToggle }: TemplateCardProps) {
           </React.Fragment>
         ))}
       </div>
-      <button
-        onClick={onEdit}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-600 rounded-lg transition-colors"
-      >
-        <Edit2 size={12} /> Edit Template
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={onEdit}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-600 rounded-lg transition-colors"
+        >
+          <Edit2 size={12} /> Edit Template
+        </button>
+        <button
+          onClick={onManageTriggers}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-600 rounded-lg transition-colors border border-amber-200"
+          title="Manage auto-trigger rules"
+        >
+          <Zap size={12} /> Triggers
+        </button>
+      </div>
     </div>
   );
 }
@@ -655,6 +674,7 @@ export default function WorkflowTemplatesContent() {
   const [newDescription, setNewDescription] = useState('');
   const [newType, setNewType] = useState<WorkflowTemplateType>('custom');
   const [creatingNew, setCreatingNew] = useState(false);
+  const [triggerRulesTemplate, setTriggerRulesTemplate] = useState<WorkflowTemplate | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -979,6 +999,7 @@ export default function WorkflowTemplatesContent() {
               template={template}
               onEdit={() => openEdit(template)}
               onToggle={() => toggleTemplate(template)}
+              onManageTriggers={() => setTriggerRulesTemplate(template)}
             />
           ))}
         </div>
