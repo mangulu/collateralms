@@ -390,7 +390,9 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
           <div className="flex-1 max-w-sm">
             <GlobalSearch />
           </div>
-          <TopBarRight />
+          <div className="ml-auto">
+            <TopBarRight />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
