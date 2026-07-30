@@ -120,7 +120,7 @@ function computeKPIs(instances: WorkflowInstance[], templates: WorkflowTemplate[
     const step = tpl.steps.find((s) => s.id === inst.currentStepId);
     if (!step) return;
     step.actors.forEach((a) => {
-      const role = a.actorLabel ?? a.actorType ?? 'Unknown';
+      const role = a.actorLabel ?? a.actorRole ?? 'Unknown';
       roleCountMap[role] = (roleCountMap[role] ?? 0) + 1;
     });
   });

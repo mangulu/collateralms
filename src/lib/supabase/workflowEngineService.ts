@@ -85,6 +85,8 @@ export interface WorkflowInstanceStep {
   assignedRole: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  completedBy: string | null;
+  actionTaken: string | null;
   dueAt: string | null;
   notes: string | null;
   step?: WorkflowStep;
@@ -222,6 +224,8 @@ function rowToInstanceStep(row: any): WorkflowInstanceStep {
     assignedRole: row.assigned_role,
     startedAt: row.started_at,
     completedAt: row.completed_at,
+    completedBy: row.completed_by ?? null,
+    actionTaken: row.action_taken ?? null,
     dueAt: row.due_at,
     notes: row.notes,
   };
@@ -485,6 +489,19 @@ export const workflowInstanceService = {
     const nextStep = steps[currentIdx + 1] ?? null;
     let newStatus: WorkflowInstanceStatus = instance.instanceStatus;
     let newStepId: string | null = currentStepId;
+
+    // Look up the current workflow_instance_steps row ID for the transition log
+    let currentInstanceStepId: string | null = null;
+    if (currentStepId) {
+      const { data: currentInstStep } = await supabase
+        .from('workflow_instance_steps')
+        .select('id')
+        .eq('instance_id', payload.instanceId)
+        .eq('step_id', currentStepId)
+        .maybeSingle();
+      currentInstanceStepId = currentInstStep?.id ?? null;
+    }
+
     // Determine new state
     if (payload.action === 'approve' || payload.action === 'skip') {
       if (nextStep) {
@@ -497,17 +514,29 @@ export const workflowInstanceService = {
         newStepId = null;
         newStatus = 'completed';
       }
-      // Complete current step
+      // Complete current step with performer info
       if (currentStepId) {
         await supabase.from('workflow_instance_steps')
-          .update({ step_status: payload.action === 'skip' ? 'skipped' : 'completed', completed_at: new Date().toISOString() })
+          .update({
+            step_status: payload.action === 'skip' ? 'skipped' : 'completed',
+            completed_at: new Date().toISOString(),
+            completed_by: payload.performedBy,
+            action_taken: payload.action,
+            notes: payload.comment ?? null,
+          })
           .eq('instance_id', payload.instanceId).eq('step_id', currentStepId);
       }
     } else if (payload.action === 'reject') {
       newStatus = 'cancelled';
       if (currentStepId) {
         await supabase.from('workflow_instance_steps')
-          .update({ step_status: 'rejected', completed_at: new Date().toISOString() })
+          .update({
+            step_status: 'rejected',
+            completed_at: new Date().toISOString(),
+            completed_by: payload.performedBy,
+            action_taken: 'reject',
+            notes: payload.comment ?? null,
+          })
           .eq('instance_id', payload.instanceId).eq('step_id', currentStepId);
       }
     } else if (payload.action === 'return') {
@@ -518,8 +547,26 @@ export const workflowInstanceService = {
           .update({ step_status: 'active', started_at: new Date().toISOString(), completed_at: null })
           .eq('instance_id', payload.instanceId).eq('step_id', prevStep.id);
       }
+      // Mark current step as returned
+      if (currentStepId) {
+        await supabase.from('workflow_instance_steps')
+          .update({
+            action_taken: 'return',
+            notes: payload.comment ?? null,
+          })
+          .eq('instance_id', payload.instanceId).eq('step_id', currentStepId);
+      }
     } else if (payload.action === 'escalate') {
       newStatus = 'escalated';
+      if (currentStepId) {
+        await supabase.from('workflow_instance_steps')
+          .update({
+            step_status: 'escalated',
+            action_taken: 'escalate',
+            notes: payload.comment ?? null,
+          })
+          .eq('instance_id', payload.instanceId).eq('step_id', currentStepId);
+      }
     } else if (payload.action === 'cancel') {
       newStatus = 'cancelled';
     } else if (payload.action === 'hold') {
@@ -531,9 +578,10 @@ export const workflowInstanceService = {
       instance_status: newStatus,
       ...(newStatus === 'completed' && { completed_by: payload.performedBy, completed_at: new Date().toISOString() }),
     }).eq('id', payload.instanceId);
-    // Log transition
+    // Log transition with instance_step_id
     await supabase.from('workflow_transition_log').insert({
       instance_id: payload.instanceId,
+      instance_step_id: currentInstanceStepId,
       from_step_id: currentStepId,
       to_step_id: newStepId,
       action: payload.action,
