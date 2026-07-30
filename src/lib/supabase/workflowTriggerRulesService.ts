@@ -112,6 +112,27 @@ function rowToRule(row: any, conditions: WorkflowTriggerCondition[] = []): Workf
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export const workflowTriggerRulesService = {
+  async getAll(): Promise<WorkflowTriggerRule[]> {
+    const supabase = createClient();
+    const { data: rulesData, error } = await supabase
+      .from('workflow_trigger_rules')
+      .select('*')
+      .order('created_at');
+    if (error) throw error;
+    const rules = rulesData ?? [];
+    if (rules.length === 0) return [];
+    const ruleIds = rules.map((r: any) => r.id);
+    const { data: condData } = await supabase
+      .from('workflow_trigger_conditions')
+      .select('*')
+      .in('rule_id', ruleIds)
+      .order('sort_order');
+    const conditions = (condData ?? []).map(rowToCondition);
+    return rules.map((r: any) =>
+      rowToRule(r, conditions.filter((c) => c.ruleId === r.id))
+    );
+  },
+
   async getByTemplateId(templateId: string): Promise<WorkflowTriggerRule[]> {
     const supabase = createClient();
     const { data: rulesData, error } = await supabase

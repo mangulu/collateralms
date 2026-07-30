@@ -1,19 +1,10 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Trash2, ToggleLeft, ToggleRight, Loader2, Zap, RefreshCw, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { workflowTriggerRulesService, type WorkflowTriggerRule } from '@/lib/supabase/workflowTriggerRulesService';
+import { workflowTriggerRulesService, type WorkflowTriggerRule, TRIGGER_EVENT_LABELS, TRIGGER_OPERATOR_LABELS } from '@/lib/supabase/workflowTriggerRulesService';
 import { workflowTemplateService, type WorkflowTemplate } from '@/lib/supabase/workflowEngineService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-
-const TRIGGER_TYPE_LABELS: Record<string, string> = {
-  collateral_status_change: 'Collateral Status Change',
-  days_since_submission: 'Days Since Submission',
-  value_threshold: 'Value Threshold',
-  ltv_breach: 'LTV Breach',
-  days_overdue: 'Days Overdue',
-  document_count_change: 'Document Count Change',
-};
 
 const TRIGGER_TYPE_COLORS: Record<string, string> = {
   collateral_status_change: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -53,9 +44,13 @@ export default function TriggerRulesAdminContent() {
     if (!user?.id) return;
     setToggling(rule.id);
     try {
-      await workflowTriggerRulesService.update(rule.id, { is_active: !rule.is_active }, user.id);
-      setRules((prev) => prev.map((r) => r.id === rule.id ? { ...r, is_active: !r.is_active } : r));
-      toast.success(`Rule ${!rule.is_active ? 'activated' : 'deactivated'}`);
+      await workflowTriggerRulesService.toggleStatus(rule.id, rule.triggerStatus, user.id);
+      setRules((prev) => prev.map((r) =>
+        r.id === rule.id
+          ? { ...r, triggerStatus: r.triggerStatus === 'active' ? 'inactive' : 'active' }
+          : r
+      ));
+      toast.success(`Rule ${rule.triggerStatus === 'active' ? 'deactivated' : 'activated'}`);
     } catch {
       toast.error('Failed to update rule');
     } finally {
@@ -82,7 +77,7 @@ export default function TriggerRulesAdminContent() {
     return templates.find((t) => t.id === id)?.name ?? id;
   };
 
-  const activeCount = rules.filter((r) => r.is_active).length;
+  const activeCount = rules.filter((r) => r.triggerStatus === 'active').length;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-6 max-w-screen-xl mx-auto">
@@ -139,7 +134,11 @@ export default function TriggerRulesAdminContent() {
         <div className="space-y-3">
           {rules.map((rule) => {
             const isExpanded = expandedRule === rule.id;
-            const typeColor = TRIGGER_TYPE_COLORS[rule.trigger_type] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+            const isActive = rule.triggerStatus === 'active';
+            // Use the first condition's event type for color coding
+            const firstEventType = rule.conditions?.[0]?.eventType ?? '';
+            const typeColor = TRIGGER_TYPE_COLORS[firstEventType] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+            const typeLabel = TRIGGER_EVENT_LABELS[firstEventType as keyof typeof TRIGGER_EVENT_LABELS] ?? firstEventType;
             return (
               <div key={rule.id} className="bg-white border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center gap-3 px-4 py-3">
@@ -148,11 +147,11 @@ export default function TriggerRulesAdminContent() {
                     onClick={() => handleToggle(rule)}
                     disabled={toggling === rule.id}
                     className="shrink-0"
-                    title={rule.is_active ? 'Deactivate rule' : 'Activate rule'}
+                    title={isActive ? 'Deactivate rule' : 'Activate rule'}
                   >
                     {toggling === rule.id ? (
                       <Loader2 size={20} className="animate-spin text-muted-foreground" />
-                    ) : rule.is_active ? (
+                    ) : isActive ? (
                       <ToggleRight size={22} className="text-emerald-500" />
                     ) : (
                       <ToggleLeft size={22} className="text-slate-400" />
@@ -163,15 +162,19 @@ export default function TriggerRulesAdminContent() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-foreground truncate">{rule.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${typeColor}`}>
-                        {TRIGGER_TYPE_LABELS[rule.trigger_type] ?? rule.trigger_type}
-                      </span>
-                      {!rule.is_active && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">Inactive</span>
+                      {firstEventType && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${typeColor}`}>
+                          {typeLabel}
+                        </span>
+                      )}
+                      {!isActive && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                          {rule.triggerStatus === 'draft' ? 'Draft' : 'Inactive'}
+                        </span>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      Template: {getTemplateName(rule.workflow_template_id)} · Created {fmtDate(rule.created_at)}
+                      Template: {getTemplateName(rule.templateId)} · Created {fmtDate(rule.createdAt)}
                     </p>
                   </div>
 
@@ -201,12 +204,17 @@ export default function TriggerRulesAdminContent() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <div>
                         <p className="text-muted-foreground mb-1 font-medium uppercase tracking-wide text-[10px]">Conditions</p>
-                        {rule.conditions && Array.isArray(rule.conditions) && rule.conditions.length > 0 ? (
+                        {rule.conditions && rule.conditions.length > 0 ? (
                           <ul className="space-y-1">
-                            {(rule.conditions as Array<{ field?: string; operator?: string; value?: unknown }>).map((c, i) => (
+                            {rule.conditions.map((c, i) => (
                               <li key={i} className="flex items-center gap-1.5 text-foreground">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                                <span>{c.field} {c.operator} <strong>{String(c.value)}</strong></span>
+                                <span>
+                                  {TRIGGER_EVENT_LABELS[c.eventType] ?? c.eventType}{' '}
+                                  {TRIGGER_OPERATOR_LABELS[c.operator] ?? c.operator}{' '}
+                                  <strong>{c.conditionValue}</strong>
+                                  {c.conditionValueTo ? ` – ${c.conditionValueTo}` : ''}
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -217,8 +225,8 @@ export default function TriggerRulesAdminContent() {
                       <div>
                         <p className="text-muted-foreground mb-1 font-medium uppercase tracking-wide text-[10px]">Configuration</p>
                         <div className="space-y-1 text-foreground">
-                          <p>Logic: <strong>{rule.condition_logic?.toUpperCase() ?? 'AND'}</strong></p>
-                          <p>Priority: <strong>{rule.priority ?? 'Normal'}</strong></p>
+                          <p>Logic: <strong>{rule.conditionLogic}</strong></p>
+                          <p>Reference: <strong>{rule.referenceType || '—'}</strong></p>
                           {rule.description && <p className="text-muted-foreground">{rule.description}</p>}
                         </div>
                       </div>
