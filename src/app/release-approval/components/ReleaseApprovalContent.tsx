@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Unlock, CheckCircle, XCircle, Clock, Search, Eye,
   AlertCircle, FileText, User, Calendar, DollarSign,
@@ -111,22 +111,138 @@ function formatCurrency(amount: number): string {
   return `TZS ${amount.toLocaleString()}`;
 }
 
+// ─── Action Dialog ─────────────────────────────────────────────────────────────
+
+interface ActionDialogState {
+  open: boolean;
+  request: ReleaseRequest | null;
+  action: 'Approved' | 'Rejected' | 'Under Review' | null;
+}
+
+interface ActionDialogProps {
+  state: ActionDialogState;
+  onClose: () => void;
+  onSubmit: (action: 'Approved' | 'Rejected' | 'Under Review', note: string) => void;
+  processing: boolean;
+}
+
+function ActionDialog({ state, onClose, onSubmit, processing }: ActionDialogProps) {
+  const [note, setNote] = useState('');
+
+  React.useEffect(() => {
+    if (state.open) setNote('');
+  }, [state.open]);
+
+  if (!state.open || !state.request || !state.action) return null;
+
+  const config = {
+    Approved: {
+      title: 'Approve Release',
+      description: 'Approve this collateral release request. The collateral will be discharged from the facility.',
+      placeholder: 'Add approval note (optional)…',
+      buttonLabel: 'Approve Release',
+      buttonStyle: 'bg-green-600 hover:bg-green-700 text-white',
+      icon: <CheckCircle size={20} className="text-green-600" />,
+      required: false,
+    },
+    Rejected: {
+      title: 'Reject Release',
+      description: 'Reject this release request. Please provide a clear reason for the submitter.',
+      placeholder: 'Reason for rejection (required)…',
+      buttonLabel: 'Reject Release',
+      buttonStyle: 'bg-red-600 hover:bg-red-700 text-white',
+      icon: <XCircle size={20} className="text-red-600" />,
+      required: true,
+    },
+    'Under Review': {
+      title: 'Mark Under Review',
+      description: 'Flag this request as currently under review. You can approve or reject it later.',
+      placeholder: 'Review notes (optional)…',
+      buttonLabel: 'Mark Under Review',
+      buttonStyle: 'bg-blue-600 hover:bg-blue-700 text-white',
+      icon: <Eye size={20} className="text-blue-600" />,
+      required: false,
+    },
+  }[state.action];
+
+  const canSubmit = !config.required || note.trim().length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            {config.icon}
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">{config.title}</h3>
+              <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{state.request.collateralRef} · {state.request.clientName}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Collateral Type</span>
+              <span className="font-medium text-gray-800">{state.request.collateralType}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Loan Reference</span>
+              <span className="font-medium text-gray-800">{state.request.loanRef}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Estimated Value</span>
+              <span className="font-medium text-gray-800">{formatCurrency(state.request.estimatedValue)}</span>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600">{config.description}</p>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Notes {config.required && <span className="text-red-500">*</span>}
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={config.placeholder}
+              rows={4}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          <button
+            onClick={onClose}
+            disabled={processing}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(state.action!, note)}
+            disabled={!canSubmit || processing}
+            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 ${config.buttonStyle}`}
+          >
+            {processing && <Loader2 size={14} className="animate-spin" />}
+            {config.buttonLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
 function DetailPanel({
   request,
   onClose,
-  onAction,
-  actionNote,
-  setActionNote,
-  processing,
+  onOpenAction,
 }: {
   request: ReleaseRequest;
   onClose: () => void;
-  onAction: (action: 'Approved' | 'Rejected' | 'Under Review') => void;
-  actionNote: string;
-  setActionNote: (v: string) => void;
-  processing: boolean;
+  onOpenAction: (action: 'Approved' | 'Rejected' | 'Under Review') => void;
 }) {
   const statusCfg = STATUS_CONFIG[request.status];
   const priorityCfg = PRIORITY_CONFIG[request.priority];
@@ -197,63 +313,49 @@ function DetailPanel({
             </div>
           </div>
         )}
+
+        {/* Final status banner */}
+        {(request.status === 'Approved' || request.status === 'Rejected') && (
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
+            request.status === 'Approved' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+          }`}>
+            {request.status === 'Approved' ? <CheckCircle size={16} /> : <XCircle size={16} />}
+            This request has been {request.status.toLowerCase()}.
+          </div>
+        )}
       </div>
 
-      {/* Action Zone */}
+      {/* Action Zone — opens popup dialog */}
       {isActive && (
         <div className="px-5 py-4 border-t border-gray-200 shrink-0">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
             <p className="text-xs text-gray-500 flex items-center gap-1.5">
               <ShieldCheck size={12} className="text-teal-600" />
-              Review the release request before making a decision.
+              Review the request details, then choose an action below.
             </p>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Decision Note (optional)</label>
-              <textarea
-                value={actionNote}
-                onChange={(e) => setActionNote(e.target.value)}
-                placeholder="Add a note for this decision..."
-                rows={3}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-            </div>
             <div className="flex items-center gap-2">
+              {request.status !== 'Under Review' && (
+                <button
+                  onClick={() => onOpenAction('Under Review')}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <Eye size={14} />
+                </button>
+              )}
               <button
-                onClick={() => onAction('Under Review')}
-                disabled={processing || request.status === 'Under Review'}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                onClick={() => onOpenAction('Rejected')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
-                <Eye size={14} />
+                <XCircle size={14} /> Reject
               </button>
               <button
-                onClick={() => onAction('Rejected')}
-                disabled={processing}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition-colors"
+                onClick={() => onOpenAction('Approved')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
               >
-                {processing ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
-                Reject
-              </button>
-              <button
-                onClick={() => onAction('Approved')}
-                disabled={processing}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {processing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                Approve Release
+                <CheckCircle size={14} /> Approve Release
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {(request.status === 'Approved' || request.status === 'Rejected') && (
-        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
-            request.status === 'Approved' ?'bg-green-50 border border-green-200 text-green-700' :'bg-red-50 border border-red-200 text-red-700'
-          }`}>
-            {request.status === 'Approved' ? <CheckCircle size={16} /> : <XCircle size={16} />}
-            This request has been {request.status.toLowerCase()}.
           </div>
         </div>
       )}
@@ -269,8 +371,14 @@ export default function ReleaseApprovalContent() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedRequest, setSelectedRequest] = useState<ReleaseRequest | null>(null);
-  const [actionNote, setActionNote] = useState('');
+  const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false, request: null, action: null });
   const [processing, setProcessing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success\' | \'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const filtered = requests.filter((r) => {
     const matchesSearch =
@@ -288,20 +396,27 @@ export default function ReleaseApprovalContent() {
     rejected:    requests.filter((r) => r.status === 'Rejected').length,
   };
 
-  const handleAction = (action: 'Approved' | 'Rejected' | 'Under Review') => {
-    if (!selectedRequest) return;
+  const handleAction = (action: 'Approved' | 'Rejected' | 'Under Review', note: string) => {
+    if (!actionDialog.request) return;
     setProcessing(true);
+    const req = actionDialog.request;
     setTimeout(() => {
       setRequests((prev) =>
         prev.map((r) =>
-          r.id === selectedRequest.id
-            ? { ...r, status: action, notes: actionNote || r.notes }
+          r.id === req.id
+            ? { ...r, status: action, notes: note || r.notes }
             : r
         )
       );
-      setSelectedRequest((prev) => prev ? { ...prev, status: action } : null);
-      setActionNote('');
+      setSelectedRequest((prev) => prev && prev.id === req.id ? { ...prev, status: action, notes: note || prev.notes } : prev);
+      setActionDialog({ open: false, request: null, action: null });
       setProcessing(false);
+      const labels: Record<string, string> = {
+        Approved: 'Release approved successfully',
+        Rejected: 'Release request rejected',
+        'Under Review': 'Request marked as under review',
+      };
+      showToast(labels[action], 'success');
     }, 600);
   };
 
@@ -418,17 +533,17 @@ export default function ReleaseApprovalContent() {
                       <span className="flex items-center gap-1"><DollarSign size={11} />{formatCurrency(req.estimatedValue)}</span>
                       <span className="flex items-center gap-1"><Calendar size={11} />{req.requestedDate}</span>
                     </div>
-                    {/* Quick actions */}
+                    {/* Quick action buttons — open dialog directly */}
                     {isActive && (
                       <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => { setSelectedRequest(req); handleAction('Approved'); }}
+                          onClick={() => { setSelectedRequest(req); setActionDialog({ open: true, request: req, action: 'Approved' }); }}
                           className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
                         >
                           <CheckCircle size={11} /> Approve
                         </button>
                         <button
-                          onClick={() => { setSelectedRequest(req); handleAction('Rejected'); }}
+                          onClick={() => { setSelectedRequest(req); setActionDialog({ open: true, request: req, action: 'Rejected' }); }}
                           className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                         >
                           <XCircle size={11} /> Reject
@@ -447,13 +562,26 @@ export default function ReleaseApprovalContent() {
           <DetailPanel
             request={selectedRequest}
             onClose={() => setSelectedRequest(null)}
-            onAction={handleAction}
-            actionNote={actionNote}
-            setActionNote={setActionNote}
-            processing={processing}
+            onOpenAction={(action) => setActionDialog({ open: true, request: selectedRequest, action })}
           />
         )}
       </div>
+
+      {/* Action Dialog */}
+      <ActionDialog
+        state={actionDialog}
+        onClose={() => setActionDialog({ open: false, request: null, action: null })}
+        onSubmit={handleAction}
+        processing={processing}
+      />
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }
