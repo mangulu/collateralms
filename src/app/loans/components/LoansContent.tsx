@@ -1,8 +1,9 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Search, X, Loader2, AlertCircle, RefreshCw, Building2, CreditCard, Calendar, CheckCircle2, XCircle, Clock, Edit2, Trash2, BarChart2,  } from 'lucide-react';
+import { Plus, Search, X, Loader2, AlertCircle, RefreshCw, Building2, CreditCard, Calendar, CheckCircle2, XCircle, Clock, Edit2, Trash2, BarChart2, CalendarClock, Scale, ArrowLeftRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { loanService, Loan } from '@/lib/supabase/loanService';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +52,7 @@ function formatTsh(val: number | null | undefined): string {
 
 export default function LoansContent() {
   const { user } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [obligors, setObligors] = useState<Obligor[]>([]);
@@ -66,6 +68,7 @@ export default function LoansContent() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Loan | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -295,87 +298,123 @@ export default function LoansContent() {
                     ? Math.min(100, (loan.outstandingBalance / loan.facilityAmount) * 100)
                     : null;
                   return (
-                    <tr key={loan.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-600 text-foreground font-mono text-xs">{loan.loanNumber}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {loan.obligorName ? (
-                            <Link href={`/obligors/${loan.obligorId}`} className="text-xs text-primary hover:underline flex items-center gap-1">
-                              <Building2 size={10} />
-                              {loan.obligorName}
-                            </Link>
+                    <React.Fragment key={loan.id}>
+                      <tr className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3">
+                          <p className="font-600 text-foreground font-mono text-xs">{loan.loanNumber}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {loan.obligorName ? (
+                              <Link href={`/obligors/${loan.obligorId}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                <Building2 size={10} />
+                                {loan.obligorName}
+                              </Link>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                          {loan.purpose && <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{loan.purpose}</p>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-foreground">{loan.facilityType}</p>
+                          <p className="text-xs text-muted-foreground">{loan.repaymentFrequency}</p>
+                          {loan.interestRate != null && (
+                            <p className="text-xs text-muted-foreground">{loan.interestRate}% p.a.</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <p className="font-600 text-foreground">{formatTsh(loan.facilityAmount)}</p>
+                          <p className="text-xs text-muted-foreground">{loan.currency}</p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <p className="font-600 text-foreground">{formatTsh(loan.outstandingBalance)}</p>
+                          {utilPct !== null && (
+                            <div className="mt-1">
+                              <div className="h-1.5 w-16 ml-auto rounded-full bg-gray-100 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${utilPct}%`,
+                                    background: utilPct >= 90 ? '#dc2626' : utilPct >= 70 ? '#d97706' : '#2563eb',
+                                  }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground text-right mt-0.5">{utilPct.toFixed(0)}%</p>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {loan.maturityDate ? (
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={12} className="text-muted-foreground" />
+                              <span className="text-xs text-foreground">{new Date(loan.maturityDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
-                        </div>
-                        {loan.purpose && <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[180px]">{loan.purpose}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-sm text-foreground">{loan.facilityType}</p>
-                        <p className="text-xs text-muted-foreground">{loan.repaymentFrequency}</p>
-                        {loan.interestRate != null && (
-                          <p className="text-xs text-muted-foreground">{loan.interestRate}% p.a.</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <p className="font-600 text-foreground">{formatTsh(loan.facilityAmount)}</p>
-                        <p className="text-xs text-muted-foreground">{loan.currency}</p>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <p className="font-600 text-foreground">{formatTsh(loan.outstandingBalance)}</p>
-                        {utilPct !== null && (
-                          <div className="mt-1">
-                            <div className="h-1.5 w-16 ml-auto rounded-full bg-gray-100 overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${utilPct}%`,
-                                  background: utilPct >= 90 ? '#dc2626' : utilPct >= 70 ? '#d97706' : '#2563eb',
-                                }}
-                              />
+                          {loan.disbursementDate && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Disbursed: {new Date(loan.disbursementDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-600 ${sc.bg} ${sc.color}`}>
+                            <StatusIcon size={11} />
+                            {loan.loanStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1 justify-end">
+                            <button
+                              onClick={() => setExpandedLoanId(expandedLoanId === loan.id ? null : loan.id)}
+                              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-primary"
+                              title="Workflow actions"
+                            >
+                              {expandedLoanId === loan.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            </button>
+                            <button
+                              onClick={() => openEdit(loan)}
+                              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-primary"
+                              title="Edit"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(loan)}
+                              className="p-1.5 rounded-md hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
+                              title="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedLoanId === loan.id && (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-3 bg-blue-50/40 border-b border-border">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-700 text-muted-foreground uppercase tracking-wide mr-1">Initiate:</span>
+                              <button
+                                onClick={() => router.push(`/valuation-workflow?collateralId=&loanId=${encodeURIComponent(loan.id)}`)}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-600 transition-colors"
+                              >
+                                <CalendarClock size={12} /> Schedule Valuation
+                              </button>
+                              <button
+                                onClick={() => router.push(`/covenant-tracking?loanId=${encodeURIComponent(loan.id)}`)}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-600 transition-colors"
+                              >
+                                <Scale size={12} /> Add Covenant
+                              </button>
+                              <button
+                                onClick={() => router.push(`/collateral-substitution?loanId=${encodeURIComponent(loan.id)}`)}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-600 transition-colors"
+                              >
+                                <ArrowLeftRight size={12} /> New Substitution
+                              </button>
                             </div>
-                            <p className="text-[10px] text-muted-foreground text-right mt-0.5">{utilPct.toFixed(0)}%</p>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {loan.maturityDate ? (
-                          <div className="flex items-center gap-1.5">
-                            <Calendar size={12} className="text-muted-foreground" />
-                            <span className="text-xs text-foreground">{new Date(loan.maturityDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                        {loan.disbursementDate && (
-                          <p className="text-[10px] text-muted-foreground mt-0.5">Disbursed: {new Date(loan.disbursementDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-600 ${sc.bg} ${sc.color}`}>
-                          <StatusIcon size={11} />
-                          {loan.loanStatus}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 justify-end">
-                          <button
-                            onClick={() => openEdit(loan)}
-                            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-primary"
-                            title="Edit"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(loan)}
-                            className="p-1.5 rounded-md hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
-                            title="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

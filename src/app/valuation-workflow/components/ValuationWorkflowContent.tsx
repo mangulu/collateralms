@@ -14,6 +14,9 @@ import {
 } from '@/lib/supabase/valuationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerOverdueActionSms } from '@/lib/supabase/smsNotificationRulesService';
+import { workflowLookupsService, type CollateralOption } from '@/lib/supabase/workflowLookupsService';
+import SearchableSelect, { type SelectOption } from '@/components/ui/SearchableSelect';
+import { useSearchParams } from 'next/navigation';
 
 const STATUS_COLORS: Record<ValuationStatus, string> = {
   Scheduled: 'bg-blue-100 text-blue-700',
@@ -43,12 +46,17 @@ function agingDays(scheduledDate: string): number {
 
 export default function ValuationWorkflowContent() {
   const { userProfile } = useAuth();
+  const searchParams = useSearchParams();
   const [valuations, setValuations] = useState<CollateralValuation[]>([]);
   const [stats, setStats] = useState({ total: 0, scheduled: 0, overdue: 0, pendingApproval: 0, approved: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<ValuationStatus | 'All'>('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Lookup data
+  const [collateralOptions, setCollateralOptions] = useState<CollateralOption[]>([]);
+  const [lookupsLoading, setLookupsLoading] = useState(false);
 
   // Modals
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -87,7 +95,6 @@ export default function ValuationWorkflowContent() {
       ]);
       setValuations(data);
       setStats(s);
-      // Fire SMS for any newly detected overdue valuations (fire-and-forget)
       const overdueItems = data.filter((v) => v.valuationStatus === 'Overdue');
       overdueItems.forEach((v) => {
         triggerOverdueActionSms({
@@ -106,6 +113,32 @@ export default function ValuationWorkflowContent() {
   }, [filterStatus]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadLookups = useCallback(async () => {
+    if (collateralOptions.length > 0) return;
+    setLookupsLoading(true);
+    try {
+      const cols = await workflowLookupsService.getCollateralOptions();
+      setCollateralOptions(cols);
+    } catch { /* silent */ } finally {
+      setLookupsLoading(false);
+    }
+  }, [collateralOptions.length]);
+
+  // Handle contextual pre-fill from URL params
+  useEffect(() => {
+    const collateralId = searchParams.get('collateralId');
+    if (collateralId) {
+      setScheduleForm((f) => ({ ...f, collateralId }));
+      setShowScheduleModal(true);
+      loadLookups();
+    }
+  }, [searchParams, loadLookups]);
+
+  const openScheduleModal = () => {
+    setShowScheduleModal(true);
+    loadLookups();
+  };
 
   const handleSchedule = async () => {
     if (!scheduleForm.collateralId || !scheduleForm.scheduledDate) return;
@@ -174,6 +207,13 @@ export default function ValuationWorkflowContent() {
 
   const filtered = filterStatus === 'All' ? valuations : valuations.filter((v) => v.valuationStatus === filterStatus);
 
+  const collateralSelectOptions: SelectOption[] = collateralOptions.map((c) => ({
+    value: c.id,
+    label: c.collateralId,
+    sublabel: `${c.description} · ${c.type}`,
+    badge: c.facilityId,
+  }));
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -187,7 +227,7 @@ export default function ValuationWorkflowContent() {
             <RefreshCw size={16} />
           </button>
           <button
-            onClick={() => setShowScheduleModal(true)}
+            onClick={openScheduleModal}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
             style={{ backgroundColor: '#003c5a' }}
           >
@@ -227,7 +267,7 @@ export default function ValuationWorkflowContent() {
             onClick={() => setFilterStatus(s)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               filterStatus === s
-                ? 'text-white border-transparent' :'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                ? 'text-white border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
             }`}
             style={filterStatus === s ? { backgroundColor: '#003c5a' } : {}}
           >
@@ -355,16 +395,15 @@ export default function ValuationWorkflowContent() {
               <h2 className="text-lg font-semibold text-gray-900">Schedule Valuation</h2>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Collateral ID *</label>
-                <input
-                  type="text"
-                  value={scheduleForm.collateralId}
-                  onChange={(e) => setScheduleForm((f) => ({ ...f, collateralId: e.target.value }))}
-                  placeholder="Enter collateral UUID"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              <SearchableSelect
+                label="Collateral *"
+                required
+                options={collateralSelectOptions}
+                value={scheduleForm.collateralId}
+                onChange={(v) => setScheduleForm((f) => ({ ...f, collateralId: v }))}
+                placeholder="Select collateral…"
+                loading={lookupsLoading}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Valuation Type</label>

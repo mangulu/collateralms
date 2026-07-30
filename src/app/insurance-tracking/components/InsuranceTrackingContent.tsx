@@ -11,6 +11,9 @@ import {
   type InsuranceStatus,
 } from '@/lib/supabase/insuranceService';
 import { useAuth } from '@/contexts/AuthContext';
+import { workflowLookupsService, type CollateralOption } from '@/lib/supabase/workflowLookupsService';
+import SearchableSelect, { type SelectOption } from '@/components/ui/SearchableSelect';
+import { useSearchParams } from 'next/navigation';
 
 const STATUS_COLORS: Record<InsuranceStatus, string> = {
   Active: 'bg-green-100 text-green-700',
@@ -36,6 +39,7 @@ function formatDate(d: string | null): string {
 
 export default function InsuranceTrackingContent() {
   const { userProfile } = useAuth();
+  const searchParams = useSearchParams();
   const [policies, setPolicies] = useState<CollateralInsurance[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, expiringSoon: 0, expired: 0, pendingRenewal: 0 });
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,10 @@ export default function InsuranceTrackingContent() {
   const [filterStatus, setFilterStatus] = useState<InsuranceStatus | 'All'>('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Lookup data
+  const [collateralOptions, setCollateralOptions] = useState<CollateralOption[]>([]);
+  const [lookupsLoading, setLookupsLoading] = useState(false);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -89,6 +97,32 @@ export default function InsuranceTrackingContent() {
   }, [filterStatus]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadLookups = useCallback(async () => {
+    if (collateralOptions.length > 0) return;
+    setLookupsLoading(true);
+    try {
+      const cols = await workflowLookupsService.getCollateralOptions();
+      setCollateralOptions(cols);
+    } catch { /* silent */ } finally {
+      setLookupsLoading(false);
+    }
+  }, [collateralOptions.length]);
+
+  // Handle contextual pre-fill from URL params
+  useEffect(() => {
+    const collateralId = searchParams.get('collateralId');
+    if (collateralId) {
+      setCreateForm((f) => ({ ...f, collateralId }));
+      setShowCreateModal(true);
+      loadLookups();
+    }
+  }, [searchParams, loadLookups]);
+
+  const openCreateModal = () => {
+    setShowCreateModal(true);
+    loadLookups();
+  };
 
   const handleCreate = async () => {
     if (!createForm.collateralId || !createForm.policyNumber || !createForm.insurerName || !createForm.coverageAmount || !createForm.policyStartDate || !createForm.policyEndDate) return;
@@ -163,6 +197,13 @@ export default function InsuranceTrackingContent() {
 
   const filtered = filterStatus === 'All' ? policies : policies.filter((p) => p.insuranceStatus === filterStatus);
 
+  const collateralSelectOptions: SelectOption[] = collateralOptions.map((c) => ({
+    value: c.id,
+    label: c.collateralId,
+    sublabel: `${c.description} · ${c.type}`,
+    badge: c.facilityId,
+  }));
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -174,7 +215,7 @@ export default function InsuranceTrackingContent() {
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500"><RefreshCw size={16} /></button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
             style={{ backgroundColor: '#003c5a' }}
           >
@@ -330,10 +371,15 @@ export default function InsuranceTrackingContent() {
             <div className="p-6 border-b border-gray-100"><h2 className="text-lg font-semibold text-gray-900">Add Insurance Policy</h2></div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Collateral ID (UUID) *</label>
-                  <input type="text" value={createForm.collateralId} onChange={(e) => setCreateForm((f) => ({ ...f, collateralId: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
+                <SearchableSelect
+                  label="Collateral *"
+                  required
+                  options={collateralSelectOptions}
+                  value={createForm.collateralId}
+                  onChange={(v) => setCreateForm((f) => ({ ...f, collateralId: v }))}
+                  placeholder="Select collateral…"
+                  loading={lookupsLoading}
+                />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Policy Number *</label>
                   <input type="text" value={createForm.policyNumber} onChange={(e) => setCreateForm((f) => ({ ...f, policyNumber: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />

@@ -12,6 +12,10 @@ import {
   Loader2,
   X,
   Send,
+  CalendarClock,
+  Scale,
+  ArrowLeftRight,
+  Shield,
 } from 'lucide-react';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
@@ -167,7 +171,6 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
 
     try {
       if (activeModal === 'perfection') {
-        // Create a perfection request and navigate to the workflow
         await perfectionService.create(
           {
             collateralRecordId: collateral.id,
@@ -186,12 +189,10 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
         onProcessStarted?.();
         router.push('/perfection-workflow');
       } else if (activeModal === 'release') {
-        // Navigate to batch release with collateral pre-selected
         toast.success('Redirecting to Release module');
         setActiveModal(null);
         router.push(`/batch-release?collateral=${encodeURIComponent(collateral.collateralId)}`);
       } else if (activeModal === 'record-request') {
-        // Create an archive record request (collateralId = record UUID)
         await archiveRequestService.create({
           collateralId: collateral.id,
           requestedBy: user.id,
@@ -231,6 +232,7 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
         ? <Clock size={11} className="text-amber-500" />
         : <CheckCircle2 size={11} className="text-green-500" />,
       statusText: canPerfect ? 'Pending' : collateral.status,
+      onClick: () => setActiveModal('perfection'),
     },
     {
       key: 'release' as ProcessType,
@@ -246,6 +248,7 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
         ? <AlertTriangle size={11} className="text-amber-500" />
         : <Clock size={11} className="text-muted-foreground" />,
       statusText: canRelease ? 'Ready' : 'Locked',
+      onClick: () => setActiveModal('release'),
     },
     {
       key: 'record-request' as ProcessType,
@@ -259,6 +262,47 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
       available: true,
       statusIcon: <CheckCircle2 size={11} className="text-green-500" />,
       statusText: 'Available',
+      onClick: () => setActiveModal('record-request'),
+    },
+  ];
+
+  // Contextual workflow launchers — navigate with collateral pre-filled
+  const workflowLaunchers = [
+    {
+      label: 'Schedule Valuation',
+      icon: CalendarClock,
+      iconBg: 'bg-indigo-50',
+      iconColor: 'text-indigo-600',
+      borderColor: 'border-indigo-200',
+      hoverBg: 'hover:bg-indigo-50/80',
+      href: `/valuation-workflow?collateralId=${encodeURIComponent(collateral.id)}`,
+    },
+    {
+      label: 'Add Covenant',
+      icon: Scale,
+      iconBg: 'bg-teal-50',
+      iconColor: 'text-teal-600',
+      borderColor: 'border-teal-200',
+      hoverBg: 'hover:bg-teal-50/80',
+      href: `/covenant-tracking?facilityId=${encodeURIComponent(collateral.facilityId)}`,
+    },
+    {
+      label: 'New Substitution',
+      icon: ArrowLeftRight,
+      iconBg: 'bg-orange-50',
+      iconColor: 'text-orange-600',
+      borderColor: 'border-orange-200',
+      hoverBg: 'hover:bg-orange-50/80',
+      href: `/collateral-substitution?collateralId=${encodeURIComponent(collateral.id)}&facilityId=${encodeURIComponent(collateral.facilityId)}`,
+    },
+    {
+      label: 'Add Policy',
+      icon: Shield,
+      iconBg: 'bg-green-50',
+      iconColor: 'text-green-600',
+      borderColor: 'border-green-200',
+      hoverBg: 'hover:bg-green-50/80',
+      href: `/insurance-tracking?collateralId=${encodeURIComponent(collateral.id)}`,
     },
   ];
 
@@ -275,11 +319,11 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
 
         <div className="p-4 space-y-2.5">
           {processes.map((proc) => {
-            const Icon = proc.icon;
+            const ProcIcon = proc.icon;
             return (
               <button
                 key={proc.key}
-                onClick={() => proc.available && setActiveModal(proc.key)}
+                onClick={() => proc.available && proc.onClick()}
                 disabled={!proc.available}
                 className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
                   proc.available
@@ -290,7 +334,7 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
                 <div
                   className={`w-8 h-8 rounded-lg ${proc.available ? proc.iconBg : 'bg-muted'} flex items-center justify-center shrink-0`}
                 >
-                  <Icon size={15} className={proc.available ? proc.iconColor : 'text-muted-foreground'} />
+                  <ProcIcon size={15} className={proc.available ? proc.iconColor : 'text-muted-foreground'} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-600 text-foreground">{proc.label}</p>
@@ -304,6 +348,30 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
               </button>
             );
           })}
+        </div>
+
+        {/* Workflow Launchers Section */}
+        <div className="border-t border-border">
+          <div className="px-5 py-3 bg-gray-50/60">
+            <p className="text-[10px] font-700 text-muted-foreground uppercase tracking-wider">Initiate Workflows</p>
+          </div>
+          <div className="p-4 grid grid-cols-2 gap-2">
+            {workflowLaunchers.map((wf) => {
+              const WfIcon = wf.icon;
+              return (
+                <button
+                  key={wf.label}
+                  onClick={() => router.push(wf.href)}
+                  className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-all cursor-pointer ${wf.borderColor} ${wf.hoverBg}`}
+                >
+                  <div className={`w-7 h-7 rounded-md ${wf.iconBg} flex items-center justify-center shrink-0`}>
+                    <WfIcon size={13} className={wf.iconColor} />
+                  </div>
+                  <span className="text-xs font-600 text-foreground leading-tight">{wf.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
