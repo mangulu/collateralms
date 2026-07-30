@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Settings2, Layers, Activity, Zap, BarChart3, ChevronRight, RefreshCw, Loader2, AlertTriangle, Clock, Shield, Play } from 'lucide-react';
+import { Settings2, Layers, Activity, Zap, BarChart3, ChevronRight, RefreshCw, Loader2, AlertTriangle, Clock, Shield, Play, ArrowRightLeft } from 'lucide-react';
 import { workflowInstanceService, workflowTemplateService } from '@/lib/supabase/workflowEngineService';
 import { workflowTriggerProcessorService } from '@/lib/supabase/workflowTriggerProcessorService';
 import { usePermissions } from '@/lib/rbac';
@@ -195,6 +195,21 @@ export default function WorkflowsAdminDashboardContent() {
       loading: false,
       badge: lastJobStatus === 'success' ? 'Last run OK' : lastJobStatus === 'error' ? 'Last run failed' : undefined,
       badgeColor: lastJobStatus === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white',
+    },
+    {
+      id: 'migration',
+      title: 'Hybrid Migration Tool',
+      description: 'Migrate old workflow instances to the new engine — auto-migrate clear ones, review ambiguous ones',
+      href: '/workflows-admin/migration',
+      icon: <ArrowRightLeft size={20} className="text-indigo-600" />,
+      accentColor: 'bg-indigo-50',
+      bgColor: 'bg-white',
+      borderColor: 'border-indigo-100 hover:border-indigo-300',
+      stat: null,
+      statLabel: 'pending',
+      loading: false,
+      badge: 'One-time',
+      badgeColor: 'bg-indigo-500 text-white',
     },
   ];
 
