@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, CheckCircle2, XCircle, RotateCcw, ChevronRight, Loader2, Pause, X, Search, RefreshCw, SkipForward, Flag, Clock, ShieldCheck, AlertTriangle, Users, GitBranch } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, RotateCcw, ChevronRight, Loader2, Pause, X, Search, RefreshCw, SkipForward, Flag, Clock, ShieldCheck, AlertTriangle, Users, GitBranch, UserCog } from 'lucide-react';
 import {
   workflowInstanceService, workflowTemplateService,
   WorkflowInstance, WorkflowTemplate, WorkflowTransitionLog,
@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { sendEscalationEmails } from '@/lib/supabase/escalationEmailService';
 import { useEscalationRealtime } from '@/lib/hooks/useEscalationRealtime';
+import { createClient } from '@/lib/supabase/client';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ const ACTION_LOG_LABELS: Record<string, { label: string; color: string }> = {
   escalate: { label: 'Escalated', color: 'bg-amber-500' },
   cancel: { label: 'Cancelled', color: 'bg-red-600' },
   hold: { label: 'Put On Hold', color: 'bg-amber-400' },
+  reassign: { label: 'Step Reassigned', color: 'bg-violet-500' },
 };
 
 function formatDate(iso: string | null): string {
@@ -50,6 +52,20 @@ function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+
+// ─── Available Roles (common banking/collateral roles) ────────────────────────
+
+const AVAILABLE_ROLES = [
+  { value: 'credit_officer', label: 'Credit Officer' },
+  { value: 'credit_manager', label: 'Credit Manager' },
+  { value: 'risk_officer', label: 'Risk Officer' },
+  { value: 'compliance_officer', label: 'Compliance Officer' },
+  { value: 'legal_officer', label: 'Legal Officer' },
+  { value: 'valuation_officer', label: 'Valuation Officer' },
+  { value: 'operations_officer', label: 'Operations Officer' },
+  { value: 'senior_manager', label: 'Senior Manager' },
+  { value: 'admin', label: 'Admin' },
+];
 
 // ─── Workflow Efficiency KPIs ─────────────────────────────────────────────────
 
@@ -492,9 +508,10 @@ interface InstanceRowProps {
   instance: WorkflowInstance;
   template: WorkflowTemplate | undefined;
   onOpen: () => void;
+  onReassign?: (e: React.MouseEvent) => void;
 }
 
-function InstanceRow({ instance, template, onOpen }: InstanceRowProps) {
+function InstanceRow({ instance, template, onOpen, onReassign }: InstanceRowProps) {
   const cfg = INSTANCE_STATUS_CONFIG[instance.instanceStatus];
   const currentStep = template?.steps.find((s) => s.id === instance.currentStepId);
   const progress = template
@@ -538,9 +555,237 @@ function InstanceRow({ instance, template, onOpen }: InstanceRowProps) {
       )}
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground">Started {formatDate(instance.startedAt)}</span>
-        <span className="text-[10px] font-600 text-indigo-600 group-hover:text-indigo-700 flex items-center gap-1">
-          View <ChevronRight size={10} />
-        </span>
+        <div className="flex items-center gap-2">
+          {instance.instanceStatus === 'active' && onReassign && (
+            <button
+              onClick={onReassign}
+              className="flex items-center gap-1 px-2 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-[10px] font-600 rounded-md border border-violet-200 transition-colors"
+            >
+              <UserCog size={10} /> Reassign
+            </button>
+          )}
+          <span className="text-[10px] font-600 text-indigo-600 group-hover:text-indigo-700 flex items-center gap-1">
+            View <ChevronRight size={10} />
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reassign Step Modal ──────────────────────────────────────────────────────
+
+interface ReassignStepModalProps {
+  instance: WorkflowInstance;
+  template: WorkflowTemplate | null;
+  onClose: () => void;
+  onReassigned: () => void;
+  currentUserId: string;
+  currentUserName: string;
+  currentUserRole: string;
+}
+
+function ReassignStepModal({ instance, template, onClose, onReassigned, currentUserId, currentUserName, currentUserRole }: ReassignStepModalProps) {
+  const [selectedStepId, setSelectedStepId] = useState<string>('');
+  const [newRole, setNewRole] = useState('');
+  const [reason, setReason] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Pending/active steps that can be reassigned
+  const reassignableSteps = (instance.instanceSteps ?? []).filter(
+    (is) => is.stepStatus === 'pending' || is.stepStatus === 'active'
+  );
+
+  // Pre-select current step
+  useEffect(() => {
+    if (instance.currentStepId) {
+      setSelectedStepId(instance.currentStepId);
+    } else if (reassignableSteps.length > 0) {
+      setSelectedStepId(reassignableSteps[0].stepId);
+    }
+  }, [instance.currentStepId, reassignableSteps]);
+
+  const selectedInstanceStep = reassignableSteps.find((is) => is.stepId === selectedStepId);
+  const selectedTemplateStep = template?.steps.find((s) => s.id === selectedStepId);
+
+  // Pre-fill current assigned role
+  useEffect(() => {
+    if (selectedInstanceStep?.assignedRole) {
+      setNewRole(selectedInstanceStep.assignedRole);
+    } else if (selectedTemplateStep?.actors?.[0]?.actorRole) {
+      setNewRole(selectedTemplateStep.actors[0].actorRole);
+    } else {
+      setNewRole('');
+    }
+  }, [selectedStepId, selectedInstanceStep, selectedTemplateStep]);
+
+  async function handleReassign() {
+    if (!selectedStepId || !newRole) {
+      toast.error('Please select a step and a new role');
+      return;
+    }
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      // Find the instance step record
+      const instStep = reassignableSteps.find((is) => is.stepId === selectedStepId);
+      if (!instStep) throw new Error('Step not found');
+
+      // Update assigned_role on the instance step
+      const { error: updateErr } = await supabase
+        .from('workflow_instance_steps')
+        .update({ assigned_role: newRole })
+        .eq('id', instStep.id);
+      if (updateErr) throw updateErr;
+
+      // Log the reassignment in transition log
+      const { error: logErr } = await supabase
+        .from('workflow_transition_log')
+        .insert({
+          instance_id: instance.id,
+          instance_step_id: instStep.id,
+          from_step_id: selectedStepId,
+          to_step_id: selectedStepId,
+          action: 'reassign',
+          performed_by: currentUserId,
+          performed_by_name: currentUserName,
+          performed_by_role: currentUserRole,
+          comment: reason
+            ? `Reassigned to ${AVAILABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole}: ${reason}`
+            : `Reassigned to ${AVAILABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole}`,
+        });
+      if (logErr) throw logErr;
+
+      toast.success(`Step reassigned to ${AVAILABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole}`);
+      onReassigned();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to reassign step');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+              <UserCog size={15} className="text-violet-700" />
+            </div>
+            <div>
+              <h3 className="text-sm font-700 text-foreground">Reassign Step</h3>
+              <p className="text-[11px] text-muted-foreground">{instance.referenceLabel ?? instance.referenceId}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {reassignableSteps.length === 0 ? (
+            <div className="text-center py-6">
+              <UserCog size={28} className="text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No pending steps to reassign</p>
+              <p className="text-xs text-muted-foreground mt-1">Only pending or active steps can be reassigned</p>
+            </div>
+          ) : (
+            <>
+              {/* Step selector */}
+              <div>
+                <label className="block text-xs font-600 text-foreground mb-1.5">Select Step to Reassign</label>
+                <select
+                  value={selectedStepId}
+                  onChange={(e) => setSelectedStepId(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                >
+                  {reassignableSteps.map((is) => {
+                    const tplStep = template?.steps.find((s) => s.id === is.stepId);
+                    const isCurrent = is.stepId === instance.currentStepId;
+                    return (
+                      <option key={is.stepId} value={is.stepId}>
+                        {tplStep?.name ?? is.stepId}{isCurrent ? ' (Current)' : ''} — {is.stepStatus}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Current assignment info */}
+              {selectedTemplateStep && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <p className="text-[11px] font-600 text-muted-foreground mb-1.5">Currently assigned to</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedTemplateStep.actors.length > 0 ? (
+                      selectedTemplateStep.actors.map((a) => (
+                        <span key={a.id} className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded-full text-[11px] font-600">
+                          {a.actorLabel ?? a.actorRole}
+                        </span>
+                      ))
+                    ) : selectedInstanceStep?.assignedRole ? (
+                      <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded-full text-[11px] font-600">
+                        {selectedInstanceStep.assignedRole.replace(/_/g, ' ')}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">No role assigned</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* New role selector */}
+              <div>
+                <label className="block text-xs font-600 text-foreground mb-1.5">Reassign To Role</label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                >
+                  <option value="">— Select a role —</option>
+                  {AVAILABLE_ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label className="block text-xs font-600 text-foreground mb-1.5">
+                  Reason <span className="text-muted-foreground font-400">(optional)</span>
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. Capacity shift, expertise required..."
+                  className="w-full px-3 py-2 text-xs border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={handleReassign}
+                  disabled={saving || !newRole || !selectedStepId}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-600 rounded-lg transition-colors disabled:opacity-60"
+                >
+                  {saving ? <Loader2 size={13} className="animate-spin" /> : <UserCog size={13} />}
+                  Reassign Step
+                </button>
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2.5 bg-muted hover:bg-muted/80 text-foreground text-sm font-600 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -561,6 +806,7 @@ export default function WorkflowInstancesContent() {
   const [search, setSearch] = useState('');
   const [stats, setStats] = useState({ active: 0, completed: 0, escalated: 0, onHold: 0, cancelled: 0 });
   const [newEscalationCount, setNewEscalationCount] = useState(0);
+  const [reassignInstance, setReassignInstance] = useState<WorkflowInstance | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -652,6 +898,10 @@ export default function WorkflowInstancesContent() {
 
   const selectedTemplate = selectedInstance
     ? templates.find((t) => t.id === selectedInstance.templateId) ?? null
+    : null;
+
+  const reassignTemplate = reassignInstance
+    ? templates.find((t) => t.id === reassignInstance.templateId) ?? null
     : null;
 
   async function handleAction(action: 'approve' | 'reject' | 'return' | 'skip' | 'escalate' | 'cancel' | 'hold', comment: string) {
@@ -812,6 +1062,7 @@ export default function WorkflowInstancesContent() {
               instance={instance}
               template={templates.find((t) => t.id === instance.templateId)}
               onOpen={() => openInstance(instance)}
+              onReassign={instance.instanceStatus === 'active' ? (e) => { e.stopPropagation(); setReassignInstance(instance); } : undefined}
             />
           ))}
         </div>
@@ -826,6 +1077,19 @@ export default function WorkflowInstancesContent() {
           onAction={handleAction}
           onClose={() => setSelectedInstance(null)}
           acting={acting}
+        />
+      )}
+
+      {/* Reassign Modal */}
+      {reassignInstance && (
+        <ReassignStepModal
+          instance={reassignInstance}
+          template={reassignTemplate}
+          onClose={() => setReassignInstance(null)}
+          onReassigned={load}
+          currentUserId={userProfile?.id ?? ''}
+          currentUserName={userProfile?.full_name ?? userProfile?.email ?? 'Manager'}
+          currentUserRole={userProfile?.role ?? 'credit_manager'}
         />
       )}
     </div>
