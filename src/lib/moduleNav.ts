@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, CheckSquare, LayoutGrid, Workflow, Layers } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, CheckSquare, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, BarChart3 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -114,6 +114,39 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Valuation Reviews', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Archive Request Workflow', icon: FolderArchive, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'workflows-admin',
+    label: 'Workflows Administration',
+    groups: [
+      {
+        label: 'Overview',
+        items: [
+          { label: 'Admin Dashboard', icon: Settings2, href: '/workflows-admin', permission: PERMISSIONS.SETTINGS_VIEW },
+        ],
+      },
+      {
+        label: 'Configuration',
+        items: [
+          { label: 'Workflow Templates', icon: Layers, href: '/workflows-admin/templates', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Auto-Trigger Rules', icon: Zap, href: '/workflows-admin/trigger-rules', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Escalation Config', icon: AlertTriangle, href: '/workflows-admin/escalation', permission: PERMISSIONS.SETTINGS_VIEW },
+        ],
+      },
+      {
+        label: 'Monitoring',
+        items: [
+          { label: 'Active Instances', icon: Activity, href: '/workflows-admin/instances', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Efficiency KPIs', icon: BarChart3, href: '/workflows-admin/kpis', permission: PERMISSIONS.SETTINGS_VIEW },
+        ],
+      },
+      {
+        label: 'Automation',
+        items: [
+          { label: 'Trigger Processor', icon: Play, href: '/workflows-admin/trigger-processor', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
     ],
@@ -287,6 +320,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/onboarding-guide': 'administration',
   '/officer-management': 'administration',
   '/user-profile': 'administration',
+  '/workflows-admin': 'workflows-admin',
 };
 
 /**

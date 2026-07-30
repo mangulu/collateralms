@@ -20,6 +20,7 @@ import {
   CheckSquare,
   BookOpen,
   HelpCircle,
+  Settings2,
 } from 'lucide-react';
 
 
@@ -73,6 +74,19 @@ const modules: ModuleCard[] = [
     iconBg: '#1AB8E6',
     stats: 'Inbox · Perfection · Archive Requests',
     requiredPermission: PERMISSIONS.PERFECTION_VIEW,
+  },
+  {
+    id: 'workflows-admin',
+    title: 'Workflows Administration',
+    description: 'Design templates, configure auto-triggers, manage escalations, and monitor system-wide workflow KPIs.',
+    icon: Settings2,
+    href: '/workflows-admin',
+    color: '#374151',
+    bgGradient: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 60%, #E2E8F0 100%)',
+    iconBg: '#475569',
+    stats: 'Templates · Triggers · KPIs',
+    adminOnly: true,
+    requiredPermission: PERMISSIONS.SETTINGS_VIEW,
   },
   {
     id: 'intelligence',
