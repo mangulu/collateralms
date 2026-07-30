@@ -9,6 +9,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { sendEscalationEmails } from '@/lib/supabase/escalationEmailService';
+import { useEscalationRealtime } from '@/lib/hooks/useEscalationRealtime';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -329,6 +330,7 @@ export default function WorkflowInstancesContent() {
   const [filterTemplate, setFilterTemplate] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [stats, setStats] = useState({ active: 0, completed: 0, escalated: 0, onHold: 0, cancelled: 0 });
+  const [newEscalationCount, setNewEscalationCount] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -356,6 +358,46 @@ export default function WorkflowInstancesContent() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // ─── Realtime escalation subscription ────────────────────────────────────────
+  useEscalationRealtime({
+    onEscalation: (event) => {
+      const label = event.referenceLabel ?? event.referenceType ?? 'Workflow';
+      const stepInfo = event.stepName ? ` · Step: ${event.stepName}` : '';
+      const workflowInfo = event.workflowName ? ` (${event.workflowName})` : '';
+      toast.warning(
+        `⚠️ Escalation triggered: ${label}${workflowInfo}${stepInfo}`,
+        {
+          description: event.performedByName
+            ? `Escalated by ${event.performedByName}${event.comment ? ` — "${event.comment}"` : ''}`
+            : event.comment ?? 'A workflow step has been escalated',
+          duration: 8000,
+          action: {
+            label: 'View',
+            onClick: () => {
+              const inst = instances.find((i) => i.id === event.instanceId);
+              if (inst) openInstance(inst);
+            },
+          },
+        }
+      );
+      setNewEscalationCount((c) => c + 1);
+      // Refresh list and stats silently
+      workflowInstanceService.getStats().then((s) => setStats(s)).catch(() => {});
+      workflowInstanceService.getAll().then(async (data) => {
+        const enriched = await Promise.all(
+          data.map(async (inst) => {
+            const full = await workflowInstanceService.getById(inst.id);
+            return full ?? inst;
+          })
+        );
+        setInstances(enriched);
+      }).catch(() => {});
+    },
+    onEscalatedCountChange: (count) => {
+      setStats((prev) => ({ ...prev, escalated: count }));
+    },
+  });
 
   async function openInstance(instance: WorkflowInstance) {
     setSelectedInstance(instance);
@@ -463,16 +505,26 @@ export default function WorkflowInstancesContent() {
         {[
           { label: 'Active', value: stats.active, color: 'text-blue-700', bg: 'bg-blue-50 border-blue-100', dot: 'bg-blue-500' },
           { label: 'Completed', value: stats.completed, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' },
-          { label: 'Escalated', value: stats.escalated, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-100', dot: 'bg-orange-500' },
+          { label: 'Escalated', value: stats.escalated, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-100', dot: 'bg-orange-500', badge: newEscalationCount },
           { label: 'On Hold', value: stats.onHold, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-100', dot: 'bg-amber-500' },
           { label: 'Cancelled', value: stats.cancelled, color: 'text-red-700', bg: 'bg-red-50 border-red-100', dot: 'bg-red-500' },
         ].map((s) => (
-          <div key={s.label} className={`flex items-center gap-3 p-3 rounded-xl border ${s.bg}`}>
+          <div
+            key={s.label}
+            className={`relative flex items-center gap-3 p-3 rounded-xl border ${s.bg}`}
+            onClick={s.label === 'Escalated' && newEscalationCount > 0 ? () => { setFilterStatus('escalated'); setNewEscalationCount(0); } : undefined}
+            style={s.label === 'Escalated' && newEscalationCount > 0 ? { cursor: 'pointer' } : undefined}
+          >
             <div className={`w-2 h-2 rounded-full ${s.dot} shrink-0`} />
             <div>
               <p className={`text-lg font-800 ${s.color}`}>{s.value}</p>
               <p className="text-[10px] text-muted-foreground">{s.label}</p>
             </div>
+            {'badge' in s && (s as any).badge > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-orange-500 text-white text-[10px] font-700 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                {(s as any).badge > 9 ? '9+' : (s as any).badge}
+              </span>
+            )}
           </div>
         ))}
       </div>
