@@ -25,8 +25,40 @@ import { createCovenant, type CovenantType } from '@/lib/supabase/covenantServic
 import { createSubstitution } from '@/lib/supabase/substitutionService';
 import { createInsurancePolicy } from '@/lib/supabase/insuranceService';
 import { workflowLookupsService, type LoanOption } from '@/lib/supabase/workflowLookupsService';
+import { workflowInstanceService, workflowTemplateService } from '@/lib/supabase/workflowEngineService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+// ─── Helper: start a workflow engine instance for a process ──────────────────
+
+async function startWorkflowEngineInstance(
+  workflowType: 'valuation' | 'substitution' | 'perfection' | 'release',
+  collateral: CollateralRecord,
+  userId: string,
+  referenceLabel: string
+): Promise<void> {
+  try {
+    const templates = await workflowTemplateService.getAll();
+    const template = templates.find(
+      (t) => t.workflowType === workflowType && t.isActive
+    );
+    if (!template) return; // No matching template — silently skip
+    await workflowInstanceService.start({
+      templateId: template.id,
+      referenceType: workflowType,
+      referenceId: collateral.id,
+      referenceLabel,
+      startedBy: userId,
+      metadata: {
+        collateralId: collateral.collateralId,
+        obligor: collateral.obligor,
+        collateralType: collateral.type,
+      },
+    });
+  } catch {
+    // Non-blocking — domain record was already created successfully
+  }
+}
 
 
 
@@ -194,6 +226,12 @@ function ValuationDialog({ collateral, userId, onClose, onSuccess }: ValuationDi
         notes: form.notes || undefined,
         createdBy: userId,
       });
+      await startWorkflowEngineInstance(
+        'valuation',
+        collateral,
+        userId,
+        `${form.valuationType} — ${collateral.collateralId}`
+      );
       toast.success('Valuation scheduled successfully');
       onSuccess();
       onClose();
@@ -528,6 +566,12 @@ function SubstitutionDialog({ collateral, userId, onClose, onSuccess }: Substitu
         notes: form.notes || undefined,
         requestedBy: userId,
       });
+      await startWorkflowEngineInstance(
+        'substitution',
+        collateral,
+        userId,
+        `Substitution — ${collateral.collateralId}`
+      );
       toast.success('Substitution request submitted successfully');
       onSuccess();
       onClose();
@@ -885,11 +929,23 @@ export default function ProcessLaunchersPanel({ collateral, onProcessStarted }: 
           user.id,
           userProfile?.full_name ?? user.email ?? 'Unknown'
         );
+        await startWorkflowEngineInstance(
+          'perfection',
+          collateral,
+          user.id,
+          `Perfection — ${collateral.collateralId}`
+        );
         toast.success('Perfection request submitted — redirecting to workflow');
         setActiveModal(null);
         onProcessStarted?.();
         router.push('/perfection-workflow');
       } else if (activeModal === 'release') {
+        await startWorkflowEngineInstance(
+          'release',
+          collateral,
+          user.id,
+          `Release — ${collateral.collateralId}`
+        );
         toast.success('Redirecting to Release module');
         setActiveModal(null);
         router.push(`/batch-release?collateral=${encodeURIComponent(collateral.collateralId)}`);
