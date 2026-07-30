@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, CheckCircle2, XCircle, RotateCcw, ChevronRight, Loader2, Pause, X, Search, RefreshCw, SkipForward, Flag } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, RotateCcw, ChevronRight, Loader2, Pause, X, Search, RefreshCw, SkipForward, Flag, Clock, ShieldCheck, AlertTriangle, Users, GitBranch } from 'lucide-react';
 import {
   workflowInstanceService, workflowTemplateService,
   WorkflowInstance, WorkflowTemplate, WorkflowTransitionLog,
@@ -49,6 +49,236 @@ function formatDate(iso: string | null): string {
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Workflow Efficiency KPIs ─────────────────────────────────────────────────
+
+interface WorkflowKPIs {
+  avgCycleTimeDays: number | null;
+  slaComplianceRate: number | null;
+  escalationFrequency: number | null;
+  pendingByRole: { role: string; count: number }[];
+  bottleneckSteps: { stepName: string; count: number; templateName: string }[];
+}
+
+function computeKPIs(instances: WorkflowInstance[], templates: WorkflowTemplate[]): WorkflowKPIs {
+  // Average cycle time (completed instances only)
+  const completed = instances.filter((i) => i.instanceStatus === 'completed' && i.startedAt && i.completedAt);
+  const avgCycleTimeDays = completed.length > 0
+    ? completed.reduce((sum, i) => {
+        const diff = new Date(i.completedAt!).getTime() - new Date(i.startedAt!).getTime();
+        return sum + diff / (1000 * 60 * 60 * 24);
+      }, 0) / completed.length
+    : null;
+
+  // SLA compliance: steps with slaHours defined — check if completed within SLA
+  let slaTotal = 0;
+  let slaCompliant = 0;
+  instances.forEach((inst) => {
+    const tpl = templates.find((t) => t.id === inst.templateId);
+    if (!tpl) return;
+    (inst.instanceSteps ?? []).forEach((is) => {
+      const step = tpl.steps.find((s) => s.id === is.stepId);
+      if (!step?.slaHours || is.stepStatus !== 'completed') return;
+      slaTotal++;
+      if (is.startedAt && is.completedAt) {
+        const hours = (new Date(is.completedAt).getTime() - new Date(is.startedAt).getTime()) / (1000 * 60 * 60);
+        if (hours <= step.slaHours) slaCompliant++;
+      }
+    });
+  });
+  const slaComplianceRate = slaTotal > 0 ? Math.round((slaCompliant / slaTotal) * 100) : null;
+
+  // Escalation frequency (% of active+completed instances that were escalated)
+  const relevantInstances = instances.filter((i) => ['active', 'completed', 'escalated'].includes(i.instanceStatus));
+  const escalatedCount = instances.filter((i) => i.instanceStatus === 'escalated').length;
+  const escalationFrequency = relevantInstances.length > 0
+    ? Math.round((escalatedCount / relevantInstances.length) * 100)
+    : null;
+
+  // Pending actions by role: look at active instances, find current step actors
+  const roleCountMap: Record<string, number> = {};
+  instances.filter((i) => i.instanceStatus === 'active').forEach((inst) => {
+    const tpl = templates.find((t) => t.id === inst.templateId);
+    if (!tpl || !inst.currentStepId) return;
+    const step = tpl.steps.find((s) => s.id === inst.currentStepId);
+    if (!step) return;
+    step.actors.forEach((a) => {
+      const role = a.actorLabel ?? a.actorType ?? 'Unknown';
+      roleCountMap[role] = (roleCountMap[role] ?? 0) + 1;
+    });
+  });
+  const pendingByRole = Object.entries(roleCountMap)
+    .map(([role, count]) => ({ role, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // Bottleneck steps: active steps with the most instances stuck on them
+  const stepCountMap: Record<string, { count: number; stepName: string; templateName: string }> = {};
+  instances.filter((i) => i.instanceStatus === 'active' && i.currentStepId).forEach((inst) => {
+    const tpl = templates.find((t) => t.id === inst.templateId);
+    if (!tpl || !inst.currentStepId) return;
+    const step = tpl.steps.find((s) => s.id === inst.currentStepId);
+    if (!step) return;
+    const key = `${tpl.id}::${step.id}`;
+    if (!stepCountMap[key]) stepCountMap[key] = { count: 0, stepName: step.name, templateName: tpl.name };
+    stepCountMap[key].count++;
+  });
+  const bottleneckSteps = Object.values(stepCountMap)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+
+  return { avgCycleTimeDays, slaComplianceRate, escalationFrequency, pendingByRole, bottleneckSteps };
+}
+
+interface WorkflowEfficiencyKPIsProps {
+  instances: WorkflowInstance[];
+  templates: WorkflowTemplate[];
+}
+
+function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIsProps) {
+  const kpis = computeKPIs(instances, templates);
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <h2 className="text-sm font-700 text-foreground">Workflow Efficiency KPIs</h2>
+        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-600 rounded-full border border-indigo-100">Live</span>
+      </div>
+
+      {/* Top KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+        {/* Avg Cycle Time */}
+        <div className="bg-white border border-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Clock size={13} className="text-blue-600" />
+            </div>
+            <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Avg Cycle Time</span>
+          </div>
+          {kpis.avgCycleTimeDays !== null ? (
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-800 text-foreground">{kpis.avgCycleTimeDays.toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">days</span>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground italic">No completed instances</span>
+          )}
+          <p className="text-[10px] text-muted-foreground mt-1">Across completed workflows</p>
+        </div>
+
+        {/* SLA Compliance */}
+        <div className="bg-white border border-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <ShieldCheck size={13} className="text-emerald-600" />
+            </div>
+            <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">SLA Compliance</span>
+          </div>
+          {kpis.slaComplianceRate !== null ? (
+            <>
+              <div className="flex items-baseline gap-1">
+                <span className={`text-2xl font-800 ${kpis.slaComplianceRate >= 80 ? 'text-emerald-700' : kpis.slaComplianceRate >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
+                  {kpis.slaComplianceRate}%
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${kpis.slaComplianceRate >= 80 ? 'bg-emerald-500' : kpis.slaComplianceRate >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                  style={{ width: `${kpis.slaComplianceRate}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <span className="text-sm text-muted-foreground italic">No SLA data yet</span>
+          )}
+          <p className="text-[10px] text-muted-foreground mt-1">Steps completed within SLA</p>
+        </div>
+
+        {/* Escalation Frequency */}
+        <div className="bg-white border border-border rounded-xl p-4 col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
+              <AlertTriangle size={13} className="text-orange-600" />
+            </div>
+            <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Escalation Rate</span>
+          </div>
+          {kpis.escalationFrequency !== null ? (
+            <div className="flex items-baseline gap-1">
+              <span className={`text-2xl font-800 ${kpis.escalationFrequency === 0 ? 'text-emerald-700' : kpis.escalationFrequency <= 15 ? 'text-amber-700' : 'text-red-700'}`}>
+                {kpis.escalationFrequency}%
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground italic">No data</span>
+          )}
+          <p className="text-[10px] text-muted-foreground mt-1">Instances escalated</p>
+        </div>
+      </div>
+
+      {/* Bottom Row: Pending by Role + Bottleneck Steps */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Pending Actions by Role */}
+        <div className="bg-white border border-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
+              <Users size={13} className="text-violet-600" />
+            </div>
+            <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Pending Actions by Role</span>
+          </div>
+          {kpis.pendingByRole.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">No pending actions</p>
+          ) : (
+            <div className="space-y-2">
+              {kpis.pendingByRole.map(({ role, count }) => {
+                const maxCount = kpis.pendingByRole[0].count;
+                const pct = Math.round((count / maxCount) * 100);
+                return (
+                  <div key={role}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-500 text-foreground capitalize">{role.replace(/_/g, ' ')}</span>
+                      <span className="text-xs font-700 text-violet-700">{count}</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-violet-400 rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Bottleneck Steps */}
+        <div className="bg-white border border-border rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-rose-50 flex items-center justify-center">
+              <GitBranch size={13} className="text-rose-600" />
+            </div>
+            <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Bottleneck Steps</span>
+          </div>
+          {kpis.bottleneckSteps.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">No active bottlenecks</p>
+          ) : (
+            <div className="space-y-2">
+              {kpis.bottleneckSteps.map(({ stepName, count, templateName }, idx) => (
+                <div key={idx} className="flex items-center gap-3 p-2 rounded-lg bg-rose-50/60 border border-rose-100">
+                  <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                    <span className="text-[10px] font-700 text-rose-700">{count}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-600 text-foreground truncate">{stepName}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{templateName}</p>
+                  </div>
+                  <span className="text-[10px] text-rose-600 font-600 shrink-0">{count} stuck</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Instance Detail Panel ────────────────────────────────────────────────────
@@ -528,6 +758,9 @@ export default function WorkflowInstancesContent() {
           </div>
         ))}
       </div>
+
+      {/* Workflow Efficiency KPIs */}
+      <WorkflowEfficiencyKPIs instances={instances} templates={templates} />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
