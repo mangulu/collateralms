@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import GlobalSearch from './GlobalSearch';
-import { Menu, HelpCircle, LogOut, CheckSquare, ChevronDown, AlertCircle } from 'lucide-react';
+import { Menu, LogOut, CheckSquare, ChevronDown, AlertCircle, LayoutGrid, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { userTaskService, UserTask } from '@/lib/supabase/userTaskService';
@@ -81,6 +81,57 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
 
   const TopBarRight = () => (
     <div className="flex items-center gap-2 shrink-0">
+      {/* Module Hub icon */}
+      <div className="relative group">
+        <Link
+          href="/module-hub"
+          className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+          style={{ color: 'var(--izou-text-muted)', border: '1px solid var(--izou-border)' }}
+          onMouseOver={e => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)';
+          }}
+          onMouseOut={e => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            (e.currentTarget as HTMLElement).style.color = 'var(--izou-text-muted)';
+          }}
+        >
+          <LayoutGrid size={16} />
+        </Link>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="text-white text-xs px-2 py-1 rounded-md whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
+            Module Hub
+          </div>
+        </div>
+      </div>
+
+      {/* Onboarding Guide icon */}
+      <div className="relative group">
+        <Link
+          href="/onboarding-guide"
+          className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+          style={{ color: 'var(--izou-text-muted)', border: '1px solid var(--izou-border)' }}
+          onMouseOver={e => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)';
+          }}
+          onMouseOut={e => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            (e.currentTarget as HTMLElement).style.color = 'var(--izou-text-muted)';
+          }}
+        >
+          <BookOpen size={16} />
+        </Link>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="text-white text-xs px-2 py-1 rounded-md whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
+            Onboarding Guide
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="w-px h-5 shrink-0" style={{ backgroundColor: 'var(--izou-border)' }} />
+
       {/* Tasks Pill */}
       <div className="relative" ref={tasksRef}>
         <button
@@ -339,18 +390,6 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
           <div className="flex-1 max-w-sm">
             <GlobalSearch />
           </div>
-          {/* Global Help / Guide icon */}
-          <Link
-            href="/onboarding-guide"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
-            style={{ color: 'var(--izou-primary)', border: '1px solid var(--izou-border)' }}
-            title="Open Onboarding Guide"
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
-          >
-            <HelpCircle size={15} />
-            <span>Guide</span>
-          </Link>
           <TopBarRight />
         </div>
 

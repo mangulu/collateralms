@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppLogo from './ui/AppLogo';
-import { ChevronLeft, ChevronRight, LayoutGrid, ChevronDown, BookOpen, HelpCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 
 import { usePermissions } from '@/lib/rbac';
 import { MODULE_DEFINITIONS, getModuleForPath, ModuleNavItem } from '@/lib/moduleNav';
@@ -218,59 +218,6 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2">
-        {/* Home / Module Hub button */}
-        <div className="mb-3">
-          <div
-            className="relative"
-            onMouseEnter={() => setHoveredItem('__home__')}
-            onMouseLeave={() => setHoveredItem(null)}
-          >
-            <button
-              onClick={() => router.push('/module-hub')}
-              className={`izou-nav-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium ${
-                currentPath === '/module-hub' ? 'izou-nav-active' : ''
-              }`}
-            >
-              <LayoutGrid size={18} className="izou-nav-icon shrink-0" />
-              {!collapsed && <span className="flex-1 truncate text-left">Module Hub</span>}
-            </button>
-            {collapsed && hoveredItem === '__home__' && (
-              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-                <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
-                  Module Hub
-                </div>
-              </div>
-            )}
-          </div>
-          {/* Onboarding Guide button */}
-          <div
-            className="relative mt-0.5"
-            onMouseEnter={() => setHoveredItem('__onboarding__')}
-            onMouseLeave={() => setHoveredItem(null)}
-          >
-            <button
-              onClick={() => router.push('/onboarding-guide')}
-              className={`izou-nav-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium ${
-                currentPath === '/onboarding-guide' ? 'izou-nav-active' : ''
-              }`}
-            >
-              <BookOpen size={18} className="izou-nav-icon shrink-0" />
-              {!collapsed && <span className="flex-1 truncate text-left">Onboarding Guide</span>}
-            </button>
-            {collapsed && hoveredItem === '__onboarding__' && (
-              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-                <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
-                  Onboarding Guide
-                </div>
-              </div>
-            )}
-          </div>
-
-          {!collapsed && (
-            <div className="mx-1 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }} />
-          )}
-        </div>
-
         {/* Module-contextual nav groups */}
         {activeModule ? (
           <>
@@ -298,32 +245,6 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
                 </div>
               );
             })}
-
-            {/* Module-specific guide link */}
-            <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-              <div
-                className="relative"
-                onMouseEnter={() => setHoveredItem('__module_guide__')}
-                onMouseLeave={() => setHoveredItem(null)}
-              >
-                <Link
-                  href={`/onboarding-guide?module=${activeModule.id}`}
-                  className="izou-nav-item flex items-center gap-2.5 px-3 py-2 text-xs font-medium opacity-80 hover:opacity-100"
-                >
-                  <HelpCircle size={15} className="izou-nav-icon shrink-0" />
-                  {!collapsed && (
-                    <span className="flex-1 truncate">{activeModule.label} Guide</span>
-                  )}
-                </Link>
-                {collapsed && hoveredItem === '__module_guide__' && (
-                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-50 pointer-events-none">
-                    <div className="text-white text-xs px-2.5 py-1.5 rounded-lg shadow-dropdown whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
-                      {activeModule.label} Guide
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
           </>
         ) : (
           !collapsed && (
