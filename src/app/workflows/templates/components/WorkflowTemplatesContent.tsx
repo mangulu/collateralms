@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, Settings2, Users, GitBranch, AlertTriangle, Loader2, X, Edit2, ToggleLeft, ToggleRight, Info, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, Settings2, Users, GitBranch, AlertTriangle, Loader2, X, Edit2, ToggleLeft, ToggleRight, Info, ChevronRight, Bell, Clock, UserCheck, CreditCard, ShieldAlert } from 'lucide-react';
 import {
   workflowTemplateService,
   WorkflowTemplate, WorkflowStep, WorkflowStepActor, WorkflowStepCondition,
@@ -55,10 +55,32 @@ const CONDITION_OPERATOR_LABELS: Record<WorkflowConditionOperator, string> = {
 
 const ESCALATION_ACTION_LABELS: Record<WorkflowEscalationAction, string> = {
   notify_manager: 'Notify Manager',
-  reassign: 'Reassign Task',
+  reassign: 'Reassign to Manager',
   auto_approve: 'Auto-Approve',
   auto_reject: 'Auto-Reject',
   escalate_to_role: 'Escalate to Role',
+  hold_payment: 'Hold Payment',
+  notify_and_hold: 'Notify & Hold Payment',
+};
+
+const ESCALATION_ACTION_DESCRIPTIONS: Record<WorkflowEscalationAction, string> = {
+  notify_manager: 'Send an alert to the manager when the step is idle',
+  reassign: 'Automatically move the task to the manager for action',
+  auto_approve: 'Automatically approve and advance to the next step',
+  auto_reject: 'Automatically reject and cancel the workflow',
+  escalate_to_role: 'Reassign the step to a specific role',
+  hold_payment: 'Place a hold on any pending payment until resolved',
+  notify_and_hold: 'Notify the manager AND hold any pending payment',
+};
+
+const ESCALATION_ACTION_ICONS: Record<WorkflowEscalationAction, React.ReactNode> = {
+  notify_manager: <Bell size={13} className="text-blue-500" />,
+  reassign: <UserCheck size={13} className="text-indigo-500" />,
+  auto_approve: <ShieldAlert size={13} className="text-green-500" />,
+  auto_reject: <ShieldAlert size={13} className="text-red-500" />,
+  escalate_to_role: <UserCheck size={13} className="text-violet-500" />,
+  hold_payment: <CreditCard size={13} className="text-rose-500" />,
+  notify_and_hold: <CreditCard size={13} className="text-amber-500" />,
 };
 
 const AVAILABLE_ROLES = [
@@ -94,12 +116,168 @@ function blankStep(): Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'> {
     slaHours: 48,
     escalationAction: 'notify_manager',
     escalationRole: null,
+    escalationNotifyRoles: [],
     notifyOnEnter: true,
     notifyOnComplete: true,
     notifyRoles: [],
     actors: [],
     conditions: [],
   };
+}
+
+// ─── Escalation Panel ─────────────────────────────────────────────────────────
+
+interface EscalationPanelProps {
+  step: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>;
+  onChange: (updated: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>) => void;
+}
+
+function EscalationPanel({ step, onChange }: EscalationPanelProps) {
+  const needsRole = step.escalationAction === 'escalate_to_role' || step.escalationAction === 'reassign';
+  const needsNotifyRoles = step.escalationAction === 'notify_manager' || step.escalationAction === 'notify_and_hold';
+
+  function toggleNotifyRole(role: string) {
+    const current = step.escalationNotifyRoles ?? [];
+    const updated = current.includes(role)
+      ? current.filter((r) => r !== role)
+      : [...current, role];
+    onChange({ ...step, escalationNotifyRoles: updated });
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/40 overflow-hidden">
+      {/* Panel Header */}
+      <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100">
+        <Clock size={13} className="text-amber-600" />
+        <span className="text-xs font-700 text-amber-800">Escalation Conditions</span>
+        <span className="ml-auto text-[10px] text-amber-600 font-500">
+          Triggered when step is idle beyond SLA
+        </span>
+      </div>
+
+      <div className="px-4 py-4 space-y-4">
+        {/* SLA reminder */}
+        <div className="flex items-center gap-2 p-3 bg-white border border-amber-100 rounded-lg">
+          <Clock size={12} className="text-amber-500 shrink-0" />
+          <p className="text-xs text-amber-700">
+            {step.slaHours
+              ? <>These conditions trigger if this step is idle for more than <strong>{step.slaHours} hours</strong>.</>
+              : <span className="italic">Set an SLA (hours) above to enable time-based escalation.</span>
+            }
+          </p>
+        </div>
+
+        {/* Action selector — visual cards */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-2">What should happen when SLA is breached?</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {(Object.keys(ESCALATION_ACTION_LABELS) as WorkflowEscalationAction[]).map((action) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => onChange({ ...step, escalationAction: action })}
+                className={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition-all ${
+                  step.escalationAction === action
+                    ? 'border-amber-400 bg-amber-50 ring-1 ring-amber-300' :'border-border bg-white hover:border-amber-200 hover:bg-amber-50/30'
+                }`}
+              >
+                <span className="mt-0.5 shrink-0">{ESCALATION_ACTION_ICONS[action]}</span>
+                <div>
+                  <p className="text-xs font-600 text-foreground leading-tight">{ESCALATION_ACTION_LABELS[action]}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{ESCALATION_ACTION_DESCRIPTIONS[action]}</p>
+                </div>
+                {step.escalationAction === action && (
+                  <span className="ml-auto shrink-0 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                  </span>
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => onChange({ ...step, escalationAction: null })}
+              className={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition-all ${
+                step.escalationAction === null
+                  ? 'border-slate-400 bg-slate-50 ring-1 ring-slate-300' :'border-border bg-white hover:border-slate-200'
+              }`}
+            >
+              <X size={13} className="text-slate-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-600 text-foreground leading-tight">No escalation</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Step can remain idle indefinitely</p>
+              </div>
+              {step.escalationAction === null && (
+                <span className="ml-auto shrink-0 w-4 h-4 rounded-full bg-slate-400 flex items-center justify-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Conditional: Role picker for reassign / escalate_to_role */}
+        {needsRole && (
+          <div>
+            <label className="block text-xs font-600 text-foreground mb-1.5">
+              {step.escalationAction === 'reassign' ? 'Reassign to which role?' : 'Escalate to which role?'}
+            </label>
+            <select
+              value={step.escalationRole ?? ''}
+              onChange={(e) => onChange({ ...step, escalationRole: e.target.value || null })}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+            >
+              <option value="">Select a role</option>
+              {AVAILABLE_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+            {!step.escalationRole && (
+              <p className="text-[10px] text-amber-600 mt-1">Please select a role to complete this escalation rule.</p>
+            )}
+          </div>
+        )}
+
+        {/* Conditional: Notify roles for notify_manager / notify_and_hold */}
+        {needsNotifyRoles && (
+          <div>
+            <label className="block text-xs font-600 text-foreground mb-2">
+              Who should be notified?
+              <span className="ml-1 font-400 text-muted-foreground">(select all that apply)</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {AVAILABLE_ROLES.map((r) => {
+                const selected = (step.escalationNotifyRoles ?? []).includes(r.value);
+                return (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => toggleNotifyRole(r.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-600 border transition-all ${
+                      selected
+                        ? 'bg-amber-500 text-white border-amber-500' :'bg-white text-foreground border-border hover:border-amber-300'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                );
+              })}
+            </div>
+            {(step.escalationNotifyRoles ?? []).length === 0 && (
+              <p className="text-[10px] text-amber-600 mt-1.5">Select at least one role to receive the notification.</p>
+            )}
+          </div>
+        )}
+
+        {/* hold_payment info */}
+        {(step.escalationAction === 'hold_payment' || step.escalationAction === 'notify_and_hold') && (
+          <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-100 rounded-lg">
+            <CreditCard size={12} className="text-rose-500 mt-0.5 shrink-0" />
+            <p className="text-[10px] text-rose-700 leading-relaxed">
+              A payment hold flag will be set on the associated collateral record. The hold is automatically lifted when this step is approved or the workflow is completed.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Step Editor ──────────────────────────────────────────────────────────────
@@ -129,7 +307,6 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
 
   function updateActor(i: number, patch: Partial<WorkflowStepActor>) {
     const actors = step.actors.map((a, idx) => idx === i ? { ...a, ...patch } : a);
-    // Auto-fill label when role changes
     if (patch.actorRole) {
       const found = AVAILABLE_ROLES.find((r) => r.value === patch.actorRole);
       actors[i] = { ...actors[i], actorLabel: found?.label ?? patch.actorRole };
@@ -159,6 +336,14 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
     onChange({ ...step, conditions: step.conditions.filter((_, idx) => idx !== i) });
   }
 
+  // Escalation badge for header
+  const escalationBadge = step.escalationAction && step.slaHours ? (
+    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-600 border border-amber-200 flex items-center gap-1">
+      <Clock size={9} />
+      {step.slaHours}h → {ESCALATION_ACTION_LABELS[step.escalationAction]}
+    </span>
+  ) : null;
+
   return (
     <div className="border border-border rounded-xl bg-white overflow-hidden">
       {/* Step Header */}
@@ -181,10 +366,13 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-600 text-foreground truncate">{step.name || 'Unnamed Step'}</p>
-          <p className="text-xs text-muted-foreground">
-            {step.actors.length} actor{step.actors.length !== 1 ? 's' : ''} · {step.conditions.length} condition{step.conditions.length !== 1 ? 's' : ''}
-            {step.slaHours ? ` · SLA ${step.slaHours}h` : ''}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <p className="text-xs text-muted-foreground">
+              {step.actors.length} actor{step.actors.length !== 1 ? 's' : ''} · {step.conditions.length} condition{step.conditions.length !== 1 ? 's' : ''}
+              {step.slaHours ? ` · SLA ${step.slaHours}h` : ''}
+            </p>
+            {escalationBadge}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {step.isOptional && (
@@ -212,12 +400,15 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
               />
             </div>
             <div>
-              <label className="block text-xs font-600 text-foreground mb-1.5">SLA (hours)</label>
+              <label className="block text-xs font-600 text-foreground mb-1.5">
+                <Clock size={11} className="inline mr-1 text-amber-500" />
+                SLA (hours) — idle time before escalation
+              </label>
               <input
                 type="number"
                 value={step.slaHours ?? ''}
                 onChange={(e) => onChange({ ...step, slaHours: e.target.value ? parseInt(e.target.value) : null })}
-                placeholder="48"
+                placeholder="e.g. 48"
                 min={1}
                 className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
               />
@@ -262,38 +453,8 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
             </label>
           </div>
 
-          {/* Escalation */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-600 text-foreground mb-1.5">
-                <AlertTriangle size={11} className="inline mr-1 text-amber-500" />
-                If SLA is breached
-              </label>
-              <select
-                value={step.escalationAction ?? ''}
-                onChange={(e) => onChange({ ...step, escalationAction: e.target.value as WorkflowEscalationAction || null })}
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              >
-                <option value="">No escalation</option>
-                {Object.entries(ESCALATION_ACTION_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
-            </div>
-            {step.escalationAction === 'escalate_to_role' && (
-              <div>
-                <label className="block text-xs font-600 text-foreground mb-1.5">Escalate to Role</label>
-                <select
-                  value={step.escalationRole ?? ''}
-                  onChange={(e) => onChange({ ...step, escalationRole: e.target.value || null })}
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                >
-                  <option value="">Select role</option>
-                  {AVAILABLE_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
+          {/* Escalation Conditions Panel */}
+          <EscalationPanel step={step} onChange={onChange} />
 
           {/* Actors */}
           <div>
@@ -411,6 +572,7 @@ interface TemplateCardProps {
 }
 
 function TemplateCard({ template, onEdit, onToggle }: TemplateCardProps) {
+  const escalatedSteps = template.steps.filter((s) => s.escalationAction && s.slaHours);
   return (
     <div className={`bg-white border-2 rounded-2xl p-5 transition-all ${template.isActive ? 'border-border hover:border-indigo-200' : 'border-dashed border-border opacity-60'}`}>
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -438,7 +600,7 @@ function TemplateCard({ template, onEdit, onToggle }: TemplateCardProps) {
           {template.isActive ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
         </button>
       </div>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
         <span className="flex items-center gap-1"><GitBranch size={11} /> {template.steps.length} steps</span>
         <span className="flex items-center gap-1">
           <Users size={11} />
@@ -448,13 +610,20 @@ function TemplateCard({ template, onEdit, onToggle }: TemplateCardProps) {
           <GitBranch size={11} className="text-amber-500" />
           {template.steps.reduce((n, s) => n + s.conditions.length, 0)} rules
         </span>
+        {escalatedSteps.length > 0 && (
+          <span className="flex items-center gap-1 text-amber-600">
+            <AlertTriangle size={11} />
+            {escalatedSteps.length} escalation{escalatedSteps.length !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
       {/* Step preview */}
       <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
         {template.steps.map((step, i) => (
           <React.Fragment key={step.id}>
-            <div className="shrink-0 px-2.5 py-1 bg-muted rounded-full text-[10px] font-600 text-foreground whitespace-nowrap">
+            <div className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-600 whitespace-nowrap ${step.escalationAction && step.slaHours ? 'bg-amber-100 text-amber-700' : 'bg-muted text-foreground'}`}>
               {step.name}
+              {step.escalationAction && step.slaHours && <span className="ml-1 opacity-70">⚡</span>}
             </div>
             {i < template.steps.length - 1 && <ChevronRight size={10} className="text-muted-foreground shrink-0" />}
           </React.Fragment>
@@ -515,6 +684,7 @@ export default function WorkflowTemplatesContent() {
       slaHours: s.slaHours,
       escalationAction: s.escalationAction,
       escalationRole: s.escalationRole,
+      escalationNotifyRoles: s.escalationNotifyRoles ?? [],
       notifyOnEnter: s.notifyOnEnter,
       notifyOnComplete: s.notifyOnComplete,
       notifyRoles: s.notifyRoles,
@@ -617,7 +787,7 @@ export default function WorkflowTemplatesContent() {
             </button>
             <div>
               <h1 className="text-xl font-800 text-foreground">Edit Template</h1>
-              <p className="text-xs text-muted-foreground">Configure steps, actors, and conditions</p>
+              <p className="text-xs text-muted-foreground">Configure steps, actors, conditions, and escalation rules</p>
             </div>
           </div>
           <button
@@ -715,7 +885,7 @@ export default function WorkflowTemplatesContent() {
             <h1 className="text-2xl font-800 text-foreground">Workflow Templates</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Define steps, assign actors by role, and set conditions for each workflow type
+            Define steps, assign actors by role, set conditions, and configure escalation rules per step
           </p>
         </div>
         <button
@@ -731,7 +901,8 @@ export default function WorkflowTemplatesContent() {
         <Info size={15} className="text-indigo-600 mt-0.5 shrink-0" />
         <p className="text-xs text-indigo-800 leading-relaxed">
           The five built-in templates below power the Perfection, Release, Valuation, Substitution, and Document Approval workflows.
-          You can modify their steps, actors, and conditions — changes take effect on new workflow instances.
+          You can modify their steps, actors, conditions, and escalation rules — changes take effect on new workflow instances.
+          Steps marked with <strong>⚡</strong> have escalation conditions configured.
         </p>
       </div>
 

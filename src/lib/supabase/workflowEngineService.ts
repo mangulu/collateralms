@@ -13,7 +13,8 @@ export type WorkflowConditionOperator =
   | 'equals' | 'not_equals' | 'greater_than' | 'less_than' |'greater_than_or_equal'| 'less_than_or_equal' | 'contains' | 'not_contains' |'is_empty' | 'is_not_empty';
 
 export type WorkflowEscalationAction =
-  | 'notify_manager' | 'reassign' | 'auto_approve' | 'auto_reject' | 'escalate_to_role';
+  | 'notify_manager' | 'reassign' | 'auto_approve' | 'auto_reject' | 'escalate_to_role'
+  | 'hold_payment' | 'notify_and_hold';
 
 export type WorkflowInstanceStatus = 'active' | 'completed' | 'cancelled' | 'on_hold' | 'escalated';
 export type WorkflowStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'rejected' | 'escalated';
@@ -50,6 +51,7 @@ export interface WorkflowStep {
   slaHours: number | null;
   escalationAction: WorkflowEscalationAction | null;
   escalationRole: string | null;
+  escalationNotifyRoles: string[];
   notifyOnEnter: boolean;
   notifyOnComplete: boolean;
   notifyRoles: string[];
@@ -154,6 +156,7 @@ function rowToStep(row: any, actors: WorkflowStepActor[] = [], conditions: Workf
     slaHours: row.sla_hours,
     escalationAction: row.escalation_action,
     escalationRole: row.escalation_role,
+    escalationNotifyRoles: row.escalation_notify_roles ?? [],
     notifyOnEnter: row.notify_on_enter,
     notifyOnComplete: row.notify_on_complete,
     notifyRoles: row.notify_roles ?? [],
@@ -341,6 +344,7 @@ export const workflowTemplateService = {
       sla_hours: s.slaHours,
       escalation_action: s.escalationAction,
       escalation_role: s.escalationRole,
+      escalation_notify_roles: s.escalationNotifyRoles ?? [],
       notify_on_enter: s.notifyOnEnter,
       notify_on_complete: s.notifyOnComplete,
       notify_roles: s.notifyRoles,
