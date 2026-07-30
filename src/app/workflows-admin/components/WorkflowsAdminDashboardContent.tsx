@@ -7,7 +7,18 @@ import { workflowTriggerProcessorService } from '@/lib/supabase/workflowTriggerP
 import { usePermissions } from '@/lib/rbac';
 import AccessDenied from '@/components/AccessDenied';
 
-const ADMIN_ROLES = ['system_admin', 'legal_officer', 'credit_officer', 'credit_manager', 'legal_manager'];
+const ADMIN_ROLES = [
+  'system_admin',
+  'legal_officer',
+  'credit_officer',
+  'credit_manager',
+  'legal_manager',
+  'risk_officer',
+  'compliance_officer',
+  'operations_officer',
+  'senior_manager',
+  'admin',
+];
 
 interface AdminCard {
   id: string;

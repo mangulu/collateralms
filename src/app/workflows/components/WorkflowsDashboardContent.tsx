@@ -7,6 +7,7 @@ import { perfectionService } from '@/lib/supabase/perfectionService';
 import { userTaskService } from '@/lib/supabase/userTaskService';
 import { getValuationStats } from '@/lib/supabase/valuationService';
 import { getSubstitutionStats } from '@/lib/supabase/substitutionService';
+import { workflowInstanceService } from '@/lib/supabase/workflowEngineService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface WorkflowCard {
@@ -89,14 +90,15 @@ export default function WorkflowsDashboardContent() {
   const [valuationUrgent, setValuationUrgent] = useState(0);
   const [substitutionCount, setSubstitutionCount] = useState<number | null>(null);
   const [archiveCount] = useState<number | null>(0);
+  const [engineStats, setEngineStats] = useState<{ active: number; escalated: number } | null>(null);
   const [loadingStates, setLoadingStates] = useState({
-    approvals: true, tasks: true, perfection: true, valuation: true, substitution: true,
+    approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true,
   });
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAll = useCallback(async (silent = false) => {
-    if (!silent) setLoadingStates({ approvals: true, tasks: true, perfection: true, valuation: true, substitution: true });
+    if (!silent) setLoadingStates({ approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true });
     else setRefreshing(true);
 
     await Promise.allSettled([
@@ -136,6 +138,12 @@ export default function WorkflowsDashboardContent() {
         setSubstitutionCount(stats.pending + stats.underReview);
         setLoadingStates((p) => ({ ...p, substitution: false }));
       }).catch(() => { setSubstitutionCount(0); setLoadingStates((p) => ({ ...p, substitution: false })); }),
+
+      // Workflow Engine instances
+      workflowInstanceService.getStats().then((stats) => {
+        setEngineStats({ active: stats.active, escalated: stats.escalated });
+        setLoadingStates((p) => ({ ...p, engine: false }));
+      }).catch(() => { setEngineStats(null); setLoadingStates((p) => ({ ...p, engine: false })); }),
     ]);
 
     setLastRefreshed(new Date());
@@ -268,12 +276,45 @@ export default function WorkflowsDashboardContent() {
           )}
           <StatPill count={(approvalCount ?? 0) + (perfectionCount ?? 0)} label="pending approvals" color="bg-violet-100 text-violet-700" />
           <StatPill count={taskCount ?? 0} label="my tasks" color="bg-teal-100 text-teal-700" />
+          {engineStats !== null && (
+            <StatPill count={engineStats.active} label="engine instances" color="bg-blue-100 text-blue-700" />
+          )}
+          {(engineStats?.escalated ?? 0) > 0 && (
+            <StatPill count={engineStats!.escalated} label="escalated" color="bg-orange-100 text-orange-700" />
+          )}
         </div>
         <div className="ml-auto text-xs text-muted-foreground hidden sm:block">
           <Clock size={11} className="inline mr-1" />
           Updated {lastRefreshed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
+
+      {/* Workflow Engine Instances Banner — shown when there are active instances */}
+      {engineStats !== null && engineStats.active > 0 && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+              <Activity size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-700 text-blue-900">
+                {engineStats.active} Active Workflow Instance{engineStats.active !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-blue-700">
+                {engineStats.escalated > 0
+                  ? `${engineStats.escalated} escalated — requires attention`
+                  : 'Running through configured workflow templates'}
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/workflows/instances"
+            className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-600 rounded-lg transition-colors"
+          >
+            View Instances <ChevronRight size={12} />
+          </Link>
+        </div>
+      )}
 
       {/* Workflow Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -294,7 +335,7 @@ export default function WorkflowsDashboardContent() {
         <p className="text-xs text-muted-foreground mb-4">
           Configure workflow templates, define steps and actors, set visual conditions, and monitor live instances.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Link
             href="/workflows/templates"
             className="flex items-center gap-3 p-4 bg-white border border-indigo-100 rounded-xl hover:border-indigo-300 hover:shadow-sm transition-all group"
@@ -318,8 +359,24 @@ export default function WorkflowsDashboardContent() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-600 text-foreground">Active Instances</p>
               <p className="text-xs text-muted-foreground">Monitor and act on live workflows</p>
+              {engineStats !== null && (
+                <p className="text-[10px] font-700 text-violet-700 mt-0.5">{engineStats.active} active{engineStats.escalated > 0 ? ` · ${engineStats.escalated} escalated` : ''}</p>
+              )}
             </div>
             <ChevronRight size={14} className="text-muted-foreground group-hover:text-violet-600 transition-colors" />
+          </Link>
+          <Link
+            href="/workflows-admin"
+            className="flex items-center gap-3 p-4 bg-white border border-indigo-100 rounded-xl hover:border-indigo-300 hover:shadow-sm transition-all group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+              <Zap size={16} className="text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-600 text-foreground">Admin Console</p>
+              <p className="text-xs text-muted-foreground">Triggers, escalations, KPIs</p>
+            </div>
+            <ChevronRight size={14} className="text-muted-foreground group-hover:text-amber-600 transition-colors" />
           </Link>
         </div>
       </div>

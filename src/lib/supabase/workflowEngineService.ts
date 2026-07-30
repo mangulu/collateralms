@@ -400,7 +400,21 @@ export const workflowInstanceService = {
     if (filters?.templateId) q = q.eq('template_id', filters.templateId);
     const { data, error } = await q;
     if (error) throw error;
-    return (data ?? []).map(rowToInstance);
+    const instances = (data ?? []).map(rowToInstance);
+
+    // Bulk-load all instance steps in one query (avoids N+1)
+    if (instances.length === 0) return instances;
+    const instanceIds = instances.map((i) => i.id);
+    const { data: stepsData } = await supabase
+      .from('workflow_instance_steps')
+      .select('*')
+      .in('instance_id', instanceIds)
+      .order('created_at');
+    const allSteps = (stepsData ?? []).map(rowToInstanceStep);
+    return instances.map((inst) => ({
+      ...inst,
+      instanceSteps: allSteps.filter((s) => s.instanceId === inst.id),
+    }));
   },
 
   async getById(id: string): Promise<WorkflowInstance | null> {
@@ -424,10 +438,21 @@ export const workflowInstanceService = {
     metadata?: Record<string, unknown>;
   }): Promise<WorkflowInstance> {
     const supabase = createClient();
-    // Get template steps
+    // Get template steps with actors
     const { data: steps } = await supabase
       .from('workflow_steps').select('*').eq('template_id', payload.templateId).order('step_order');
     const firstStep = steps?.[0];
+
+    // Get actors for the first step
+    let firstStepActors: any[] = [];
+    if (firstStep) {
+      const { data: actors } = await supabase
+        .from('workflow_step_actors')
+        .select('*')
+        .eq('step_id', firstStep.id);
+      firstStepActors = actors ?? [];
+    }
+
     const { data, error } = await supabase
       .from('workflow_instances')
       .insert({
@@ -446,6 +471,7 @@ export const workflowInstanceService = {
       .select().single();
     if (error) throw error;
     const instance = rowToInstance(data);
+
     // Create instance step records
     if (steps && steps.length > 0) {
       const instanceStepRows = steps.map((s: any, i: number) => ({
@@ -457,8 +483,24 @@ export const workflowInstanceService = {
           ? new Date(Date.now() + s.sla_hours * 3600000).toISOString()
           : null,
       }));
-      await supabase.from('workflow_instance_steps').insert(instanceStepRows);
+      const { data: createdSteps } = await supabase.from('workflow_instance_steps').insert(instanceStepRows).select();
+
+      // Create user_tasks for actors of the first step
+      if (firstStep && firstStepActors.length > 0 && createdSteps) {
+        const firstInstanceStep = createdSteps.find((s: any) => s.step_id === firstStep.id);
+        await _createTasksForStepActors(supabase, {
+          instanceId: instance.id,
+          instanceStepId: firstInstanceStep?.id ?? null,
+          step: firstStep,
+          actors: firstStepActors,
+          referenceLabel: payload.referenceLabel,
+          referenceType: payload.referenceType,
+          referenceId: payload.referenceId,
+          dueAt: firstInstanceStep?.due_at ?? null,
+        });
+      }
     }
+
     // Log transition
     await supabase.from('workflow_transition_log').insert({
       instance_id: instance.id,
@@ -507,9 +549,28 @@ export const workflowInstanceService = {
       if (nextStep) {
         newStepId = nextStep.id;
         // Activate next instance step
-        await supabase.from('workflow_instance_steps')
+        const { data: updatedNextStep } = await supabase.from('workflow_instance_steps')
           .update({ step_status: 'active', started_at: new Date().toISOString() })
-          .eq('instance_id', payload.instanceId).eq('step_id', nextStep.id);
+          .eq('instance_id', payload.instanceId).eq('step_id', nextStep.id)
+          .select().maybeSingle();
+
+        // Create user_tasks for actors of the next step
+        const { data: nextActors } = await supabase
+          .from('workflow_step_actors')
+          .select('*')
+          .eq('step_id', nextStep.id);
+        if (nextActors && nextActors.length > 0) {
+          await _createTasksForStepActors(supabase, {
+            instanceId: payload.instanceId,
+            instanceStepId: updatedNextStep?.id ?? null,
+            step: nextStep,
+            actors: nextActors,
+            referenceLabel: instance.referenceLabel ?? instance.referenceId,
+            referenceType: instance.referenceType,
+            referenceId: instance.referenceId,
+            dueAt: updatedNextStep?.due_at ?? null,
+          });
+        }
       } else {
         newStepId = null;
         newStatus = 'completed';
@@ -525,6 +586,13 @@ export const workflowInstanceService = {
             notes: payload.comment ?? null,
           })
           .eq('instance_id', payload.instanceId).eq('step_id', currentStepId);
+      }
+      // Mark any pending user_tasks for the current step as completed
+      if (currentInstanceStepId) {
+        await supabase.from('user_tasks')
+          .update({ task_status: 'completed', completed_at: new Date().toISOString() })
+          .eq('collateral_record_id', payload.instanceId)
+          .eq('task_status', 'pending');
       }
     } else if (payload.action === 'reject') {
       newStatus = 'cancelled';
@@ -543,9 +611,28 @@ export const workflowInstanceService = {
       const prevStep = steps[currentIdx - 1] ?? null;
       if (prevStep) {
         newStepId = prevStep.id;
-        await supabase.from('workflow_instance_steps')
+        const { data: reactivatedStep } = await supabase.from('workflow_instance_steps')
           .update({ step_status: 'active', started_at: new Date().toISOString(), completed_at: null })
-          .eq('instance_id', payload.instanceId).eq('step_id', prevStep.id);
+          .eq('instance_id', payload.instanceId).eq('step_id', prevStep.id)
+          .select().maybeSingle();
+
+        // Re-create user_tasks for actors of the previous step
+        const { data: prevActors } = await supabase
+          .from('workflow_step_actors')
+          .select('*')
+          .eq('step_id', prevStep.id);
+        if (prevActors && prevActors.length > 0) {
+          await _createTasksForStepActors(supabase, {
+            instanceId: payload.instanceId,
+            instanceStepId: reactivatedStep?.id ?? null,
+            step: prevStep,
+            actors: prevActors,
+            referenceLabel: instance.referenceLabel ?? instance.referenceId,
+            referenceType: instance.referenceType,
+            referenceId: instance.referenceId,
+            dueAt: reactivatedStep?.due_at ?? null,
+          });
+        }
       }
       // Mark current step as returned
       if (currentStepId) {
@@ -618,3 +705,76 @@ export const workflowInstanceService = {
     };
   },
 };
+
+// ─── Internal helper: create user_tasks for step actors ───────────────────────
+
+async function _createTasksForStepActors(
+  supabase: ReturnType<typeof createClient>,
+  opts: {
+    instanceId: string;
+    instanceStepId: string | null;
+    step: any;
+    actors: any[];
+    referenceLabel: string;
+    referenceType: string;
+    referenceId: string;
+    dueAt: string | null;
+  }
+): Promise<void> {
+  try {
+    // Look up users by role to assign tasks
+    const roles = [...new Set(opts.actors.map((a: any) => a.actor_role).filter(Boolean))];
+    if (roles.length === 0) return;
+
+    const { data: usersWithRoles } = await supabase
+      .from('user_profiles')
+      .select('id, role, full_name')
+      .in('role', roles);
+
+    const taskRows: any[] = [];
+    for (const actor of opts.actors) {
+      const matchingUsers = (usersWithRoles ?? []).filter((u: any) => u.role === actor.actor_role);
+      if (matchingUsers.length === 0) {
+        // No specific user found — create a generic task with no assignee (will appear in role-based views)
+        taskRows.push({
+          assigned_to: null,
+          collateral_record_id: opts.instanceId, // store instance ID for linking
+          collateral_id: opts.referenceId,
+          task_type: 'workflow_step',
+          title: `${opts.step.name} — ${opts.referenceLabel}`,
+          description: opts.step.description
+            ? `${opts.step.description} (${opts.referenceType})`
+            : `Workflow step action required for ${opts.referenceLabel}`,
+          action_url: `/workflows/instances`,
+          action_label: 'View Workflow',
+          priority: 'normal',
+          due_date: opts.dueAt ?? null,
+        });
+      } else {
+        for (const u of matchingUsers) {
+          taskRows.push({
+            assigned_to: u.id,
+            collateral_record_id: opts.instanceId,
+            collateral_id: opts.referenceId,
+            task_type: 'workflow_step',
+            title: `${opts.step.name} — ${opts.referenceLabel}`,
+            description: opts.step.description
+              ? `${opts.step.description} (${opts.referenceType})`
+              : `Workflow step action required for ${opts.referenceLabel}`,
+            action_url: `/workflows/instances`,
+            action_label: 'View Workflow',
+            priority: 'normal',
+            due_date: opts.dueAt ?? null,
+          });
+        }
+      }
+    }
+
+    if (taskRows.length > 0) {
+      await supabase.from('user_tasks').insert(taskRows);
+    }
+  } catch (err) {
+    // Non-blocking — task creation failure should not break the workflow transition
+    console.warn('[workflow] Failed to create user_tasks for step actors:', err);
+  }
+}

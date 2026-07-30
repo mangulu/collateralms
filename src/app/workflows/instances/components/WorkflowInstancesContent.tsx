@@ -816,14 +816,8 @@ export default function WorkflowInstancesContent() {
         workflowTemplateService.getAll(),
         workflowInstanceService.getStats(),
       ]);
-      // Attach instance steps to each instance
-      const enriched = await Promise.all(
-        instanceData.map(async (inst) => {
-          const full = await workflowInstanceService.getById(inst.id);
-          return full ?? inst;
-        })
-      );
-      setInstances(enriched);
+      // getAll() now bulk-loads instance steps — no N+1 needed
+      setInstances(instanceData);
       setTemplates(templateData);
       setStats(statsData);
     } catch {
@@ -858,16 +852,10 @@ export default function WorkflowInstancesContent() {
         }
       );
       setNewEscalationCount((c) => c + 1);
-      // Refresh list and stats silently
+      // Refresh list and stats silently using bulk-load (no N+1)
       workflowInstanceService.getStats().then((s) => setStats(s)).catch(() => {});
-      workflowInstanceService.getAll().then(async (data) => {
-        const enriched = await Promise.all(
-          data.map(async (inst) => {
-            const full = await workflowInstanceService.getById(inst.id);
-            return full ?? inst;
-          })
-        );
-        setInstances(enriched);
+      workflowInstanceService.getAll().then((data) => {
+        setInstances(data);
       }).catch(() => {});
     },
     onEscalatedCountChange: (count) => {
@@ -939,7 +927,7 @@ export default function WorkflowInstancesContent() {
         }
       }
 
-      // Refresh instance
+      // Refresh the specific instance detail
       const updated = await workflowInstanceService.getById(selectedInstance.id);
       if (updated) {
         setSelectedInstance(updated);
