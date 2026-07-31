@@ -813,16 +813,45 @@ export default function WorkflowInstancesContent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [instanceData, templateData, statsData] = await Promise.all([
+      const [instanceResult, templateResult, statsResult] = await Promise.allSettled([
         workflowInstanceService.getAll(),
         workflowTemplateService.getAll(),
         workflowInstanceService.getStats(),
       ]);
-      // getAll() now bulk-loads instance steps — no N+1 needed
-      setInstances(instanceData);
-      setTemplates(templateData);
-      setStats(statsData);
-    } catch {
+
+      if (instanceResult.status === 'fulfilled') {
+        setInstances(instanceResult.value);
+      } else {
+        console.error('[WorkflowInstances] Failed to load instances:', instanceResult.reason);
+        toast.error('Failed to load workflow instances');
+        setInstances([]);
+      }
+
+      if (templateResult.status === 'fulfilled') {
+        setTemplates(templateResult.value);
+      } else {
+        console.error('[WorkflowInstances] Failed to load templates:', templateResult.reason);
+        setTemplates([]);
+      }
+
+      if (statsResult.status === 'fulfilled') {
+        setStats(statsResult.value);
+      } else {
+        console.error('[WorkflowInstances] Failed to load stats:', statsResult.reason);
+        // Compute stats from instances if stats query failed
+        if (instanceResult.status === 'fulfilled') {
+          const data = instanceResult.value;
+          setStats({
+            active: data.filter((i) => i.instanceStatus === 'active').length,
+            completed: data.filter((i) => i.instanceStatus === 'completed').length,
+            escalated: data.filter((i) => i.instanceStatus === 'escalated').length,
+            onHold: data.filter((i) => i.instanceStatus === 'on_hold').length,
+            cancelled: data.filter((i) => i.instanceStatus === 'cancelled').length,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[WorkflowInstances] Unexpected error during load:', err);
       toast.error('Failed to load workflow instances');
     } finally {
       setLoading(false);

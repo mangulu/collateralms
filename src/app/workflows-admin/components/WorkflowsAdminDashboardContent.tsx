@@ -94,10 +94,18 @@ export default function WorkflowsAdminDashboardContent() {
 
     await Promise.allSettled([
       workflowTemplateService.getAll().then((t) => setTemplateCount(t.length)).catch(() => setTemplateCount(0)),
-      workflowInstanceService.getAll().then((instances) => {
-        setInstanceCount(instances.filter((i) => i.instanceStatus === 'active').length);
-        setEscalatedCount(instances.filter((i) => i.instanceStatus === 'escalated').length);
-      }).catch(() => { setInstanceCount(0); setEscalatedCount(0); }),
+      workflowInstanceService.getStats().then((stats) => {
+        setInstanceCount(stats.active);
+        setEscalatedCount(stats.escalated);
+      }).catch(() => {
+        // Fallback: try getAll() if getStats() fails
+        workflowInstanceService.getAll()
+          .then((instances) => {
+            setInstanceCount(instances.filter((i) => i.instanceStatus === 'active').length);
+            setEscalatedCount(instances.filter((i) => i.instanceStatus === 'escalated').length);
+          })
+          .catch(() => { setInstanceCount(0); setEscalatedCount(0); });
+      }),
       workflowTriggerProcessorService.getRecentLogs(1).then((logs) => {
         if (logs.length > 0) setLastJobStatus(logs[0].status);
       }).catch(() => setLastJobStatus(null)),
