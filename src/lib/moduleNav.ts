@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -100,7 +100,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Release Approvals', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Valuation Reviews', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
-          { label: 'Archive Requests', icon: FolderArchive, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Archive Requests', icon: FolderArchive, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -250,16 +250,13 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Documents',
         items: [
           { label: 'Documents Library', icon: Library, href: '/archive/documents-library', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Document Management', icon: FolderArchive, href: '/document-management', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
         label: 'Workflow',
         items: [
-          { label: 'Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Request Status', icon: ListChecks, href: '/archive/request-status', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Custody Tracker', icon: Eye, href: '/archive/custody-tracker', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Chain of Custody', icon: Link2, href: '/archive/chain-of-custody', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Access Requests', icon: ClipboardCheck, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Custody', icon: Eye, href: '/archive/custody', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
@@ -302,6 +299,10 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/officer-management': 'administration',
   '/user-profile': 'administration',
   '/workflows-admin': 'workflows-admin',
+  '/archive/request-workflow': 'archive',
+  '/archive/request-status': 'archive',
+  '/archive/custody-tracker': 'archive',
+  '/archive/chain-of-custody': 'archive',
 };
 
 /**

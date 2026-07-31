@@ -9,16 +9,16 @@ import {
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 
-// ─── Hierarchy: vault → room → shelf → slot ───────────────────────────────────
-// We map 'cabinet' → 'shelf' in display; the DB still uses 'cabinet' for shelf level
-// New hierarchy order: vault → room → cabinet(shelf) → slot
+// ─── Hierarchy: vault → room → cabinet → slot ───────────────────────────────────
+// Strict 4-level hierarchy: Vault → Room → Cabinet → Slot
+// 'shelf' is treated as an alias for 'cabinet' — no distinct shelf level
 const LOCATION_TYPE_ORDER: LocationType[] = ['vault', 'room', 'cabinet', 'slot'];
 
 const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
   vault: 'Vault',
   room: 'Room',
-  cabinet: 'Shelf/Cabinet',
-  shelf: 'Shelf/Cabinet',
+  cabinet: 'Cabinet',
+  shelf: 'Cabinet',
   slot: 'Slot',
 };
 
@@ -42,9 +42,9 @@ const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
 const LEVEL_ILLUSTRATIONS: Record<LocationType, { emoji: string; desc: string }> = {
   vault:   { emoji: '🏛️', desc: 'Physical vault building' },
   room:    { emoji: '🚪', desc: 'Room inside vault' },
-  cabinet: { emoji: '📚', desc: 'Shelf/Cabinet in room' },
-  shelf:   { emoji: '📚', desc: 'Shelf/Cabinet in room' },
-  slot:    { emoji: '📂', desc: 'Filing slot on shelf' },
+  cabinet: { emoji: '📚', desc: 'Cabinet in room' },
+  shelf:   { emoji: '📚', desc: 'Cabinet in room' },
+  slot:    { emoji: '📂', desc: 'Filing slot in cabinet' },
 };
 
 // ─── Add Location Modal ───────────────────────────────────────────────────────
@@ -65,9 +65,9 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
   const [capacity, setCapacity] = useState(10);
-  // Room-specific: max shelves
+  // Room-specific: max cabinets
   const [maxShelves, setMaxShelves] = useState(10);
-  // Shelf-specific: rows, columns, max slot capacity
+  // Cabinet-specific: rows, columns, max slot capacity
   const [rows, setRows] = useState(3);
   const [columns, setColumns] = useState(4);
   const [maxSlotCapacity, setMaxSlotCapacity] = useState(5);
@@ -85,8 +85,8 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
     setSaving(true);
     try {
       if (isShelf) {
-        // Create the shelf/cabinet
-        const shelf = await archiveLocationService.create({
+        // Create the cabinet
+        const cabinet = await archiveLocationService.create({
           name: name.trim(),
           code: code.trim(),
           locationType: 'cabinet',
@@ -103,7 +103,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
               name: `Row ${r}, Col ${c}`,
               code: slotLabel,
               locationType: 'slot',
-              parentId: shelf.id,
+              parentId: cabinet.id,
               description: `Auto-generated slot at Row ${r}, Column ${c}`,
               capacity: maxSlotCapacity,
               createdBy: userId,
@@ -175,24 +175,24 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
               style={{ borderColor: '#D1D5DB' }} />
           </div>
 
-          {/* Room: max shelves */}
+          {/* Room: max cabinets */}
           {isRoom && (
             <div className="p-3 rounded-xl" style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
               <label className="block text-xs font-semibold mb-1" style={{ color: '#15803D' }}>
-                Room Capacity (Max Shelves/Cabinets)
+                Room Capacity (Max Cabinets)
               </label>
               <input type="number" value={maxShelves} onChange={(e) => setMaxShelves(Number(e.target.value))}
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 style={{ borderColor: '#BBF7D0' }} min={1} />
-              <p className="text-xs mt-1" style={{ color: '#6B7280' }}>Maximum number of shelves/cabinets this room can hold</p>
+              <p className="text-xs mt-1" style={{ color: '#6B7280' }}>Maximum number of cabinets this room can hold</p>
             </div>
           )}
 
-          {/* Shelf: rows, columns, slot capacity */}
+          {/* Cabinet: rows, columns, slot capacity */}
           {isShelf && (
             <div className="p-3 rounded-xl space-y-3" style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA' }}>
               <p className="text-xs font-semibold" style={{ color: '#C2410C' }}>
-                📐 Shelf Layout — Slots are auto-generated from rows × columns
+                📐 Cabinet Layout — Slots are auto-generated from rows × columns
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -241,7 +241,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-opacity"
             style={{ backgroundColor: '#2563EB', opacity: saving ? 0.6 : 1 }}>
-            {saving ? (isShelf ? 'Creating Slots…' : 'Saving…') : (isShelf ? `Create Shelf + ${totalSlots} Slots` : 'Save')}
+            {saving ? (isShelf ? 'Creating Slots…' : 'Saving…') : (isShelf ? `Create Cabinet + ${totalSlots} Slots` : 'Save')}
           </button>
         </div>
       </div>
