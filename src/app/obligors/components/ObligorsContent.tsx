@@ -208,7 +208,7 @@ export default function ObligorsContent() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((o) => {
-                  const risk = riskConfig[o.riskRating ?? 'MEDIUM'];
+                  const risk = riskConfig[o.riskRating as keyof typeof riskConfig] ?? riskConfig['MEDIUM'];
                   return (
                     <tr key={o.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
