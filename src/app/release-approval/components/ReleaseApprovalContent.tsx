@@ -7,6 +7,11 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  releaseRequestService,
+  type ReleaseRequest,
+  type ReleaseRequestStatus,
+} from '@/lib/supabase/releaseRequestService';
 
 interface ReleaseRequest {
   id: string;
@@ -22,75 +27,6 @@ interface ReleaseRequest {
   priority: 'High' | 'Normal' | 'Low';
   notes?: string;
 }
-
-const MOCK_REQUESTS: ReleaseRequest[] = [
-  {
-    id: 'REL-001',
-    collateralRef: 'COL-2024-0045',
-    collateralType: 'Land Title',
-    clientName: 'Karibu Enterprises Ltd',
-    loanRef: 'LN-2024-1123',
-    estimatedValue: 450000000,
-    requestedBy: 'James Mwangi',
-    requestedDate: '2026-07-14',
-    releaseReason: 'Loan fully repaid — collateral discharge requested',
-    status: 'Pending',
-    priority: 'High',
-  },
-  {
-    id: 'REL-002',
-    collateralRef: 'COL-2024-0078',
-    collateralType: 'Motor Vehicle',
-    clientName: 'Simba Trading Co.',
-    loanRef: 'LN-2024-0987',
-    estimatedValue: 85000000,
-    requestedBy: 'Grace Odhiambo',
-    requestedDate: '2026-07-13',
-    releaseReason: 'Partial settlement — releasing secondary collateral',
-    status: 'Under Review',
-    priority: 'Normal',
-  },
-  {
-    id: 'REL-003',
-    collateralRef: 'COL-2023-0312',
-    collateralType: 'Commercial Property',
-    clientName: 'Nguvu Holdings',
-    loanRef: 'LN-2023-0456',
-    estimatedValue: 1200000000,
-    requestedBy: 'Peter Kamau',
-    requestedDate: '2026-07-12',
-    releaseReason: 'Collateral substitution approved — releasing original',
-    status: 'Approved',
-    priority: 'Normal',
-  },
-  {
-    id: 'REL-004',
-    collateralRef: 'COL-2024-0091',
-    collateralType: 'Equipment',
-    clientName: 'Jua Kali Manufacturers',
-    loanRef: 'LN-2024-0234',
-    estimatedValue: 32000000,
-    requestedBy: 'Alice Wanjiku',
-    requestedDate: '2026-07-11',
-    releaseReason: 'Loan restructured — collateral no longer required',
-    status: 'Rejected',
-    priority: 'Low',
-    notes: 'Outstanding balance remains. Release denied pending full settlement.',
-  },
-  {
-    id: 'REL-005',
-    collateralRef: 'COL-2024-0103',
-    collateralType: 'Fixed Deposit',
-    clientName: 'Amani Savings Group',
-    loanRef: 'LN-2024-0567',
-    estimatedValue: 15000000,
-    requestedBy: 'David Otieno',
-    requestedDate: '2026-07-10',
-    releaseReason: 'Loan matured and fully settled',
-    status: 'Pending',
-    priority: 'Normal',
-  },
-];
 
 const STATUS_CONFIG: Record<ReleaseRequest['status'], { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   Pending:        { label: 'Pending',      color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200',  icon: <Clock size={12} /> },
@@ -367,13 +303,37 @@ function DetailPanel({
 
 export default function ReleaseApprovalContent() {
   const { userProfile } = useAuth();
-  const [requests, setRequests] = useState<ReleaseRequest[]>(MOCK_REQUESTS);
+  const [requests, setRequests] = useState<ReleaseRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedRequest, setSelectedRequest] = useState<ReleaseRequest | null>(null);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false, request: null, action: null });
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success\' | \'error' } | null>(null);
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await releaseRequestService.getAll();
+        if (!cancelled) setRequests(data);
+      } catch (err: any) {
+        if (!cancelled) setLoadError(err?.message ?? 'Failed to load release requests');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -396,29 +356,43 @@ export default function ReleaseApprovalContent() {
     rejected:    requests.filter((r) => r.status === 'Rejected').length,
   };
 
-  const handleAction = (action: 'Approved' | 'Rejected' | 'Under Review', note: string) => {
+  // ── Action Handler (live update) ───────────────────────────────────────────
+
+  const handleAction = async (action: 'Approved' | 'Rejected' | 'Under Review', note: string) => {
     if (!actionDialog.request) return;
     setProcessing(true);
     const req = actionDialog.request;
-    setTimeout(() => {
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === req.id
-            ? { ...r, status: action, notes: note || r.notes }
-            : r
-        )
+    try {
+      const updated = await releaseRequestService.updateStatus(
+        req.id,
+        action as ReleaseRequestStatus,
+        note || undefined,
+        userProfile?.id,
       );
-      setSelectedRequest((prev) => prev && prev.id === req.id ? { ...prev, status: action, notes: note || prev.notes } : prev);
+      if (updated) {
+        setRequests((prev) => prev.map((r) => r.id === updated.id ? updated : r));
+        setSelectedRequest((prev) => prev?.id === updated.id ? updated : prev);
+      } else {
+        // Optimistic fallback
+        const optimistic = { ...req, status: action as ReleaseRequestStatus, notes: note || req.notes };
+        setRequests((prev) => prev.map((r) => r.id === req.id ? optimistic : r));
+        setSelectedRequest((prev) => prev?.id === req.id ? optimistic : prev);
+      }
       setActionDialog({ open: false, request: null, action: null });
-      setProcessing(false);
       const labels: Record<string, string> = {
         Approved: 'Release approved successfully',
         Rejected: 'Release request rejected',
         'Under Review': 'Request marked as under review',
       };
       showToast(labels[action], 'success');
-    }, 600);
+    } catch (err: any) {
+      showToast(err?.message ?? 'Action failed', 'error');
+    } finally {
+      setProcessing(false);
+    }
   };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-gray-50">
@@ -494,7 +468,17 @@ export default function ReleaseApprovalContent() {
 
           {/* Request List */}
           <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                <Loader2 size={28} className="animate-spin mb-2 text-blue-400" />
+                <p className="text-sm">Loading release requests…</p>
+              </div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center justify-center h-40 text-red-400 px-6 text-center">
+                <AlertCircle size={28} className="mb-2" />
+                <p className="text-sm">{loadError}</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-gray-400">
                 <Unlock size={32} className="mb-2 opacity-30" />
                 <p className="text-sm">No release requests found</p>
