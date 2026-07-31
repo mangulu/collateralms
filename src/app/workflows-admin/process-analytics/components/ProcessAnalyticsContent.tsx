@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   TrendingUp, Loader2, RefreshCw, Clock, CheckCircle2, AlertTriangle,
-  Users, BarChart3, Activity, Gauge, Timer, Layers
+  Users, BarChart3, Activity, Gauge, Timer, Layers, GitBranch
 } from 'lucide-react';
 import {
   workflowInstanceService,
@@ -47,10 +47,13 @@ interface AnalyticsData {
   overallSLARate: number | null;
   totalCompleted: number;
   totalActive: number;
+  totalInstances: number;
+  escalatedInstances: number;
   stepDurations: StepDurationRow[];
   bottleneckByRole: BottleneckByRole[];
   throughputTrend: ThroughputPoint[];
   slaByTemplate: SLAByTemplate[];
+  completionByTemplate: { name: string; completed: number; active: number; escalated: number }[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,6 +68,7 @@ function getWeekLabel(date: Date): string {
 function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemplate[]): AnalyticsData {
   const completed = instances.filter((i) => i.status === 'completed');
   const active = instances.filter((i) => i.status === 'active');
+  const escalated = instances.filter((i) => i.status === 'escalated');
 
   // Avg cycle time
   const withDates = completed.filter((i) => i.started_at && i.completed_at);
@@ -76,9 +80,8 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
     : null;
 
   // Overall SLA rate (completed without escalation)
-  const escalated = instances.filter((i) => i.status === 'escalated').length;
   const overallSLARate = completed.length > 0
-    ? Math.round(((completed.length - escalated) / completed.length) * 100)
+    ? Math.round(((completed.length - escalated.length) / completed.length) * 100)
     : null;
 
   // Step durations — estimate from step history if available
@@ -158,15 +161,32 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
     .sort((a, b) => b.rate - a.rate)
     .slice(0, 6);
 
+  // Completion by template (merged from KPIs)
+  const templateMap: Record<string, { name: string; completed: number; active: number; escalated: number }> = {};
+  instances.forEach((inst) => {
+    const template = templates.find((t) => t.id === inst.workflow_template_id);
+    const name = template?.name ?? 'Unknown';
+    if (!templateMap[name]) templateMap[name] = { name, completed: 0, active: 0, escalated: 0 };
+    if (inst.status === 'completed') templateMap[name].completed++;
+    else if (inst.status === 'active') templateMap[name].active++;
+    else if (inst.status === 'escalated') templateMap[name].escalated++;
+  });
+  const completionByTemplate = Object.values(templateMap)
+    .sort((a, b) => (b.completed + b.active) - (a.completed + a.active))
+    .slice(0, 6);
+
   return {
     avgCycleTimeDays,
     overallSLARate,
     totalCompleted: completed.length,
     totalActive: active.length,
+    totalInstances: instances.length,
+    escalatedInstances: escalated.length,
     stepDurations,
     bottleneckByRole,
     throughputTrend,
     slaByTemplate,
+    completionByTemplate,
   };
 }
 
@@ -233,10 +253,10 @@ export default function ProcessAnalyticsContent() {
             <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
               <TrendingUp size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Process Analytics</h1>
+            <h1 className="text-2xl font-bold text-foreground">Process Analytics & KPIs</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Cycle times, step duration, SLA compliance, bottleneck analysis by role, and throughput trends
+            Cycle times, SLA compliance, bottleneck analysis, role workload, and throughput trends
           </p>
         </div>
         <button
@@ -265,6 +285,14 @@ export default function ProcessAnalyticsContent() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
+                label: 'Total Instances',
+                value: data.totalInstances,
+                sub: 'all time',
+                icon: <Activity size={16} className="text-blue-500" />,
+                bg: 'bg-blue-50',
+                color: 'text-blue-700',
+              },
+              {
                 label: 'Avg Cycle Time',
                 value: data.avgCycleTimeDays !== null ? `${data.avgCycleTimeDays.toFixed(1)}d` : '—',
                 sub: 'per completed instance',
@@ -281,20 +309,12 @@ export default function ProcessAnalyticsContent() {
                 color: 'text-emerald-700',
               },
               {
-                label: 'Completed',
-                value: data.totalCompleted,
-                sub: 'total instances',
-                icon: <Activity size={16} className="text-blue-500" />,
-                bg: 'bg-blue-50',
-                color: 'text-blue-700',
-              },
-              {
-                label: 'Active',
-                value: data.totalActive,
-                sub: 'in-progress instances',
-                icon: <Gauge size={16} className="text-violet-500" />,
-                bg: 'bg-violet-50',
-                color: 'text-violet-700',
+                label: 'Escalated',
+                value: data.escalatedInstances,
+                sub: 'currently escalated',
+                icon: <AlertTriangle size={16} className="text-orange-500" />,
+                bg: 'bg-orange-50',
+                color: 'text-orange-700',
               },
             ].map((kpi) => (
               <div key={kpi.label} className={`${kpi.bg} border border-border rounded-xl p-4`}>
@@ -464,7 +484,31 @@ export default function ProcessAnalyticsContent() {
             )}
           </div>
 
-          {/* ── Row 5: Process Friction Insight ──────────────────────────── */}
+          {/* ── Row 5: Instance Status by Template (merged from KPIs) ─────── */}
+          <div className="bg-white border border-border rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <GitBranch size={16} className="text-violet-500" />
+              <h2 className="text-sm font-semibold text-foreground">Instance Status by Template</h2>
+            </div>
+            {data.completionByTemplate.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-8">No instance data available</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={data.completionByTemplate} margin={{ left: 0, right: 16, top: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="completed" name="Completed" fill="#10B981" radius={[4, 4, 0, 0]} stackId="a" />
+                  <Bar dataKey="active" name="Active" fill="#3B82F6" stackId="a" />
+                  <Bar dataKey="escalated" name="Escalated" fill="#F97316" radius={[0, 0, 4, 4]} stackId="a" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* ── Row 6: Process Friction Insight ──────────────────────────── */}
           <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-100 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle size={16} className="text-violet-600" />

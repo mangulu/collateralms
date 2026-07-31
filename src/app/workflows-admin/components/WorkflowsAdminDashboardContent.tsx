@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Settings2, Layers, Activity, Zap, BarChart3, ChevronRight, RefreshCw, Loader2, AlertTriangle, Clock, Shield, Play, ArrowRightLeft } from 'lucide-react';
+import { Settings2, Layers, Activity, Zap, ChevronRight, RefreshCw, Loader2, AlertTriangle, Clock, Shield, Play, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { workflowInstanceService, workflowTemplateService } from '@/lib/supabase/workflowEngineService';
 import { workflowTriggerProcessorService } from '@/lib/supabase/workflowTriggerProcessorService';
 import { usePermissions } from '@/lib/rbac';
@@ -188,11 +188,11 @@ export default function WorkflowsAdminDashboardContent() {
       loading: loadingStats,
     },
     {
-      id: 'kpis',
-      title: 'Efficiency KPIs',
-      description: 'Cycle times, SLA compliance rates, bottleneck analysis, and role workload metrics',
-      href: '/workflows-admin/kpis',
-      icon: <BarChart3 size={20} className="text-emerald-600" />,
+      id: 'process-analytics',
+      title: 'Process Analytics & KPIs',
+      description: 'Cycle times, SLA compliance, bottleneck analysis, role workload, and throughput trends',
+      href: '/workflows-admin/process-analytics',
+      icon: <TrendingUp size={20} className="text-emerald-600" />,
       accentColor: 'bg-emerald-50',
       bgColor: 'bg-white',
       borderColor: 'border-emerald-100 hover:border-emerald-300',
@@ -217,7 +217,7 @@ export default function WorkflowsAdminDashboardContent() {
     },
     {
       id: 'migration',
-      title: 'Hybrid Migration Tool',
+      title: 'Migration Tool',
       description: 'Migrate old workflow instances to the new engine — auto-migrate clear ones, review ambiguous ones',
       href: '/workflows-admin/migration',
       icon: <ArrowRightLeft size={20} className="text-indigo-600" />,
