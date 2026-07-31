@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
+import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   Draft: { label: 'Draft', color: 'text-gray-600', bg: 'bg-gray-100', icon: <Clock size={12} /> },
@@ -664,8 +665,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-border">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white">
 
         {/* Modal Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-border bg-white shrink-0">
@@ -1123,7 +1123,6 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
             )}
           </div>
         </div>
-      </div>
       {showSmsModal && <SmsApprovalModal request={request} onClose={() => setShowSmsModal(false)} />}
     </div>
   );
@@ -1867,20 +1866,26 @@ export default function PerfectionWorkflowContent() {
         )}
       </div>
 
-      {/* Detail Modal */}
-      {selectedRequest && !batchMode && (
-        <DetailModal
-          request={selectedRequest}
-          comments={comments}
-          history={statusHistory}
-          userRole={userRole}
-          userId={userId}
-          userName={userName}
-          onClose={() => setSelectedRequest(null)}
-          onRefresh={handleRefresh}
-          isRoleResolved={!!userRole}
-        />
-      )}
+      {/* Detail Drawer */}
+      <WorkflowDrawer
+        open={!!selectedRequest && !batchMode}
+        onClose={() => setSelectedRequest(null)}
+        width="w-[720px]"
+      >
+        {selectedRequest && !batchMode && (
+          <DetailModal
+            request={selectedRequest}
+            comments={comments}
+            history={statusHistory}
+            userRole={userRole}
+            userId={userId}
+            userName={userName}
+            onClose={() => setSelectedRequest(null)}
+            onRefresh={handleRefresh}
+            isRoleResolved={!!userRole}
+          />
+        )}
+      </WorkflowDrawer>
 
       {showNewModal && (
         <NewRequestModal

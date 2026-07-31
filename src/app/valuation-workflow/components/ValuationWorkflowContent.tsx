@@ -19,6 +19,7 @@ import SearchableSelect, { type SelectOption } from '@/components/ui/SearchableS
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
+import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 
 const STATUS_COLORS: Record<ValuationStatus, { text: string; bg: string; border: string }> = {
@@ -82,7 +83,7 @@ function ValuationActionDialog({ open, valuation, action, onClose, onRecord, onA
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
@@ -350,6 +351,7 @@ export default function ValuationWorkflowContent() {
   const [filterStatus, setFilterStatus] = useState<ValuationStatus | 'All'>('All');
   const [search, setSearch] = useState('');
   const [selectedValuation, setSelectedValuation] = useState<CollateralValuation | null>(null);
+  const [valuationDrawerOpen, setValuationDrawerOpen] = useState(false);
 
   // Lookup data
   const [collateralOptions, setCollateralOptions] = useState<CollateralOption[]>([]);
@@ -569,10 +571,10 @@ export default function ValuationWorkflowContent() {
         <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 shrink-0">{error}</div>
       )}
 
-      {/* Body — two-panel */}
+      {/* Body — full-width list */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left: List Panel */}
-        <div className={`flex flex-col ${selectedValuation ? 'w-[42%]' : 'w-full'} border-r border-gray-200 bg-white min-h-0`}>
+        {/* List Panel */}
+        <div className="flex flex-col w-full bg-white min-h-0">
           {/* Search + filter */}
           <div className="px-4 py-3 border-b border-gray-100 shrink-0 space-y-2">
             <div className="relative">
@@ -616,7 +618,7 @@ export default function ValuationWorkflowContent() {
             ) : (
               filtered.map((v) => {
                 const sc = STATUS_COLORS[v.valuationStatus] ?? STATUS_COLORS['Scheduled'];
-                const isSelected = selectedValuation?.id === v.id;
+                const isSelected = selectedValuation?.id === v.id && valuationDrawerOpen;
                 const isOverdue = v.valuationStatus === 'Overdue';
                 const canRecord = ['Scheduled', 'Overdue', 'In Progress'].includes(v.valuationStatus);
                 const canApproveReject = v.valuationStatus === 'Completed';
@@ -624,7 +626,7 @@ export default function ValuationWorkflowContent() {
                 return (
                   <div
                     key={v.id}
-                    onClick={() => setSelectedValuation(isSelected ? null : v)}
+                    onClick={() => { setSelectedValuation(v); setValuationDrawerOpen(true); }}
                     className={`px-4 py-4 border-b border-gray-100 cursor-pointer transition-colors ${
                       isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : isOverdue ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50'
                     }`}
@@ -681,16 +683,18 @@ export default function ValuationWorkflowContent() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Right: Detail Panel */}
+      {/* Valuation Drawer */}
+      <WorkflowDrawer open={valuationDrawerOpen} onClose={() => { setValuationDrawerOpen(false); setTimeout(() => setSelectedValuation(null), 300); }} width="w-[520px]">
         {selectedValuation && (
           <ValuationDetailPanel
             valuation={selectedValuation}
-            onClose={() => setSelectedValuation(null)}
+            onClose={() => { setValuationDrawerOpen(false); setTimeout(() => setSelectedValuation(null), 300); }}
             onOpenAction={(action) => setActionDialog({ open: true, valuation: selectedValuation, action })}
           />
         )}
-      </div>
+      </WorkflowDrawer>
 
       {/* Schedule Modal */}
       {showScheduleModal && (

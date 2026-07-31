@@ -12,6 +12,7 @@ import {
   type ReleaseRequest,
   type ReleaseRequestStatus,
 } from '@/lib/supabase/releaseRequestService';
+import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 interface ReleaseRequest {
   id: string;
@@ -104,7 +105,7 @@ function ActionDialog({ state, onClose, onSubmit, processing }: ActionDialogProp
   const canSubmit = !config.required || note.trim().length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -169,7 +170,7 @@ function ActionDialog({ state, onClose, onSubmit, processing }: ActionDialogProp
   );
 }
 
-// ─── Detail Panel ─────────────────────────────────────────────────────────────
+// ─── Detail Panel (used inside drawer) ────────────────────────────────────────
 
 function DetailPanel({
   request,
@@ -185,7 +186,7 @@ function DetailPanel({
   const isActive = request.status === 'Pending' || request.status === 'Under Review';
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
+    <div className="flex flex-col h-full min-h-0">
       {/* Panel Header */}
       <div className="px-5 py-4 border-b border-gray-200 shrink-0">
         <div className="flex items-start justify-between gap-3">
@@ -261,7 +262,7 @@ function DetailPanel({
         )}
       </div>
 
-      {/* Action Zone — opens popup dialog */}
+      {/* Action Zone */}
       {isActive && (
         <div className="px-5 py-4 border-t border-gray-200 shrink-0">
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
@@ -309,11 +310,10 @@ export default function ReleaseApprovalContent() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedRequest, setSelectedRequest] = useState<ReleaseRequest | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false, request: null, action: null });
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success\' | \'error' } | null>(null);
-
-  // ── Fetch ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     let cancelled = false;
@@ -332,8 +332,6 @@ export default function ReleaseApprovalContent() {
     load();
     return () => { cancelled = true; };
   }, []);
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -356,7 +354,15 @@ export default function ReleaseApprovalContent() {
     rejected:    requests.filter((r) => r.status === 'Rejected').length,
   };
 
-  // ── Action Handler (live update) ───────────────────────────────────────────
+  const handleSelectRequest = (req: ReleaseRequest) => {
+    setSelectedRequest(req);
+    setDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false);
+    setTimeout(() => setSelectedRequest(null), 300);
+  };
 
   const handleAction = async (action: 'Approved' | 'Rejected' | 'Under Review', note: string) => {
     if (!actionDialog.request) return;
@@ -373,7 +379,6 @@ export default function ReleaseApprovalContent() {
         setRequests((prev) => prev.map((r) => r.id === updated.id ? updated : r));
         setSelectedRequest((prev) => prev?.id === updated.id ? updated : prev);
       } else {
-        // Optimistic fallback
         const optimistic = { ...req, status: action as ReleaseRequestStatus, notes: note || req.notes };
         setRequests((prev) => prev.map((r) => r.id === req.id ? optimistic : r));
         setSelectedRequest((prev) => prev?.id === req.id ? optimistic : prev);
@@ -391,8 +396,6 @@ export default function ReleaseApprovalContent() {
       setProcessing(false);
     }
   };
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-gray-50">
@@ -437,10 +440,9 @@ export default function ReleaseApprovalContent() {
         </div>
       </div>
 
-      {/* Body — two-panel */}
+      {/* Body — full-width list */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left: List Panel */}
-        <div className={`flex flex-col ${selectedRequest ? 'w-[42%]' : 'w-full'} border-r border-gray-200 bg-white min-h-0`}>
+        <div className="flex flex-col w-full bg-white min-h-0">
           {/* Filters */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 shrink-0">
             <div className="relative flex-1">
@@ -487,13 +489,13 @@ export default function ReleaseApprovalContent() {
               filtered.map((req) => {
                 const statusCfg = STATUS_CONFIG[req.status];
                 const priorityCfg = PRIORITY_CONFIG[req.priority];
-                const isSelected = selectedRequest?.id === req.id;
+                const isSelected = selectedRequest?.id === req.id && drawerOpen;
                 const isActive = req.status === 'Pending' || req.status === 'Under Review';
 
                 return (
                   <div
                     key={req.id}
-                    onClick={() => setSelectedRequest(isSelected ? null : req)}
+                    onClick={() => handleSelectRequest(req)}
                     className={`px-4 py-4 border-b border-gray-100 cursor-pointer transition-colors ${
                       isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'
                     }`}
@@ -517,7 +519,6 @@ export default function ReleaseApprovalContent() {
                       <span className="flex items-center gap-1"><DollarSign size={11} />{formatCurrency(req.estimatedValue)}</span>
                       <span className="flex items-center gap-1"><Calendar size={11} />{req.requestedDate}</span>
                     </div>
-                    {/* Quick action buttons — open dialog directly */}
                     {isActive && (
                       <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -540,16 +541,18 @@ export default function ReleaseApprovalContent() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Right: Detail Panel */}
+      {/* Drawer */}
+      <WorkflowDrawer open={drawerOpen} onClose={handleCloseDrawer} width="w-[500px]">
         {selectedRequest && (
           <DetailPanel
             request={selectedRequest}
-            onClose={() => setSelectedRequest(null)}
+            onClose={handleCloseDrawer}
             onOpenAction={(action) => setActionDialog({ open: true, request: selectedRequest, action })}
           />
         )}
-      </div>
+      </WorkflowDrawer>
 
       {/* Action Dialog */}
       <ActionDialog
@@ -561,7 +564,7 @@ export default function ReleaseApprovalContent() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+        <div className={`fixed bottom-6 right-6 z-[70] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
           {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
           {toast.message}
         </div>

@@ -17,6 +17,7 @@ import { workflowLookupsService, type CollateralOption, type LoanOption, type Fa
 import SearchableSelect, { type SelectOption } from '@/components/ui/SearchableSelect';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 const STATUS_CONFIG: Record<SubstitutionStatus, { text: string; bg: string; border: string }> = {
   Pending:      { text: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200' },
@@ -65,7 +66,7 @@ function SubstitutionActionDialog({ open, sub, action, onClose, onSubmit, loadin
   const canSubmit = !cfg.requiresNotes || notes.trim().length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
@@ -127,7 +128,7 @@ function SubstitutionActionDialog({ open, sub, action, onClose, onSubmit, loadin
   );
 }
 
-// ─── Detail Panel ─────────────────────────────────────────────────────────────
+// ─── Detail Panel (used inside drawer) ────────────────────────────────────────
 
 function SubstitutionDetailPanel({
   sub,
@@ -146,7 +147,7 @@ function SubstitutionDetailPanel({
   const canComplete = sub.substitutionStatus === 'Approved';
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-200 shrink-0">
         <div className="flex items-start justify-between gap-3">
@@ -227,7 +228,6 @@ function SubstitutionDetailPanel({
           </div>
         )}
 
-        {/* Audit trail link */}
         <button
           onClick={() => onViewAudit(sub.id)}
           className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800 transition-colors"
@@ -293,21 +293,19 @@ export default function CollateralSubstitutionContent() {
   const [filterStatus, setFilterStatus] = useState<SubstitutionStatus | 'All'>('All');
   const [search, setSearch] = useState('');
   const [selectedSub, setSelectedSub] = useState<CollateralSubstitution | null>(null);
+  const [subDrawerOpen, setSubDrawerOpen] = useState(false);
   const [auditTrail, setAuditTrail] = useState<Record<string, SubstitutionAuditEntry[]>>({});
   const [showAuditId, setShowAuditId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Lookup data
   const [collateralOptions, setCollateralOptions] = useState<CollateralOption[]>([]);
   const [loanOptions, setLoanOptions] = useState<LoanOption[]>([]);
   const [facilityOptions, setFacilityOptions] = useState<FacilityOption[]>([]);
   const [lookupsLoading, setLookupsLoading] = useState(false);
 
-  // Create modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ facilityId: '', loanId: '', outgoingCollateralId: '', incomingCollateralId: '', reason: '', notes: '' });
 
-  // Action dialog
   const [actionDialog, setActionDialog] = useState<{ open: boolean; sub: CollateralSubstitution | null; action: SubActionType | null }>({ open: false, sub: null, action: null });
 
   const load = useCallback(async () => {
@@ -511,10 +509,9 @@ export default function CollateralSubstitutionContent() {
         <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 shrink-0">{error}</div>
       )}
 
-      {/* Body — two-panel */}
+      {/* Body — full-width list */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left: List Panel */}
-        <div className={`flex flex-col ${selectedSub ? 'w-[42%]' : 'w-full'} border-r border-gray-200 bg-white min-h-0`}>
+        <div className="flex flex-col w-full bg-white min-h-0">
           {/* Search + filter */}
           <div className="px-4 py-3 border-b border-gray-100 shrink-0 space-y-2">
             <div className="relative">
@@ -558,7 +555,7 @@ export default function CollateralSubstitutionContent() {
             ) : (
               filtered.map((sub) => {
                 const sc = STATUS_CONFIG[sub.substitutionStatus] ?? STATUS_CONFIG['Pending'];
-                const isSelected = selectedSub?.id === sub.id;
+                const isSelected = selectedSub?.id === sub.id && subDrawerOpen;
                 const canReview = sub.substitutionStatus === 'Pending';
                 const canApproveReject = sub.substitutionStatus === 'Under Review';
                 const canComplete = sub.substitutionStatus === 'Approved';
@@ -566,7 +563,7 @@ export default function CollateralSubstitutionContent() {
                 return (
                   <div
                     key={sub.id}
-                    onClick={() => setSelectedSub(isSelected ? null : sub)}
+                    onClick={() => { setSelectedSub(sub); setSubDrawerOpen(true); }}
                     className={`px-4 py-4 border-b border-gray-100 cursor-pointer transition-colors ${
                       isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'
                     }`}
@@ -587,7 +584,6 @@ export default function CollateralSubstitutionContent() {
                       <span>{sub.requestedByName ?? '—'}</span>
                       <span className="ml-auto">{formatDate(sub.requestedAt)}</span>
                     </div>
-                    {/* Quick action buttons */}
                     {(canReview || canApproveReject || canComplete) && (
                       <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                         {canReview && (
@@ -630,21 +626,27 @@ export default function CollateralSubstitutionContent() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Right: Detail Panel */}
+      {/* Substitution Drawer */}
+      <WorkflowDrawer
+        open={subDrawerOpen}
+        onClose={() => { setSubDrawerOpen(false); setTimeout(() => setSelectedSub(null), 300); }}
+        width="w-[520px]"
+      >
         {selectedSub && (
           <SubstitutionDetailPanel
             sub={selectedSub}
-            onClose={() => setSelectedSub(null)}
+            onClose={() => { setSubDrawerOpen(false); setTimeout(() => setSelectedSub(null), 300); }}
             onOpenAction={(action) => setActionDialog({ open: true, sub: selectedSub, action })}
             onViewAudit={loadAuditTrail}
           />
         )}
-      </div>
+      </WorkflowDrawer>
 
       {/* Audit Trail Modal */}
       {showAuditId && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Substitution Audit Trail</h2>
