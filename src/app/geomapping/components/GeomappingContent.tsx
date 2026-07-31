@@ -73,12 +73,40 @@ const mockPins: CollateralPin[] = [
   { id: '7', collateralId: 'COL-2024-0290', titleDeed: 'TD-02001', obligor: 'Zanzibar Spice Exports', type: 'Land & Property', status: 'Draft', lat: -6.1659, lng: 39.2026, address: 'Stone Town, Zanzibar, Tanzania', addressVerified: false, riskZone: 'HIGH', utilization: 0, valueTZS: '420,000,000', region: 'Zanzibar' },
 ];
 
-const mockValidations: AddressValidation[] = [
-  { collateralId: 'COL-2024-0891', idAddress: 'Ohio Street, Dar es Salaam, Tanzania', collateralAddress: 'Ohio Street, Dar es Salaam, Tanzania', matchScore: 100, matchType: 'EXACT', sameRegion: true, flagged: false },
-  { collateralId: 'COL-2024-0612', idAddress: 'Temeke District, Dar es Salaam, Tanzania', collateralAddress: 'Temeke, Dar es Salaam, Tanzania', matchScore: 78, matchType: 'PARTIAL', sameRegion: true, flagged: false },
-  { collateralId: 'COL-2024-0534', idAddress: 'Dar es Salaam, Tanzania', collateralAddress: 'Mwanza City Centre, Tanzania', matchScore: 12, matchType: 'MISMATCH', sameRegion: false, flagged: true },
-  { collateralId: 'COL-2024-0290', idAddress: 'Dar es Salaam, Tanzania', collateralAddress: 'Stone Town, Zanzibar, Tanzania', matchScore: 25, matchType: 'MISMATCH', sameRegion: false, flagged: true },
-];
+// ─── Address match scoring helper ────────────────────────────────────────────
+
+function computeAddressMatch(
+  idAddr: string,
+  collateralAddr: string,
+): { matchScore: number; matchType: AddressValidation['matchType']; sameRegion: boolean; flagged: boolean } {
+  if (!idAddr || !collateralAddr) {
+    return { matchScore: 0, matchType: 'MISMATCH', sameRegion: false, flagged: true };
+  }
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+  const a = normalize(idAddr);
+  const b = normalize(collateralAddr);
+
+  if (a === b) return { matchScore: 100, matchType: 'EXACT', sameRegion: true, flagged: false };
+
+  // Token overlap score
+  const tokensA = new Set(a.split(/\s+/).filter((t) => t.length > 2));
+  const tokensB = new Set(b.split(/\s+/).filter((t) => t.length > 2));
+  const intersection = [...tokensA].filter((t) => tokensB.has(t)).length;
+  const union = new Set([...tokensA, ...tokensB]).size;
+  const jaccardScore = union === 0 ? 0 : Math.round((intersection / union) * 100);
+
+  // Region check: look for shared city/region tokens
+  const regionKeywords = ['dar es salaam', 'mwanza', 'arusha', 'dodoma', 'kilimanjaro', 'zanzibar', 'mbeya', 'tanga', 'morogoro', 'iringa', 'tabora', 'kigoma', 'shinyanga', 'kagera', 'lindi', 'mtwara', 'ruvuma', 'singida', 'manyara', 'geita', 'simiyu', 'njombe', 'katavi', 'rukwa', 'songwe'];
+  const sameRegion = regionKeywords.some((r) => a.includes(r) && b.includes(r)) || jaccardScore >= 60;
+
+  let matchType: AddressValidation['matchType'];
+  if (jaccardScore >= 80) matchType = 'EXACT';
+  else if (jaccardScore >= 40) matchType = 'PARTIAL';
+  else matchType = 'MISMATCH';
+
+  const flagged = jaccardScore < 30 || !sameRegion;
+  return { matchScore: jaccardScore, matchType, sameRegion, flagged };
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -214,13 +242,14 @@ export default function GeomappingContent() {
   const [activeTab, setActiveTab] = useState<'map' | 'validation' | 'risk'>('map');
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [pins, setPins] = useState<CollateralPin[]>([]);
-  const [validations, setValidations] = useState<AddressValidation[]>(mockValidations);
+  const [validations, setValidations] = useState<AddressValidation[]>([]);
   const [geocodingStatus, setGeocodingStatus] = useState<Record<string, 'idle' | 'loading' | 'done' | 'error'>>({});
   const [validatingAll, setValidatingAll] = useState(false);
   const [geocodeSearch, setGeocodeSearch] = useState('');
   const [geocodeResult, setGeocodeResult] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [geocodeLoading, setGeocodeLoading] = useState(false);
   const [loadingPins, setLoadingPins] = useState(true);
+  const [loadingValidations, setLoadingValidations] = useState(true);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
@@ -262,6 +291,62 @@ export default function GeomappingContent() {
         .catch(() => {
           setPins(mockPins);
           setLoadingPins(false);
+        });
+    });
+  }, []);
+
+  // Load live address validations from Supabase
+  // Joins collateral_records with obligors to compare obligor ID address vs collateral location address
+  useEffect(() => {
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      const supabase = createClient();
+      supabase
+        .from('collateral_records')
+        .select(`
+          collateral_id,
+          location_address,
+          obligors!collateral_records_obligor_ref_id_fkey (
+            full_name,
+            address_line1,
+            address_line2,
+            city,
+            region,
+            country
+          )
+        `)
+        .not('obligor_ref_id', 'is', null)
+        .limit(50)
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('GeomappingContent: validations query error:', error.message);
+            setLoadingValidations(false);
+            return;
+          }
+          if (data && data.length > 0) {
+            const liveValidations: AddressValidation[] = data
+              .filter((row: any) => row.obligors)
+              .map((row: any) => {
+                const ob = row.obligors as any;
+                const idAddrParts = [ob.address_line1, ob.address_line2, ob.city, ob.region, ob.country].filter(Boolean);
+                const idAddress = idAddrParts.length > 0 ? idAddrParts.join(', ') : '';
+                const collateralAddress = row.location_address ?? '';
+                const { matchScore, matchType, sameRegion, flagged } = computeAddressMatch(idAddress, collateralAddress);
+                return {
+                  collateralId: row.collateral_id,
+                  idAddress: idAddress || 'No address on record',
+                  collateralAddress: collateralAddress || 'No address on record',
+                  matchScore,
+                  matchType,
+                  sameRegion,
+                  flagged,
+                } as AddressValidation;
+              });
+            setValidations(liveValidations);
+          }
+          setLoadingValidations(false);
+        })
+        .catch(() => {
+          setLoadingValidations(false);
         });
     });
   }, []);
@@ -709,44 +794,57 @@ export default function GeomappingContent() {
               )}
             </div>
             <div className="space-y-3">
-              {validations.map((v) => (
-                <div key={v.collateralId} className={`p-4 rounded-xl border shadow-card ${v.flagged ? 'bg-red-50 border-red-200' : 'bg-white border-border'}`}>
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                      <p className="text-sm font-700 text-foreground">{v.collateralId}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs font-600 px-2 py-0.5 rounded-full border ${matchTypeColors[v.matchType]}`}>{v.matchType}</span>
-                        {v.flagged && <span className="text-xs font-600 text-red-600">⚠ Flagged for review</span>}
+              {loadingValidations ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground text-sm">
+                  <Loader2 size={16} className="animate-spin" />
+                  Loading validation records…
+                </div>
+              ) : validations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                  <Shield size={28} className="mb-2 opacity-30" />
+                  <p className="text-sm">No obligor–collateral address pairs found.</p>
+                  <p className="text-xs mt-1">Link obligors to collateral records to enable address validation.</p>
+                </div>
+              ) : (
+                validations.map((v) => (
+                  <div key={v.collateralId} className={`p-4 rounded-xl border shadow-card ${v.flagged ? 'bg-red-50 border-red-200' : 'bg-white border-border'}`}>
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-sm font-700 text-foreground">{v.collateralId}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-xs font-600 px-2 py-0.5 rounded-full border ${matchTypeColors[v.matchType]}`}>{v.matchType}</span>
+                          {v.flagged && <span className="text-xs font-600 text-red-600">⚠ Flagged for review</span>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Match Score</p>
+                        <p className={`text-xl font-700 tabular-nums font-mono ${v.matchScore >= 80 ? 'text-green-600' : v.matchScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{v.matchScore}%</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Match Score</p>
-                      <p className={`text-xl font-700 tabular-nums font-mono ${v.matchScore >= 80 ? 'text-green-600' : v.matchScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{v.matchScore}%</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">ID Document Address</p>
+                        <p className="text-sm text-foreground">{v.idAddress}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">Collateral Address</p>
+                        <p className="text-sm text-foreground">{v.collateralAddress}</p>
+                      </div>
                     </div>
+                    {v.geocodedLat && v.geocodedLng && (
+                      <div className="mt-2 text-xs text-muted-foreground font-mono">
+                        Geocoded: {v.geocodedLat.toFixed(4)}, {v.geocodedLng.toFixed(4)}
+                      </div>
+                    )}
+                    {!v.sameRegion && (
+                      <div className="mt-3 flex items-center gap-1.5 text-xs text-red-600 font-500">
+                        <AlertTriangle size={12} />
+                        Addresses are in different regions — manual review required
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">ID Document Address</p>
-                      <p className="text-sm text-foreground">{v.idAddress}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-1">Collateral Address</p>
-                      <p className="text-sm text-foreground">{v.collateralAddress}</p>
-                    </div>
-                  </div>
-                  {v.geocodedLat && v.geocodedLng && (
-                    <div className="mt-2 text-xs text-muted-foreground font-mono">
-                      Geocoded: {v.geocodedLat.toFixed(4)}, {v.geocodedLng.toFixed(4)}
-                    </div>
-                  )}
-                  {!v.sameRegion && (
-                    <div className="mt-3 flex items-center gap-1.5 text-xs text-red-600 font-500">
-                      <AlertTriangle size={12} />
-                      Addresses are in different regions — manual review required
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}
