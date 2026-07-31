@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -259,12 +259,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Custody', icon: Eye, href: '/archive/custody', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
-      {
-        label: 'Analytics',
-        items: [
-          { label: 'Occupancy Heatmap', icon: Thermometer, href: '/archive/occupancy-heatmap', permission: PERMISSIONS.COLLATERAL_VIEW },
-        ],
-      },
     ],
   },
 ];
@@ -303,6 +297,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/archive/request-status': 'archive',
   '/archive/custody-tracker': 'archive',
   '/archive/chain-of-custody': 'archive',
+  '/archive/occupancy-heatmap': 'archive',
 };
 
 /**

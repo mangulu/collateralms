@@ -1,13 +1,14 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, ChevronRight, ChevronDown, Trash2, RefreshCw, AlertCircle, Package, FileText, X, Search, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3,  } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, Trash2, RefreshCw, AlertCircle, Package, FileText, X, Search, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3, Thermometer } from 'lucide-react';
 import {
   archiveLocationService, archivePlacementService,
   ArchiveLocation, ArchivePlacement, LocationType,
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
+import OccupancyHeatmapContent from '@/app/archive/occupancy-heatmap/components/OccupancyHeatmapContent';
 
 // ─── Hierarchy: vault → room → cabinet → slot ───────────────────────────────────
 // Strict 4-level hierarchy: Vault → Room → Cabinet → Slot
@@ -720,6 +721,8 @@ export default function VaultManagementContent() {
     return nodes.reduce((acc, n) => acc + (n.locationType === 'slot' ? 1 : 0) + countSlots(n.children ?? []), 0);
   })(tree);
 
+  const [activeTab, setActiveTab] = useState<'structure' | 'heatmap'>('structure');
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -729,103 +732,136 @@ export default function VaultManagementContent() {
             Vault Management
           </h1>
           <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
-            Hierarchical vault structure: Vault → Room → Shelf/Cabinet → Slot
+            Hierarchical vault structure: Vault → Room → Cabinet → Slot
           </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={load} className="p-2 rounded-lg border transition-colors hover:bg-blue-50"
-            style={{ borderColor: '#BFDBFE' }}>
-            <RefreshCw size={16} style={{ color: '#2563EB' }} />
-          </button>
-          <button onClick={() => setAddModal({ parentId: null, parentType: null })}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
-            style={{ backgroundColor: '#2563EB' }}>
-            <Plus size={16} /> Add Vault
-          </button>
-        </div>
-      </div>
-
-      {/* Hierarchy Legend */}
-      <HierarchyLegend />
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: 'Vaults', value: totalVaults, icon: '🏛️', color: '#1D4ED8' },
-          { label: 'Total Locations', value: totalLocations, icon: '📍', color: '#15803D' },
-          { label: 'Active', value: totalLocations, icon: '✅', color: '#0369A1' },
-          { label: 'Filing Slots', value: totalSlots, icon: '📂', color: '#7E22CE' },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-base">{stat.icon}</span>
-              <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{stat.label}</span>
-            </div>
-            <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
+        {activeTab === 'structure' && (
+          <div className="flex gap-2">
+            <button onClick={load} className="p-2 rounded-lg border transition-colors hover:bg-blue-50"
+              style={{ borderColor: '#BFDBFE' }}>
+              <RefreshCw size={16} style={{ color: '#2563EB' }} />
+            </button>
+            <button onClick={() => setAddModal({ parentId: null, parentType: null })}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
+              style={{ backgroundColor: '#2563EB' }}>
+              <Plus size={16} /> Add Vault
+            </button>
           </div>
-        ))}
+        )}
       </div>
 
-      {/* Slot hint */}
-      <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs"
-        style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
-        <FolderOpen size={13} />
-        <span>Click on any <strong>📂 Slot</strong> to open its detail page — view contents, move files to another slot, or remove them.</span>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ backgroundColor: '#F1F5F9', width: 'fit-content' }}>
+        <button
+          onClick={() => setActiveTab('structure')}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          style={activeTab === 'structure'
+            ? { backgroundColor: '#fff', color: '#1E3A8A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+            : { color: '#64748B' }}
+        >
+          <Building2 size={15} />
+          Vault Structure
+        </button>
+        <button
+          onClick={() => setActiveTab('heatmap')}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+          style={activeTab === 'heatmap'
+            ? { backgroundColor: '#fff', color: '#1E3A8A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+            : { color: '#64748B' }}
+        >
+          <Thermometer size={15} />
+          Occupancy Heatmap
+        </button>
       </div>
 
-      {/* Tree */}
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl mb-4 bg-red-50 text-red-700 text-sm">
-          <AlertCircle size={16} /> {error}
-        </div>
-      )}
-      {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-14 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />
-          ))}
-        </div>
-      ) : tree.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-5xl mb-3">🏛️</div>
-          <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No vaults defined yet</p>
-          <p className="text-xs mt-1 mb-4" style={{ color: '#3B82F6' }}>
-            Start by adding your first vault, then add rooms, shelves, and slots
-          </p>
-          <button onClick={() => setAddModal({ parentId: null, parentType: null })}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-white" style={{ backgroundColor: '#2563EB' }}>
-            Add First Vault
-          </button>
-        </div>
+      {/* Tab Content */}
+      {activeTab === 'heatmap' ? (
+        <OccupancyHeatmapContent />
       ) : (
-        <div>
-          {tree.map((node) => (
-            <LocationNode key={node.id} node={node} depth={0}
-              onAddChild={(pid, pt) => setAddModal({ parentId: pid, parentType: pt })}
-              onDelete={handleDelete}
-              onSelectSlot={setSelectedSlot}
-              selectedSlotId={selectedSlot?.id ?? null} />
-          ))}
-        </div>
-      )}
+        <>
+          {/* Hierarchy Legend */}
+          <HierarchyLegend />
 
-      {addModal && (
-        <AddLocationModal
-          parentId={addModal.parentId}
-          parentType={addModal.parentType}
-          userId={user?.id ?? ''}
-          onClose={() => setAddModal(null)}
-          onSaved={() => { setAddModal(null); load(); }}
-        />
-      )}
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: 'Vaults', value: totalVaults, icon: '🏛️', color: '#1D4ED8' },
+              { label: 'Total Locations', value: totalLocations, icon: '📍', color: '#15803D' },
+              { label: 'Active', value: totalLocations, icon: '✅', color: '#0369A1' },
+              { label: 'Filing Slots', value: totalSlots, icon: '📂', color: '#7E22CE' },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base">{stat.icon}</span>
+                  <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{stat.label}</span>
+                </div>
+                <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
+              </div>
+            ))}
+          </div>
 
-      {selectedSlot && (
-        <SlotContentsPanel
-          slot={selectedSlot}
-          userId={user?.id ?? ''}
-          onClose={() => setSelectedSlot(null)}
-          onRefreshTree={load}
-        />
+          {/* Slot hint */}
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs"
+            style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
+            <FolderOpen size={13} />
+            <span>Click on any <strong>📂 Slot</strong> to open its detail page — view contents, move files to another slot, or remove them.</span>
+          </div>
+
+          {/* Tree */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-xl mb-4 bg-red-50 text-red-700 text-sm">
+              <AlertCircle size={16} /> {error}
+            </div>
+          )}
+          {loading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-14 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />
+              ))}
+            </div>
+          ) : tree.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-5xl mb-3">🏛️</div>
+              <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No vaults defined yet</p>
+              <p className="text-xs mt-1 mb-4" style={{ color: '#3B82F6' }}>
+                Start by adding your first vault, then add rooms, shelves, and slots
+              </p>
+              <button onClick={() => setAddModal({ parentId: null, parentType: null })}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white" style={{ backgroundColor: '#2563EB' }}>
+                Add First Vault
+              </button>
+            </div>
+          ) : (
+            <div>
+              {tree.map((node) => (
+                <LocationNode key={node.id} node={node} depth={0}
+                  onAddChild={(pid, pt) => setAddModal({ parentId: pid, parentType: pt })}
+                  onDelete={handleDelete}
+                  onSelectSlot={setSelectedSlot}
+                  selectedSlotId={selectedSlot?.id ?? null} />
+              ))}
+            </div>
+          )}
+
+          {addModal && (
+            <AddLocationModal
+              parentId={addModal.parentId}
+              parentType={addModal.parentType}
+              userId={user?.id ?? ''}
+              onClose={() => setAddModal(null)}
+              onSaved={() => { setAddModal(null); load(); }}
+            />
+          )}
+
+          {selectedSlot && (
+            <SlotContentsPanel
+              slot={selectedSlot}
+              userId={user?.id ?? ''}
+              onClose={() => setSelectedSlot(null)}
+              onRefreshTree={load}
+            />
+          )}
+        </>
       )}
     </div>
   );
