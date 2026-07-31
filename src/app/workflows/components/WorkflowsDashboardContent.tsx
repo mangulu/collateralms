@@ -8,6 +8,7 @@ import { userTaskService } from '@/lib/supabase/userTaskService';
 import { getValuationStats } from '@/lib/supabase/valuationService';
 import { getSubstitutionStats } from '@/lib/supabase/substitutionService';
 import { workflowInstanceService } from '@/lib/supabase/workflowEngineService';
+import { archiveRequestService } from '@/lib/supabase/archiveService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface WorkflowCard {
@@ -89,16 +90,17 @@ export default function WorkflowsDashboardContent() {
   const [valuationCount, setValuationCount] = useState<number | null>(null);
   const [valuationUrgent, setValuationUrgent] = useState(0);
   const [substitutionCount, setSubstitutionCount] = useState<number | null>(null);
-  const [archiveCount] = useState<number | null>(0);
+  const [archiveCount, setArchiveCount] = useState<number | null>(null);
+  const [archiveUrgent, setArchiveUrgent] = useState(0);
   const [engineStats, setEngineStats] = useState<{ active: number; escalated: number } | null>(null);
   const [loadingStates, setLoadingStates] = useState({
-    approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true,
+    approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true, archive: true,
   });
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAll = useCallback(async (silent = false) => {
-    if (!silent) setLoadingStates({ approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true });
+    if (!silent) setLoadingStates({ approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true, archive: true });
     else setRefreshing(true);
 
     await Promise.allSettled([
@@ -138,6 +140,14 @@ export default function WorkflowsDashboardContent() {
         setSubstitutionCount(stats.pending + stats.underReview);
         setLoadingStates((p) => ({ ...p, substitution: false }));
       }).catch(() => { setSubstitutionCount(0); setLoadingStates((p) => ({ ...p, substitution: false })); }),
+
+      // Archive Requests
+      archiveRequestService.getAll().then((requests) => {
+        const active = requests.filter((r) => r.requestStatus === 'pending' || r.requestStatus === 'approved');
+        setArchiveCount(active.length);
+        setArchiveUrgent(requests.filter((r) => r.requestStatus === 'checked_out').length);
+        setLoadingStates((p) => ({ ...p, archive: false }));
+      }).catch(() => { setArchiveCount(0); setLoadingStates((p) => ({ ...p, archive: false })); }),
 
       // Workflow Engine instances
       workflowInstanceService.getStats().then((stats) => {
@@ -231,7 +241,8 @@ export default function WorkflowsDashboardContent() {
       bgColor: 'bg-white',
       borderColor: 'border-slate-100 hover:border-slate-300',
       count: archiveCount,
-      loading: false,
+      urgentCount: archiveUrgent,
+      loading: loadingStates.archive,
     },
   ];
 
