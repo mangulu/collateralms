@@ -6,7 +6,7 @@ import {
   AlertTriangle, Info, ArrowRight, Map, CheckSquare,
 } from 'lucide-react';
 import type { RoleGuide, GuideTask, GuideModule, GuideTip } from '../data/guideData';
-import Icon from '@/components/ui/AppIcon';
+
 
 
 // ─── Task Accordion ───────────────────────────────────────────────────────────
