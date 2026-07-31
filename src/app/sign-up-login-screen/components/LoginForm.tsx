@@ -8,6 +8,7 @@ import AppLogo from '@/components/ui/AppLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
+import Link from 'next/link';
 
 
 interface LoginFormData {
@@ -544,6 +545,15 @@ export default function LoginForm() {
                 Contentpro
               </a>
               {' '}· Deployable for any bank
+            </p>
+            <p className="mt-2 text-center text-xs">
+              <Link
+                href="/glossary"
+                className="font-medium hover:underline"
+                style={{ color: 'var(--izou-primary)' }}
+              >
+                Glossary of Terms
+              </Link>
             </p>
           </div>
         </aside>
