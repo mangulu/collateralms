@@ -17,7 +17,7 @@ import {
   Legend,
 } from 'recharts';
 import Icon from '@/components/ui/AppIcon';
-
+import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,15 +64,17 @@ function generateMetrics(): PortfolioMetrics {
   };
 }
 
-const volumeData: VolumePoint[] = [
-  { label: 'Mon', created: 12, perfected: 9, overdue: 2 },
-  { label: 'Tue', created: 18, perfected: 14, overdue: 1 },
-  { label: 'Wed', created: 8, perfected: 11, overdue: 3 },
-  { label: 'Thu', created: 22, perfected: 17, overdue: 2 },
-  { label: 'Fri', created: 15, perfected: 13, overdue: 1 },
-  { label: 'Sat', created: 5, perfected: 4, overdue: 0 },
-  { label: 'Sun', created: 3, perfected: 2, overdue: 1 },
-];
+const CONCENTRATION_COLORS: Record<string, string> = {
+  'Mortgage': '#2563eb',
+  'Motor Vehicle': '#7c3aed',
+  'Shares (DSE)': '#0891b2',
+  'Debenture': '#059669',
+  'FDR': '#d97706',
+  'Guarantee': '#db2777',
+  'Ship/Vessel': '#64748b',
+};
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const registryTurnaround: RegistryTurnaround[] = [
   { registry: 'BRELA', avgDays: 18, target: 14 },
@@ -80,14 +82,6 @@ const registryTurnaround: RegistryTurnaround[] = [
   { registry: 'TRA', avgDays: 12, target: 10 },
   { registry: 'DSE', avgDays: 7, target: 7 },
   { registry: 'TASAC', avgDays: 21, target: 18 },
-];
-
-const concentrationData: ConcentrationItem[] = [
-  { name: 'Land & Property', value: 42, color: '#2563eb' },
-  { name: 'Motor Vehicles', value: 23, color: '#7c3aed' },
-  { name: 'Shares/Securities', value: 15, color: '#0891b2' },
-  { name: 'Equipment', value: 12, color: '#059669' },
-  { name: 'Other', value: 8, color: '#d97706' },
 ];
 
 const delinquencyTrend = [
@@ -148,9 +142,114 @@ export default function PortfolioMonitoringContent() {
   const [activeTab, setActiveTab] = useState<'volumes' | 'turnaround' | 'concentration' | 'delinquency'>('volumes');
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Live chart data state
+  const [volumeData, setVolumeData] = useState<VolumePoint[]>([]);
+  const [volumeLoading, setVolumeLoading] = useState(true);
+  const [volumeError, setVolumeError] = useState<string | null>(null);
+
+  const [concentrationData, setConcentrationData] = useState<ConcentrationItem[]>([]);
+  const [concentrationLoading, setConcentrationLoading] = useState(true);
+  const [concentrationError, setConcentrationError] = useState<string | null>(null);
+
   useEffect(() => {
     setLastUpdate(new Date().toLocaleTimeString('en-GB'));
   }, []);
+
+  // ── Fetch daily collateral volumes (last 7 days) ──────────────────────────
+  const fetchVolumeData = useCallback(async () => {
+    setVolumeLoading(true);
+    setVolumeError(null);
+    try {
+      const supabase = createClient();
+      const since = new Date();
+      since.setDate(since.getDate() - 6);
+      since.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('created_at, status')
+        .gte('created_at', since.toISOString());
+
+      if (error) throw new Error(error.message);
+
+      // Build a map keyed by day-of-week index (0=Sun … 6=Sat) for the last 7 days
+      const dayMap: Record<number, { created: number; perfected: number; overdue: number }> = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dayMap[d.getDay()] = { created: 0, perfected: 0, overdue: 0 };
+      }
+
+      (data ?? []).forEach((row) => {
+        const dow = new Date(row.created_at).getDay();
+        if (dayMap[dow] !== undefined) {
+          dayMap[dow].created += 1;
+          if (row.status === 'Perfected') dayMap[dow].perfected += 1;
+          if (row.status === 'Overdue') dayMap[dow].overdue += 1;
+        }
+      });
+
+      // Build ordered array starting from 6 days ago → today
+      const points: VolumePoint[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dow = d.getDay();
+        points.push({
+          label: DAY_LABELS[dow],
+          created: dayMap[dow]?.created ?? 0,
+          perfected: dayMap[dow]?.perfected ?? 0,
+          overdue: dayMap[dow]?.overdue ?? 0,
+        });
+      }
+
+      setVolumeData(points);
+    } catch (err: unknown) {
+      setVolumeError(err instanceof Error ? err.message : 'Failed to load volume data');
+    } finally {
+      setVolumeLoading(false);
+    }
+  }, []);
+
+  // ── Fetch collateral concentration by type ────────────────────────────────
+  const fetchConcentrationData = useCallback(async () => {
+    setConcentrationLoading(true);
+    setConcentrationError(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('collateral_type');
+
+      if (error) throw new Error(error.message);
+
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach((row) => {
+        const t = row.collateral_type ?? 'Other';
+        counts[t] = (counts[t] ?? 0) + 1;
+      });
+
+      const total = Object.values(counts).reduce((s, v) => s + v, 0) || 1;
+      const items: ConcentrationItem[] = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({
+          name,
+          value: Math.round((count / total) * 100),
+          color: CONCENTRATION_COLORS[name] ?? '#94a3b8',
+        }));
+
+      setConcentrationData(items);
+    } catch (err: unknown) {
+      setConcentrationError(err instanceof Error ? err.message : 'Failed to load concentration data');
+    } finally {
+      setConcentrationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchVolumeData();
+    fetchConcentrationData();
+  }, [fetchVolumeData, fetchConcentrationData]);
 
   const startWebSocket = useCallback(() => {
     setWsConnected(true);
@@ -248,18 +347,24 @@ export default function PortfolioMonitoringContent() {
             <div>
               <h3 className="text-sm font-700 text-foreground mb-1">Daily Collateral Volumes</h3>
               <p className="text-xs text-muted-foreground mb-4">New collateral created, perfected, and overdue by day</p>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={volumeData} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="created" name="Created" fill="#2563eb" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="perfected" name="Perfected" fill="#059669" radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="overdue" name="Overdue" fill="#dc2626" radius={[3, 3, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {volumeLoading ? (
+                <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">Loading volume data…</div>
+              ) : volumeError ? (
+                <div className="flex items-center justify-center h-[280px] text-sm text-red-500">{volumeError}</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={volumeData} barGap={4}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="created" name="Created" fill="#2563eb" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="perfected" name="Perfected" fill="#059669" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="overdue" name="Overdue" fill="#dc2626" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           )}
 
@@ -285,19 +390,25 @@ export default function PortfolioMonitoringContent() {
             <div>
               <h3 className="text-sm font-700 text-foreground mb-1">Collateral Concentration by Type</h3>
               <p className="text-xs text-muted-foreground mb-4">Exposure distribution across collateral categories</p>
-              <div className="flex items-center justify-center">
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie data={concentrationData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}%`} labelLine={false}>
-                      {concentrationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v) => `${v}%`} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              {concentrationLoading ? (
+                <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">Loading concentration data…</div>
+              ) : concentrationError ? (
+                <div className="flex items-center justify-center h-[280px] text-sm text-red-500">{concentrationError}</div>
+              ) : (
+                <div className="flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie data={concentrationData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}%`} labelLine={false}>
+                        {concentrationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v) => `${v}%`} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           )}
 
