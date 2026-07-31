@@ -1871,6 +1871,13 @@ export default function PerfectionWorkflowContent() {
         open={!!selectedRequest && !batchMode}
         onClose={() => setSelectedRequest(null)}
         width="w-[720px]"
+        deadline={selectedRequest?.perfectionDeadline ?? undefined}
+        overdueHours={
+          selectedRequest?.perfectionDeadline &&
+          new Date(selectedRequest.perfectionDeadline) < new Date()
+            ? Math.max(0, (Date.now() - new Date(selectedRequest.perfectionDeadline).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
       >
         {selectedRequest && !batchMode && (
           <DetailModal

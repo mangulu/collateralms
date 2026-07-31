@@ -544,7 +544,19 @@ export default function ReleaseApprovalContent() {
       </div>
 
       {/* Drawer */}
-      <WorkflowDrawer open={drawerOpen} onClose={handleCloseDrawer} width="w-[500px]">
+      <WorkflowDrawer
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        width="w-[500px]"
+        deadline={selectedRequest?.requestedDate ?? undefined}
+        escalated={selectedRequest?.priority === 'High'}
+        overdueHours={
+          selectedRequest &&
+          (selectedRequest.status === 'Pending' || selectedRequest.status === 'Under Review')
+            ? Math.max(0, (Date.now() - new Date(selectedRequest.requestedDate).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
+      >
         {selectedRequest && (
           <DetailPanel
             request={selectedRequest}

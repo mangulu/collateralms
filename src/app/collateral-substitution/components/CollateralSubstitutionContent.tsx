@@ -633,6 +633,12 @@ export default function CollateralSubstitutionContent() {
         open={subDrawerOpen}
         onClose={() => { setSubDrawerOpen(false); setTimeout(() => setSelectedSub(null), 300); }}
         width="w-[520px]"
+        overdueHours={
+          selectedSub &&
+          (selectedSub.substitutionStatus === 'Pending' || selectedSub.substitutionStatus === 'Under Review')
+            ? Math.max(0, (Date.now() - new Date(selectedSub.requestedAt).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
       >
         {selectedSub && (
           <SubstitutionDetailPanel

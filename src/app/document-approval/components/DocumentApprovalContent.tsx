@@ -725,7 +725,17 @@ export default function DocumentApprovalContent() {
       </div>
 
       {/* Drawer */}
-      <WorkflowDrawer open={drawerOpen} onClose={handleCloseDrawer} width="w-[520px]">
+      <WorkflowDrawer
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        width="w-[520px]"
+        overdueHours={
+          selectedDoc &&
+          (selectedDoc.approvalStatus === 'pending' || selectedDoc.approvalStatus === 'under_review')
+            ? Math.max(0, (Date.now() - new Date(selectedDoc.uploadedAt).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
+      >
         {selectedDoc && (
           <DetailPanel
             doc={selectedDoc}

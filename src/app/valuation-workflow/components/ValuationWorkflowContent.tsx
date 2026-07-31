@@ -686,7 +686,17 @@ export default function ValuationWorkflowContent() {
       </div>
 
       {/* Valuation Drawer */}
-      <WorkflowDrawer open={valuationDrawerOpen} onClose={() => { setValuationDrawerOpen(false); setTimeout(() => setSelectedValuation(null), 300); }} width="w-[520px]">
+      <WorkflowDrawer
+        open={valuationDrawerOpen}
+        onClose={() => { setValuationDrawerOpen(false); setTimeout(() => setSelectedValuation(null), 300); }}
+        width="w-[520px]"
+        deadline={selectedValuation?.scheduledDate ?? undefined}
+        overdueHours={
+          selectedValuation?.valuationStatus === 'Overdue'
+            ? Math.max(0, (Date.now() - new Date(selectedValuation.scheduledDate).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
+      >
         {selectedValuation && (
           <ValuationDetailPanel
             valuation={selectedValuation}

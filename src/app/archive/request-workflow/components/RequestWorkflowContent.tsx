@@ -464,7 +464,19 @@ export default function RequestWorkflowContent() {
       )}
 
       {/* Request Detail Drawer */}
-      <WorkflowDrawer open={drawerOpen} onClose={handleCloseDrawer} width="w-[480px]">
+      <WorkflowDrawer
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        width="w-[480px]"
+        deadline={selectedRequest?.expectedReturnDate ?? undefined}
+        overdueHours={
+          selectedRequest?.expectedReturnDate &&
+          selectedRequest.requestStatus === 'approved' &&
+          new Date(selectedRequest.expectedReturnDate) < new Date()
+            ? Math.max(0, (Date.now() - new Date(selectedRequest.expectedReturnDate).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
+      >
         {selectedRequest && (
           <RequestDetailPanel
             request={selectedRequest}
