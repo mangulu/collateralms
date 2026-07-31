@@ -1,27 +1,35 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Shield, Key, Bell, Save, RefreshCw, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, Mail, Phone, BadgeCheck, ShieldCheck, ShieldOff, Info, Smartphone,  } from 'lucide-react';
+import { User, Shield, Key, Bell, Save, RefreshCw, CheckCircle2, AlertCircle, Eye, EyeOff, Lock, Mail, Phone, BadgeCheck, ShieldCheck, ShieldOff, Info, Smartphone, ShieldAlert, ChevronDown, ChevronRight,  } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, getRoleLabel } from '@/lib/rbac';
 import { createClient } from '@/lib/supabase/client';
 import TwoFASetup from '@/components/TwoFASetup';
+import { notificationService, NotificationPreferences, defaultPreferences } from '@/lib/supabase/notificationService';
 import { toast } from 'sonner';
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'security' | 'credentials' | 'preferences';
+type Tab = 'overview' | 'security' | 'credentials' | 'preferences' | 'permissions';
 
 interface TabDef {
   id: Tab;
   label: string;
   icon: React.ReactNode;
+  roles?: string[];
 }
 
 const TABS: TabDef[] = [
   { id: 'overview', label: 'Profile & Role', icon: <User size={15} /> },
   { id: 'security', label: '2FA & Security', icon: <Shield size={15} /> },
   { id: 'credentials', label: 'Credentials', icon: <Key size={15} /> },
-  { id: 'preferences', label: 'Preferences', icon: <Bell size={15} /> },
+  { id: 'preferences', label: 'Notifications', icon: <Bell size={15} /> },
+  {
+    id: 'permissions',
+    label: 'Permissions',
+    icon: <ShieldAlert size={15} />,
+    roles: ['legal_officer', 'system_admin', 'supervisor'],
+  },
 ];
 
 // ─── Role badge colours ───────────────────────────────────────────────────────
@@ -30,6 +38,7 @@ const ROLE_BADGE: Record<string, { bg: string; text: string; border: string }> =
   system_admin: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
   credit_officer: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
   legal_officer: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+  supervisor: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
 };
 
 function getRoleBadge(role: string) {
@@ -38,10 +47,15 @@ function getRoleBadge(role: string) {
 
 // ─── Permission pill ──────────────────────────────────────────────────────────
 
-function PermissionPill({ label }: { label: string }) {
+function PermissionPill({ label, granted = true }: { label: string; granted?: boolean }) {
   const pretty = label.replace(/\./g, ' › ').replace(/_/g, ' ');
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/8 text-primary border border-primary/15">
+    <span
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${
+        granted
+          ? 'bg-primary/8 text-primary border-primary/15' :'bg-red-50 text-red-600 border-red-200 line-through opacity-60'
+      }`}
+    >
       <CheckCircle2 size={10} className="shrink-0" />
       {pretty}
     </span>
@@ -50,16 +64,17 @@ function PermissionPill({ label }: { label: string }) {
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-        checked ? 'bg-primary' : 'bg-gray-200'
-      }`}
+        disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+      } ${checked ? 'bg-primary' : 'bg-gray-200'}`}
     >
       <span
         className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
@@ -68,6 +83,19 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       />
     </button>
   );
+}
+
+// ─── Permission module group ──────────────────────────────────────────────────
+
+interface PermissionGroup {
+  module: string;
+  permissions: Array<{
+    key: string;
+    label: string;
+    description: string;
+    hasRole: boolean;
+    override: boolean | null; // null = no override, true = granted, false = revoked
+  }>;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -94,13 +122,18 @@ export default function UserProfileContent() {
   const [credSaving, setCredSaving] = useState(false);
   const [credError, setCredError] = useState<string | null>(null);
 
-  // ── Preferences state ─────────────────────────────────────────────────────
-  const [prefEmailAlerts, setPrefEmailAlerts] = useState(true);
-  const [prefSmsAlerts, setPrefSmsAlerts] = useState(false);
-  const [prefDeadlineReminders, setPrefDeadlineReminders] = useState(true);
-  const [prefApprovalNotifs, setPrefApprovalNotifs] = useState(true);
-  const [prefSaving, setPrefSaving] = useState(false);
-  const [prefSaved, setPrefSaved] = useState(false);
+  // ── Notification preferences state ───────────────────────────────────────
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences | null>(null);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifSaved, setNotifSaved] = useState(false);
+
+  // ── Permissions tab state ─────────────────────────────────────────────────
+  const [permGroups, setPermGroups] = useState<PermissionGroup[]>([]);
+  const [permOverrides, setPermOverrides] = useState<Record<string, boolean>>({});
+  const [permLoading, setPermLoading] = useState(false);
+  const [permSaving, setPermSaving] = useState(false);
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   // ── Load profile data ─────────────────────────────────────────────────────
   const loadProfile = useCallback(async () => {
@@ -108,27 +141,102 @@ export default function UserProfileContent() {
     try {
       const { data } = await supabase
         .from('user_profiles')
-        .select('full_name, notification_preferences')
+        .select('full_name')
         .eq('id', user.id)
         .single();
       if (data) {
         setFullName(data.full_name ?? '');
-        const prefs = data.notification_preferences as Record<string, boolean> | null;
-        if (prefs) {
-          if (typeof prefs.email_alerts === 'boolean') setPrefEmailAlerts(prefs.email_alerts);
-          if (typeof prefs.sms_alerts === 'boolean') setPrefSmsAlerts(prefs.sms_alerts);
-          if (typeof prefs.deadline_reminders === 'boolean') setPrefDeadlineReminders(prefs.deadline_reminders);
-          if (typeof prefs.approval_notifications === 'boolean') setPrefApprovalNotifs(prefs.approval_notifications);
-        }
       }
     } catch {
       // silent
     }
   }, [user, supabase]);
 
+  // ── Load notification preferences ─────────────────────────────────────────
+  const loadNotifPrefs = useCallback(async () => {
+    if (!user) return;
+    setNotifLoading(true);
+    try {
+      const prefs = await notificationService.getPreferences(user.id);
+      setNotifPrefs(prefs);
+    } catch {
+      setNotifPrefs(defaultPreferences(user.id));
+    } finally {
+      setNotifLoading(false);
+    }
+  }, [user]);
+
+  // ── Load permissions and overrides ────────────────────────────────────────
+  const loadPermissions = useCallback(async () => {
+    if (!user || !role) return;
+    setPermLoading(true);
+    try {
+      // Fetch all permissions with labels
+      const { data: allPerms } = await supabase
+        .from('permissions')
+        .select('key, label, description, module')
+        .order('module')
+        .order('key');
+
+      // Fetch role permissions
+      const { data: rolePerms } = await supabase
+        .from('role_permissions')
+        .select('permission_key')
+        .eq('role_name', role);
+
+      const rolePermSet = new Set((rolePerms || []).map((r: any) => r.permission_key));
+
+      // Fetch user overrides
+      const { data: overrides } = await supabase
+        .from('user_permission_overrides')
+        .select('permission_key, granted')
+        .eq('user_id', user.id);
+
+      const overrideMap: Record<string, boolean> = {};
+      (overrides || []).forEach((o: any) => {
+        overrideMap[o.permission_key] = o.granted;
+      });
+      setPermOverrides(overrideMap);
+
+      // Group by module
+      const moduleMap: Record<string, PermissionGroup> = {};
+      (allPerms || []).forEach((p: any) => {
+        if (!moduleMap[p.module]) {
+          moduleMap[p.module] = { module: p.module, permissions: [] };
+        }
+        moduleMap[p.module].permissions.push({
+          key: p.key,
+          label: p.label || p.key,
+          description: p.description || '',
+          hasRole: rolePermSet.has(p.key),
+          override: overrideMap[p.key] !== undefined ? overrideMap[p.key] : null,
+        });
+      });
+
+      const groups = Object.values(moduleMap);
+      setPermGroups(groups);
+      // Expand first module by default
+      if (groups.length > 0) {
+        setExpandedModules(new Set([groups[0].module]));
+      }
+    } catch {
+      // silent
+    } finally {
+      setPermLoading(false);
+    }
+  }, [user, role, supabase]);
+
   useEffect(() => {
     loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (activeTab === 'preferences') loadNotifPrefs();
+  }, [activeTab, loadNotifPrefs]);
+
+  useEffect(() => {
+    if (activeTab === 'permissions') loadPermissions();
+  }, [activeTab, loadPermissions]);
 
   // ── Save profile ──────────────────────────────────────────────────────────
   const saveProfile = async () => {
@@ -176,29 +284,74 @@ export default function UserProfileContent() {
     }
   };
 
-  // ── Save preferences ──────────────────────────────────────────────────────
-  const savePreferences = async () => {
-    if (!user) return;
-    setPrefSaving(true);
+  // ── Save notification preferences ─────────────────────────────────────────
+  const saveNotifPrefs = async () => {
+    if (!user || !notifPrefs) return;
+    setNotifSaving(true);
     try {
-      const prefs = {
-        email_alerts: prefEmailAlerts,
-        sms_alerts: prefSmsAlerts,
-        deadline_reminders: prefDeadlineReminders,
-        approval_notifications: prefApprovalNotifs,
-      };
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ notification_preferences: prefs })
-        .eq('id', user.id);
-      if (error) throw error;
-      setPrefSaved(true);
-      toast.success('Preferences saved');
-      setTimeout(() => setPrefSaved(false), 3000);
+      const saved = await notificationService.savePreferences(notifPrefs);
+      if (!saved) throw new Error('Failed to save');
+      setNotifPrefs(saved);
+      setNotifSaved(true);
+      toast.success('Notification preferences saved');
+      setTimeout(() => setNotifSaved(false), 3000);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to save preferences');
     } finally {
-      setPrefSaving(false);
+      setNotifSaving(false);
+    }
+  };
+
+  // ── Toggle permission override ────────────────────────────────────────────
+  const togglePermOverride = async (permKey: string, currentHasRole: boolean, currentOverride: boolean | null) => {
+    if (!user) return;
+    setPermSaving(true);
+    try {
+      // Determine new state: cycle through role-default → granted → revoked → role-default
+      let newGranted: boolean | null;
+      if (currentOverride === null) {
+        // No override → add override (grant if not in role, revoke if in role)
+        newGranted = !currentHasRole;
+      } else if (currentOverride === true && !currentHasRole) {
+        // Was granted via override, remove override
+        newGranted = null;
+      } else if (currentOverride === false && currentHasRole) {
+        // Was revoked via override, remove override
+        newGranted = null;
+      } else {
+        newGranted = null;
+      }
+
+      if (newGranted === null) {
+        // Remove override
+        await supabase
+          .from('user_permission_overrides')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('permission_key', permKey);
+        const updated = { ...permOverrides };
+        delete updated[permKey];
+        setPermOverrides(updated);
+        toast.success('Permission override removed');
+      } else {
+        // Upsert override
+        const { error } = await supabase
+          .from('user_permission_overrides')
+          .upsert(
+            { user_id: user.id, permission_key: permKey, granted: newGranted },
+            { onConflict: 'user_id,permission_key' }
+          );
+        if (error) throw error;
+        setPermOverrides({ ...permOverrides, [permKey]: newGranted });
+        toast.success(`Permission ${newGranted ? 'granted' : 'revoked'} via override`);
+      }
+
+      // Refresh permission groups
+      await loadPermissions();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update permission');
+    } finally {
+      setPermSaving(false);
     }
   };
 
@@ -212,6 +365,15 @@ export default function UserProfileContent() {
     : displayEmail.slice(0, 2).toUpperCase();
   const permList = Array.from(permissions).sort();
   const twoFaEnabled = userProfile?.two_fa_enabled ?? false;
+
+  const isLegalOfficer = displayRole === 'legal_officer';
+  const isSystemAdmin = displayRole === 'system_admin';
+  const isSupervisor = displayRole === 'supervisor';
+  const canManagePermissions = isLegalOfficer || isSystemAdmin || isSupervisor;
+
+  const visibleTabs = TABS.filter(
+    (t) => !t.roles || t.roles.includes(displayRole)
+  );
 
   const inputBase =
     'w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors';
@@ -237,7 +399,7 @@ export default function UserProfileContent() {
       {/* ── Tab bar ── */}
       <div className="px-6 shrink-0" style={{ borderBottom: '1px solid var(--izou-border)' }}>
         <div className="flex gap-1">
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -380,6 +542,18 @@ export default function UserProfileContent() {
                 <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                   <Info size={14} className="text-orange-600 shrink-0" />
                   <p className="text-xs text-orange-700">No permissions found for your role. Contact your administrator.</p>
+                </div>
+              )}
+
+              {canManagePermissions && (
+                <div className="pt-1">
+                  <button
+                    onClick={() => setActiveTab('permissions')}
+                    className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                  >
+                    <ShieldAlert size={12} />
+                    Manage role-scoped permission overrides →
+                  </button>
                 </div>
               )}
             </div>
@@ -594,89 +768,341 @@ export default function UserProfileContent() {
           </div>
         )}
 
-        {/* ══ PREFERENCES TAB ══ */}
+        {/* ══ NOTIFICATIONS TAB ══ */}
         {activeTab === 'preferences' && (
           <div className="max-w-2xl space-y-6">
-            <div
-              className="rounded-xl p-5 space-y-5"
-              style={{ background: 'var(--izou-card)', border: '1px solid var(--izou-border)' }}
-            >
-              <div className="flex items-center gap-2">
-                <Bell size={16} className="text-primary" />
-                <h2 className="text-sm font-semibold text-foreground">Notification Preferences</h2>
+            {notifLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <RefreshCw size={14} className="animate-spin" />
+                Loading preferences…
               </div>
-
-              <div className="space-y-4">
-                {[
-                  {
-                    label: 'Email Alerts',
-                    description: 'Receive system alerts and updates via email',
-                    value: prefEmailAlerts,
-                    onChange: setPrefEmailAlerts,
-                  },
-                  {
-                    label: 'SMS Alerts',
-                    description: 'Receive critical alerts via SMS to your registered phone',
-                    value: prefSmsAlerts,
-                    onChange: setPrefSmsAlerts,
-                  },
-                  {
-                    label: 'Deadline Reminders',
-                    description: 'Get notified before collateral perfection deadlines',
-                    value: prefDeadlineReminders,
-                    onChange: setPrefDeadlineReminders,
-                  },
-                  {
-                    label: 'Approval Notifications',
-                    description: 'Notify me when items in my queue need approval',
-                    value: prefApprovalNotifs,
-                    onChange: setPrefApprovalNotifs,
-                  },
-                ].map((pref) => (
-                  <div key={pref.label} className="flex items-center justify-between gap-4 py-3 border-b border-border last:border-0">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{pref.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{pref.description}</p>
-                    </div>
-                    <Toggle checked={pref.value} onChange={pref.onChange} />
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-end pt-1">
-                <button
-                  onClick={savePreferences}
-                  disabled={prefSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-60 transition-colors"
+            ) : notifPrefs ? (
+              <>
+                {/* Alert Types */}
+                <div
+                  className="rounded-xl p-5 space-y-4"
+                  style={{ background: 'var(--izou-card)', border: '1px solid var(--izou-border)' }}
                 >
-                  {prefSaving ? (
-                    <RefreshCw size={14} className="animate-spin" />
-                  ) : prefSaved ? (
-                    <CheckCircle2 size={14} />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  {prefSaved ? 'Saved!' : 'Save Preferences'}
-                </button>
+                  <div className="flex items-center gap-2">
+                    <Bell size={16} className="text-primary" />
+                    <h2 className="text-sm font-semibold text-foreground">Alert Types</h2>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Overdue Collateral', key: 'alertOverdueCollateral' as keyof NotificationPreferences, desc: 'Alerts when collateral becomes overdue' },
+                      { label: 'Perfection Deadline', key: 'alertPerfectionDeadline' as keyof NotificationPreferences, desc: 'Reminders before perfection deadlines' },
+                      { label: 'Workflow Status Change', key: 'alertWorkflowStatusChange' as keyof NotificationPreferences, desc: 'Notify when workflow stages change' },
+                      { label: 'Document Expiry', key: 'alertDocumentExpiry' as keyof NotificationPreferences, desc: 'Alerts for expiring documents' },
+                      { label: 'New Collateral Added', key: 'alertNewCollateralAdded' as keyof NotificationPreferences, desc: 'Notify when new collateral is registered' },
+                      { label: 'Audit Log Events', key: 'alertAuditLogEvents' as keyof NotificationPreferences, desc: 'Alerts for significant audit events' },
+                    ].map((item) => (
+                      <div key={item.key} className="flex items-center justify-between gap-4 py-2.5 border-b border-border last:border-0">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{item.label}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                        </div>
+                        <Toggle
+                          checked={notifPrefs[item.key] as boolean}
+                          onChange={(v) => setNotifPrefs({ ...notifPrefs, [item.key]: v })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Delivery Channels */}
+                <div
+                  className="rounded-xl p-5 space-y-4"
+                  style={{ background: 'var(--izou-card)', border: '1px solid var(--izou-border)' }}
+                >
+                  <h2 className="text-sm font-semibold text-foreground">Delivery Channels</h2>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <div>
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          <Mail size={13} className="text-primary" /> Email Notifications
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Receive alerts via email</p>
+                      </div>
+                      <Toggle
+                        checked={notifPrefs.emailEnabled}
+                        onChange={(v) => setNotifPrefs({ ...notifPrefs, emailEnabled: v })}
+                      />
+                    </div>
+                    {notifPrefs.emailEnabled && (
+                      <div className="pl-4 space-y-2 pt-1">
+                        {[
+                          { label: 'Overdue Collateral', key: 'emailOverdueCollateral' as keyof NotificationPreferences },
+                          { label: 'Perfection Deadline', key: 'emailPerfectionDeadline' as keyof NotificationPreferences },
+                          { label: 'Workflow Status Change', key: 'emailWorkflowStatusChange' as keyof NotificationPreferences },
+                          { label: 'Document Expiry', key: 'emailDocumentExpiry' as keyof NotificationPreferences },
+                        ].map((item) => (
+                          <div key={item.key} className="flex items-center justify-between py-1.5">
+                            <p className="text-xs text-muted-foreground">{item.label}</p>
+                            <Toggle
+                              checked={notifPrefs[item.key] as boolean}
+                              onChange={(v) => setNotifPrefs({ ...notifPrefs, [item.key]: v })}
+                            />
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between py-1.5">
+                          <p className="text-xs text-muted-foreground">Email Digest</p>
+                          <Toggle
+                            checked={notifPrefs.emailDigestEnabled}
+                            onChange={(v) => setNotifPrefs({ ...notifPrefs, emailDigestEnabled: v })}
+                          />
+                        </div>
+                        {notifPrefs.emailDigestEnabled && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <p className="text-xs text-muted-foreground">Digest frequency:</p>
+                            <select
+                              value={notifPrefs.emailDigestFrequency}
+                              onChange={(e) => setNotifPrefs({ ...notifPrefs, emailDigestFrequency: e.target.value as 'daily' | 'weekly' })}
+                              className="text-xs border border-border rounded px-2 py-1 bg-background text-foreground"
+                            >
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* In-App */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2 border-b border-border">
+                      <div>
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          <Bell size={13} className="text-primary" /> In-App Notifications
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Show alerts inside the application</p>
+                      </div>
+                      <Toggle
+                        checked={notifPrefs.inappEnabled}
+                        onChange={(v) => setNotifPrefs({ ...notifPrefs, inappEnabled: v })}
+                      />
+                    </div>
+                    {notifPrefs.inappEnabled && (
+                      <div className="pl-4 space-y-2 pt-1">
+                        {[
+                          { label: 'Overdue Collateral', key: 'inappOverdueCollateral' as keyof NotificationPreferences },
+                          { label: 'Perfection Deadline', key: 'inappPerfectionDeadline' as keyof NotificationPreferences },
+                          { label: 'Workflow Status Change', key: 'inappWorkflowStatusChange' as keyof NotificationPreferences },
+                          { label: 'Document Expiry', key: 'inappDocumentExpiry' as keyof NotificationPreferences },
+                        ].map((item) => (
+                          <div key={item.key} className="flex items-center justify-between py-1.5">
+                            <p className="text-xs text-muted-foreground">{item.label}</p>
+                            <Toggle
+                              checked={notifPrefs[item.key] as boolean}
+                              onChange={(v) => setNotifPrefs({ ...notifPrefs, [item.key]: v })}
+                            />
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between py-1.5">
+                          <p className="text-xs text-muted-foreground">Sound Alerts</p>
+                          <Toggle
+                            checked={notifPrefs.inappSoundEnabled}
+                            onChange={(v) => setNotifPrefs({ ...notifPrefs, inappSoundEnabled: v })}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Frequency */}
+                <div
+                  className="rounded-xl p-5 space-y-3"
+                  style={{ background: 'var(--izou-card)', border: '1px solid var(--izou-border)' }}
+                >
+                  <h2 className="text-sm font-semibold text-foreground">Notification Frequency</h2>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {(['realtime', 'hourly', 'daily', 'weekly'] as const).map((freq) => (
+                      <button
+                        key={freq}
+                        onClick={() => setNotifPrefs({ ...notifPrefs, notificationFrequency: freq })}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors capitalize ${
+                          notifPrefs.notificationFrequency === freq
+                            ? 'bg-primary text-white border-primary' :'bg-background text-muted-foreground border-border hover:border-primary/40'
+                        }`}
+                      >
+                        {freq}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={saveNotifPrefs}
+                    disabled={notifSaving}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                  >
+                    {notifSaving ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : notifSaved ? (
+                      <CheckCircle2 size={14} />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                    {notifSaved ? 'Saved!' : 'Save Preferences'}
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
+
+        {/* ══ PERMISSIONS TAB ══ */}
+        {activeTab === 'permissions' && canManagePermissions && (
+          <div className="max-w-2xl space-y-6">
+            {/* Info banner */}
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-purple-50 border border-purple-200">
+              <ShieldAlert size={16} className="text-purple-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-purple-800">Role-Scoped Permission Management</p>
+                <p className="text-xs text-purple-700 mt-0.5">
+                  Your base permissions are set by your <strong>{roleLabel}</strong> role. You can request overrides below.
+                  Overrides are subject to administrator approval and audit logging.
+                </p>
               </div>
             </div>
 
-            {/* SMS note */}
-            {prefSmsAlerts && !userProfile?.phone && (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                <Info size={14} className="text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-700">
-                  SMS alerts are enabled but no phone number is configured.{' '}
-                  <button
-                    onClick={() => setActiveTab('security')}
-                    className="font-semibold underline hover:no-underline"
-                  >
-                    Set up 2FA
-                  </button>{' '}
-                  to add your phone number.
-                </p>
+            {permLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <RefreshCw size={14} className="animate-spin" />
+                Loading permissions…
+              </div>
+            ) : permGroups.length === 0 ? (
+              <div className="flex items-center gap-2 p-4 bg-muted/30 border border-border rounded-xl">
+                <Info size={14} className="text-muted-foreground shrink-0" />
+                <p className="text-sm text-muted-foreground">No permissions found in the system. Contact your administrator.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {permGroups.map((group) => {
+                  const isExpanded = expandedModules.has(group.module);
+                  const overrideCount = group.permissions.filter((p) => p.override !== null).length;
+                  return (
+                    <div
+                      key={group.module}
+                      className="rounded-xl overflow-hidden"
+                      style={{ border: '1px solid var(--izou-border)' }}
+                    >
+                      {/* Module header */}
+                      <button
+                        onClick={() => {
+                          const next = new Set(expandedModules);
+                          if (isExpanded) next.delete(group.module);
+                          else next.add(group.module);
+                          setExpandedModules(next);
+                        }}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+                        style={{ background: 'var(--izou-card)' }}
+                        onMouseOver={(e) => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'}
+                        onMouseOut={(e) => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-card)'}
+                      >
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
+                          <span className="text-sm font-semibold text-foreground capitalize">
+                            {group.module.replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({group.permissions.length} permission{group.permissions.length !== 1 ? 's' : ''})
+                          </span>
+                        </div>
+                        {overrideCount > 0 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 font-medium">
+                            {overrideCount} override{overrideCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Permission rows */}
+                      {isExpanded && (
+                        <div style={{ borderTop: '1px solid var(--izou-border)' }}>
+                          {group.permissions.map((perm, idx) => {
+                            const effectiveGranted = perm.override !== null ? perm.override : perm.hasRole;
+                            const hasOverride = perm.override !== null;
+                            return (
+                              <div
+                                key={perm.key}
+                                className={`flex items-center justify-between px-4 py-3 gap-4 ${
+                                  idx < group.permissions.length - 1 ? 'border-b border-border' : ''
+                                }`}
+                                style={{ background: hasOverride ? 'rgba(var(--izou-primary-rgb, 0,100,160), 0.04)' : 'var(--izou-card)' }}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-xs font-semibold text-foreground">{perm.label}</p>
+                                    {perm.hasRole && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                                        Role default
+                                      </span>
+                                    )}
+                                    {hasOverride && (
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${
+                                        perm.override
+                                          ? 'bg-green-50 text-green-700 border-green-200' :'bg-red-50 text-red-600 border-red-200'
+                                      }`}>
+                                        {perm.override ? '+ Override granted' : '− Override revoked'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {perm.description && (
+                                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{perm.description}</p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground/60 mt-0.5 font-mono">{perm.key}</p>
+                                </div>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <span className={`text-xs font-medium ${effectiveGranted ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                    {effectiveGranted ? 'Granted' : 'Denied'}
+                                  </span>
+                                  <Toggle
+                                    checked={effectiveGranted}
+                                    disabled={permSaving}
+                                    onChange={() => togglePermOverride(perm.key, perm.hasRole, perm.override)}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
+
+            {/* Legend */}
+            <div
+              className="rounded-xl p-4 space-y-2"
+              style={{ background: 'var(--izou-card)', border: '1px solid var(--izou-border)' }}
+            >
+              <p className="text-xs font-semibold text-foreground">Legend</p>
+              <div className="flex flex-wrap gap-3">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="w-3 h-3 rounded-full bg-blue-200 inline-block" />
+                  Role default — inherited from your role
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="w-3 h-3 rounded-full bg-green-400 inline-block" />
+                  Override granted — added beyond role
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="w-3 h-3 rounded-full bg-red-400 inline-block" />
+                  Override revoked — removed from role
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                <Info size={11} className="inline mr-1" />
+                All permission changes are recorded in the audit log for compliance.
+              </p>
+            </div>
           </div>
         )}
       </div>
