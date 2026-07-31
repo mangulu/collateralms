@@ -136,14 +136,12 @@ function ItemCard({ item, onMarkComplete }: { item: UnifiedItem; onMarkComplete?
                   Done
                 </button>
               )}
-              {item.actionUrl && (
-                <Link
-                  href={item.actionUrl}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-500 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors"
-                >
-                  View <ChevronRight size={11} />
-                </Link>
-              )}
+              <Link
+                href={`/workflows/tasks/${item.id}`}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-500 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors"
+              >
+                View <ChevronRight size={11} />
+              </Link>
             </div>
           </div>
         </div>
