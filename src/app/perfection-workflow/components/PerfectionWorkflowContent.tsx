@@ -7,6 +7,8 @@ import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequ
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
+import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
+import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
 
 const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   Draft: { label: 'Draft', color: 'text-gray-600', bg: 'bg-gray-100', icon: <Clock size={12} /> },
@@ -1254,12 +1256,69 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
   const [form, setForm] = useState({
     collateralId: '',
     obligor: '',
-    collateralType: 'Mortgage',
-    registry: 'Lands Registry',
+    collateralType: '',
+    registry: '',
     perfectionDeadline: '',
     priority: 'Normal',
   });
   const [loading, setLoading] = useState(false);
+
+  // Live collateral records for picker
+  const [collateralRecords, setCollateralRecords] = useState<CollateralRecord[]>([]);
+  const [collateralLoading, setCollateralLoading] = useState(true);
+  const [selectedRecordId, setSelectedRecordId] = useState<string>('');
+  const [collateralSearch, setCollateralSearch] = useState('');
+
+  // Live lookup options
+  const [collateralTypes, setCollateralTypes] = useState<string[]>([]);
+  const [registries, setRegistries] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Load collateral records that require perfection
+    setCollateralLoading(true);
+    Promise.all([
+      collateralService.getAll(),
+      collateralLookupsService.getCollateralTypeNames(),
+      collateralLookupsService.getRegistryNames(),
+    ]).then(([records, typeNames, registryNames]) => {
+      // Filter to records that require perfection and are not yet perfected
+      const eligible = records.filter(
+        (r) => r.requiresPerfection && r.status !== 'Perfected' && r.status !== 'Released'
+      );
+      setCollateralRecords(eligible);
+      setCollateralTypes(typeNames.length > 0 ? typeNames : ['Mortgage', 'Debenture', 'Motor Vehicle', 'Shares (DSE)', 'FDR', 'Guarantee', 'Ship/Vessel']);
+      setRegistries(registryNames.length > 0 ? registryNames : ['BRELA', 'Lands Registry', 'TRA', 'DSE', 'TASAC', 'N/A']);
+    }).catch(() => {
+      setCollateralTypes(['Mortgage', 'Debenture', 'Motor Vehicle', 'Shares (DSE)', 'FDR', 'Guarantee', 'Ship/Vessel']);
+      setRegistries(['BRELA', 'Lands Registry', 'TRA', 'DSE', 'TASAC', 'N/A']);
+    }).finally(() => setCollateralLoading(false));
+  }, []);
+
+  // Auto-populate form when a collateral record is selected
+  function handleRecordSelect(recordId: string) {
+    setSelectedRecordId(recordId);
+    if (!recordId) {
+      setForm(f => ({ ...f, collateralId: '', obligor: '', collateralType: '', registry: '', perfectionDeadline: '' }));
+      return;
+    }
+    const record = collateralRecords.find(r => r.id === recordId);
+    if (record) {
+      setForm(f => ({
+        ...f,
+        collateralId: record.collateralId,
+        obligor: record.obligor,
+        collateralType: record.type,
+        registry: record.registry,
+        perfectionDeadline: record.perfectionDeadline || '',
+      }));
+    }
+  }
+
+  const filteredRecords = collateralRecords.filter(r =>
+    !collateralSearch ||
+    r.collateralId.toLowerCase().includes(collateralSearch.toLowerCase()) ||
+    r.obligor.toLowerCase().includes(collateralSearch.toLowerCase())
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1269,7 +1328,19 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
     }
     setLoading(true);
     try {
-      await perfectionService.create(form, userId, userName);
+      await perfectionService.create(
+        {
+          collateralRecordId: selectedRecordId || undefined,
+          collateralId: form.collateralId,
+          obligor: form.obligor,
+          collateralType: form.collateralType || collateralTypes[0] || 'Mortgage',
+          registry: form.registry || registries[0] || 'Lands Registry',
+          perfectionDeadline: form.perfectionDeadline,
+          priority: form.priority,
+        },
+        userId,
+        userName
+      );
       toast.success('Perfection request created');
       onCreated();
       onClose();
@@ -1282,54 +1353,155 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <h2 className="text-base font-semibold text-foreground">New Perfection Request</h2>
           <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"><X size={16} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+
+          {/* Collateral Record Picker */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Link to Collateral Record
+              <span className="ml-1 text-muted-foreground font-normal">(auto-fills fields below)</span>
+            </label>
+            {collateralLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 size={13} className="animate-spin" /> Loading collateral records...
+              </div>
+            ) : collateralRecords.length === 0 ? (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <AlertCircle size={13} className="shrink-0" />
+                No eligible collateral records found. Fill in the fields manually below.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search by ID or obligor..."
+                    value={collateralSearch}
+                    onChange={(e) => setCollateralSearch(e.target.value)}
+                    className="w-full text-sm pl-8 pr-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <div className="border border-border rounded-md overflow-hidden max-h-40 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleRecordSelect('')}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors border-b border-border ${
+                      !selectedRecordId ? 'bg-primary/5 text-primary font-medium' : 'hover:bg-muted/50 text-muted-foreground'
+                    }`}
+                  >
+                    — Enter manually —
+                  </button>
+                  {filteredRecords.map(r => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => handleRecordSelect(r.id)}
+                      className={`w-full text-left px-3 py-2.5 text-sm transition-colors border-b border-border last:border-b-0 ${
+                        selectedRecordId === r.id ? 'bg-primary/5 border-l-2 border-l-primary' : 'hover:bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="font-medium text-foreground font-mono text-xs">{r.collateralId}</span>
+                          <span className="mx-1.5 text-muted-foreground">·</span>
+                          <span className="text-foreground">{r.obligor}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground shrink-0">{r.type}</span>
+                      </div>
+                      {r.perfectionDeadline && (
+                        <p className="text-xs text-amber-600 mt-0.5">Deadline: {r.perfectionDeadline}</p>
+                      )}
+                    </button>
+                  ))}
+                  {filteredRecords.length === 0 && collateralSearch && (
+                    <p className="px-3 py-3 text-xs text-muted-foreground text-center">No records match your search</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Collateral ID + Priority */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Collateral ID *</label>
-              <input value={form.collateralId} onChange={(e) => setForm(f => ({ ...f, collateralId: e.target.value }))}
+              <input
+                value={form.collateralId}
+                onChange={(e) => setForm(f => ({ ...f, collateralId: e.target.value }))}
                 className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="col-0000" />
+                placeholder="col-0000"
+                readOnly={!!selectedRecordId}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Priority</label>
-              <select value={form.priority} onChange={(e) => setForm(f => ({ ...f, priority: e.target.value }))}
-                className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <select
+                value={form.priority}
+                onChange={(e) => setForm(f => ({ ...f, priority: e.target.value }))}
+                className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
                 <option>High</option><option>Normal</option><option>Low</option>
               </select>
             </div>
           </div>
+
+          {/* Obligor */}
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">Obligor *</label>
-            <input value={form.obligor} onChange={(e) => setForm(f => ({ ...f, obligor: e.target.value }))}
+            <input
+              value={form.obligor}
+              onChange={(e) => setForm(f => ({ ...f, obligor: e.target.value }))}
               className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder="Company / Individual name" />
+              placeholder="Company / Individual name"
+              readOnly={!!selectedRecordId}
+            />
           </div>
+
+          {/* Collateral Type + Registry */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Collateral Type</label>
-              <select value={form.collateralType} onChange={(e) => setForm(f => ({ ...f, collateralType: e.target.value }))}
-                className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30">
-                {['Mortgage','Debenture','Motor Vehicle','Shares (DSE)','FDR','Guarantee','Ship/Vessel'].map(t => <option key={t}>{t}</option>)}
+              <select
+                value={form.collateralType}
+                onChange={(e) => setForm(f => ({ ...f, collateralType: e.target.value }))}
+                className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                disabled={!!selectedRecordId}
+              >
+                {!form.collateralType && <option value="">— Select —</option>}
+                {collateralTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground mb-1">Registry</label>
-              <select value={form.registry} onChange={(e) => setForm(f => ({ ...f, registry: e.target.value }))}
-                className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30">
-                {['BRELA','Lands Registry','TRA','DSE','TASAC','N/A'].map(r => <option key={r}>{r}</option>)}
+              <select
+                value={form.registry}
+                onChange={(e) => setForm(f => ({ ...f, registry: e.target.value }))}
+                className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                disabled={!!selectedRecordId}
+              >
+                {!form.registry && <option value="">— Select —</option>}
+                {registries.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
           </div>
+
+          {/* Perfection Deadline */}
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">Perfection Deadline</label>
-            <input type="date" value={form.perfectionDeadline} onChange={(e) => setForm(f => ({ ...f, perfectionDeadline: e.target.value }))}
-              className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input
+              type="date"
+              value={form.perfectionDeadline}
+              onChange={(e) => setForm(f => ({ ...f, perfectionDeadline: e.target.value }))}
+              className="w-full text-sm border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
           </div>
+
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">Cancel</button>
             <button type="submit" disabled={loading} className="flex-1 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors">
