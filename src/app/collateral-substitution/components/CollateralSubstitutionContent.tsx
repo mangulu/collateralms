@@ -406,7 +406,8 @@ export default function CollateralSubstitutionContent() {
         sub.substitutionStatus,
         notes,
         action === 'reject' ? notes : undefined,
-        action === 'approve' ? effectiveDate : undefined
+        action === 'approve' ? effectiveDate : undefined,
+        userProfile.role ?? undefined,
       );
       setActionDialog({ open: false, sub: null, action: null });
       await load();

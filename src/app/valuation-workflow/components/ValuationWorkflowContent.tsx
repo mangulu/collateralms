@@ -465,7 +465,12 @@ export default function ValuationWorkflowContent() {
     if (!userProfile?.id) return;
     setActionLoading(true);
     try {
-      await approveValuation(v.id, userProfile.id);
+      await approveValuation(
+        v.id,
+        userProfile.id,
+        userProfile.full_name ?? undefined,
+        userProfile.role ?? undefined,
+      );
       setActionDialog({ open: false, valuation: null, action: null });
       await load();
     } catch (e: any) {
@@ -479,7 +484,13 @@ export default function ValuationWorkflowContent() {
     if (!actionDialog.valuation || !reason) return;
     setActionLoading(true);
     try {
-      await rejectValuation(actionDialog.valuation.id, reason);
+      await rejectValuation(
+        actionDialog.valuation.id,
+        reason,
+        userProfile?.id ?? undefined,
+        userProfile?.full_name ?? undefined,
+        userProfile?.role ?? undefined,
+      );
       setActionDialog({ open: false, valuation: null, action: null });
       await load();
     } catch (e: any) {

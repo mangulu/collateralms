@@ -374,6 +374,8 @@ export default function ReleaseApprovalContent() {
         action as ReleaseRequestStatus,
         note || undefined,
         userProfile?.id,
+        userProfile?.full_name ?? undefined,
+        userProfile?.role ?? undefined,
       );
       if (updated) {
         setRequests((prev) => prev.map((r) => r.id === updated.id ? updated : r));

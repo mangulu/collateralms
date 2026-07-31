@@ -154,9 +154,18 @@ export const releaseRequestService = {
     status: ReleaseRequestStatus,
     notes?: string,
     reviewedBy?: string,
+    reviewedByName?: string,
+    reviewedByRole?: string,
   ): Promise<ReleaseRequest | null> {
     const supabase = createClient();
     try {
+      // Fetch current record for audit trail
+      const { data: current } = await supabase
+        .from('release_requests')
+        .select('request_status, collateral_ref, client_name')
+        .eq('id', id)
+        .maybeSingle();
+
       const updatePayload: Record<string, any> = {
         request_status: status,
         reviewed_at: new Date().toISOString(),
@@ -176,6 +185,86 @@ export const releaseRequestService = {
         console.log('releaseRequestService.updateStatus error:', error.message);
         return null;
       }
+
+      // ── Write audit trail ──────────────────────────────────────────────────
+      const oldStatus = current?.request_status ?? 'Pending';
+      const collateralRef = current?.collateral_ref ?? id;
+      const clientName = current?.client_name ?? '';
+      const actionLabel = status === 'Approved' ? 'approved' : status === 'Rejected' ? 'rejected' : 'status_changed';
+
+      await supabase.from('audit_logs').insert({
+        entity_type: 'release_request',
+        action: actionLabel,
+        message: `Release request ${actionLabel}: ${collateralRef}${clientName ? ` — ${clientName}` : ''}`,
+        detail: `Status changed from ${oldStatus} to ${status}${notes ? `. Notes: ${notes}` : ''}`,
+        reason: notes ?? null,
+        performed_by: reviewedBy ?? null,
+        performed_by_name: reviewedByName ?? 'System',
+        event_category: 'status_transition',
+        field_changes: [
+          {
+            field: 'request_status',
+            label: 'Status',
+            old_value: oldStatus,
+            new_value: status,
+          },
+        ],
+      }).then(() => {}).catch((e) => console.warn('[releaseRequest] audit log failed:', e.message));
+
+      // ── Sync workflow_instances if a linked instance exists ────────────────
+      if (reviewedBy && (status === 'Approved' || status === 'Rejected')) {
+        const { data: instances } = await supabase
+          .from('workflow_instances')
+          .select('id, instance_status')
+          .eq('reference_id', id)
+          .eq('reference_type', 'release_request')
+          .in('instance_status', ['active', 'escalated'])
+          .limit(1);
+
+        const instance = instances?.[0];
+        if (instance) {
+          const wfAction = status === 'Approved' ? 'approve' : 'reject';
+          // Get current step
+          const { data: currentStep } = await supabase
+            .from('workflow_instance_steps')
+            .select('id, step_id')
+            .eq('instance_id', instance.id)
+            .eq('step_status', 'active')
+            .maybeSingle();
+
+          const now = new Date().toISOString();
+          if (currentStep) {
+            await supabase.from('workflow_instance_steps').update({
+              step_status: wfAction === 'approve' ? 'completed' : 'rejected',
+              completed_at: now,
+              completed_by: reviewedBy,
+              action_taken: wfAction,
+              notes: notes ?? null,
+            }).eq('id', currentStep.id);
+          }
+
+          const newInstanceStatus = wfAction === 'approve' ? 'completed' : 'cancelled';
+          await supabase.from('workflow_instances').update({
+            instance_status: newInstanceStatus,
+            current_step_id: null,
+            completed_by: reviewedBy,
+            completed_at: now,
+          }).eq('id', instance.id);
+
+          await supabase.from('workflow_transition_log').insert({
+            instance_id: instance.id,
+            instance_step_id: currentStep?.id ?? null,
+            from_step_id: currentStep?.step_id ?? null,
+            to_step_id: null,
+            action: wfAction,
+            performed_by: reviewedBy,
+            performed_by_name: reviewedByName ?? null,
+            performed_by_role: reviewedByRole ?? null,
+            comment: notes ?? null,
+          }).then(() => {}).catch((e) => console.warn('[releaseRequest] workflow transition log failed:', e.message));
+        }
+      }
+
       return rowToRequest(data);
     } catch (err: any) {
       console.log('releaseRequestService.updateStatus caught:', err.message);

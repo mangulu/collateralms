@@ -139,9 +139,19 @@ export async function recordValuationResult(
 
 export async function approveValuation(
   id: string,
-  approvedBy: string
+  approvedBy: string,
+  approvedByName?: string,
+  approvedByRole?: string,
 ): Promise<CollateralValuation> {
   const supabase = createClient();
+
+  // Fetch current record for audit trail
+  const { data: current } = await supabase
+    .from('collateral_valuations')
+    .select('valuation_status, collateral_id, collateral_records(description)')
+    .eq('id', id)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from('collateral_valuations')
     .update({
@@ -153,14 +163,96 @@ export async function approveValuation(
     .select('*, collateral_records(description, collateral_type)')
     .single();
   if (error) throw error;
+
+  // ── Write audit trail ──────────────────────────────────────────────────────
+  const collateralDesc = (current as any)?.collateral_records?.description ?? current?.collateral_id ?? id;
+  await supabase.from('audit_logs').insert({
+    collateral_id: current?.collateral_id ?? null,
+    entity_type: 'valuation',
+    action: 'approved',
+    message: `Valuation approved: ${collateralDesc}`,
+    detail: `Valuation status changed from ${current?.valuation_status ?? 'Completed'} to Approved`,
+    performed_by: approvedBy,
+    performed_by_name: approvedByName ?? 'System',
+    event_category: 'status_transition',
+    field_changes: [
+      {
+        field: 'valuation_status',
+        label: 'Status',
+        old_value: current?.valuation_status ?? 'Completed',
+        new_value: 'Approved',
+      },
+    ],
+  }).then(() => {}).catch((e) => console.warn('[valuation] audit log failed:', e.message));
+
+  // ── Sync workflow_instances if a linked instance exists ────────────────────
+  const { data: instances } = await supabase
+    .from('workflow_instances')
+    .select('id, instance_status')
+    .eq('reference_id', id)
+    .eq('reference_type', 'valuation')
+    .in('instance_status', ['active', 'escalated'])
+    .limit(1);
+
+  const instance = instances?.[0];
+  if (instance) {
+    const { data: currentStep } = await supabase
+      .from('workflow_instance_steps')
+      .select('id, step_id')
+      .eq('instance_id', instance.id)
+      .eq('step_status', 'active')
+      .maybeSingle();
+
+    const now = new Date().toISOString();
+    if (currentStep) {
+      await supabase.from('workflow_instance_steps').update({
+        step_status: 'completed',
+        completed_at: now,
+        completed_by: approvedBy,
+        action_taken: 'approve',
+        notes: null,
+      }).eq('id', currentStep.id);
+    }
+
+    await supabase.from('workflow_instances').update({
+      instance_status: 'completed',
+      current_step_id: null,
+      completed_by: approvedBy,
+      completed_at: now,
+    }).eq('id', instance.id);
+
+    await supabase.from('workflow_transition_log').insert({
+      instance_id: instance.id,
+      instance_step_id: currentStep?.id ?? null,
+      from_step_id: currentStep?.step_id ?? null,
+      to_step_id: null,
+      action: 'approve',
+      performed_by: approvedBy,
+      performed_by_name: approvedByName ?? null,
+      performed_by_role: approvedByRole ?? null,
+      comment: null,
+    }).then(() => {}).catch((e) => console.warn('[valuation] workflow transition log failed:', e.message));
+  }
+
   return rowToValuation(data);
 }
 
 export async function rejectValuation(
   id: string,
-  rejectionReason: string
+  rejectionReason: string,
+  rejectedBy?: string,
+  rejectedByName?: string,
+  rejectedByRole?: string,
 ): Promise<CollateralValuation> {
   const supabase = createClient();
+
+  // Fetch current record for audit trail
+  const { data: current } = await supabase
+    .from('collateral_valuations')
+    .select('valuation_status, collateral_id, collateral_records(description)')
+    .eq('id', id)
+    .maybeSingle();
+
   const { data, error } = await supabase
     .from('collateral_valuations')
     .update({
@@ -171,6 +263,78 @@ export async function rejectValuation(
     .select('*, collateral_records(description, collateral_type)')
     .single();
   if (error) throw error;
+
+  // ── Write audit trail ──────────────────────────────────────────────────────
+  const collateralDesc = (current as any)?.collateral_records?.description ?? current?.collateral_id ?? id;
+  await supabase.from('audit_logs').insert({
+    collateral_id: current?.collateral_id ?? null,
+    entity_type: 'valuation',
+    action: 'rejected',
+    message: `Valuation rejected: ${collateralDesc}`,
+    detail: `Valuation status changed from ${current?.valuation_status ?? 'Completed'} to Rejected. Reason: ${rejectionReason}`,
+    reason: rejectionReason,
+    performed_by: rejectedBy ?? null,
+    performed_by_name: rejectedByName ?? 'System',
+    event_category: 'status_transition',
+    field_changes: [
+      {
+        field: 'valuation_status',
+        label: 'Status',
+        old_value: current?.valuation_status ?? 'Completed',
+        new_value: 'Rejected',
+      },
+    ],
+  }).then(() => {}).catch((e) => console.warn('[valuation] audit log failed:', e.message));
+
+  // ── Sync workflow_instances if a linked instance exists ────────────────────
+  const { data: instances } = await supabase
+    .from('workflow_instances')
+    .select('id, instance_status')
+    .eq('reference_id', id)
+    .eq('reference_type', 'valuation')
+    .in('instance_status', ['active', 'escalated'])
+    .limit(1);
+
+  const instance = instances?.[0];
+  if (instance) {
+    const { data: currentStep } = await supabase
+      .from('workflow_instance_steps')
+      .select('id, step_id')
+      .eq('instance_id', instance.id)
+      .eq('step_status', 'active')
+      .maybeSingle();
+
+    const now = new Date().toISOString();
+    if (currentStep) {
+      await supabase.from('workflow_instance_steps').update({
+        step_status: 'rejected',
+        completed_at: now,
+        completed_by: rejectedBy ?? null,
+        action_taken: 'reject',
+        notes: rejectionReason,
+      }).eq('id', currentStep.id);
+    }
+
+    await supabase.from('workflow_instances').update({
+      instance_status: 'cancelled',
+      current_step_id: null,
+      completed_by: rejectedBy ?? null,
+      completed_at: now,
+    }).eq('id', instance.id);
+
+    await supabase.from('workflow_transition_log').insert({
+      instance_id: instance.id,
+      instance_step_id: currentStep?.id ?? null,
+      from_step_id: currentStep?.step_id ?? null,
+      to_step_id: null,
+      action: 'reject',
+      performed_by: rejectedBy ?? null,
+      performed_by_name: rejectedByName ?? null,
+      performed_by_role: rejectedByRole ?? null,
+      comment: rejectionReason,
+    }).then(() => {}).catch((e) => console.warn('[valuation] workflow transition log failed:', e.message));
+  }
+
   return rowToValuation(data);
 }
 
