@@ -66,10 +66,11 @@ const MODULES: ModuleGuide[] = [
     textColor: '#1D4ED8',
     features: [
       { label: 'Collateral Dashboard', href: '/collateral-dashboard', icon: LayoutDashboard, description: 'KPI overview, overdue alerts, portfolio health bar, and recent activity feed.' },
-      { label: 'Portfolio Monitoring', href: '/portfolio-monitoring', icon: Activity, description: 'Portfolio-wide health trends, concentration analysis, and risk distribution.' },
+      { label: 'Portfolio Monitoring', href: '/portfolio-monitoring', icon: Activity, description: 'Live portfolio health trends pulled from Supabase — daily collateral volumes by status and real-time concentration breakdown by collateral type.' },
       { label: 'Collateral Registry', href: '/collateral-management', icon: FolderOpen, description: 'Add, edit, and search all collateral records. The primary data entry point.' },
       { label: 'Loan–Collateral Map', href: '/collateral-loan-visualization', icon: GitMerge, description: 'Visual network map linking loans to their collateral assets.' },
       { label: 'Collateral Documents', href: '/collateral-documents', icon: Files, description: 'Manage documents attached to collateral, including the Security Pocket.' },
+      { label: 'Loan Facilities', href: '/loans', icon: Landmark, description: 'Register and manage loan facilities linked to obligors — supports multiple facility types, repayment schedules, and live status tracking.' },
       { label: 'Batch Release', href: '/batch-release', icon: Unlock, description: 'Release multiple collateral records simultaneously in a single operation.' },
       { label: 'Bulk Upload', href: '/bulk-upload', icon: Upload, description: 'Import hundreds of collateral records at once via CSV template.' },
       { label: 'Scheduled Jobs', href: '/scheduled-jobs', icon: CalendarClock, description: 'Monitor automated background tasks like expiry checks and notifications.' },
@@ -107,15 +108,15 @@ const MODULES: ModuleGuide[] = [
     id: 'obligors',
     title: 'Obligors',
     tagline: 'Borrower profiles with credit risk intelligence',
-    purpose: 'Maintain a complete profile for every borrower (obligor), including their credit risk score, exposure metrics, and approval trend history. Surfaces high-risk obligors directly in approval workflows.',
+    purpose: 'Maintain a complete profile for every borrower (obligor), including their credit risk score, exposure metrics, and approval trend history. Risk ratings are validated on load — unknown or null ratings fall back to a safe default so the screen never crashes. Surfaces high-risk obligors directly in approval workflows.',
     icon: Users,
     color: '#0F766E',
     bgGradient: 'linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 60%, #99F6E4 100%)',
     iconBg: '#0D9488',
     textColor: '#0F766E',
     features: [
-      { label: 'Obligors List', href: '/obligors', icon: Users, description: 'Full directory of all obligors with search, filter, and risk-level indicators.' },
-      { label: 'Obligor Profile', href: '/obligors', icon: BookMarked, description: 'Individual profile with credit risk score gauge, exposure metrics, and approval trend summary.' },
+      { label: 'Obligors List', href: '/obligors', icon: Users, description: 'Full directory of all obligors with search, filter, and risk-level indicators. Handles null or unexpected risk ratings gracefully.' },
+      { label: 'Obligor Profile', href: '/obligors', icon: BookMarked, description: 'Individual profile with credit risk score gauge, exposure metrics, and approval trend summary. Risk badge falls back to MEDIUM when rating is unrecognised.' },
     ],
     journeys: [
       {
@@ -147,7 +148,7 @@ const MODULES: ModuleGuide[] = [
       { label: 'Approval Inbox', href: '/approval-inbox', icon: MailCheck, description: 'Unified inbox showing all items awaiting your approval decision.' },
       { label: 'Perfection Approval', href: '/perfection-workflow', icon: GitBranch, description: 'Step-by-step workflow for approving or returning collateral perfection submissions.' },
       { label: 'Document Approval', href: '/document-approval', icon: BadgeCheck, description: 'Review and approve document submissions attached to collateral records.' },
-      { label: 'Release Approval', href: '/release-approval', icon: Unlock, description: 'Authorise the release of perfected collateral back to the borrower.' },
+      { label: 'Release Approval', href: '/release-approval', icon: Unlock, description: 'Authorise the release of perfected collateral back to the borrower. Requests are stored live in the release_requests table — create, fetch, and update status in real time with no mock data.' },
     ],
     journeys: [
       {
@@ -195,7 +196,7 @@ const MODULES: ModuleGuide[] = [
       { label: 'AI Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert, description: 'Real-time fraud flag detection on collateral submissions with investigation tools.' },
       { label: 'AI Risk Assessment', href: '/risk-assessment', icon: ScanSearch, description: 'Automated risk scoring for each collateral asset with narrative explanations.' },
       { label: 'Fast Track', href: '/fast-track', icon: Zap, description: 'AI-assisted expedited processing for urgent collateral cases.' },
-      { label: 'Geomapping', href: '/geomapping', icon: Map, description: 'Interactive map showing physical locations of all collateral assets.' },
+      { label: 'Geomapping', href: '/geomapping', icon: Map, description: 'Interactive map showing physical locations of all collateral assets. Address validation records are now fetched live from Supabase — obligor addresses are scored against collateral location using Jaccard token overlap to determine EXACT, PARTIAL, or MISMATCH status.' },
       { label: 'Portfolio Heatmap', href: '/portfolio-heatmap', icon: Flame, description: 'Visual heatmap of portfolio concentration, risk density, and geographic spread.' },
     ],
     journeys: [
