@@ -1,11 +1,14 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Download, Calendar } from 'lucide-react';
+import { RefreshCw, Download, Calendar, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useEscalationRealtime } from '@/lib/hooks/useEscalationRealtime';
+import Link from 'next/link';
 
 export default function DashboardHeader() {
   const [lastUpdated, setLastUpdated] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [escalationBadge, setEscalationBadge] = useState(0);
 
   useEffect(() => {
     setLastUpdated(new Date()?.toLocaleString('en-TZ', {
@@ -13,6 +16,32 @@ export default function DashboardHeader() {
       hour: '2-digit', minute: '2-digit',
     }));
   }, []);
+
+  // ─── Live escalation subscription ──────────────────────────────────────────
+  useEscalationRealtime({
+    onEscalation: (event) => {
+      const label = event.referenceLabel ?? event.referenceType ?? 'Workflow';
+      const workflowInfo = event.workflowName ? ` (${event.workflowName})` : '';
+      toast.warning(
+        `⚠️ Escalation triggered: ${label}${workflowInfo}`,
+        {
+          description: event.performedByName
+            ? `Escalated by ${event.performedByName}${event.comment ? ` — "${event.comment}"` : ''}`
+            : event.comment ?? 'A workflow step has been escalated',
+          duration: 8000,
+          action: {
+            label: 'View Instances',
+            onClick: () => { window.location.href = '/workflows/instances'; },
+          },
+        }
+      );
+      setEscalationBadge((c) => c + 1);
+    },
+    onEscalatedCountChange: (count) => {
+      // Only set badge if there are escalated instances and we haven't already counted new ones
+      if (count > 0) setEscalationBadge((prev) => Math.max(prev, 0));
+    },
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -37,6 +66,17 @@ export default function DashboardHeader() {
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
             Live
           </span>
+          {escalationBadge > 0 && (
+            <Link
+              href="/workflows/instances"
+              onClick={() => setEscalationBadge(0)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full shrink-0 transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}
+            >
+              <AlertTriangle size={11} className="animate-pulse" />
+              {escalationBadge} new escalation{escalationBadge > 1 ? 's' : ''}
+            </Link>
+          )}
         </div>
         <p className="text-xs sm:text-sm" style={{ color: 'var(--izou-muted)' }}>
           Portfolio health overview

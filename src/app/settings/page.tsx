@@ -27,6 +27,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  ChevronRight,
 } from 'lucide-react';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import {
@@ -335,17 +336,37 @@ function ConfigSection({ tab, values, onChange, onSave, saving, saved, error, la
   );
 }
 
-// ─── Tab Definitions ──────────────────────────────────────────────────────────
+// ─── Nav Item Types ───────────────────────────────────────────────────────────
 
-type SettingsTab =
+type SettingsSection =
   | 'document-types'
-  | 'collateral-type-documents' |'registries' |'collateral-types' |'notifications' |'email-provider' |'registry-integrations' |'bank' |'registry' |'notifications-config' |'thresholds' |'retention';
+  | 'collateral-type-documents' |'registries' |'collateral-types' |'email-provider' |'registry-integrations' |'notifications' |'email-templates' |'bank' |'registry' |'thresholds' |'retention';
+
+interface NavItem {
+  id: SettingsSection;
+  label: string;
+  icon: React.ReactNode;
+  adminOnly?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  icon: React.ReactNode;
+  items: NavItem[];
+  adminOnly?: boolean;
+}
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const pathname = usePathname();
-  const [activeTab, setActiveTab] = useState<SettingsTab>('document-types');
+  const [activeSection, setActiveSection] = useState<SettingsSection>('document-types');
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    'Reference Data': true,
+    'Integrations': false,
+    'Notifications': false,
+    'Advanced': false,
+  });
   const { hasPermission, loading, permissions } = usePermissions();
   const { userProfile } = useAuth();
 
@@ -368,15 +389,6 @@ export default function SettingsPage() {
     thresholds: null,
     retention: null,
   });
-
-  const isAdvancedTab = (tab: SettingsTab): tab is ConfigCategory =>
-    ['bank', 'registry', 'notifications-config', 'thresholds', 'retention'].includes(tab);
-
-  const configCategoryForTab = (tab: SettingsTab): ConfigCategory | null => {
-    if (tab === 'notifications-config') return 'notifications';
-    if (['bank', 'registry', 'thresholds', 'retention'].includes(tab)) return tab as ConfigCategory;
-    return null;
-  };
 
   const loadConfigs = useCallback(async () => {
     try {
@@ -438,52 +450,155 @@ export default function SettingsPage() {
     }
   };
 
-  const configTabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'document-types', label: 'Document Types', icon: <FileText size={15} /> },
-    { id: 'collateral-type-documents', label: 'Required Documents', icon: <Layers size={15} /> },
-    { id: 'registries', label: 'Registries', icon: <Building2 size={15} /> },
-    { id: 'collateral-types', label: 'Collateral Types', icon: <Layers size={15} /> },
-  ];
-
-  const systemTabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'notifications', label: 'Notifications', icon: <Bell size={15} /> },
-    { id: 'email-provider', label: 'Email Provider', icon: <Mail size={15} /> },
-    { id: 'registry-integrations', label: 'Registry Integrations', icon: <Link2 size={15} /> },
-  ];
-
-  const advancedTabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'bank', label: 'Bank Details', icon: <Building2 size={15} /> },
-    { id: 'registry', label: 'BRELA Registry URLs', icon: <Link2 size={15} /> },
-    { id: 'notifications-config', label: 'Email Templates', icon: <Mail size={15} /> },
-    { id: 'thresholds', label: 'Threshold Values', icon: <Sliders size={15} /> },
-    { id: 'retention', label: 'Retention Policies', icon: <Archive size={15} /> },
-  ];
-
   const canManage = hasPermission(PERMISSIONS.SETTINGS_MANAGE);
 
-  const renderTabGroup = (
-    label: string,
-    tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[]
-  ) => (
-    <div className="flex items-center">
-      <span className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider select-none">
-        {label}
-      </span>
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => setActiveTab(tab.id)}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-            activeTab === tab.id
-              ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-          }`}
-        >
-          {tab.icon}
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
+  const NAV_GROUPS: NavGroup[] = [
+    {
+      label: 'Reference Data',
+      icon: <FileText size={15} />,
+      items: [
+        { id: 'document-types', label: 'Document Types', icon: <FileText size={14} /> },
+        { id: 'collateral-type-documents', label: 'Required Documents', icon: <Layers size={14} /> },
+        { id: 'collateral-types', label: 'Collateral Types', icon: <Layers size={14} /> },
+        { id: 'registries', label: 'Registries', icon: <Building2 size={14} /> },
+      ],
+    },
+    {
+      label: 'Integrations',
+      icon: <Link2 size={15} />,
+      items: [
+        { id: 'email-provider', label: 'Email Provider', icon: <Mail size={14} />, adminOnly: true },
+        { id: 'registry-integrations', label: 'Registry Integrations', icon: <Link2 size={14} /> },
+      ],
+    },
+    {
+      label: 'Notifications',
+      icon: <Bell size={15} />,
+      items: [
+        { id: 'notifications', label: 'Notification Preferences', icon: <Bell size={14} /> },
+        { id: 'email-templates', label: 'Email Templates', icon: <Mail size={14} />, adminOnly: true },
+      ],
+    },
+    {
+      label: 'Advanced',
+      icon: <Settings size={15} />,
+      adminOnly: true,
+      items: [
+        { id: 'bank', label: 'Bank Details', icon: <Building2 size={14} /> },
+        { id: 'registry', label: 'BRELA Registry URLs', icon: <Link2 size={14} /> },
+        { id: 'thresholds', label: 'Threshold Values', icon: <Sliders size={14} /> },
+        { id: 'retention', label: 'Retention Policies', icon: <Archive size={14} /> },
+      ],
+    },
+  ];
+
+  function toggleGroup(label: string) {
+    setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  }
+
+  function handleNavClick(section: SettingsSection, groupLabel: string) {
+    setActiveSection(section);
+    setExpandedGroups((prev) => ({ ...prev, [groupLabel]: true }));
+  }
+
+  // Expand the group that contains the active section on mount
+  useEffect(() => {
+    for (const group of NAV_GROUPS) {
+      if (group.items.some((item) => item.id === activeSection)) {
+        setExpandedGroups((prev) => ({ ...prev, [group.label]: true }));
+        break;
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function renderContent() {
+    switch (activeSection) {
+      case 'document-types':
+        return <DocumentTypesSettingsContent />;
+      case 'collateral-type-documents':
+        return <CollateralTypeDocumentsSettingsContent />;
+      case 'registries':
+        return <RegistriesSettingsContent />;
+      case 'collateral-types':
+        return <CollateralTypesSettingsContent />;
+      case 'notifications':
+        return <NotificationSettingsContent />;
+      case 'email-provider':
+        return canManage ? (
+          <EmailProviderSettingsContent />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Lock size={20} className="text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Managing email provider requires Settings Manage permission.
+            </p>
+          </div>
+        );
+      case 'registry-integrations':
+        return <RegistrySettingsContent />;
+      case 'email-templates': {
+        if (!canManage) return (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Lock size={20} className="text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">Managing email templates requires Settings Manage permission.</p>
+          </div>
+        );
+        const tabDef = CONFIG_TABS.find((t) => t.id === 'notifications')!;
+        return configLoading ? (
+          <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-12 bg-muted animate-pulse rounded-md" />)}</div>
+        ) : (
+          <ConfigSection
+            tab={tabDef}
+            values={localValues['notifications']}
+            onChange={(key, value) => handleConfigChange('notifications', key, value)}
+            onSave={() => handleConfigSave('notifications')}
+            saving={saving === 'notifications'}
+            saved={saved === 'notifications'}
+            error={errors['notifications']}
+            lastUpdated={configs[tabDef.configKey]?.updatedAt ?? null}
+          />
+        );
+      }
+      case 'bank': case'registry': case'thresholds': case'retention': {
+        if (!canManage) return (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Lock size={20} className="text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">This section requires Settings Manage permission.</p>
+          </div>
+        );
+        const tabDef = CONFIG_TABS.find((t) => t.id === activeSection)!;
+        return configLoading ? (
+          <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-12 bg-muted animate-pulse rounded-md" />)}</div>
+        ) : (
+          <ConfigSection
+            tab={tabDef}
+            values={localValues[activeSection]}
+            onChange={(key, value) => handleConfigChange(activeSection, key, value)}
+            onSave={() => handleConfigSave(activeSection)}
+            saving={saving === activeSection}
+            saved={saved === activeSection}
+            error={errors[activeSection]}
+            lastUpdated={configs[tabDef.configKey]?.updatedAt ?? null}
+          />
+        );
+      }
+      default:
+        return null;
+    }
+  }
+
+  // Find the active section label for the breadcrumb
+  let activeSectionLabel = '';
+  let activeGroupLabel = '';
+  for (const group of NAV_GROUPS) {
+    const item = group.items.find((i) => i.id === activeSection);
+    if (item) {
+      activeSectionLabel = item.label;
+      activeGroupLabel = group.label;
+      break;
+    }
+  }
 
   return (
     <AppLayout currentPath={pathname}>
@@ -498,78 +613,97 @@ export default function SettingsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-0">
-          {/* Page Header */}
-          <div className="px-6 pt-6 pb-0">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Settings size={18} className="text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-700 text-foreground">System Settings</h1>
-                <p className="text-sm text-muted-foreground">Configure document types, registries, notifications, and advanced system options</p>
+        <div className="flex h-full min-h-screen">
+          {/* Left Navigation */}
+          <aside className="w-56 shrink-0 border-r border-border bg-muted/20 flex flex-col">
+            {/* Sidebar Header */}
+            <div className="px-4 py-5 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
+                  <Settings size={15} className="text-primary" />
+                </div>
+                <span className="text-sm font-600 text-foreground">System Settings</span>
               </div>
             </div>
-          </div>
 
-          {/* Tab Bar */}
-          <div className="flex flex-wrap items-end gap-0 border-b border-border overflow-x-auto px-6 mt-4">
-            {renderTabGroup('Configuration', configTabs)}
-            <div className="w-px h-6 bg-border mx-1 self-center" />
-            {renderTabGroup('System', systemTabs)}
-            {canManage && (
-              <>
-                <div className="w-px h-6 bg-border mx-1 self-center" />
-                {renderTabGroup('Advanced', advancedTabs)}
-              </>
-            )}
-          </div>
+            {/* Nav Groups */}
+            <nav className="flex-1 overflow-y-auto py-2">
+              {NAV_GROUPS.map((group) => {
+                // Hide Advanced group if user can't manage
+                if (group.adminOnly && !canManage) return null;
+                const isGroupExpanded = expandedGroups[group.label] !== false;
+                const hasActiveItem = group.items.some((item) => item.id === activeSection);
 
-          {/* Tab Content */}
-          <div className="px-6 py-6">
-          {activeTab === 'document-types' && <DocumentTypesSettingsContent />}
-          {activeTab === 'collateral-type-documents' && <CollateralTypeDocumentsSettingsContent />}
-          {activeTab === 'registries' && <RegistriesSettingsContent />}
-          {activeTab === 'collateral-types' && <CollateralTypesSettingsContent />}
-          {activeTab === 'notifications' && <NotificationSettingsContent />}
-          {activeTab === 'email-provider' && (
-            canManage ? (
-              <EmailProviderSettingsContent />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Lock size={20} className="text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Managing email provider requires Settings Manage permission.
-                </p>
+                return (
+                  <div key={group.label} className="mb-1">
+                    <button
+                      onClick={() => toggleGroup(group.label)}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-xs font-600 uppercase tracking-wider transition-colors ${
+                        hasActiveItem
+                          ? 'text-primary' :'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={hasActiveItem ? 'text-primary' : 'text-muted-foreground'}>
+                          {group.icon}
+                        </span>
+                        {group.label}
+                      </div>
+                      <ChevronRight
+                        size={12}
+                        className={`transition-transform ${isGroupExpanded ? 'rotate-90' : ''}`}
+                      />
+                    </button>
+
+                    {isGroupExpanded && (
+                      <div className="ml-2 pl-3 border-l border-border/60 space-y-0.5 mb-1">
+                        {group.items.map((item) => {
+                          // Hide admin-only items if user can't manage
+                          if (item.adminOnly && !canManage) return null;
+                          const isActive = activeSection === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => handleNavClick(item.id, group.label)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors text-left ${
+                                isActive
+                                  ? 'bg-primary/10 text-primary font-600' :'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                              }`}
+                            >
+                              <span className={isActive ? 'text-primary' : 'text-muted-foreground/70'}>
+                                {item.icon}
+                              </span>
+                              {item.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            {/* Breadcrumb */}
+            <div className="px-6 pt-5 pb-0">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
+                <Settings size={12} />
+                <span>System Settings</span>
+                <ChevronRight size={11} />
+                <span className="text-muted-foreground/70">{activeGroupLabel}</span>
+                <ChevronRight size={11} />
+                <span className="text-foreground font-500">{activeSectionLabel}</span>
               </div>
-            )
-          )}
-          {activeTab === 'registry-integrations' && <RegistrySettingsContent />}
+            </div>
 
-          {/* Advanced / System Config tabs */}
-          {canManage && (['bank', 'registry', 'notifications-config', 'thresholds', 'retention'] as SettingsTab[]).includes(activeTab) && (() => {
-            const category = activeTab === 'notifications-config' ? 'notifications' : activeTab as ConfigCategory;
-            const tabDef = CONFIG_TABS.find((t) => t.id === category)!;
-            return configLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 bg-muted animate-pulse rounded-md" />
-                ))}
-              </div>
-            ) : (
-              <ConfigSection
-                tab={tabDef}
-                values={localValues[category]}
-                onChange={(key, value) => handleConfigChange(category, key, value)}
-                onSave={() => handleConfigSave(category)}
-                saving={saving === category}
-                saved={saved === category}
-                error={errors[category]}
-                lastUpdated={configs[tabDef.configKey]?.updatedAt ?? null}
-              />
-            );
-          })()}
-          </div>
+            {/* Content Area */}
+            <div className="px-6 pb-8">
+              {renderContent()}
+            </div>
+          </main>
         </div>
       )}
     </AppLayout>

@@ -1,11 +1,13 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { ClipboardList, Plus, Search, RefreshCw, AlertCircle, CheckCircle, XCircle, Clock, RotateCcw,  } from 'lucide-react';
+import { ClipboardList, Plus, Search, RefreshCw, AlertCircle, CheckCircle, XCircle, Clock, RotateCcw, X, Info } from 'lucide-react';
 import {
   archiveRequestService, archiveAuditService, ArchiveRequest, RequestStatus,
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
+import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
+
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; border: string }> = {
   pending:     { label: 'Pending',     bg: '#FFFBEB', text: '#B45309', border: '#FDE68A' },
@@ -129,7 +131,7 @@ function ActionModal({ request, action, userId, onClose, onDone }: ActionModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
         <h3 className="text-base font-bold mb-2" style={{ color: '#1E3A8A' }}>{titles[action]}</h3>
         <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
@@ -161,6 +163,126 @@ function ActionModal({ request, action, userId, onClose, onDone }: ActionModalPr
   );
 }
 
+// ─── Request Detail Panel (used inside drawer) ─────────────────────────────────
+
+function RequestDetailPanel({
+  request,
+  onClose,
+  onAction,
+}: {
+  request: ArchiveRequest;
+  onClose: () => void;
+  onAction: (action: 'approve' | 'reject' | 'return') => void;
+}) {
+  const sc = STATUS_CONFIG[request.requestStatus];
+  const isOverdue = request.expectedReturnDate && request.requestStatus === 'approved' && new Date(request.expectedReturnDate) < new Date();
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-200 shrink-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full border" style={{ backgroundColor: sc.bg, color: sc.text, borderColor: sc.border }}>
+                {sc.label}
+              </span>
+              {isOverdue && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">Overdue</span>
+              )}
+            </div>
+            <h2 className="text-base font-semibold text-gray-900">
+              {request.collateral?.collateral_type ?? 'Unknown'} — {request.collateral?.obligor ?? '—'}
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              By: {request.requestedByProfile?.full_name ?? '—'}
+            </p>
+          </div>
+          <button onClick={onClose} className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        {/* Purpose */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Purpose</h3>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex gap-2">
+            <Info size={14} className="shrink-0 mt-0.5 text-blue-500" />
+            <p className="text-sm text-gray-800">{request.purpose}</p>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Request Details</h3>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+            {[
+              { label: 'Collateral Type', value: request.collateral?.collateral_type ?? '—' },
+              { label: 'Obligor', value: request.collateral?.obligor ?? '—' },
+              { label: 'Requested By', value: request.requestedByProfile?.full_name ?? '—' },
+              { label: 'Expected Return', value: request.expectedReturnDate ?? '—' },
+              { label: 'Status', value: sc.label },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
+                <p className="text-sm text-gray-800 font-medium mt-0.5">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Final status */}
+        {(request.requestStatus === 'approved' || request.requestStatus === 'rejected' || request.requestStatus === 'returned') && (
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
+            request.requestStatus === 'approved' || request.requestStatus === 'returned'
+              ? 'bg-green-50 border border-green-200 text-green-700' :'bg-red-50 border border-red-200 text-red-700'
+          }`}>
+            {request.requestStatus === 'rejected' ? <XCircle size={16} /> : <CheckCircle size={16} />}
+            {sc.label}
+          </div>
+        )}
+      </div>
+
+      {/* Action Zone */}
+      {(request.requestStatus === 'pending' || request.requestStatus === 'approved') && (
+        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
+          <div className="flex items-center gap-2">
+            {request.requestStatus === 'pending' && (
+              <>
+                <button
+                  onClick={() => onAction('approve')}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                >
+                  <CheckCircle size={14} /> Approve
+                </button>
+                <button
+                  onClick={() => onAction('reject')}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                >
+                  <XCircle size={14} /> Reject
+                </button>
+              </>
+            )}
+            {request.requestStatus === 'approved' && (
+              <button
+                onClick={() => onAction('return')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors"
+                style={{ backgroundColor: '#0369A1' }}
+              >
+                <RotateCcw size={14} /> Mark Returned
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RequestWorkflowContent() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<ArchiveRequest[]>([]);
@@ -171,6 +293,8 @@ export default function RequestWorkflowContent() {
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all');
   const [showRaiseModal, setShowRaiseModal] = useState(false);
   const [actionModal, setActionModal] = useState<{ request: ArchiveRequest; action: 'approve' | 'reject' | 'return' } | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ArchiveRequest | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -196,6 +320,16 @@ export default function RequestWorkflowContent() {
     acc[r.requestStatus] = (acc[r.requestStatus] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  const handleSelectRequest = (req: ArchiveRequest) => {
+    setSelectedRequest(req);
+    setDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false);
+    setTimeout(() => setSelectedRequest(null), 300);
+  };
 
   return (
     <div className="p-6">
@@ -259,8 +393,17 @@ export default function RequestWorkflowContent() {
           {filtered.map((req) => {
             const sc = STATUS_CONFIG[req.requestStatus];
             const isOverdue = req.expectedReturnDate && req.requestStatus === 'approved' && new Date(req.expectedReturnDate) < new Date();
+            const isSelected = selectedRequest?.id === req.id && drawerOpen;
             return (
-              <div key={req.id} className="p-4 rounded-xl" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+              <div
+                key={req.id}
+                onClick={() => handleSelectRequest(req)}
+                className="p-4 rounded-xl cursor-pointer transition-all hover:shadow-sm"
+                style={{
+                  backgroundColor: isSelected ? '#EFF6FF' : '#F8FAFF',
+                  border: isSelected ? '2px solid #2563EB' : '1px solid #DBEAFE',
+                }}
+              >
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: sc.bg }}>
                     <ClipboardList size={16} style={{ color: sc.text }} />
@@ -289,8 +432,8 @@ export default function RequestWorkflowContent() {
                       )}
                     </div>
                   </div>
-                  {/* Actions */}
-                  <div className="flex gap-1.5 shrink-0">
+                  {/* Quick action buttons */}
+                  <div className="flex gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                     {req.requestStatus === 'pending' && (
                       <>
                         <button onClick={() => setActionModal({ request: req, action: 'approve' })}
@@ -319,6 +462,29 @@ export default function RequestWorkflowContent() {
           })}
         </div>
       )}
+
+      {/* Request Detail Drawer */}
+      <WorkflowDrawer
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        width="w-[480px]"
+        deadline={selectedRequest?.expectedReturnDate ?? undefined}
+        overdueHours={
+          selectedRequest?.expectedReturnDate &&
+          selectedRequest.requestStatus === 'approved' &&
+          new Date(selectedRequest.expectedReturnDate) < new Date()
+            ? Math.max(0, (Date.now() - new Date(selectedRequest.expectedReturnDate).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
+      >
+        {selectedRequest && (
+          <RequestDetailPanel
+            request={selectedRequest}
+            onClose={handleCloseDrawer}
+            onAction={(action) => setActionModal({ request: selectedRequest, action })}
+          />
+        )}
+      </WorkflowDrawer>
 
       {showRaiseModal && (
         <RaiseRequestModal

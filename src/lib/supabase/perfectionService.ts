@@ -232,6 +232,14 @@ export const perfectionService = {
     userRole: string
   ): Promise<boolean> {
     const supabase = createClient();
+
+    // Fetch current record for audit trail + workflow instance linking
+    const { data: current } = await supabase
+      .from('perfection_requests')
+      .select('request_status, collateral_id, title')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error: updateError } = await supabase
       .from('perfection_requests')
       .update({
@@ -255,6 +263,26 @@ export const perfectionService = {
         performed_by_role: userRole,
       });
     if (commentError) throw commentError;
+
+    // ── Write audit trail ────────────────────────────────────────────────────
+    await supabase.from('audit_logs').insert({
+      collateral_id: current?.collateral_id ?? null,
+      entity_type: 'perfection_request',
+      action: 'approved',
+      message: `Perfection request approved: ${current?.title ?? id}`,
+      detail: `Status changed from ${current?.request_status ?? 'Under Review'} to Approved. ${decisionNotes ? `Notes: ${decisionNotes}` : ''}`,
+      reason: decisionNotes || null,
+      performed_by: userId,
+      performed_by_name: userName,
+      event_category: 'status_transition',
+      field_changes: [
+        { field: 'request_status', label: 'Status', old_value: current?.request_status ?? 'Under Review', new_value: 'Approved' },
+      ],
+    }).then(() => {}).catch((e) => console.warn('[perfection] audit log failed:', e.message));
+
+    // ── Sync workflow_instances ──────────────────────────────────────────────
+    await _syncWorkflowInstance(supabase, id, 'perfection_request', 'approve', userId, userName, userRole, decisionNotes);
+
     return true;
   },
 
@@ -266,6 +294,13 @@ export const perfectionService = {
     userRole: string
   ): Promise<boolean> {
     const supabase = createClient();
+
+    const { data: current } = await supabase
+      .from('perfection_requests')
+      .select('request_status, collateral_id, title')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error: updateError } = await supabase
       .from('perfection_requests')
       .update({
@@ -289,6 +324,26 @@ export const perfectionService = {
         performed_by_role: userRole,
       });
     if (commentError) throw commentError;
+
+    // ── Write audit trail ────────────────────────────────────────────────────
+    await supabase.from('audit_logs').insert({
+      collateral_id: current?.collateral_id ?? null,
+      entity_type: 'perfection_request',
+      action: 'rejected',
+      message: `Perfection request rejected: ${current?.title ?? id}`,
+      detail: `Status changed from ${current?.request_status ?? 'Under Review'} to Rejected. Reason: ${decisionNotes}`,
+      reason: decisionNotes || null,
+      performed_by: userId,
+      performed_by_name: userName,
+      event_category: 'status_transition',
+      field_changes: [
+        { field: 'request_status', label: 'Status', old_value: current?.request_status ?? 'Under Review', new_value: 'Rejected' },
+      ],
+    }).then(() => {}).catch((e) => console.warn('[perfection] audit log failed:', e.message));
+
+    // ── Sync workflow_instances ──────────────────────────────────────────────
+    await _syncWorkflowInstance(supabase, id, 'perfection_request', 'reject', userId, userName, userRole, decisionNotes);
+
     return true;
   },
 
@@ -365,6 +420,13 @@ export const perfectionService = {
     userRole: string
   ): Promise<boolean> {
     const supabase = createClient();
+
+    const { data: current } = await supabase
+      .from('perfection_requests')
+      .select('request_status, collateral_id, title')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error: updateError } = await supabase
       .from('perfection_requests')
       .update({
@@ -388,6 +450,26 @@ export const perfectionService = {
         performed_by_role: userRole,
       });
     if (commentError) throw commentError;
+
+    // ── Write audit trail ────────────────────────────────────────────────────
+    await supabase.from('audit_logs').insert({
+      collateral_id: current?.collateral_id ?? null,
+      entity_type: 'perfection_request',
+      action: 'perfected',
+      message: `Collateral perfected: ${current?.title ?? id}`,
+      detail: `Status changed from ${current?.request_status ?? 'Under Review'} to Perfected. ${decisionNotes ? `Notes: ${decisionNotes}` : ''}`,
+      reason: decisionNotes || null,
+      performed_by: userId,
+      performed_by_name: userName,
+      event_category: 'status_transition',
+      field_changes: [
+        { field: 'request_status', label: 'Status', old_value: current?.request_status ?? 'Under Review', new_value: 'Perfected' },
+      ],
+    }).then(() => {}).catch((e) => console.warn('[perfection] audit log failed:', e.message));
+
+    // ── Sync workflow_instances ──────────────────────────────────────────────
+    await _syncWorkflowInstance(supabase, id, 'perfection_request', 'approve', userId, userName, userRole, decisionNotes);
+
     return true;
   },
 
@@ -402,3 +484,68 @@ export const perfectionService = {
     return (data ?? []).map(rowToHistory);
   },
 };
+
+// ── Internal helper: sync workflow_instance state on approve/reject ────────────
+
+async function _syncWorkflowInstance(
+  supabase: ReturnType<typeof createClient>,
+  referenceId: string,
+  referenceType: string,
+  action: 'approve' | 'reject',
+  performedBy: string,
+  performedByName: string,
+  performedByRole: string,
+  comment?: string,
+): Promise<void> {
+  try {
+    const { data: instances } = await supabase
+      .from('workflow_instances')
+      .select('id, instance_status')
+      .eq('reference_id', referenceId)
+      .eq('reference_type', referenceType)
+      .in('instance_status', ['active', 'escalated'])
+      .limit(1);
+
+    const instance = instances?.[0];
+    if (!instance) return;
+
+    const { data: currentStep } = await supabase
+      .from('workflow_instance_steps')
+      .select('id, step_id')
+      .eq('instance_id', instance.id)
+      .eq('step_status', 'active')
+      .maybeSingle();
+
+    const now = new Date().toISOString();
+    if (currentStep) {
+      await supabase.from('workflow_instance_steps').update({
+        step_status: action === 'approve' ? 'completed' : 'rejected',
+        completed_at: now,
+        completed_by: performedBy,
+        action_taken: action,
+        notes: comment ?? null,
+      }).eq('id', currentStep.id);
+    }
+
+    await supabase.from('workflow_instances').update({
+      instance_status: action === 'approve' ? 'completed' : 'cancelled',
+      current_step_id: null,
+      completed_by: performedBy,
+      completed_at: now,
+    }).eq('id', instance.id);
+
+    await supabase.from('workflow_transition_log').insert({
+      instance_id: instance.id,
+      instance_step_id: currentStep?.id ?? null,
+      from_step_id: currentStep?.step_id ?? null,
+      to_step_id: null,
+      action,
+      performed_by: performedBy,
+      performed_by_name: performedByName,
+      performed_by_role: performedByRole,
+      comment: comment ?? null,
+    });
+  } catch (err) {
+    console.warn('[perfection] workflow instance sync failed:', err);
+  }
+}

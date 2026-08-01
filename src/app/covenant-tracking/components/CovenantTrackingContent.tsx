@@ -14,6 +14,9 @@ import {
 } from '@/lib/supabase/covenantService';
 import { useAuth } from '@/contexts/AuthContext';
 import { triggerCovenantBreachSms } from '@/lib/supabase/smsNotificationRulesService';
+import { workflowLookupsService, type CollateralOption, type LoanOption, type FacilityOption } from '@/lib/supabase/workflowLookupsService';
+import SearchableSelect, { type SelectOption } from '@/components/ui/SearchableSelect';
+import { useSearchParams } from 'next/navigation';
 
 const STATUS_COLORS: Record<CovenantStatus, string> = {
   Active: 'bg-green-100 text-green-700',
@@ -45,6 +48,7 @@ function daysUntil(d: string | null): number | null {
 
 export default function CovenantTrackingContent() {
   const { userProfile } = useAuth();
+  const searchParams = useSearchParams();
   const [covenants, setCovenants] = useState<LoanCovenant[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, breached: 0, waived: 0, expired: 0 });
   const [loading, setLoading] = useState(true);
@@ -52,6 +56,12 @@ export default function CovenantTrackingContent() {
   const [filterStatus, setFilterStatus] = useState<CovenantStatus | 'All'>('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Lookup data
+  const [collateralOptions, setCollateralOptions] = useState<CollateralOption[]>([]);
+  const [loanOptions, setLoanOptions] = useState<LoanOption[]>([]);
+  const [facilityOptions, setFacilityOptions] = useState<FacilityOption[]>([]);
+  const [lookupsLoading, setLookupsLoading] = useState(false);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -96,6 +106,43 @@ export default function CovenantTrackingContent() {
   }, [filterStatus]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Load lookups when modal opens
+  const loadLookups = useCallback(async () => {
+    if (collateralOptions.length > 0) return;
+    setLookupsLoading(true);
+    try {
+      const [cols, loans] = await Promise.all([
+        workflowLookupsService.getCollateralOptions(),
+        workflowLookupsService.getLoanOptions(),
+      ]);
+      setCollateralOptions(cols);
+      setLoanOptions(loans);
+      setFacilityOptions(workflowLookupsService.deriveFacilityOptions(cols));
+    } catch { /* silent */ } finally {
+      setLookupsLoading(false);
+    }
+  }, [collateralOptions.length]);
+
+  // Handle contextual pre-fill from URL params
+  useEffect(() => {
+    const loanId = searchParams.get('loanId');
+    const facilityId = searchParams.get('facilityId');
+    if (loanId || facilityId) {
+      setCreateForm((f) => ({
+        ...f,
+        loanId: loanId ?? f.loanId,
+        facilityId: facilityId ?? f.facilityId,
+      }));
+      setShowCreateModal(true);
+      loadLookups();
+    }
+  }, [searchParams, loadLookups]);
+
+  const openCreateModal = () => {
+    setShowCreateModal(true);
+    loadLookups();
+  };
 
   const handleCreate = async () => {
     if (!createForm.loanId || !createForm.covenantName) return;
@@ -169,6 +216,20 @@ export default function CovenantTrackingContent() {
 
   const filtered = filterStatus === 'All' ? covenants : covenants.filter((c) => c.covenantStatus === filterStatus);
 
+  // Build select options
+  const loanSelectOptions: SelectOption[] = loanOptions.map((l) => ({
+    value: l.id,
+    label: l.loanNumber,
+    sublabel: `${l.obligorName} · ${l.facilityType}`,
+    badge: l.loanStatus,
+  }));
+
+  const facilitySelectOptions: SelectOption[] = facilityOptions.map((f) => ({
+    value: f.facilityId,
+    label: f.facilityId,
+    sublabel: collateralOptions.filter((c) => c.facilityId === f.facilityId).map((c) => c.description).slice(0, 2).join(', '),
+  }));
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -180,7 +241,7 @@ export default function CovenantTrackingContent() {
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500"><RefreshCw size={16} /></button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
             style={{ backgroundColor: '#003c5a' }}
           >
@@ -346,14 +407,23 @@ export default function CovenantTrackingContent() {
             <div className="p-6 border-b border-gray-100"><h2 className="text-lg font-semibold text-gray-900">Add Covenant</h2></div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Loan ID (UUID) *</label>
-                  <input type="text" value={createForm.loanId} onChange={(e) => setCreateForm((f) => ({ ...f, loanId: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Facility ID</label>
-                  <input type="text" value={createForm.facilityId} onChange={(e) => setCreateForm((f) => ({ ...f, facilityId: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
+                <SearchableSelect
+                  label="Loan *"
+                  required
+                  options={loanSelectOptions}
+                  value={createForm.loanId}
+                  onChange={(v) => setCreateForm((f) => ({ ...f, loanId: v }))}
+                  placeholder="Select loan…"
+                  loading={lookupsLoading}
+                />
+                <SearchableSelect
+                  label="Facility"
+                  options={facilitySelectOptions}
+                  value={createForm.facilityId}
+                  onChange={(v) => setCreateForm((f) => ({ ...f, facilityId: v }))}
+                  placeholder="Select facility…"
+                  loading={lookupsLoading}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Covenant Name *</label>

@@ -135,7 +135,8 @@ export async function updateSubstitutionStatus(
   oldStatus: string,
   notes?: string,
   rejectionReason?: string,
-  effectiveDate?: string
+  effectiveDate?: string,
+  userRole?: string,
 ): Promise<void> {
   const supabase = createClient();
   const updatePayload: any = { substitution_status: newStatus };
@@ -156,7 +157,7 @@ export async function updateSubstitutionStatus(
     .eq('id', id);
   if (updateError) throw updateError;
 
-  // Append audit trail
+  // Append substitution-specific audit trail
   await supabase.from('substitution_audit_trail').insert({
     substitution_id: id,
     action: `Status changed to ${newStatus}`,
@@ -166,6 +167,78 @@ export async function updateSubstitutionStatus(
     new_status: newStatus,
     notes,
   });
+
+  // ── Write to global audit_logs ─────────────────────────────────────────────
+  const actionLabel = newStatus === 'Approved' ? 'approved' : newStatus === 'Rejected' ? 'rejected' : 'status_changed';
+  await supabase.from('audit_logs').insert({
+    entity_type: 'collateral_substitution',
+    action: actionLabel,
+    message: `Collateral substitution ${actionLabel}: ${id}`,
+    detail: `Status changed from ${oldStatus} to ${newStatus}${notes ? `. Notes: ${notes}` : ''}${rejectionReason ? `. Reason: ${rejectionReason}` : ''}`,
+    reason: rejectionReason ?? notes ?? null,
+    performed_by: userId,
+    performed_by_name: userName,
+    event_category: 'status_transition',
+    field_changes: [
+      { field: 'substitution_status', label: 'Status', old_value: oldStatus, new_value: newStatus },
+    ],
+  }).then(() => {}).catch((e) => console.warn('[substitution] audit log failed:', e.message));
+
+  // ── Sync workflow_instances if a linked instance exists ────────────────────
+  if (newStatus === 'Approved' || newStatus === 'Rejected') {
+    try {
+      const { data: instances } = await supabase
+        .from('workflow_instances')
+        .select('id, instance_status')
+        .eq('reference_id', id)
+        .eq('reference_type', 'collateral_substitution')
+        .in('instance_status', ['active', 'escalated'])
+        .limit(1);
+
+      const instance = instances?.[0];
+      if (instance) {
+        const wfAction = newStatus === 'Approved' ? 'approve' : 'reject';
+        const { data: currentStep } = await supabase
+          .from('workflow_instance_steps')
+          .select('id, step_id')
+          .eq('instance_id', instance.id)
+          .eq('step_status', 'active')
+          .maybeSingle();
+
+        const now = new Date().toISOString();
+        if (currentStep) {
+          await supabase.from('workflow_instance_steps').update({
+            step_status: wfAction === 'approve' ? 'completed' : 'rejected',
+            completed_at: now,
+            completed_by: userId,
+            action_taken: wfAction,
+            notes: notes ?? rejectionReason ?? null,
+          }).eq('id', currentStep.id);
+        }
+
+        await supabase.from('workflow_instances').update({
+          instance_status: wfAction === 'approve' ? 'completed' : 'cancelled',
+          current_step_id: null,
+          completed_by: userId,
+          completed_at: now,
+        }).eq('id', instance.id);
+
+        await supabase.from('workflow_transition_log').insert({
+          instance_id: instance.id,
+          instance_step_id: currentStep?.id ?? null,
+          from_step_id: currentStep?.step_id ?? null,
+          to_step_id: null,
+          action: wfAction,
+          performed_by: userId,
+          performed_by_name: userName,
+          performed_by_role: userRole ?? null,
+          comment: notes ?? rejectionReason ?? null,
+        }).then(() => {}).catch((e) => console.warn('[substitution] workflow transition log failed:', e.message));
+      }
+    } catch (err) {
+      console.warn('[substitution] workflow instance sync failed:', err);
+    }
+  }
 }
 
 export async function getSubstitutionAuditTrail(

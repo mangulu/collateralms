@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, SlidersHorizontal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, KeyRound, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, CheckSquare, LayoutGrid } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -43,7 +43,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'Registry',
         items: [
-          { label: 'Collateral Registry', icon: FolderOpen, href: '/collateral-management', badge: '3', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Collateral Registry', icon: FolderOpen, href: '/collateral-management', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Loan–Collateral Map', icon: GitMerge, href: '/collateral-loan-visualization', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Collateral Documents', icon: Files, href: '/collateral-documents', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
@@ -63,6 +63,8 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Collateral Substitution', icon: ArrowLeftRight, href: '/collateral-substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Covenant Tracking', icon: Scale, href: '/covenant-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Insurance Tracking', icon: Shield, href: '/insurance-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Settlement Status', icon: HandCoins, href: '/collateral-settlement', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Post-Settlement Workflow', icon: ClipboardCheck, href: '/post-settlement-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
         ],
       },
     ],
@@ -76,6 +78,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Obligors', icon: Users, href: '/obligors', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Loan Facilities', icon: Landmark, href: '/loans', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Loan Registry', icon: ClipboardList, href: '/loan-registry', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -88,25 +91,48 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Overview',
         items: [
           { label: 'Workflows Dashboard', icon: LayoutGrid, href: '/workflows', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Task List', icon: CheckSquare, href: '/workflows/tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
-        label: 'Approvals',
+        label: 'My Actions',
         items: [
           { label: 'Approvals', icon: ShieldCheck, href: '/approvals', permission: PERMISSIONS.PERFECTION_REVIEW },
           { label: 'Perfection Queue', icon: GitBranch, href: '/approval-inbox', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Perfection Workflow', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Document Approval', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Release Approval', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Perfection', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Document Approvals', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Release Approvals', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Valuation Reviews', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Archive Requests', icon: FolderArchive, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'workflows-admin',
+    label: 'Workflows Administration',
+    groups: [
+      {
+        label: 'Overview',
+        items: [
+          { label: 'Admin Dashboard', icon: Settings2, href: '/workflows-admin', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
       {
-        label: 'Workflow Processes',
+        label: 'Monitoring',
         items: [
-          { label: 'Valuation Reviews', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
-          { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
-          { label: 'Archive Request Workflow', icon: FolderArchive, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Active Instances', icon: Activity, href: '/workflows-admin/instances', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Process Analytics & KPIs', icon: TrendingUp, href: '/workflows-admin/process-analytics', permission: PERMISSIONS.SETTINGS_VIEW },
+        ],
+      },
+      {
+        label: 'Configuration',
+        items: [
+          { label: 'Workflow Templates', icon: Layers, href: '/workflows-admin/templates', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Auto-Trigger Rules', icon: Zap, href: '/workflows-admin/trigger-rules', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Escalation Config', icon: AlertTriangle, href: '/workflows-admin/escalation', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Trigger Processor', icon: Play, href: '/workflows-admin/trigger-processor', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Migration Tool', icon: Settings2, href: '/workflows-admin/migration', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
     ],
@@ -206,10 +232,8 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'User Management', icon: Users, href: '/user-management', permission: PERMISSIONS.USER_MANAGEMENT_VIEW },
           { label: 'Officer Management', icon: UserCog, href: '/officer-management', permission: PERMISSIONS.USER_MANAGEMENT_MANAGE },
-          { label: 'Officer Permissions', icon: KeyRound, href: '/officer-permissions', permission: PERMISSIONS.USER_MANAGEMENT_MANAGE },
           { label: 'Client Bank Accounts', icon: Landmark, href: '/client-bank-accounts', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Settings', icon: Settings, href: '/settings', permission: PERMISSIONS.SETTINGS_VIEW },
-          { label: 'Alert Thresholds', icon: SlidersHorizontal, href: '/alert-thresholds', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
     ],
@@ -229,16 +253,14 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Documents',
         items: [
           { label: 'Documents Library', icon: Library, href: '/archive/documents-library', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Document Management', icon: FolderArchive, href: '/document-management', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
         label: 'Workflow',
         items: [
-          { label: 'Request Workflow', icon: ClipboardCheck, href: '/archive/request-workflow', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Request Status', icon: ListChecks, href: '/archive/request-status', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Custody Tracker', icon: Eye, href: '/archive/custody-tracker', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Chain of Custody', icon: Link2, href: '/archive/chain-of-custody', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Access Requests', icon: ClipboardCheck, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'File Location Status', icon: MapPin, href: '/archive/file-location-status', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Custody', icon: Eye, href: '/archive/custody', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
@@ -269,6 +291,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/document-approval': 'approvals',
   '/obligors': 'obligors',
   '/loans': 'obligors',
+  '/loan-registry': 'obligors',
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'approvals',
@@ -280,6 +303,12 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/onboarding-guide': 'administration',
   '/officer-management': 'administration',
   '/user-profile': 'administration',
+  '/workflows-admin': 'workflows-admin',
+  '/archive/request-workflow': 'archive',
+  '/archive/request-status': 'archive',
+  '/archive/custody-tracker': 'archive',
+  '/archive/chain-of-custody': 'archive',
+  '/archive/occupancy-heatmap': 'archive',
 };
 
 /**

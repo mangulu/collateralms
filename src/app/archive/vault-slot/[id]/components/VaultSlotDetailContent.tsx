@@ -4,15 +4,17 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, RefreshCw, FileText, Trash2, MoveRight, AlertCircle,
   Package, Search, ChevronRight, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3, X, Check,
-  CheckSquare, Square, CheckCheck, Loader2,
+  CheckSquare, Square, CheckCheck, Loader2, Plus,
 } from 'lucide-react';
 import {
   archiveLocationService,
   archivePlacementService,
+  archiveAuditService,
   ArchiveLocation,
   ArchivePlacement,
   LocationType,
 } from '@/lib/supabase/archiveService';
+import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import SlotTimelineLog from './SlotTimelineLog';
@@ -414,6 +416,206 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
   );
 }
 
+// ─── File Collateral Modal ────────────────────────────────────────────────────
+
+interface FileCollateralModalProps {
+  slotId: string;
+  slotName: string;
+  userId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+function generatePhysicalRef(): string {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `PHY-${date}-${rand}`;
+}
+
+function FileCollateralModal({ slotId, slotName, userId, onClose, onSaved }: FileCollateralModalProps) {
+  const [collaterals, setCollaterals] = useState<CollateralRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState('');
+  const [physicalRef, setPhysicalRef] = useState(generatePhysicalRef());
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    collateralService.getAll().then((data) => {
+      setCollaterals(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const filtered = collaterals.filter((c) => {
+    const q = search.toLowerCase();
+    return !q || c.type?.toLowerCase().includes(q) || c.obligor?.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q);
+  });
+
+  const handleSave = async () => {
+    if (!selectedId) { setError('Please select a collateral.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await archivePlacementService.upsert({
+        collateralId: selectedId,
+        locationId: slotId,
+        physicalRef: physicalRef.trim() || generatePhysicalRef(),
+        notes: notes.trim() || undefined,
+        placedBy: userId,
+      });
+      await archiveAuditService.log({
+        eventType: 'placement_assigned',
+        collateralId: selectedId,
+        locationId: slotId,
+        performedBy: userId,
+        description: `Filed directly from slot page — physical ref ${physicalRef}`,
+      });
+      onSaved();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to file collateral');
+    } finally { setSaving(false); }
+  };
+
+  const selected = collaterals.find((c) => c.id === selectedId);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#E5E7EB' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+              📂
+            </div>
+            <div>
+              <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>File Collateral</h3>
+              <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>Filing into: {slotName}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X size={16} style={{ color: '#6B7280' }} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 text-red-700 text-sm">
+              <AlertCircle size={14} /> {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+              Select Collateral *
+            </label>
+            <div className="relative mb-2">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by type, obligor, description…"
+                className="w-full border rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                style={{ borderColor: '#D1D5DB' }}
+              />
+            </div>
+            <div className="border rounded-xl overflow-hidden max-h-52 overflow-y-auto" style={{ borderColor: '#E5E7EB' }}>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 size={20} className="animate-spin" style={{ color: '#2563EB' }} />
+                </div>
+              ) : filtered.length === 0 ? (
+                <p className="text-xs text-center py-8" style={{ color: '#9CA3AF' }}>
+                  {search ? 'No matching collaterals' : 'No collaterals available'}
+                </p>
+              ) : (
+                filtered.map((c) => {
+                  const isSelected = selectedId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedId(c.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left border-b last:border-b-0 transition-colors"
+                      style={{
+                        borderColor: '#F3F4F6',
+                        backgroundColor: isSelected ? '#EFF6FF' : 'white',
+                      }}
+                    >
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD' }}>
+                        <FileText size={13} style={{ color: '#2563EB' }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: '#1E3A8A' }}>
+                          {c.description ?? c.type}
+                        </p>
+                        <p className="text-xs" style={{ color: '#6B7280' }}>
+                          {c.type} · {c.obligor}
+                        </p>
+                      </div>
+                      {isSelected && <Check size={14} style={{ color: '#2563EB' }} className="shrink-0" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {selected && (
+            <div className="p-3 rounded-xl" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+              <p className="text-xs font-semibold mb-1" style={{ color: '#1D4ED8' }}>Selected:</p>
+              <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>{selected.description ?? selected.type}</p>
+              <p className="text-xs" style={{ color: '#6B7280' }}>{selected.type} · {selected.obligor}</p>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Physical Reference</label>
+            <input
+              value={physicalRef}
+              onChange={(e) => setPhysicalRef(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+              style={{ borderColor: '#D1D5DB' }}
+            />
+            <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Auto-generated — edit if needed</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Notes (optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              style={{ borderColor: '#D1D5DB' }}
+              placeholder="Any filing notes…"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 p-5 border-t" style={{ borderColor: '#E5E7EB' }}>
+          <button onClick={onClose}
+            className="flex-1 py-2 rounded-lg text-sm font-medium border"
+            style={{ borderColor: '#D1D5DB', color: '#374151' }}>
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !selectedId}
+            className="flex-1 py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2 transition-opacity"
+            style={{ backgroundColor: '#2563EB', opacity: saving || !selectedId ? 0.5 : 1 }}>
+            {saving ? <><Loader2 size={14} className="animate-spin" /> Filing…</> : <><Plus size={14} /> File Collateral</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Collateral Detail Drawer ─────────────────────────────────────────────────
 
 interface CollateralDetailDrawerProps {
@@ -510,6 +712,9 @@ export default function VaultSlotDetailContent() {
   const [bulkReceiving, setBulkReceiving] = useState(false);
   const [confirmBulkRemove, setConfirmBulkRemove] = useState(false);
   const [bulkActionResult, setBulkActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // File collateral
+  const [showFileModal, setShowFileModal] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -679,11 +884,19 @@ export default function VaultSlotDetailContent() {
             </p>
           </div>
         </div>
-        <button onClick={load}
-          className="p-2 rounded-lg border transition-colors hover:bg-blue-50 shrink-0"
-          style={{ borderColor: '#BFDBFE' }}>
-          <RefreshCw size={16} style={{ color: '#2563EB' }} />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setShowFileModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
+            style={{ backgroundColor: '#2563EB' }}>
+            <Plus size={15} /> File Collateral
+          </button>
+          <button onClick={load}
+            className="p-2 rounded-lg border transition-colors hover:bg-blue-50"
+            style={{ borderColor: '#BFDBFE' }}>
+            <RefreshCw size={16} style={{ color: '#2563EB' }} />
+          </button>
+        </div>
       </div>
 
       {/* Slot stats */}
@@ -872,13 +1085,14 @@ export default function VaultSlotDetailContent() {
           <Package size={40} className="mx-auto mb-3" style={{ color: '#BAE6FD' }} />
           <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>This slot is empty</p>
           <p className="text-xs mt-1 mb-4" style={{ color: '#6B7280' }}>
-            File collaterals into this slot from the Collateral Filing screen
+            File a collateral directly into this slot
           </p>
           <button
-            onClick={() => router.push('/archive/collateral-placement')}
+            onClick={() => setShowFileModal(true)}
             className="px-4 py-2 rounded-xl text-sm font-medium text-white"
             style={{ backgroundColor: '#2563EB' }}>
-            Go to Collateral Filing
+            <Plus size={14} className="inline mr-1.5" />
+            File Collateral
           </button>
         </div>
       ) : filtered.length === 0 ? (
@@ -1009,6 +1223,17 @@ export default function VaultSlotDetailContent() {
             );
           })}
         </div>
+      )}
+
+      {/* File Collateral Modal */}
+      {showFileModal && slot && (
+        <FileCollateralModal
+          slotId={slot.id}
+          slotName={slot.name}
+          userId={user?.id ?? ''}
+          onClose={() => setShowFileModal(false)}
+          onSaved={() => { setShowFileModal(false); load(); }}
+        />
       )}
 
       {/* Single Move Modal */}

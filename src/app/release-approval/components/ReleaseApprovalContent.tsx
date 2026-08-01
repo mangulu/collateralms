@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Unlock, CheckCircle, XCircle, Clock, Search, Eye,
   AlertCircle, FileText, User, Calendar, DollarSign,
@@ -7,6 +7,12 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  releaseRequestService,
+  type ReleaseRequest,
+  type ReleaseRequestStatus,
+} from '@/lib/supabase/releaseRequestService';
+import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 interface ReleaseRequest {
   id: string;
@@ -22,75 +28,6 @@ interface ReleaseRequest {
   priority: 'High' | 'Normal' | 'Low';
   notes?: string;
 }
-
-const MOCK_REQUESTS: ReleaseRequest[] = [
-  {
-    id: 'REL-001',
-    collateralRef: 'COL-2024-0045',
-    collateralType: 'Land Title',
-    clientName: 'Karibu Enterprises Ltd',
-    loanRef: 'LN-2024-1123',
-    estimatedValue: 450000000,
-    requestedBy: 'James Mwangi',
-    requestedDate: '2026-07-14',
-    releaseReason: 'Loan fully repaid — collateral discharge requested',
-    status: 'Pending',
-    priority: 'High',
-  },
-  {
-    id: 'REL-002',
-    collateralRef: 'COL-2024-0078',
-    collateralType: 'Motor Vehicle',
-    clientName: 'Simba Trading Co.',
-    loanRef: 'LN-2024-0987',
-    estimatedValue: 85000000,
-    requestedBy: 'Grace Odhiambo',
-    requestedDate: '2026-07-13',
-    releaseReason: 'Partial settlement — releasing secondary collateral',
-    status: 'Under Review',
-    priority: 'Normal',
-  },
-  {
-    id: 'REL-003',
-    collateralRef: 'COL-2023-0312',
-    collateralType: 'Commercial Property',
-    clientName: 'Nguvu Holdings',
-    loanRef: 'LN-2023-0456',
-    estimatedValue: 1200000000,
-    requestedBy: 'Peter Kamau',
-    requestedDate: '2026-07-12',
-    releaseReason: 'Collateral substitution approved — releasing original',
-    status: 'Approved',
-    priority: 'Normal',
-  },
-  {
-    id: 'REL-004',
-    collateralRef: 'COL-2024-0091',
-    collateralType: 'Equipment',
-    clientName: 'Jua Kali Manufacturers',
-    loanRef: 'LN-2024-0234',
-    estimatedValue: 32000000,
-    requestedBy: 'Alice Wanjiku',
-    requestedDate: '2026-07-11',
-    releaseReason: 'Loan restructured — collateral no longer required',
-    status: 'Rejected',
-    priority: 'Low',
-    notes: 'Outstanding balance remains. Release denied pending full settlement.',
-  },
-  {
-    id: 'REL-005',
-    collateralRef: 'COL-2024-0103',
-    collateralType: 'Fixed Deposit',
-    clientName: 'Amani Savings Group',
-    loanRef: 'LN-2024-0567',
-    estimatedValue: 15000000,
-    requestedBy: 'David Otieno',
-    requestedDate: '2026-07-10',
-    releaseReason: 'Loan matured and fully settled',
-    status: 'Pending',
-    priority: 'Normal',
-  },
-];
 
 const STATUS_CONFIG: Record<ReleaseRequest['status'], { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   Pending:        { label: 'Pending',      color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200',  icon: <Clock size={12} /> },
@@ -111,29 +48,145 @@ function formatCurrency(amount: number): string {
   return `TZS ${amount.toLocaleString()}`;
 }
 
-// ─── Detail Panel ─────────────────────────────────────────────────────────────
+// ─── Action Dialog ─────────────────────────────────────────────────────────────
+
+interface ActionDialogState {
+  open: boolean;
+  request: ReleaseRequest | null;
+  action: 'Approved' | 'Rejected' | 'Under Review' | null;
+}
+
+interface ActionDialogProps {
+  state: ActionDialogState;
+  onClose: () => void;
+  onSubmit: (action: 'Approved' | 'Rejected' | 'Under Review', note: string) => void;
+  processing: boolean;
+}
+
+function ActionDialog({ state, onClose, onSubmit, processing }: ActionDialogProps) {
+  const [note, setNote] = useState('');
+
+  React.useEffect(() => {
+    if (state.open) setNote('');
+  }, [state.open]);
+
+  if (!state.open || !state.request || !state.action) return null;
+
+  const config = {
+    Approved: {
+      title: 'Approve Release',
+      description: 'Approve this collateral release request. The collateral will be discharged from the facility.',
+      placeholder: 'Add approval note (optional)…',
+      buttonLabel: 'Approve Release',
+      buttonStyle: 'bg-green-600 hover:bg-green-700 text-white',
+      icon: <CheckCircle size={20} className="text-green-600" />,
+      required: false,
+    },
+    Rejected: {
+      title: 'Reject Release',
+      description: 'Reject this release request. Please provide a clear reason for the submitter.',
+      placeholder: 'Reason for rejection (required)…',
+      buttonLabel: 'Reject Release',
+      buttonStyle: 'bg-red-600 hover:bg-red-700 text-white',
+      icon: <XCircle size={20} className="text-red-600" />,
+      required: true,
+    },
+    'Under Review': {
+      title: 'Mark Under Review',
+      description: 'Flag this request as currently under review. You can approve or reject it later.',
+      placeholder: 'Review notes (optional)…',
+      buttonLabel: 'Mark Under Review',
+      buttonStyle: 'bg-blue-600 hover:bg-blue-700 text-white',
+      icon: <Eye size={20} className="text-blue-600" />,
+      required: false,
+    },
+  }[state.action];
+
+  const canSubmit = !config.required || note.trim().length > 0;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            {config.icon}
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">{config.title}</h3>
+              <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{state.request.collateralRef} · {state.request.clientName}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Collateral Type</span>
+              <span className="font-medium text-gray-800">{state.request.collateralType}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Loan Reference</span>
+              <span className="font-medium text-gray-800">{state.request.loanRef}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Estimated Value</span>
+              <span className="font-medium text-gray-800">{formatCurrency(state.request.estimatedValue)}</span>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600">{config.description}</p>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Notes {config.required && <span className="text-red-500">*</span>}
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={config.placeholder}
+              rows={4}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          <button
+            onClick={onClose}
+            disabled={processing}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(state.action!, note)}
+            disabled={!canSubmit || processing}
+            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 ${config.buttonStyle}`}
+          >
+            {processing && <Loader2 size={14} className="animate-spin" />}
+            {config.buttonLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Detail Panel (used inside drawer) ────────────────────────────────────────
 
 function DetailPanel({
   request,
   onClose,
-  onAction,
-  actionNote,
-  setActionNote,
-  processing,
+  onOpenAction,
 }: {
   request: ReleaseRequest;
   onClose: () => void;
-  onAction: (action: 'Approved' | 'Rejected' | 'Under Review') => void;
-  actionNote: string;
-  setActionNote: (v: string) => void;
-  processing: boolean;
+  onOpenAction: (action: 'Approved' | 'Rejected' | 'Under Review') => void;
 }) {
   const statusCfg = STATUS_CONFIG[request.status];
   const priorityCfg = PRIORITY_CONFIG[request.priority];
   const isActive = request.status === 'Pending' || request.status === 'Under Review';
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
+    <div className="flex flex-col h-full min-h-0">
       {/* Panel Header */}
       <div className="px-5 py-4 border-b border-gray-200 shrink-0">
         <div className="flex items-start justify-between gap-3">
@@ -197,6 +250,16 @@ function DetailPanel({
             </div>
           </div>
         )}
+
+        {/* Final status banner */}
+        {(request.status === 'Approved' || request.status === 'Rejected') && (
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
+            request.status === 'Approved' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+          }`}>
+            {request.status === 'Approved' ? <CheckCircle size={16} /> : <XCircle size={16} />}
+            This request has been {request.status.toLowerCase()}.
+          </div>
+        )}
       </div>
 
       {/* Action Zone */}
@@ -206,54 +269,30 @@ function DetailPanel({
           <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
             <p className="text-xs text-gray-500 flex items-center gap-1.5">
               <ShieldCheck size={12} className="text-teal-600" />
-              Review the release request before making a decision.
+              Review the request details, then choose an action below.
             </p>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1.5">Decision Note (optional)</label>
-              <textarea
-                value={actionNote}
-                onChange={(e) => setActionNote(e.target.value)}
-                placeholder="Add a note for this decision..."
-                rows={3}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-            </div>
             <div className="flex items-center gap-2">
+              {request.status !== 'Under Review' && (
+                <button
+                  onClick={() => onOpenAction('Under Review')}
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <Eye size={14} />
+                </button>
+              )}
               <button
-                onClick={() => onAction('Under Review')}
-                disabled={processing || request.status === 'Under Review'}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                onClick={() => onOpenAction('Rejected')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
-                <Eye size={14} />
+                <XCircle size={14} /> Reject
               </button>
               <button
-                onClick={() => onAction('Rejected')}
-                disabled={processing}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition-colors"
+                onClick={() => onOpenAction('Approved')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
               >
-                {processing ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
-                Reject
-              </button>
-              <button
-                onClick={() => onAction('Approved')}
-                disabled={processing}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 transition-colors"
-              >
-                {processing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                Approve Release
+                <CheckCircle size={14} /> Approve Release
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {(request.status === 'Approved' || request.status === 'Rejected') && (
-        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
-            request.status === 'Approved' ?'bg-green-50 border border-green-200 text-green-700' :'bg-red-50 border border-red-200 text-red-700'
-          }`}>
-            {request.status === 'Approved' ? <CheckCircle size={16} /> : <XCircle size={16} />}
-            This request has been {request.status.toLowerCase()}.
           </div>
         </div>
       )}
@@ -265,12 +304,39 @@ function DetailPanel({
 
 export default function ReleaseApprovalContent() {
   const { userProfile } = useAuth();
-  const [requests, setRequests] = useState<ReleaseRequest[]>(MOCK_REQUESTS);
+  const [requests, setRequests] = useState<ReleaseRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedRequest, setSelectedRequest] = useState<ReleaseRequest | null>(null);
-  const [actionNote, setActionNote] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false, request: null, action: null });
   const [processing, setProcessing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success\' | \'error' } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await releaseRequestService.getAll();
+        if (!cancelled) setRequests(data);
+      } catch (err: any) {
+        if (!cancelled) setLoadError(err?.message ?? 'Failed to load release requests');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const filtered = requests.filter((r) => {
     const matchesSearch =
@@ -288,21 +354,49 @@ export default function ReleaseApprovalContent() {
     rejected:    requests.filter((r) => r.status === 'Rejected').length,
   };
 
-  const handleAction = (action: 'Approved' | 'Rejected' | 'Under Review') => {
-    if (!selectedRequest) return;
+  const handleSelectRequest = (req: ReleaseRequest) => {
+    setSelectedRequest(req);
+    setDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false);
+    setTimeout(() => setSelectedRequest(null), 300);
+  };
+
+  const handleAction = async (action: 'Approved' | 'Rejected' | 'Under Review', note: string) => {
+    if (!actionDialog.request) return;
     setProcessing(true);
-    setTimeout(() => {
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === selectedRequest.id
-            ? { ...r, status: action, notes: actionNote || r.notes }
-            : r
-        )
+    const req = actionDialog.request;
+    try {
+      const updated = await releaseRequestService.updateStatus(
+        req.id,
+        action as ReleaseRequestStatus,
+        note || undefined,
+        userProfile?.id,
+        userProfile?.full_name ?? undefined,
+        userProfile?.role ?? undefined,
       );
-      setSelectedRequest((prev) => prev ? { ...prev, status: action } : null);
-      setActionNote('');
+      if (updated) {
+        setRequests((prev) => prev.map((r) => r.id === updated.id ? updated : r));
+        setSelectedRequest((prev) => prev?.id === updated.id ? updated : prev);
+      } else {
+        const optimistic = { ...req, status: action as ReleaseRequestStatus, notes: note || req.notes };
+        setRequests((prev) => prev.map((r) => r.id === req.id ? optimistic : r));
+        setSelectedRequest((prev) => prev?.id === req.id ? optimistic : prev);
+      }
+      setActionDialog({ open: false, request: null, action: null });
+      const labels: Record<string, string> = {
+        Approved: 'Release approved successfully',
+        Rejected: 'Release request rejected',
+        'Under Review': 'Request marked as under review',
+      };
+      showToast(labels[action], 'success');
+    } catch (err: any) {
+      showToast(err?.message ?? 'Action failed', 'error');
+    } finally {
       setProcessing(false);
-    }, 600);
+    }
   };
 
   return (
@@ -348,10 +442,9 @@ export default function ReleaseApprovalContent() {
         </div>
       </div>
 
-      {/* Body — two-panel */}
+      {/* Body — full-width list */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left: List Panel */}
-        <div className={`flex flex-col ${selectedRequest ? 'w-[42%]' : 'w-full'} border-r border-gray-200 bg-white min-h-0`}>
+        <div className="flex flex-col w-full bg-white min-h-0">
           {/* Filters */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 shrink-0">
             <div className="relative flex-1">
@@ -379,7 +472,17 @@ export default function ReleaseApprovalContent() {
 
           {/* Request List */}
           <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                <Loader2 size={28} className="animate-spin mb-2 text-blue-400" />
+                <p className="text-sm">Loading release requests…</p>
+              </div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center justify-center h-40 text-red-400 px-6 text-center">
+                <AlertCircle size={28} className="mb-2" />
+                <p className="text-sm">{loadError}</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-40 text-gray-400">
                 <Unlock size={32} className="mb-2 opacity-30" />
                 <p className="text-sm">No release requests found</p>
@@ -388,13 +491,13 @@ export default function ReleaseApprovalContent() {
               filtered.map((req) => {
                 const statusCfg = STATUS_CONFIG[req.status];
                 const priorityCfg = PRIORITY_CONFIG[req.priority];
-                const isSelected = selectedRequest?.id === req.id;
+                const isSelected = selectedRequest?.id === req.id && drawerOpen;
                 const isActive = req.status === 'Pending' || req.status === 'Under Review';
 
                 return (
                   <div
                     key={req.id}
-                    onClick={() => setSelectedRequest(isSelected ? null : req)}
+                    onClick={() => handleSelectRequest(req)}
                     className={`px-4 py-4 border-b border-gray-100 cursor-pointer transition-colors ${
                       isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'
                     }`}
@@ -418,17 +521,16 @@ export default function ReleaseApprovalContent() {
                       <span className="flex items-center gap-1"><DollarSign size={11} />{formatCurrency(req.estimatedValue)}</span>
                       <span className="flex items-center gap-1"><Calendar size={11} />{req.requestedDate}</span>
                     </div>
-                    {/* Quick actions */}
                     {isActive && (
                       <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => { setSelectedRequest(req); handleAction('Approved'); }}
+                          onClick={() => { setSelectedRequest(req); setActionDialog({ open: true, request: req, action: 'Approved' }); }}
                           className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
                         >
                           <CheckCircle size={11} /> Approve
                         </button>
                         <button
-                          onClick={() => { setSelectedRequest(req); handleAction('Rejected'); }}
+                          onClick={() => { setSelectedRequest(req); setActionDialog({ open: true, request: req, action: 'Rejected' }); }}
                           className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                         >
                           <XCircle size={11} /> Reject
@@ -441,19 +543,46 @@ export default function ReleaseApprovalContent() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Right: Detail Panel */}
+      {/* Drawer */}
+      <WorkflowDrawer
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        width="w-[500px]"
+        deadline={selectedRequest?.requestedDate ?? undefined}
+        escalated={selectedRequest?.priority === 'High'}
+        overdueHours={
+          selectedRequest &&
+          (selectedRequest.status === 'Pending' || selectedRequest.status === 'Under Review')
+            ? Math.max(0, (Date.now() - new Date(selectedRequest.requestedDate).getTime()) / (1000 * 60 * 60))
+            : undefined
+        }
+      >
         {selectedRequest && (
           <DetailPanel
             request={selectedRequest}
-            onClose={() => setSelectedRequest(null)}
-            onAction={handleAction}
-            actionNote={actionNote}
-            setActionNote={setActionNote}
-            processing={processing}
+            onClose={handleCloseDrawer}
+            onOpenAction={(action) => setActionDialog({ open: true, request: selectedRequest, action })}
           />
         )}
-      </div>
+      </WorkflowDrawer>
+
+      {/* Action Dialog */}
+      <ActionDialog
+        state={actionDialog}
+        onClose={() => setActionDialog({ open: false, request: null, action: null })}
+        onSubmit={handleAction}
+        processing={processing}
+      />
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[70] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+          {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

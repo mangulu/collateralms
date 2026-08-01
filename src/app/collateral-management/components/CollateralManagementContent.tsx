@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown } from 'lucide-react';
+import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
@@ -12,6 +12,7 @@ import CollateralTable from './CollateralTable';
 import CollateralFilters from './CollateralFilters';
 import AddEditCollateralModal from './AddEditCollateralModal';
 import NextStepsBanner from './NextStepsBanner';
+import InitiateWorkflowModal from './InitiateWorkflowModal';
 
 export interface FilterState {
   search: string;
@@ -46,6 +47,8 @@ export default function CollateralManagementContent() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const [newlyCreated, setNewlyCreated] = useState<CollateralRecord | null>(null);
+  const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
+  const [workflowTarget, setWorkflowTarget] = useState<CollateralRecord | null>(null);
 
   // Live lookup data for filter dropdowns
   const [filterCollateralTypes, setFilterCollateralTypes] = useState<string[]>([]);
@@ -422,6 +425,19 @@ export default function CollateralManagementContent() {
             )}
           </div>
           <button
+            onClick={() => {
+              setWorkflowTarget(selectedIds.length === 1
+                ? (collateralData.find((c) => c.id === selectedIds[0]) ?? null)
+                : null);
+              setWorkflowModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <Play size={14} className="text-primary" />
+            <span className="hidden xs:inline">Start Workflow</span>
+            <span className="xs:hidden">Workflow</span>
+          </button>
+          <button
             onClick={() => setAddModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-md text-sm font-600 hover:bg-primary/90 transition-all active:scale-95"
           >
@@ -604,6 +620,20 @@ export default function CollateralManagementContent() {
           setEditItem(null);
         }}
         onSave={handleSave}
+      />
+
+      {/* Initiate Workflow Modal */}
+      <InitiateWorkflowModal
+        open={workflowModalOpen}
+        collateral={workflowTarget}
+        onClose={() => {
+          setWorkflowModalOpen(false);
+          setWorkflowTarget(null);
+        }}
+        onLaunched={() => {
+          setWorkflowModalOpen(false);
+          setWorkflowTarget(null);
+        }}
       />
 
       {/* Next Steps Banner */}

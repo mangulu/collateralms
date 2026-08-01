@@ -4,6 +4,7 @@ import {
   Calendar, Clock, Play, Pause, Trash2, Plus, CheckCircle2, XCircle,
   AlertTriangle, RefreshCw, ChevronDown, ChevronUp, Loader2, Settings2,
   BarChart3, Shield, Zap, CalendarClock, ListChecks, TrendingUp,
+  GitBranch, Workflow, Activity,
 } from 'lucide-react';
 import {
   scheduledJobService,
@@ -15,6 +16,11 @@ import {
   type DayOfWeek,
   type JobStatus,
 } from '@/lib/supabase/scheduledJobService';
+import {
+  workflowTriggerProcessorService,
+  type TriggerJobLog,
+  type TriggerProcessorResult,
+} from '@/lib/supabase/workflowTriggerProcessorService';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import AccessDenied from '@/components/AccessDenied';
 
@@ -597,6 +603,245 @@ function JobCard({
   );
 }
 
+// ─── Trigger Processor Panel ──────────────────────────────────────────────────
+
+function TriggerProcessorPanel() {
+  const [logs, setLogs] = useState<TriggerJobLog[]>([]);
+  const [stats, setStats] = useState<{ totalRuns: number; successRuns: number; totalInstancesCreated: number; lastRunAt: string | null }>({
+    totalRuns: 0, successRuns: 0, totalInstancesCreated: 0, lastRunAt: null,
+  });
+  const [running, setRunning] = useState(false);
+  const [lastResult, setLastResult] = useState<TriggerProcessorResult | null>(null);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [expandedLog, setExpandedLog] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      const [logsData, statsData] = await Promise.all([
+        workflowTriggerProcessorService.getRecentLogs(15),
+        workflowTriggerProcessorService.getStats(),
+      ]);
+      setLogs(logsData);
+      setStats(statsData);
+    } catch {
+      // silently fail — table may not exist yet
+    } finally {
+      setLogsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  async function handleRunNow() {
+    setRunning(true);
+    setLastResult(null);
+    try {
+      const result = await workflowTriggerProcessorService.runNow();
+      setLastResult(result);
+      await loadData();
+    } catch (err: any) {
+      setLastResult({
+        status: 'failed',
+        rulesEvaluated: 0,
+        rulesMatched: 0,
+        instancesCreated: 0,
+        instancesSkipped: 0,
+        errors: 1,
+        durationMs: 0,
+        detail: [],
+      });
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const successRate = stats.totalRuns > 0 ? Math.round((stats.successRuns / stats.totalRuns) * 100) : 0;
+
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-gradient-to-r from-violet-50 to-white">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
+            <GitBranch className="w-5 h-5 text-violet-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm text-foreground">Workflow Trigger Processor</p>
+            <p className="text-xs text-muted-foreground">Auto-initiates workflow instances when trigger rule conditions match</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadData}
+            className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-slate-50 transition-colors"
+            title="Refresh logs"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleRunNow}
+            disabled={running}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {running ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Running…</>
+            ) : (
+              <><Play className="w-4 h-4" /> Run Now</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-5">
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'Total Runs', value: stats.totalRuns, icon: <Activity className="w-4 h-4 text-violet-600" />, bg: 'bg-violet-50', text: 'text-violet-700' },
+            { label: 'Success Rate', value: `${successRate}%`, icon: <CheckCircle2 className="w-4 h-4 text-green-600" />, bg: 'bg-green-50', text: 'text-green-700' },
+            { label: 'Instances Created', value: stats.totalInstancesCreated, icon: <Workflow className="w-4 h-4 text-blue-600" />, bg: 'bg-blue-50', text: 'text-blue-700' },
+            { label: 'Last Run', value: stats.lastRunAt ? new Date(stats.lastRunAt).toLocaleDateString('en-TZ', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—', icon: <Clock className="w-4 h-4 text-slate-500" />, bg: 'bg-slate-50', text: 'text-slate-700' },
+          ].map((k) => (
+            <div key={k.label} className={`${k.bg} rounded-xl p-3 flex items-center gap-2.5`}>
+              <div className="shrink-0">{k.icon}</div>
+              <div className="min-w-0">
+                <p className={`text-lg font-bold ${k.text} truncate`}>{k.value}</p>
+                <p className="text-xs text-muted-foreground">{k.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Last run result banner */}
+        {lastResult && (
+          <div className={`rounded-xl border p-4 ${lastResult.status === 'success' ? 'bg-green-50 border-green-200' : lastResult.status === 'partial' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              {lastResult.status === 'success' && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+              {lastResult.status === 'partial' && <AlertTriangle className="w-4 h-4 text-amber-600" />}
+              {lastResult.status === 'failed' && <XCircle className="w-4 h-4 text-red-600" />}
+              <span className={`text-sm font-semibold ${lastResult.status === 'success' ? 'text-green-800' : lastResult.status === 'partial' ? 'text-amber-800' : 'text-red-800'}`}>
+                Run {lastResult.status === 'success' ? 'Completed' : lastResult.status === 'partial' ? 'Completed with Errors' : 'Failed'}
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto">{lastResult.durationMs}ms</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              <div><span className="text-muted-foreground">Rules evaluated:</span> <span className="font-semibold">{lastResult.rulesEvaluated}</span></div>
+              <div><span className="text-muted-foreground">Rules matched:</span> <span className="font-semibold">{lastResult.rulesMatched}</span></div>
+              <div><span className="text-muted-foreground">Instances created:</span> <span className="font-semibold text-green-700">{lastResult.instancesCreated}</span></div>
+              <div><span className="text-muted-foreground">Skipped (dup):</span> <span className="font-semibold">{lastResult.instancesSkipped}</span></div>
+            </div>
+            {lastResult.detail.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {lastResult.detail.filter((d) => d.matched > 0).map((d) => (
+                  <div key={d.ruleId} className="flex items-center justify-between text-xs bg-white/60 rounded-lg px-3 py-1.5">
+                    <span className="font-medium text-foreground truncate max-w-[60%]">{d.ruleName}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-muted-foreground">{d.matched} matched</span>
+                      <span className="text-green-700 font-semibold">+{d.created} created</span>
+                      {d.skipped > 0 && <span className="text-amber-600">{d.skipped} skipped</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Recent logs */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recent Executions</p>
+          {logsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              No executions yet. Click <span className="font-semibold">Run Now</span> to trigger the processor.
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {logs.map((log) => (
+                <div key={log.id} className="border border-border rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${log.status === 'success' ? 'bg-green-100 text-green-700' : log.status === 'partial' ? 'bg-amber-100 text-amber-700' : log.status === 'running' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                        {log.status === 'running' && <Loader2 className="w-3 h-3 animate-spin" />}
+                        {log.status === 'success' && <CheckCircle2 className="w-3 h-3" />}
+                        {log.status === 'partial' && <AlertTriangle className="w-3 h-3" />}
+                        {log.status === 'failed' && <XCircle className="w-3 h-3" />}
+                        {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
+                      </span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {new Date(log.runAt).toLocaleString('en-TZ', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {log.triggeredBy === 'manual' ? '(manual)' : '(scheduler)'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0 ml-3">
+                      <span className="text-xs text-muted-foreground hidden sm:block">{log.rulesEvaluated} rules</span>
+                      <span className="text-xs font-semibold text-green-700">+{log.instancesCreated} instances</span>
+                      {log.durationMs && <span className="text-xs text-muted-foreground hidden md:block">{log.durationMs}ms</span>}
+                      {expandedLog === log.id ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                    </div>
+                  </button>
+                  {expandedLog === log.id && (
+                    <div className="px-4 pb-3 pt-1 border-t border-border bg-slate-50 space-y-2">
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div><span className="text-muted-foreground">Rules matched:</span> <span className="font-semibold">{log.rulesMatched}</span></div>
+                        <div><span className="text-muted-foreground">Skipped (dup):</span> <span className="font-semibold">{log.instancesSkipped}</span></div>
+                        <div><span className="text-muted-foreground">Errors:</span> <span className={`font-semibold ${log.errorsCount > 0 ? 'text-red-600' : ''}`}>{log.errorsCount}</span></div>
+                      </div>
+                      {log.detail.filter((d) => d.matched > 0).length > 0 && (
+                        <div className="space-y-1">
+                          {log.detail.filter((d) => d.matched > 0).map((d, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-white rounded-lg px-3 py-1.5 border border-border">
+                              <span className="font-medium text-foreground truncate max-w-[55%]">{d.ruleName}</span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-muted-foreground">{d.matched} matched</span>
+                                <span className="text-green-700 font-semibold">+{d.created}</span>
+                                {d.errors.length > 0 && <span className="text-red-600">{d.errors.length} err</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {log.errorMessages.length > 0 && (
+                        <div className="bg-red-50 rounded-lg p-2 space-y-0.5">
+                          {log.errorMessages.map((e, i) => (
+                            <p key={i} className="text-xs text-red-700">• {e}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* How it works */}
+        <div className="bg-slate-50 rounded-xl p-4 border border-border">
+          <p className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-muted-foreground" /> How It Works
+          </p>
+          <ol className="space-y-1 text-xs text-muted-foreground list-decimal list-inside">
+            <li>Loads all <span className="font-medium text-foreground">active trigger rules</span> from Workflow Templates</li>
+            <li>Evaluates each rule's conditions against every collateral record</li>
+            <li>Supports <span className="font-medium text-foreground">status change</span>, <span className="font-medium text-foreground">days-since-submission</span>, value threshold, LTV breach, and more</li>
+            <li>Creates a new workflow instance for each match — skips collaterals that already have an active instance</li>
+            <li>Logs every run with per-rule results for full auditability</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ScheduledJobsContent() {
@@ -696,6 +941,9 @@ export default function ScheduledJobsContent() {
           </button>
         </div>
       </div>
+
+      {/* ── Workflow Trigger Processor ── */}
+      <TriggerProcessorPanel />
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapPin, User, Edit2, Save, X, Plus, RefreshCw, AlertTriangle, CheckCircle, Clock, ChevronDown, Package, Calendar, ArrowDownCircle, ArrowUpCircle, FileWarning, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { MapPin, User, Edit2, Save, X, Plus, RefreshCw, AlertTriangle, CheckCircle, Clock, ChevronDown, Package, Calendar, ArrowDownCircle, ArrowUpCircle, FileWarning, MessageSquare, Send, Loader2, Building2, Search } from 'lucide-react';
 import {
   securityPocketService,
   SecurityPocket,
@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase/securityPocketService';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
+import { archiveLocationService, ArchiveLocation } from '@/lib/supabase/archiveService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,161 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// ─── Vault Slot Picker ────────────────────────────────────────────────────────
+
+interface VaultSlotPickerProps {
+  selectedSlotId: string | null;
+  onSelect: (slot: ArchiveLocation | null) => void;
+}
+
+function VaultSlotPicker({ selectedSlotId, onSelect }: VaultSlotPickerProps) {
+  const [locations, setLocations] = useState<ArchiveLocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    archiveLocationService.getAll()
+      .then((all) => {
+        setLocations(all.filter((l) => l.isActive));
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load vault locations');
+        setLoading(false);
+      });
+  }, []);
+
+  // Build breadcrumb path for a location
+  const getPath = (loc: ArchiveLocation): string => {
+    const map = new Map(locations.map((l) => [l.id, l]));
+    const parts: string[] = [];
+    let current: ArchiveLocation | undefined = loc;
+    while (current) {
+      parts.unshift(current.name);
+      current = current.parentId ? map.get(current.parentId) : undefined;
+    }
+    return parts.join(' › ');
+  };
+
+  // Only show slots (leaf-level locations)
+  const slots = locations.filter((l) => l.locationType === 'slot');
+  const filtered = slots.filter((s) =>
+    !search || getPath(s).toLowerCase().includes(search.toLowerCase()) || s.code.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selected = selectedSlotId ? locations.find((l) => l.id === selectedSlotId) ?? null : null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+        <Loader2 size={13} className="animate-spin" /> Loading vault slots…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+        <AlertTriangle size={13} /> {error}
+      </div>
+    );
+  }
+
+  if (slots.length === 0) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <AlertTriangle size={13} />
+        No vault slots found. Please create slots in Archive › Vault Management first.
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between border border-border rounded-lg px-3 py-2.5 text-sm bg-white hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-colors"
+      >
+        {selected ? (
+          <span className="flex items-center gap-2 text-foreground">
+            <Building2 size={13} className="text-primary shrink-0" />
+            <span className="truncate">{getPath(selected)}</span>
+            <span className="text-muted-foreground text-xs shrink-0">({selected.code})</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">— Select a vault slot —</span>
+        )}
+        <ChevronDown size={13} className={`text-muted-foreground transition-transform shrink-0 ml-2 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Clear button */}
+      {selected && (
+        <button
+          type="button"
+          onClick={() => { onSelect(null); setOpen(false); }}
+          className="absolute right-8 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+        >
+          <X size={12} />
+        </button>
+      )}
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-30 top-full mt-1 w-full bg-white border border-border rounded-xl shadow-xl overflow-hidden">
+          {/* Search */}
+          <div className="p-2 border-b border-border">
+            <div className="relative">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search slots…"
+                className="w-full pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          </div>
+          {/* List */}
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No slots match your search.</p>
+            ) : (
+              filtered.map((slot) => {
+                const path = getPath(slot);
+                const isSelected = slot.id === selectedSlotId;
+                const isFull = slot.currentOccupancy >= slot.capacity;
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    disabled={isFull && !isSelected}
+                    onClick={() => { onSelect(slot); setOpen(false); setSearch(''); }}
+                    className={`w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors border-b border-border/50 last:border-0 disabled:opacity-50 disabled:cursor-not-allowed ${isSelected ? 'bg-primary/5' : ''}`}
+                  >
+                    <Building2 size={13} className={`mt-0.5 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{path}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Code: {slot.code} · {slot.currentOccupancy}/{slot.capacity} used
+                        {isFull && <span className="ml-1 text-red-500 font-medium">· Full</span>}
+                      </p>
+                    </div>
+                    {isSelected && <CheckCircle size={13} className="text-primary shrink-0 mt-0.5" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Location Form ────────────────────────────────────────────────────────────
 
 interface LocationFormProps {
@@ -36,33 +192,94 @@ interface LocationFormProps {
 }
 
 function LocationForm({ pocket, collateralRecord, userId, userName, onSaved, onCancel }: LocationFormProps) {
-  const [form, setForm] = useState({
-    pocketName: pocket?.pocketName ?? `${collateralRecord.collateralId} — Security Pocket`,
-    building: pocket?.building ?? '',
-    floor: pocket?.floor ?? '',
-    room: pocket?.room ?? '',
-    cabinet: pocket?.cabinet ?? '',
-    drawer: pocket?.drawer ?? '',
-    slot: pocket?.slot ?? '',
-    locationNotes: pocket?.locationNotes ?? '',
-    custodianId: pocket?.custodianId ?? null,
-    custodianName: pocket?.custodianName ?? '',
-    hasDiscrepancy: pocket?.hasDiscrepancy ?? false,
-    discrepancyNotes: pocket?.discrepancyNotes ?? '',
-  });
+  const [pocketName, setPocketName] = useState(
+    pocket?.pocketName ?? `${collateralRecord.collateralId} — Security Pocket`
+  );
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<ArchiveLocation | null>(null);
+  const [locationNotes, setLocationNotes] = useState(pocket?.locationNotes ?? '');
+  const [custodianName, setCustodianName] = useState(pocket?.custodianName ?? '');
+  const [hasDiscrepancy, setHasDiscrepancy] = useState(pocket?.hasDiscrepancy ?? false);
+  const [discrepancyNotes, setDiscrepancyNotes] = useState(pocket?.discrepancyNotes ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const set = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
+  // Pre-populate slot from existing pocket data (match by slot name/code if possible)
+  // We store the slot reference in locationNotes or we derive from building/floor/room/cabinet/drawer/slot fields
+  // For existing pockets, we show the old location as read-only and let user re-select
+  const existingLocationSummary = pocket
+    ? [pocket.building, pocket.floor, pocket.room, pocket.cabinet, pocket.drawer, pocket.slot]
+        .filter(Boolean)
+        .join(' › ')
+    : null;
+
+  const handleSlotSelect = (slot: ArchiveLocation | null) => {
+    setSelectedSlot(slot);
+    setSelectedSlotId(slot?.id ?? null);
+  };
 
   const handleSave = async () => {
-    if (!form.pocketName.trim()) { setError('Pocket name is required.'); return; }
+    if (!pocketName.trim()) { setError('Pocket name is required.'); return; }
+    if (!selectedSlotId && !pocket) { setError('Please select a vault slot from the Archive.'); return; }
     setSaving(true);
     setError('');
+
+    // Build location fields from selected slot path
+    // We store the slot's path info into the existing fields for backward compatibility
+    let locationFields: {
+      pocketName: string;
+      building: string;
+      floor: string;
+      room: string;
+      cabinet: string;
+      drawer: string;
+      slot: string;
+      locationNotes: string;
+      custodianId: string | null;
+      custodianName: string;
+      hasDiscrepancy: boolean;
+      discrepancyNotes: string;
+    };
+
+    if (selectedSlot) {
+      // Derive hierarchy from the slot's ancestors
+      // We'll store the slot code and name in the slot field, and the path in locationNotes
+      locationFields = {
+        pocketName: pocketName.trim(),
+        building: selectedSlot.code, // use code as building reference
+        floor: '',
+        room: '',
+        cabinet: '',
+        drawer: '',
+        slot: selectedSlot.name,
+        locationNotes: locationNotes.trim(),
+        custodianId: null,
+        custodianName: custodianName.trim(),
+        hasDiscrepancy,
+        discrepancyNotes,
+      };
+    } else {
+      // Editing existing pocket without changing slot — keep existing location fields
+      locationFields = {
+        pocketName: pocketName.trim(),
+        building: pocket?.building ?? '',
+        floor: pocket?.floor ?? '',
+        room: pocket?.room ?? '',
+        cabinet: pocket?.cabinet ?? '',
+        drawer: pocket?.drawer ?? '',
+        slot: pocket?.slot ?? '',
+        locationNotes: locationNotes.trim(),
+        custodianId: pocket?.custodianId ?? null,
+        custodianName: custodianName.trim(),
+        hasDiscrepancy,
+        discrepancyNotes,
+      };
+    }
+
     const result = await securityPocketService.upsert(
       collateralRecord.id,
       collateralRecord.collateralId,
-      form,
+      locationFields,
       userId,
       userName,
       pocket?.id
@@ -78,54 +295,50 @@ function LocationForm({ pocket, collateralRecord, userId, userName, onSaved, onC
       <div>
         <label className="block text-xs font-medium text-foreground mb-1">Pocket Name</label>
         <input
-          value={form.pocketName}
-          onChange={(e) => set('pocketName', e.target.value)}
+          value={pocketName}
+          onChange={(e) => setPocketName(e.target.value)}
           className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
           placeholder="e.g. COL-001 Security Pocket"
         />
       </div>
 
-      {/* Physical location grid */}
+      {/* Vault Slot Picker */}
       <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Physical Location</p>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { key: 'building', label: 'Building', placeholder: 'e.g. Head Office' },
-            { key: 'floor', label: 'Floor', placeholder: 'e.g. 2nd Floor' },
-            { key: 'room', label: 'Room / Vault', placeholder: 'e.g. Strong Room A' },
-            { key: 'cabinet', label: 'Cabinet', placeholder: 'e.g. Cabinet 3' },
-            { key: 'drawer', label: 'Drawer', placeholder: 'e.g. Drawer 2' },
-            { key: 'slot', label: 'Slot / Folder', placeholder: 'e.g. Slot B' },
-          ].map(({ key, label, placeholder }) => (
-            <div key={key}>
-              <label className="block text-xs font-medium text-foreground mb-1">{label}</label>
-              <input
-                value={(form as any)[key]}
-                onChange={(e) => set(key, e.target.value)}
-                placeholder={placeholder}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-          ))}
-        </div>
-        <div className="mt-3">
-          <label className="block text-xs font-medium text-foreground mb-1">Location Notes</label>
-          <textarea
-            value={form.locationNotes}
-            onChange={(e) => set('locationNotes', e.target.value)}
-            rows={2}
-            placeholder="Additional directions or notes…"
-            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-          />
-        </div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+          Vault Slot (from Archive)
+        </p>
+        {/* Show existing location if editing without re-selecting */}
+        {pocket && existingLocationSummary && !selectedSlotId && (
+          <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
+            <Building2 size={12} className="shrink-0" />
+            <span>Current: <span className="font-medium">{existingLocationSummary}</span></span>
+            <span className="text-blue-400 ml-1">(select below to change)</span>
+          </div>
+        )}
+        <VaultSlotPicker selectedSlotId={selectedSlotId} onSelect={handleSlotSelect} />
+        <p className="text-[11px] text-muted-foreground mt-1.5">
+          Select a slot created in Archive › Vault Management. Only active slots are shown.
+        </p>
+      </div>
+
+      {/* Location Notes */}
+      <div>
+        <label className="block text-xs font-medium text-foreground mb-1">Location Notes</label>
+        <textarea
+          value={locationNotes}
+          onChange={(e) => setLocationNotes(e.target.value)}
+          rows={2}
+          placeholder="Additional directions or notes about this pocket's location…"
+          className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+        />
       </div>
 
       {/* Custodian */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Custodian</p>
         <input
-          value={form.custodianName}
-          onChange={(e) => set('custodianName', e.target.value)}
+          value={custodianName}
+          onChange={(e) => setCustodianName(e.target.value)}
           placeholder="Custodian full name"
           className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
@@ -136,18 +349,18 @@ function LocationForm({ pocket, collateralRecord, userId, userName, onSaved, onC
         <input
           type="checkbox"
           id="discrepancy"
-          checked={form.hasDiscrepancy}
-          onChange={(e) => set('hasDiscrepancy', e.target.checked)}
+          checked={hasDiscrepancy}
+          onChange={(e) => setHasDiscrepancy(e.target.checked)}
           className="mt-0.5 accent-amber-600"
         />
         <div className="flex-1">
           <label htmlFor="discrepancy" className="text-xs font-medium text-amber-800 cursor-pointer">
             Flag discrepancy (digital docs exist but physical copy not confirmed)
           </label>
-          {form.hasDiscrepancy && (
+          {hasDiscrepancy && (
             <textarea
-              value={form.discrepancyNotes}
-              onChange={(e) => set('discrepancyNotes', e.target.value)}
+              value={discrepancyNotes}
+              onChange={(e) => setDiscrepancyNotes(e.target.value)}
               rows={2}
               placeholder="Describe the discrepancy…"
               className="mt-2 w-full border border-amber-300 rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
@@ -384,7 +597,6 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
     setPocket(saved);
     setEditing(false);
     fetchPocket();
-    // If a discrepancy was just flagged, prompt to send SMS
     if (saved.hasDiscrepancy) {
       setShowSmsPrompt(true);
       setSmsResult(null);
@@ -442,7 +654,7 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
         </div>
         <h3 className="text-sm font-semibold text-foreground mb-1">No Security Pocket</h3>
         <p className="text-xs text-muted-foreground mb-4 max-w-xs mx-auto">
-          Create a security pocket to map this collateral's physical originals to a specific location and assign a custodian.
+          Create a security pocket by selecting an existing vault slot from the Archive module.
         </p>
         <button
           onClick={() => setEditing(true)}
@@ -494,7 +706,6 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Checkout status badge */}
             {activeCheckout ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
                 <ArrowUpCircle size={11} /> Checked Out
@@ -537,7 +748,7 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
             {/* Location chips */}
             <div className="flex flex-wrap gap-2 mt-2">
               {[
-                { label: 'Building', value: pocket!.building },
+                { label: 'Vault Ref', value: pocket!.building },
                 { label: 'Floor', value: pocket!.floor },
                 { label: 'Room', value: pocket!.room },
                 { label: 'Cabinet', value: pocket!.cabinet },
@@ -594,7 +805,6 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
                 </button>
               </div>
 
-              {/* SMS prompt */}
               {showSmsPrompt && (
                 <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50 space-y-2">
                   <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
@@ -694,7 +904,7 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
                     <div
                       key={log.id}
                       className={`rounded-lg border p-3 ${
-                        log.checkoutStatus === 'checked_out' ?'border-amber-200 bg-amber-50' :'border-border bg-muted/20'
+                        log.checkoutStatus === 'checked_out' ? 'border-amber-200 bg-amber-50' : 'border-border bg-muted/20'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -716,7 +926,7 @@ export default function SecurityPocketPanel({ collateralRecord, userId, userName
                           </div>
                         </div>
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-                          log.checkoutStatus === 'checked_out' ?'bg-amber-100 text-amber-700 border-amber-200' :'bg-emerald-100 text-emerald-700 border-emerald-200'
+                          log.checkoutStatus === 'checked_out' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'
                         }`}>
                           {log.checkoutStatus === 'checked_out' ? 'Out' : 'Returned'}
                         </span>
