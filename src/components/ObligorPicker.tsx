@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Building2, User, X, Loader2, ChevronDown, Plus } from 'lucide-react';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
@@ -22,13 +21,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
 
   // Load all obligors once on mount for quick filtering
   useEffect(() => {
-    let isMounted = true;
-    obligorService.getAll()
-      .then(data => {
-        if (isMounted) setAllLoaded(data);
-      })
-      .catch(() => {});
-    return () => { isMounted = false; };
+    obligorService.getAll().then(setAllLoaded).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -109,7 +102,7 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
             <X size={12} />
           </button>
         )}
-      </button> {/* <-- This closing tag was missing! */}
+      </div>
 
       {/* Dropdown */}
       {open && (
@@ -158,13 +151,13 @@ export default function ObligorPicker({ value, onChange, error }: ObligorPickerP
                       : <User size={12} className="text-purple-600" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{o.fullName}</p>
+                    <p className="text-sm font-500 text-foreground truncate">{o.fullName}</p>
                     <p className="text-xs text-muted-foreground font-mono">{o.obligorCode}</p>
                   </div>
                   {o.riskRating && (
-                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+                    <span className={`text-xs font-600 px-1.5 py-0.5 rounded shrink-0 ${
                       o.riskRating === 'HIGH' ? 'bg-red-100 text-red-700'
-                        : o.riskRating === 'MEDIUM'? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                        : o.riskRating === 'MEDIUM'? 'bg-amber-100 text-amber-700' :'bg-green-100 text-green-700'
                     }`}>
                       {o.riskRating}
                     </span>

@@ -79,7 +79,7 @@ export default function DashboardHeader() {
           )}
         </div>
         <p className="text-xs sm:text-sm" style={{ color: 'var(--izou-muted)' }}>
-          Portfolio health overview
+          Portfolio health overview · EXIM Bank Tanzania
           {lastUpdated && (
             <span className="ml-2 text-xs hidden sm:inline">· Last updated: {lastUpdated}</span>
           )}

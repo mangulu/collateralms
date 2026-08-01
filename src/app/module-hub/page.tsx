@@ -295,13 +295,14 @@ export default function ModuleHubPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [collateralRes, workflowRes, tasksRes] = await Promise.all([
-          supabase.from('collateral_records').select('id, status', { count: 'exact', head: false }),
+        const [collateralCountRes, collateralDataRes, workflowRes, tasksRes] = await Promise.all([
+          supabase.from('collateral_records').select('*', { count: 'exact', head: true }),
+          supabase.from('collateral_records').select('id, status'),
           supabase.from('workflow_instances').select('id, status', { count: 'exact', head: false }).in('status', ['active', 'pending', 'in_progress']),
           supabase.from('user_tasks').select('id, status, due_date, priority').eq('status', 'pending'),
         ]);
 
-        const totalCollateral = collateralRes.count ?? (collateralRes.data?.length ?? 0);
+        const totalCollateral = collateralCountRes.count ?? (collateralDataRes.data?.length ?? 0);
         const activeWorkflows = workflowRes.count ?? (workflowRes.data?.length ?? 0);
 
         const tasks = tasksRes.data ?? [];
@@ -363,7 +364,7 @@ export default function ModuleHubPage() {
         setPriorityItems(items.slice(0, 6));
 
         // Module KPIs — use correct collateral_status enum values
-        const collateralData = collateralRes.data ?? [];
+        const collateralData = collateralDataRes.data ?? [];
         const perfectedCount = collateralData.filter((c) => c.status === 'Perfected').length;
         const overdueCount = collateralData.filter((c) => c.status === 'Overdue').length;
         const pendingReviewCount = collateralData.filter(
@@ -543,7 +544,7 @@ export default function ModuleHubPage() {
               </p>
             </div>
             <button
-              onClick={() => router.push('/my-tasks')}
+              onClick={() => router.push('/workflows/tasks')}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
               style={{ backgroundColor: 'var(--izou-primary)', color: '#fff' }}
               onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.9'; }}
