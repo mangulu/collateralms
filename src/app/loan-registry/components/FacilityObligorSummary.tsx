@@ -9,8 +9,7 @@ interface ObligorSummary {
   id: string;
   full_name: string;
   obligor_code: string;
-  obligor_type: string | null;
-  industry_sector: string | null;
+  entity_type: string | null;
   risk_rating: string | null;
   total_loans: number;
   total_facility: number;
@@ -53,7 +52,7 @@ export default function FacilityObligorSummary({ loan }: Props) {
         // Fetch obligor profile
         const { data: obligor, error: oErr } = await supabase
           .from('obligors')
-          .select('id, full_name, obligor_code, obligor_type, industry_sector, risk_rating')
+          .select('id, full_name, obligor_code, entity_type, risk_rating')
           .eq('id', loan.obligorId)
           .maybeSingle();
         if (oErr || !obligor) {
@@ -148,13 +147,10 @@ export default function FacilityObligorSummary({ loan }: Props) {
             </Link>
           </div>
         </div>
-        {(summary.obligor_type || summary.industry_sector) && (
+        {(summary.entity_type) && (
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {summary.obligor_type && (
-              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{summary.obligor_type}</span>
-            )}
-            {summary.industry_sector && (
-              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{summary.industry_sector}</span>
+            {summary.entity_type && (
+              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{summary.entity_type}</span>
             )}
           </div>
         )}

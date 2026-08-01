@@ -9,7 +9,7 @@ interface LinkedCollateral {
   collateral_id: string;
   description: string;
   collateral_type: string;
-  collateral_status: string;
+  status: string;
   valuation_amount: number | null;
   obligor_ref_id: string | null;
 }
@@ -52,7 +52,7 @@ export default function LinkedCollateralsPanel({ loanId, loanNumber }: Props) {
         const supabase = createClient();
         const { data, error: err } = await supabase
           .from('collateral_records')
-          .select('id, collateral_id, description, collateral_type, collateral_status, valuation_amount, obligor_ref_id')
+          .select('id, collateral_id, description, collateral_type, status, valuation_amount, obligor_ref_id')
           .eq('loan_id', loanId)
           .order('created_at', { ascending: false });
         if (!cancelled) {
@@ -118,7 +118,7 @@ export default function LinkedCollateralsPanel({ loanId, loanNumber }: Props) {
         ) : (
           <div className="space-y-2">
             {collaterals.map((c) => {
-              const sc = statusConfig[c.collateral_status] ?? statusConfig['Draft'];
+              const sc = statusConfig[c.status] ?? statusConfig['Draft'];
               const StatusIcon = sc.icon;
               return (
                 <div
@@ -133,7 +133,7 @@ export default function LinkedCollateralsPanel({ loanId, loanNumber }: Props) {
                       <span className="text-xs font-700 text-foreground font-mono">{c.collateral_id}</span>
                       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-600 ${sc.bg} ${sc.color}`}>
                         <StatusIcon size={9} />
-                        {c.collateral_status}
+                        {c.status}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{c.description || '—'}</p>
