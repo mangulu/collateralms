@@ -294,7 +294,7 @@ export default function ModuleHubPage() {
     async function fetchStats() {
       try {
         const [collateralRes, workflowRes, tasksRes] = await Promise.all([
-          supabase.from('collaterals').select('id, status', { count: 'exact', head: false }),
+          supabase.from('collateral_records').select('id, status', { count: 'exact', head: false }),
           supabase.from('workflow_instances').select('id, status', { count: 'exact', head: false }).in('status', ['active', 'pending', 'in_progress']),
           supabase.from('user_tasks').select('id, status, due_date, priority').eq('status', 'pending'),
         ]);
@@ -360,16 +360,22 @@ export default function ModuleHubPage() {
 
         setPriorityItems(items.slice(0, 6));
 
-        // Module KPIs
+        // Module KPIs — use correct collateral_status enum values
         const collateralData = collateralRes.data ?? [];
-        const pendingPerfection = collateralData.filter((c) => c.status === 'pending_perfection').length;
-        const activeCount = collateralData.filter((c) => c.status === 'active').length;
+        const perfectedCount = collateralData.filter((c) => c.status === 'Perfected').length;
+        const overdueCount = collateralData.filter((c) => c.status === 'Overdue').length;
+        const pendingReviewCount = collateralData.filter(
+          (c) => c.status === 'Submitted' || c.status === 'Under Review'
+        ).length;
+        const activeCount = collateralData.filter(
+          (c) => c.status !== 'Released' && c.status !== 'Rejected'
+        ).length;
 
         const kpis: Record<string, ModuleKPI> = {
           collaterals: {
-            primary: `${activeCount} Active`,
-            secondary: `${pendingPerfection} Pending Perfection`,
-            status: pendingPerfection > 5 ? 'warn' : 'ok',
+            primary: `${totalCollateral} Total`,
+            secondary: `${perfectedCount} Perfected · ${overdueCount} Overdue`,
+            status: overdueCount > 5 ? 'critical' : pendingReviewCount > 5 ? 'warn' : 'ok',
           },
           obligors: {
             primary: `${totalCollateral} Linked`,
