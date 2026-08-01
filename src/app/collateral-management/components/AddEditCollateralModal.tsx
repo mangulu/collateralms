@@ -1,13 +1,15 @@
 'use client';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database, CreditCard, UserPlus } from 'lucide-react';
+import { AlertCircle, Upload, FileText, Trash2, Download, Clock, X, Loader2, CheckCircle2, AlertTriangle, RefreshCw, WifiOff, ShieldAlert, Database, CreditCard, UserPlus, Plus } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import { CollateralRecord as Collateral, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { documentTypeSettingsService, DocumentTypeSetting } from '@/lib/supabase/documentTypeSettingsService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
 import { loanService, Loan } from '@/lib/supabase/loanService';
+import { obligorService, Obligor as ObligorFull } from '@/lib/supabase/obligorService';
+import { collateralTypeRequiredDocsService, CollateralTypeRequiredDoc } from '@/lib/supabase/collateralTypeRequiredDocsService';
 import { useAuth } from '@/contexts/AuthContext';
 import ObligorPicker from '@/components/ObligorPicker';
 import LocationPicker from '@/components/LocationPicker';
@@ -31,6 +33,32 @@ interface AddEditCollateralModalProps {
   onClose: () => void;
   onSave: (data: Partial<Collateral>, pendingFiles?: { file: File; docType: string; notes: string }[]) => Promise<void>;
 }
+
+// ── Inline Loan Creation Form constants ──
+const FACILITY_TYPES = ['Term Loan', 'Overdraft Facility', 'Mortgage', 'Asset Finance', 'Trade Finance', 'Revolving Credit', 'Letter of Credit', 'Other'];
+const REPAYMENT_FREQUENCIES = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Bullet'];
+const LOAN_STATUSES = ['Active', 'Closed', 'Defaulted', 'Restructured', 'Written Off'];
+
+interface LoanFormData {
+  obligorId: string;
+  facilityType: string;
+  facilityAmount: string;
+  outstandingBalance: string;
+  currency: string;
+  interestRate: string;
+  disbursementDate: string;
+  maturityDate: string;
+  repaymentFrequency: string;
+  loanStatus: string;
+  purpose: string;
+  notes: string;
+}
+
+const emptyLoanForm: LoanFormData = {
+  obligorId: '', facilityType: 'Term Loan', facilityAmount: '', outstandingBalance: '',
+  currency: 'TZS', interestRate: '', disbursementDate: '', maturityDate: '',
+  repaymentFrequency: 'Monthly', loanStatus: 'Active', purpose: '', notes: '',
+};
 
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -90,6 +118,14 @@ export default function AddEditCollateralModal({
   const [selectedLoanId, setSelectedLoanId] = useState<string>('');
   const [loansLoading, setLoansLoading] = useState(false);
 
+  // Inline new loan modal state
+  const [showNewLoanModal, setShowNewLoanModal] = useState(false);
+  const [loanForm, setLoanForm] = useState<LoanFormData>(emptyLoanForm);
+  const [loanFormErrors, setLoanFormErrors] = useState<Partial<LoanFormData>>({});
+  const [loanSaving, setLoanSaving] = useState(false);
+  const [loanSaveError, setLoanSaveError] = useState<string | null>(null);
+  const [allObligors, setAllObligors] = useState<ObligorFull[]>([]);
+
   // Location picker state
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
@@ -118,6 +154,10 @@ export default function AddEditCollateralModal({
   const [docTypeSettings, setDocTypeSettings] = useState<DocumentTypeSetting[]>([]);
   const [docTypeNames, setDocTypeNames] = useState<string[]>([]);
   const [requiredDocTypes, setRequiredDocTypes] = useState<DocumentTypeSetting[]>([]);
+
+  // Type-specific required documents from collateral_type_required_documents table
+  const [typeRequiredDocs, setTypeRequiredDocs] = useState<CollateralTypeRequiredDoc[]>([]);
+  const [typeRequiredDocsLoading, setTypeRequiredDocsLoading] = useState(false);
 
   // Officers loaded from Supabase user_profiles
   const [officers, setOfficers] = useState<string[]>([]);
@@ -151,6 +191,7 @@ export default function AddEditCollateralModal({
   const requiresPerfection = watch('requiresPerfection');
   const registryValue = watch('registry');
   const registrationDateValue = watch('registrationDate');
+  const selectedType = watch('type');
 
   // Load document type settings from DB
   useEffect(() => {
@@ -170,6 +211,22 @@ export default function AddEditCollateralModal({
       });
     }
   }, [open]);
+
+  // Load type-specific required documents when collateral type changes
+  useEffect(() => {
+    if (selectedType && selectedType !== '') {
+      setTypeRequiredDocsLoading(true);
+      collateralTypeRequiredDocsService.getByType(selectedType).then((docs) => {
+        setTypeRequiredDocs(docs);
+        setTypeRequiredDocsLoading(false);
+      }).catch(() => {
+        setTypeRequiredDocs([]);
+        setTypeRequiredDocsLoading(false);
+      });
+    } else {
+      setTypeRequiredDocs([]);
+    }
+  }, [selectedType]);
 
   // Auto-calculate BRELA 42-day perfection deadline
   useEffect(() => {
@@ -214,6 +271,10 @@ export default function AddEditCollateralModal({
       setRetryCount(0);
       lastSubmitDataRef.current = null;
       setObligorError(null);
+      setShowNewLoanModal(false);
+      setLoanForm(emptyLoanForm);
+      setLoanFormErrors({});
+      setLoanSaveError(null);
     }
   }, [open]);
 
@@ -234,42 +295,12 @@ export default function AddEditCollateralModal({
     }
   }, [selectedObligor?.id]);
 
+  // Load all obligors for the inline loan form
   useEffect(() => {
-    if (editItem) {
-      reset({
-        type: editItem.type,
-        description: editItem.description,
-        valueTS: editItem.valueTSh,
-        registry: editItem.registry,
-        registrationDate: editItem.registrationDate,
-        perfectionDeadline: editItem.perfectionDeadline,
-        assignedOfficer: editItem.assignedOfficer,
-        requiresPerfection: editItem.requiresPerfection,
-      });
-      if (editItem.obligorRefId) {
-        setSelectedObligor({ id: editItem.obligorRefId, name: editItem.obligor, code: editItem.obligorId });
-      } else if (editItem.obligor) {
-        setSelectedObligor({ id: '', name: editItem.obligor, code: editItem.obligorId });
-      } else {
-        setSelectedObligor(null);
-      }
-      setSelectedLoanId((editItem as any).loanId ?? '');
-      if (editItem.latitude != null && editItem.longitude != null) {
-        setLocation({ lat: editItem.latitude, lng: editItem.longitude, address: editItem.locationAddress ?? `${editItem.latitude}, ${editItem.longitude}` });
-      } else {
-        setLocation(null);
-      }
-    } else {
-      reset({
-        type: '', description: '', valueTS: '',
-        registry: '', registrationDate: '', perfectionDeadline: '',
-        assignedOfficer: '', requiresPerfection: true,
-      });
-      setSelectedObligor(null);
-      setSelectedLoanId('');
-      setLocation(null);
+    if (showNewLoanModal && allObligors.length === 0) {
+      obligorService.getAll().then(setAllObligors).catch(() => {});
     }
-  }, [editItem, open, reset]);
+  }, [showNewLoanModal]);
 
   const validateFile = (file: File): string | null => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -377,11 +408,16 @@ export default function AddEditCollateralModal({
   };
 
   // Compute missing required document types
+  // Use type-specific required docs if available, otherwise fall back to global required docs
+  const effectiveRequiredDocTypes = typeRequiredDocs.length > 0
+    ? typeRequiredDocs.map((d) => ({ id: d.id, name: d.documentName, required: d.isMandatory, isActive: true } as DocumentTypeSetting))
+    : requiredDocTypes;
+
   const uploadedDocTypes = new Set([
     ...documents.map((d) => d.documentType),
     ...pendingFiles.map((pf) => pf.docType),
   ]);
-  const missingRequiredTypes = requiredDocTypes.filter((rt) => !uploadedDocTypes.has(rt.name));
+  const missingRequiredTypes = effectiveRequiredDocTypes.filter((rt) => !uploadedDocTypes.has(rt.name));
 
   // Progress indicator: count filled sections
   const detailsProgress = (() => {
@@ -546,6 +582,52 @@ export default function AddEditCollateralModal({
     handleSlotFileSelected(e.dataTransfer.files);
   }, [handleSlotFileSelected]);
 
+  // Validate and save the inline loan form
+  const validateLoanForm = (): boolean => {
+    const errs: Partial<LoanFormData> = {};
+    if (!loanForm.obligorId) errs.obligorId = 'Obligor is required';
+    if (!loanForm.facilityType) errs.facilityType = 'Facility type is required';
+    if (!loanForm.facilityAmount || isNaN(parseFloat(loanForm.facilityAmount))) errs.facilityAmount = 'Valid amount required';
+    if (!loanForm.loanStatus) errs.loanStatus = 'Status is required';
+    setLoanFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSaveLoan = async () => {
+    if (!validateLoanForm() || !user) return;
+    setLoanSaving(true);
+    setLoanSaveError(null);
+    try {
+      const loanNumber = await loanService.generateLoanNumber();
+      const payload: Partial<Loan> = {
+        obligorId: loanForm.obligorId,
+        facilityType: loanForm.facilityType,
+        facilityAmount: parseFloat(loanForm.facilityAmount),
+        outstandingBalance: loanForm.outstandingBalance ? parseFloat(loanForm.outstandingBalance) : null,
+        currency: loanForm.currency,
+        interestRate: loanForm.interestRate ? parseFloat(loanForm.interestRate) : null,
+        disbursementDate: loanForm.disbursementDate || null,
+        maturityDate: loanForm.maturityDate || null,
+        repaymentFrequency: loanForm.repaymentFrequency,
+        loanStatus: loanForm.loanStatus,
+        purpose: loanForm.purpose || null,
+        notes: loanForm.notes || null,
+      };
+      const created = await loanService.create({ ...payload, loanNumber }, user.id);
+      if (created) {
+        // Add to available loans and auto-select it
+        setAvailableLoans((prev) => [created, ...prev]);
+        setSelectedLoanId(created.id);
+      }
+      setShowNewLoanModal(false);
+      setLoanForm(emptyLoanForm);
+    } catch (err: any) {
+      setLoanSaveError(err?.message ?? 'Failed to create loan.');
+    } finally {
+      setLoanSaving(false);
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -569,6 +651,168 @@ export default function AddEditCollateralModal({
             setShowNewObligorModal(false);
           }}
         />
+      )}
+
+      {/* Inline New Loan Modal */}
+      {showNewLoanModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-sm font-700 text-foreground">Register New Loan Facility</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Create a loan to link with this collateral</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowNewLoanModal(false); setLoanForm(emptyLoanForm); setLoanFormErrors({}); setLoanSaveError(null); }}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors"
+              >
+                <X size={15} className="text-muted-foreground" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {loanSaveError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle size={14} className="text-red-600 mt-0.5 shrink-0" />
+                  <p className="text-sm text-red-700">{loanSaveError}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Obligor — pre-fill if one is selected */}
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-500 text-foreground mb-1">Obligor <span className="text-destructive">*</span></label>
+                  <select
+                    value={loanForm.obligorId}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, obligorId: e.target.value }))}
+                    className={`w-full px-3 py-2.5 rounded-md border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 ${loanFormErrors.obligorId ? 'border-destructive' : 'border-border'}`}
+                  >
+                    <option value="">Select obligor…</option>
+                    {allObligors.map((o) => (
+                      <option key={o.id} value={o.id}>{o.fullName} ({o.obligorCode})</option>
+                    ))}
+                  </select>
+                  {loanFormErrors.obligorId && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{loanFormErrors.obligorId}</p>}
+                </div>
+                {/* Facility Type */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Facility Type <span className="text-destructive">*</span></label>
+                  <select
+                    value={loanForm.facilityType}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, facilityType: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    {FACILITY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Loan Status <span className="text-destructive">*</span></label>
+                  <select
+                    value={loanForm.loanStatus}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, loanStatus: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    {LOAN_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                {/* Facility Amount */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Facility Amount (TZS) <span className="text-destructive">*</span></label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 500000000"
+                    value={loanForm.facilityAmount}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, facilityAmount: e.target.value }))}
+                    className={`w-full px-3 py-2.5 rounded-md border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 ${loanFormErrors.facilityAmount ? 'border-destructive' : 'border-border'}`}
+                  />
+                  {loanFormErrors.facilityAmount && <p className="mt-1 text-xs text-destructive flex items-center gap-1"><AlertCircle size={11} />{loanFormErrors.facilityAmount}</p>}
+                </div>
+                {/* Outstanding Balance */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Outstanding Balance (TZS)</label>
+                  <input
+                    type="number"
+                    placeholder="Current outstanding amount"
+                    value={loanForm.outstandingBalance}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, outstandingBalance: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                {/* Interest Rate */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Interest Rate (% p.a.)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="e.g. 14.5"
+                    value={loanForm.interestRate}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, interestRate: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                {/* Repayment Frequency */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Repayment Frequency</label>
+                  <select
+                    value={loanForm.repaymentFrequency}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, repaymentFrequency: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    {REPAYMENT_FREQUENCIES.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                {/* Disbursement Date */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Disbursement Date</label>
+                  <input
+                    type="date"
+                    value={loanForm.disbursementDate}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, disbursementDate: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                {/* Maturity Date */}
+                <div>
+                  <label className="block text-sm font-500 text-foreground mb-1">Maturity Date</label>
+                  <input
+                    type="date"
+                    value={loanForm.maturityDate}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, maturityDate: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                {/* Purpose */}
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-500 text-foreground mb-1">Purpose</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Working capital, equipment purchase"
+                    value={loanForm.purpose}
+                    onChange={(e) => setLoanForm((f) => ({ ...f, purpose: e.target.value }))}
+                    className="w-full px-3 py-2.5 rounded-md border border-border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border sticky bottom-0 bg-white">
+              <button
+                type="button"
+                onClick={() => { setShowNewLoanModal(false); setLoanForm(emptyLoanForm); setLoanFormErrors({}); setLoanSaveError(null); }}
+                className="px-4 py-2 border border-border rounded-md text-sm font-500 text-foreground hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveLoan}
+                disabled={loanSaving}
+                className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-md text-sm font-600 hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+              >
+                {loanSaving ? <><Loader2 size={13} className="animate-spin" />Saving…</> : <><Plus size={13} />Create Loan</>}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Per-slot upload popup */}
@@ -817,7 +1061,37 @@ export default function AddEditCollateralModal({
                   <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
                     <AlertCircle size={11} className="text-amber-500" />
                     No loans found for this obligor.{' '}
-                    <a href="/loans" target="_blank" className="text-primary hover:underline">Create a loan first</a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoanForm({ ...emptyLoanForm, obligorId: selectedObligor?.id ?? '' });
+                        setLoanFormErrors({});
+                        setLoanSaveError(null);
+                        setShowNewLoanModal(true);
+                      }}
+                      className="inline-flex items-center gap-1 text-primary hover:underline font-500"
+                    >
+                      <Plus size={11} />
+                      Create a loan
+                    </button>
+                  </p>
+                )}
+                {selectedObligor && availableLoans.length > 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Need a different loan?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoanForm({ ...emptyLoanForm, obligorId: selectedObligor?.id ?? '' });
+                        setLoanFormErrors({});
+                        setLoanSaveError(null);
+                        setShowNewLoanModal(true);
+                      }}
+                      className="inline-flex items-center gap-1 text-primary hover:underline font-500"
+                    >
+                      <Plus size={11} />
+                      Create new loan
+                    </button>
                   </p>
                 )}
               </div>
@@ -988,11 +1262,17 @@ export default function AddEditCollateralModal({
           </div>
 
           {/* Section 5: Required Documents */}
-          {requiredDocTypes.length > 0 && (
+          {(effectiveRequiredDocTypes.length > 0 || typeRequiredDocsLoading) && (
             <div className="mb-6">
               <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">5</span>
                 Required Documents
+                {selectedType && typeRequiredDocs.length > 0 && (
+                  <span className="ml-1 text-xs font-400 text-muted-foreground">for {selectedType}</span>
+                )}
+                {typeRequiredDocsLoading && (
+                  <Loader2 size={12} className="animate-spin text-muted-foreground ml-1" />
+                )}
                 {missingRequiredTypes.length > 0 && (
                   <span className="ml-auto text-xs font-500 text-amber-600 flex items-center gap-1">
                     <AlertTriangle size={11} />
@@ -1003,7 +1283,7 @@ export default function AddEditCollateralModal({
 
               {/* Tray slots — one per required doc type */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                {requiredDocTypes.map((rt) => {
+                {effectiveRequiredDocTypes.map((rt) => {
                   const pending = getPendingForSlot(rt.name);
                   const uploaded = getUploadedForSlot(rt.name);
                   const isSatisfied = !!pending || !!uploaded;
@@ -1107,7 +1387,7 @@ export default function AddEditCollateralModal({
           )}
 
           {/* If no required doc types, still show compact upload zone */}
-          {requiredDocTypes.length === 0 && (
+          {effectiveRequiredDocTypes.length === 0 && !typeRequiredDocsLoading && (
             <div className="mb-6">
               <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">5</span>
@@ -1204,11 +1484,17 @@ export default function AddEditCollateralModal({
         {/* ── DOCUMENTS TAB ── */}
         <div className={activeTab === 'documents' ? 'block' : 'hidden'}>
           {/* Required Documents Status */}
-          {requiredDocTypes.length > 0 && (
+          {effectiveRequiredDocTypes.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs font-600 text-foreground mb-2">Required Documents Status:</p>
+              <p className="text-xs font-600 text-foreground mb-2">
+                Required Documents Status
+                {selectedType && typeRequiredDocs.length > 0 && (
+                  <span className="ml-1 font-400 text-muted-foreground">— {selectedType}</span>
+                )}
+                :
+              </p>
               <div className="flex flex-wrap gap-2">
-                {requiredDocTypes.map((rt) => {
+                {effectiveRequiredDocTypes.map((rt) => {
                   const isSatisfied = uploadedDocTypes.has(rt.name);
                   return (
                     <span
