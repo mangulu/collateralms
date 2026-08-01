@@ -64,6 +64,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Covenant Tracking', icon: Scale, href: '/covenant-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Insurance Tracking', icon: Shield, href: '/insurance-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Settlement Status', icon: HandCoins, href: '/collateral-settlement', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Post-Settlement Workflow', icon: ClipboardCheck, href: '/post-settlement-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
         ],
       },
     ],
