@@ -269,6 +269,7 @@ export default function ModuleHubPage() {
   const { hasPermission, isSystemAdmin, loading } = usePermissions();
 
   const [todayStr, setTodayStr] = useState('');
+  const [greeting, setGreeting] = useState('');
   const [summaryStats, setSummaryStats] = useState<SummaryStats>({ totalCollateral: 0, activeWorkflows: 0, pendingActions: 0, overdueItems: 0 });
   const [priorityItems, setPriorityItems] = useState<PriorityItem[]>([]);
   const [moduleKPIs, setModuleKPIs] = useState<Record<string, ModuleKPI>>({});
@@ -287,6 +288,7 @@ export default function ModuleHubPage() {
   useEffect(() => {
     const d = new Date();
     setTodayStr(d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+    setGreeting(getGreeting());
   }, []);
 
   // Fetch summary stats and priority items
@@ -533,7 +535,7 @@ export default function ModuleHubPage() {
                 </span>
               </div>
               <h1 className="text-2xl font-bold leading-tight" style={{ color: 'var(--izou-text)' }}>
-                Good {getGreeting()}, {firstName}
+                Good {greeting || '—'}, {firstName}
               </h1>
               <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--izou-muted)' }}>
                 <Calendar size={13} />
