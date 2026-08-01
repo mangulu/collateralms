@@ -4,6 +4,7 @@ import { ClipboardList, Plus, Search, RefreshCw, AlertCircle, CheckCircle, XCirc
 import {
   archiveRequestService, archiveAuditService, archiveRequestStatusLogService,
   ArchiveRequest, RequestStatus, RequestStatusLogEntry,
+  archivePlacementService,
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,15 +37,45 @@ interface RaiseRequestModalProps {
 function RaiseRequestModal({ collaterals, userId, onClose, onSaved }: RaiseRequestModalProps) {
   const [collateralId, setCollateralId] = useState('');
   const [purpose, setPurpose] = useState('');
-  const [expectedReturnDate, setExpectedReturnDate] = useState('');
+  const [numberOfDays, setNumberOfDays] = useState('');
+  const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Auto-calculate expected return date
+  const expectedReturnDate = (() => {
+    const days = parseInt(numberOfDays, 10);
+    if (!fromDate || isNaN(days) || days <= 0) return '';
+    const d = new Date(fromDate);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  })();
+
+  const formatDisplayDate = (iso: string) => {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   const handleSave = async () => {
     if (!collateralId || !purpose.trim()) { setError('Collateral and purpose are required.'); return; }
     setSaving(true);
+    setError('');
     try {
-      const req = await archiveRequestService.create({ collateralId, requestedBy: userId, purpose, expectedReturnDate: expectedReturnDate || undefined });
+      // Check if the requested file is available in the vault
+      const placements = await archivePlacementService.getAll();
+      const isInVault = placements.some((p) => p.collateralId === collateralId && p.locationId);
+      if (!isInVault) {
+        setError('This file is not currently available in the vault. Please verify the collateral has been filed before raising a request.');
+        setSaving(false);
+        return;
+      }
+
+      const req = await archiveRequestService.create({
+        collateralId,
+        requestedBy: userId,
+        purpose,
+        expectedReturnDate: expectedReturnDate || undefined,
+      });
       await archiveAuditService.log({
         eventType: 'request_raised', collateralId, requestId: req.id, performedBy: userId,
         description: `File request raised: ${purpose}`,
@@ -82,11 +113,29 @@ function RaiseRequestModal({ collaterals, userId, onClose, onSaved }: RaiseReque
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               style={{ borderColor: '#D1D5DB' }} placeholder="Reason for requesting the physical file…" />
           </div>
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Expected Return Date</label>
-            <input type="date" value={expectedReturnDate} onChange={(e) => setExpectedReturnDate(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>From</label>
+              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                style={{ borderColor: '#D1D5DB' }} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Number of Days</label>
+              <input type="number" min="1" value={numberOfDays} onChange={(e) => setNumberOfDays(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                style={{ borderColor: '#D1D5DB' }} placeholder="e.g. 7" />
+            </div>
+          </div>
+          <div className="rounded-lg px-3 py-2.5 flex items-center gap-2"
+            style={{ backgroundColor: expectedReturnDate ? '#EFF6FF' : '#F9FAFB', border: `1px solid ${expectedReturnDate ? '#BFDBFE' : '#E5E7EB'}` }}>
+            <Calendar size={14} style={{ color: expectedReturnDate ? '#2563EB' : '#9CA3AF' }} />
+            <div>
+              <p className="text-xs font-medium" style={{ color: '#374151' }}>Expected Return Date</p>
+              <p className="text-sm font-semibold" style={{ color: expectedReturnDate ? '#1E3A8A' : '#9CA3AF' }}>
+                {expectedReturnDate ? formatDisplayDate(expectedReturnDate) : 'Enter From date and Number of Days'}
+              </p>
+            </div>
           </div>
         </div>
         <div className="flex gap-2 mt-5">
@@ -94,7 +143,7 @@ function RaiseRequestModal({ collaterals, userId, onClose, onSaved }: RaiseReque
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white"
             style={{ backgroundColor: '#2563EB', opacity: saving ? 0.6 : 1 }}>
-            {saving ? 'Submitting…' : 'Submit Request'}
+            {saving ? 'Checking vault…' : 'Submit Request'}
           </button>
         </div>
       </div>
