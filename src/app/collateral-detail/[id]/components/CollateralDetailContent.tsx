@@ -11,7 +11,6 @@ import { loanService, Loan } from '@/lib/supabase/loanService';
 import AddEditCollateralModal from '@/app/collateral-management/components/AddEditCollateralModal';
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralUtilizationTab from './CollateralUtilizationTab';
-import QuickActionsPanel from './QuickActionsPanel';
 import GeoSection from './GeoSection';
 import DocumentsSection from './DocumentsSection';
 import LegalSignOffSection from './LegalSignOffSection';
@@ -413,7 +412,6 @@ export default function CollateralDetailContent({
 
           <div className="space-y-6">
             <ProcessLaunchersPanel collateral={collateral} onProcessStarted={onRefresh} />
-            <QuickActionsPanel collateral={collateral} onSignOffComplete={onRefresh} />
             <RiskComplianceSidebarCard collateral={collateral} />
 
             {/* Obligor Context Card */}

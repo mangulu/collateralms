@@ -1,6 +1,8 @@
 'use client';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { FileCheck2, Users, CalendarClock, CheckCircle2, Clock, AlertTriangle, ChevronDown, ChevronUp, ClipboardCheck, Send, CalendarDays, Building2, User, Phone, Mail, FileText, RefreshCw, Search, BadgeCheck, XCircle, ArrowRight, Landmark, Package, Truck, MapPin, ShieldCheck, PenLine, Bell, CheckCheck } from 'lucide-react';
+import { loanService, Loan } from '@/lib/supabase/loanService';
+import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -67,83 +69,10 @@ interface PostSettlementCase {
   activeTab: 'discharge' | 'stakeholders' | 'returns';
 }
 
-// ── Mock Data ─────────────────────────────────────────────────────────────────
-
-const MOCK_CASES: Omit<PostSettlementCase, 'expanded' | 'activeTab'>[] = [
-  {
-    id: 'psc-001',
-    loanRef: 'LN-2024-0041',
-    obligorName: 'Karibu Enterprises Ltd',
-    facilityType: 'Term Loan',
-    settlementDate: '2026-07-15',
-    totalFacilityAmount: 850_000_000,
-    currency: 'TZS',
-    overallStatus: 'In Progress',
-    dischargeDocuments: [
-      { id: 'dd-001', documentName: 'Discharge of Mortgage – Plot 45 Msasani', documentType: 'Mortgage Discharge', signedBy: 'Adv. Fatuma Mwanga', signedAt: '2026-07-18', status: 'Signed', dueDate: '2026-07-20' },
-      { id: 'dd-002', documentName: 'Release of Debenture – Karibu Enterprises', documentType: 'Debenture Release', status: 'Awaiting Review', dueDate: '2026-07-25', notes: 'Pending legal review by head office' },
-      { id: 'dd-003', documentName: 'Vehicle Log Book Return – TZN 4521', documentType: 'Vehicle Title', status: 'Pending', dueDate: '2026-07-30' },
-    ],
-    stakeholderConfirmations: [
-      { id: 'sc-001', stakeholderName: 'Juma Rashid', role: 'Obligor Director', organisation: 'Karibu Enterprises Ltd', email: 'juma@karibu.co.tz', phone: '+255 712 345 678', confirmationType: 'Settlement Acknowledgement', status: 'Confirmed', sentAt: '2026-07-16', confirmedAt: '2026-07-17' },
-      { id: 'sc-002', stakeholderName: 'Adv. Fatuma Mwanga', role: 'Legal Counsel', organisation: 'Mwanga & Associates', email: 'fatuma@mwangalaw.co.tz', confirmationType: 'Discharge Sign-Off', status: 'Confirmed', sentAt: '2026-07-16', confirmedAt: '2026-07-18' },
-      { id: 'sc-003', stakeholderName: 'BRELA Registry Office', role: 'Regulatory Body', organisation: 'BRELA', email: 'registry@brela.go.tz', confirmationType: 'Debenture Cancellation Notice', status: 'Sent', sentAt: '2026-07-19', notes: 'Awaiting official acknowledgement from BRELA' },
-    ],
-    collateralReturns: [
-      { id: 'cr-001', collateralRef: 'COL-2024-0089', collateralType: 'Motor Vehicle', description: 'Toyota Land Cruiser V8 – TZN 4521', currentLocation: 'Bank Custody – Dar es Salaam Branch', returnTo: 'Karibu Enterprises Ltd, Plot 12 Mikocheni', scheduledDate: '2026-07-28', status: 'Scheduled', handlerName: 'Baraka Logistics', trackingRef: 'BL-20260728-001' },
-      { id: 'cr-002', collateralRef: 'COL-2024-0090', collateralType: 'Title Deed', description: 'Certificate of Title – Plot 45 Msasani Peninsula', currentLocation: 'Archive Vault – Shelf B-12', returnTo: 'Karibu Enterprises Ltd via Adv. Fatuma Mwanga', scheduledDate: '2026-07-30', status: 'Pending Schedule', notes: 'Awaiting discharge document completion before scheduling' },
-    ],
-  },
-  {
-    id: 'psc-002',
-    loanRef: 'LN-2023-0187',
-    obligorName: 'Simba Holdings PLC',
-    facilityType: 'Revolving Credit Facility',
-    settlementDate: '2026-07-01',
-    totalFacilityAmount: 2_400_000_000,
-    currency: 'TZS',
-    overallStatus: 'Completed',
-    dischargeDocuments: [
-      { id: 'dd-004', documentName: 'Discharge of Fixed Charge – Factory Premises', documentType: 'Fixed Charge Discharge', signedBy: 'Adv. Peter Kimaro', signedAt: '2026-07-05', status: 'Signed', dueDate: '2026-07-08' },
-      { id: 'dd-005', documentName: 'Release of Floating Charge – All Assets', documentType: 'Floating Charge Release', signedBy: 'Adv. Peter Kimaro', signedAt: '2026-07-05', status: 'Signed', dueDate: '2026-07-08' },
-      { id: 'dd-006', documentName: 'Share Certificate Return – 500,000 Ordinary Shares', documentType: 'Share Certificate', signedBy: 'Adv. Peter Kimaro', signedAt: '2026-07-06', status: 'Signed', dueDate: '2026-07-10' },
-    ],
-    stakeholderConfirmations: [
-      { id: 'sc-004', stakeholderName: 'Grace Mwangi', role: 'CFO', organisation: 'Simba Holdings PLC', email: 'g.mwangi@simba.co.tz', confirmationType: 'Settlement Acknowledgement', status: 'Confirmed', sentAt: '2026-07-02', confirmedAt: '2026-07-03' },
-      { id: 'sc-005', stakeholderName: 'Adv. Peter Kimaro', role: 'Legal Counsel', organisation: 'Kimaro Legal', email: 'pkimaro@kimarolegal.co.tz', confirmationType: 'Discharge Sign-Off', status: 'Confirmed', sentAt: '2026-07-02', confirmedAt: '2026-07-05' },
-      { id: 'sc-006', stakeholderName: 'DSE Registrar', role: 'Regulatory Body', organisation: 'Dar es Salaam Stock Exchange', email: 'registrar@dse.co.tz', confirmationType: 'Share Release Notification', status: 'Confirmed', sentAt: '2026-07-06', confirmedAt: '2026-07-08' },
-    ],
-    collateralReturns: [
-      { id: 'cr-003', collateralRef: 'COL-2023-0201', collateralType: 'Share Certificate', description: '500,000 Ordinary Shares – Simba Holdings PLC', currentLocation: 'Security Pocket – SP-0042', returnTo: 'Simba Holdings PLC Board Secretary', scheduledDate: '2026-07-10', actualReturnDate: '2026-07-10', status: 'Delivered', handlerName: 'Internal Courier', trackingRef: 'INT-20260710-003' },
-      { id: 'cr-004', collateralRef: 'COL-2023-0202', collateralType: 'Property Title', description: 'Title Deed – Factory Premises, Ubungo Industrial Area', currentLocation: 'Archive Vault – Shelf A-04', returnTo: 'Simba Holdings PLC via Adv. Peter Kimaro', scheduledDate: '2026-07-12', actualReturnDate: '2026-07-12', status: 'Delivered', handlerName: 'Internal Courier', trackingRef: 'INT-20260712-001' },
-    ],
-  },
-  {
-    id: 'psc-003',
-    loanRef: 'LN-2025-0012',
-    obligorName: 'Mwanga Agri-Business Co.',
-    facilityType: 'Agricultural Loan',
-    settlementDate: '2026-07-20',
-    totalFacilityAmount: 320_000_000,
-    currency: 'TZS',
-    overallStatus: 'Blocked',
-    dischargeDocuments: [
-      { id: 'dd-007', documentName: 'Discharge of Chattel Mortgage – Farm Equipment', documentType: 'Chattel Mortgage Discharge', status: 'Rejected', dueDate: '2026-07-27', notes: 'Rejected — equipment serial numbers mismatch. Requires correction.' },
-      { id: 'dd-008', documentName: 'Land Charge Release – Moshi Farm Plot', documentType: 'Land Charge Release', status: 'Pending', dueDate: '2026-07-30' },
-    ],
-    stakeholderConfirmations: [
-      { id: 'sc-007', stakeholderName: 'Hassan Mwanga', role: 'Obligor', organisation: 'Mwanga Agri-Business Co.', email: 'hassan@mwangaagri.co.tz', phone: '+255 754 987 321', confirmationType: 'Settlement Acknowledgement', status: 'Pending', notes: 'SMS and email sent, no response yet' },
-      { id: 'sc-008', stakeholderName: 'Ministry of Agriculture', role: 'Regulatory Body', organisation: 'MoA – Land Registry', email: 'landregistry@moa.go.tz', confirmationType: 'Land Charge Cancellation', status: 'Pending' },
-    ],
-    collateralReturns: [
-      { id: 'cr-005', collateralRef: 'COL-2025-0031', collateralType: 'Farm Equipment', description: 'John Deere Tractor 5075E + Attachments', currentLocation: 'Bank Custody – Moshi Branch', returnTo: 'Mwanga Agri-Business Co., Moshi Farm', status: 'Overdue', notes: 'Return blocked pending discharge document correction', scheduledDate: '2026-07-28' },
-    ],
-  },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmt(n: number, currency = 'TZS'): string {
+  if (!n && n !== 0) return '—';
   if (n >= 1_000_000_000) return `${currency} ${(n / 1_000_000_000).toFixed(2)}B`;
   if (n >= 1_000_000) return `${currency} ${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `${currency} ${(n / 1_000).toFixed(0)}K`;
@@ -154,6 +83,145 @@ function fmtDate(d?: string | null): string {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
+
+// ── Derive a PostSettlementCase from a Loan + its linked collaterals ──────────
+
+function deriveOverallStatus(loan: Loan, collaterals: { releaseStatus: string }[]): OverallStatus {
+  if (loan.loanStatus === 'Closed') return 'Completed';
+  if (loan.loanStatus === 'Defaulted' || loan.loanStatus === 'Written Off') return 'Blocked';
+  const hasPending = collaterals.some(c => c.releaseStatus !== 'RELEASED' && c.releaseStatus !== 'Released');
+  if (hasPending) return 'In Progress';
+  return 'Pending';
+}
+
+function buildDischargeDocuments(loan: Loan, collaterals: { collateralRef: string; collateralType: string }[]): DischargeDocument[] {
+  return collaterals.map((c, i) => ({
+    id: `dd-${loan.id}-${i}`,
+    documentName: `Discharge of ${c.collateralType} – ${c.collateralRef}`,
+    documentType: `${c.collateralType} Discharge`,
+    status: loan.loanStatus === 'Closed' ? 'Signed' : 'Pending',
+    dueDate: loan.maturityDate ?? new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    signedBy: loan.loanStatus === 'Closed' ? 'Legal Officer' : undefined,
+    signedAt: loan.loanStatus === 'Closed' ? loan.maturityDate ?? undefined : undefined,
+  }));
+}
+
+function buildStakeholderConfirmations(loan: Loan): StakeholderConfirmation[] {
+  const confirmations: StakeholderConfirmation[] = [];
+  if (loan.obligorName) {
+    confirmations.push({
+      id: `sc-${loan.id}-obligor`,
+      stakeholderName: loan.obligorName,
+      role: 'Obligor',
+      organisation: loan.obligorName,
+      email: `${loan.obligorName.toLowerCase().replace(/\s+/g, '.')}@example.co.tz`,
+      confirmationType: 'Settlement Acknowledgement',
+      status: loan.loanStatus === 'Closed' ? 'Confirmed' : 'Pending',
+      sentAt: loan.loanStatus === 'Closed' ? loan.maturityDate ?? undefined : undefined,
+      confirmedAt: loan.loanStatus === 'Closed' ? loan.maturityDate ?? undefined : undefined,
+    });
+  }
+  confirmations.push({
+    id: `sc-${loan.id}-legal`,
+    stakeholderName: 'Legal Counsel',
+    role: 'Legal Officer',
+    organisation: 'Bank Legal Department',
+    email: 'legal@bank.co.tz',
+    confirmationType: 'Discharge Sign-Off',
+    status: loan.loanStatus === 'Closed' ? 'Confirmed' : 'Pending',
+  });
+  return confirmations;
+}
+
+function buildCollateralReturns(loan: Loan, collaterals: { collateralRef: string; collateralType: string; collateralDescription: string; releaseStatus: string }[]): CollateralReturn[] {
+  return collaterals.map((c, i) => {
+    const released = c.releaseStatus === 'RELEASED' || c.releaseStatus === 'Released';
+    return {
+      id: `cr-${loan.id}-${i}`,
+      collateralRef: c.collateralRef,
+      collateralType: c.collateralType,
+      description: c.collateralDescription || c.collateralRef,
+      currentLocation: released ? 'Returned to Owner' : 'Bank Custody / Archive Vault',
+      returnTo: loan.obligorName ?? 'Obligor',
+      scheduledDate: loan.maturityDate ?? undefined,
+      actualReturnDate: released ? loan.maturityDate ?? undefined : undefined,
+      status: released ? 'Delivered' : loan.loanStatus === 'Closed' ? 'Scheduled' : 'Pending Schedule',
+    };
+  });
+}
+
+async function fetchPostSettlementCases(): Promise<PostSettlementCase[]> {
+  const supabase = createClient();
+
+  // Fetch all loans (we'll show all loans that have linked collaterals)
+  const loans = await loanService.getAll();
+  if (!loans || loans.length === 0) return [];
+
+  // Fetch collateral_loan_links with collateral details
+  const { data: links } = await supabase
+    .from('collateral_loan_links')
+    .select(`
+      id,
+      loan_id,
+      collateral_record_id,
+      allocated_amount,
+      release_status,
+      discharge_date,
+      discharge_number,
+      collateral_records (
+        collateral_id,
+        type,
+        description,
+        registry
+      )
+    `);
+
+  const linksByLoan: Record<string, typeof links> = {};
+  if (links) {
+    for (const link of links) {
+      if (!linksByLoan[link.loan_id]) linksByLoan[link.loan_id] = [];
+      linksByLoan[link.loan_id]!.push(link);
+    }
+  }
+
+  // Only include loans that have at least one linked collateral
+  const cases: PostSettlementCase[] = loans
+    .filter(loan => linksByLoan[loan.id] && linksByLoan[loan.id]!.length > 0)
+    .map(loan => {
+      const loanLinks = linksByLoan[loan.id] ?? [];
+      const collaterals = loanLinks.map(l => ({
+        collateralRef: (l.collateral_records as any)?.collateral_id ?? l.collateral_record_id,
+        collateralType: (l.collateral_records as any)?.type ?? 'Collateral',
+        collateralDescription: (l.collateral_records as any)?.description ?? '',
+        releaseStatus: l.release_status ?? 'Pending',
+        allocatedAmount: l.allocated_amount ?? 0,
+        dischargeDate: l.discharge_date,
+        dischargeNumber: l.discharge_number,
+      }));
+
+      const overallStatus = deriveOverallStatus(loan, collaterals);
+
+      return {
+        id: loan.id,
+        loanRef: loan.loanNumber,
+        obligorName: loan.obligorName ?? 'Unknown Obligor',
+        facilityType: loan.facilityType,
+        settlementDate: loan.maturityDate ?? loan.disbursementDate ?? new Date().toISOString().split('T')[0],
+        totalFacilityAmount: loan.facilityAmount,
+        currency: loan.currency,
+        overallStatus,
+        dischargeDocuments: buildDischargeDocuments(loan, collaterals),
+        stakeholderConfirmations: buildStakeholderConfirmations(loan),
+        collateralReturns: buildCollateralReturns(loan, collaterals),
+        expanded: false,
+        activeTab: 'discharge' as const,
+      };
+    });
+
+  return cases;
+}
+
+// ── Status configs ────────────────────────────────────────────────────────────
 
 const signOffStatusConfig: Record<SignOffStatus, { bg: string; text: string; border: string; icon: React.ElementType; dot: string }> = {
   Signed:          { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: CheckCircle2, dot: 'bg-emerald-500' },
@@ -391,11 +459,26 @@ function ReturnsTab({ returns }: { returns: CollateralReturn[] }) {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function PostSettlementWorkflowContent() {
-  const [cases, setCases] = useState<PostSettlementCase[]>(
-    MOCK_CASES.map(c => ({ ...c, expanded: false, activeTab: 'discharge' as const }))
-  );
+  const [cases, setCases] = useState<PostSettlementCase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
+
+  const loadCases = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchPostSettlementCases();
+      setCases(data);
+    } catch {
+      setError('Failed to load post-settlement cases. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadCases(); }, [loadCases]);
 
   const toggleExpand = useCallback((id: string) => {
     setCases(prev => prev.map(c => c.id === id ? { ...c, expanded: !c.expanded } : c));
@@ -417,7 +500,6 @@ export default function PostSettlementWorkflowContent() {
   const blocked = cases.filter(c => c.overallStatus === 'Blocked').length;
   const inProgress = cases.filter(c => c.overallStatus === 'In Progress').length;
   const pendingDischarges = cases.flatMap(c => c.dischargeDocuments).filter(d => d.status === 'Pending' || d.status === 'Awaiting Review').length;
-  const pendingConfirmations = cases.flatMap(c => c.stakeholderConfirmations).filter(s => s.status === 'Pending' || s.status === 'Sent').length;
   const pendingReturns = cases.flatMap(c => c.collateralReturns).filter(r => r.status !== 'Delivered').length;
 
   return (
@@ -432,20 +514,23 @@ export default function PostSettlementWorkflowContent() {
             </div>
             <p className="text-sm text-slate-500">Manage discharge sign-offs, stakeholder confirmations, and collateral return scheduling before final release</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
-            <ClipboardCheck className="w-4 h-4" /> New Case
+          <button
+            onClick={loadCases}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4" /> Refresh
           </button>
         </div>
 
         {/* KPI Strip */}
         <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: 'Total Cases', value: totalCases, color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200' },
-            { label: 'Completed', value: completed, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-            { label: 'In Progress', value: inProgress, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
-            { label: 'Blocked', value: blocked, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
-            { label: 'Pending Discharges', value: pendingDischarges, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-            { label: 'Pending Returns', value: pendingReturns, color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+            { label: 'Total Cases', value: isLoading ? '—' : String(totalCases), color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-200' },
+            { label: 'Completed', value: isLoading ? '—' : String(completed), color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+            { label: 'In Progress', value: isLoading ? '—' : String(inProgress), color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+            { label: 'Blocked', value: isLoading ? '—' : String(blocked), color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
+            { label: 'Pending Discharges', value: isLoading ? '—' : String(pendingDischarges), color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+            { label: 'Pending Returns', value: isLoading ? '—' : String(pendingReturns), color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200' },
           ].map(kpi => (
             <div key={kpi.label} className={`rounded-xl border ${kpi.border} ${kpi.bg} px-3 py-2.5`}>
               <p className={`text-xl font-bold ${kpi.color}`}>{kpi.value}</p>
@@ -483,13 +568,30 @@ export default function PostSettlementWorkflowContent() {
 
       {/* Cases */}
       <div className="px-6 pb-8 space-y-4">
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-slate-400">
-            <ClipboardCheck className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="text-sm">No cases match your filters</p>
+        {isLoading && (
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 animate-pulse">
+                <div className="h-4 bg-slate-100 rounded w-1/3 mb-3" />
+                <div className="h-3 bg-slate-100 rounded w-1/2" />
+              </div>
+            ))}
           </div>
         )}
-        {filtered.map(c => {
+        {!isLoading && error && (
+          <div className="text-center py-16 text-red-500">
+            <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-60" />
+            <p className="text-sm font-semibold">{error}</p>
+            <button onClick={loadCases} className="mt-3 text-xs text-blue-600 hover:underline">Try again</button>
+          </div>
+        )}
+        {!isLoading && !error && filtered.length === 0 && (
+          <div className="text-center py-16 text-slate-400">
+            <ClipboardCheck className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm">{cases.length === 0 ? 'No loans with linked collateral found.' : 'No cases match your filters.'}</p>
+          </div>
+        )}
+        {!isLoading && !error && filtered.map(c => {
           const osCfg = overallStatusConfig[c.overallStatus];
           const dischargesDone = c.dischargeDocuments.filter(d => d.status === 'Signed').length;
           const confirmsDone = c.stakeholderConfirmations.filter(s => s.status === 'Confirmed').length;
@@ -504,7 +606,7 @@ export default function PostSettlementWorkflowContent() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-sm font-bold text-slate-800">{c.obligorName}</span>
                       <span className="text-xs text-slate-400">·</span>
                       <span className="text-xs font-mono text-slate-500">{c.loanRef}</span>
@@ -512,12 +614,11 @@ export default function PostSettlementWorkflowContent() {
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">
                       <span className="flex items-center gap-1"><Landmark className="w-3 h-3" />{c.facilityType}</span>
-                      <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />Settled {fmtDate(c.settlementDate)}</span>
+                      <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />Maturity {fmtDate(c.settlementDate)}</span>
                       <span className="font-medium text-slate-700">{fmt(c.totalFacilityAmount, c.currency)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    {/* Progress mini-summary */}
                     <div className="hidden sm:flex items-center gap-4 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <FileCheck2 className="w-3.5 h-3.5 text-blue-500" />
