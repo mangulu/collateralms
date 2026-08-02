@@ -1,12 +1,6 @@
 'use client';
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  GoogleMap,
-  useJsApiLoader,
-  Marker,
-  InfoWindow,
-  HeatmapLayer,
-} from '@react-google-maps/api';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Map,
   MapPin,
@@ -21,11 +15,6 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { geocodeAddress, validateAddressPair } from '@/lib/googleMaps/geocodingService';
-import Icon from '@/components/ui/AppIcon';
-
-
-declare const google: any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,14 +77,12 @@ function computeAddressMatch(
 
   if (a === b) return { matchScore: 100, matchType: 'EXACT', sameRegion: true, flagged: false };
 
-  // Token overlap score
   const tokensA = new Set(a.split(/\s+/).filter((t) => t.length > 2));
   const tokensB = new Set(b.split(/\s+/).filter((t) => t.length > 2));
   const intersection = [...tokensA].filter((t) => tokensB.has(t)).length;
   const union = new Set([...tokensA, ...tokensB]).size;
   const jaccardScore = union === 0 ? 0 : Math.round((intersection / union) * 100);
 
-  // Region check: look for shared city/region tokens
   const regionKeywords = ['dar es salaam', 'mwanza', 'arusha', 'dodoma', 'kilimanjaro', 'zanzibar', 'mbeya', 'tanga', 'morogoro', 'iringa', 'tabora', 'kigoma', 'shinyanga', 'kagera', 'lindi', 'mtwara', 'ruvuma', 'singida', 'manyara', 'geita', 'simiyu', 'njombe', 'katavi', 'rukwa', 'songwe'];
   const sameRegion = regionKeywords.some((r) => a.includes(r) && b.includes(r)) || jaccardScore >= 60;
 
@@ -110,17 +97,7 @@ function computeAddressMatch(
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const LIBRARIES: ('visualization' | 'places' | 'geometry')[] = ['visualization', 'places'];
-
-const TANZANIA_CENTER = { lat: -6.3690, lng: 34.8888 };
-
-const MAP_STYLES: { featureType?: string; elementType?: string; stylers: Record<string, string | number>[] }[] = [
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#a2daf2' }] },
-  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#f0f4f0' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#94a3b8' }, { weight: 1 }] },
-];
+const TANZANIA_CENTER: [number, number] = [-6.3690, 34.8888];
 
 const riskZoneConfig: Record<RiskZone, { color: string; bg: string; border: string; dot: string; markerColor: string }> = {
   LOW: { color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200', dot: 'bg-green-500', markerColor: '#22c55e' },
@@ -142,98 +119,33 @@ const matchTypeColors: Record<AddressValidation['matchType'], string> = {
   MISMATCH: 'bg-red-100 text-red-700 border-red-200',
 };
 
-// ─── Marker Icon Helper ───────────────────────────────────────────────────────
+// ─── Nominatim Geocoding (OpenStreetMap) ──────────────────────────────────────
 
-function getMarkerIcon(pin: CollateralPin, isSelected: boolean) {
-  const color = riskZoneConfig[pin.riskZone].markerColor;
-  if (typeof google === 'undefined') return undefined;
-  return {
-    path: google.maps.SymbolPath.CIRCLE,
-    fillColor: color,
-    fillOpacity: 1,
-    strokeColor: isSelected ? '#1e293b' : '#ffffff',
-    strokeWeight: isSelected ? 3 : 2,
-    scale: isSelected ? 14 : 10,
-  };
+async function nominatimGeocode(address: string): Promise<{ lat: number; lng: number; displayName: string } | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=tz`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'CollateralMS/1.0' } });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), displayName: data[0].display_name };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
+
+// ─── Leaflet Map Component (dynamically imported to avoid SSR issues) ─────────
+
+const LeafletMap = dynamic(() => import('./LeafletMapComponent'), { ssr: false, loading: () => (
+  <div className="w-full h-full flex items-center justify-center bg-muted/20">
+    <Loader2 size={24} className="animate-spin text-primary" />
+  </div>
+) });
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function GeomappingContent() {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
-  const hasValidKey = apiKey !== '' && apiKey !== 'your-google-maps-api-key-here';
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: hasValidKey ? apiKey : '',
-    libraries: LIBRARIES,
-  });
-
-  // ─── API Key Warning State ────────────────────────────────────────────────
-  if (!hasValidKey) {
-    return (
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-            <Map size={18} className="text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-700 text-foreground">Geomapping & Address Validation</h1>
-            <p className="text-sm text-muted-foreground">Collateral location intelligence and address risk scoring</p>
-          </div>
-        </div>
-
-        {/* Warning Banner */}
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-              <AlertTriangle size={22} className="text-amber-600" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-base font-700 text-amber-900 mb-1">Google Maps API Key Not Configured</h2>
-              <p className="text-sm text-amber-800 mb-4">
-                The Geomapping feature requires a valid <strong>Google Maps JavaScript API</strong> key to render maps,
-                display collateral pins, and run address validation. The current key is a placeholder.
-              </p>
-              <div className="bg-white border border-amber-200 rounded-lg p-4 space-y-3 text-sm text-amber-900">
-                <p className="font-600">To enable Geomapping:</p>
-                <ol className="list-decimal list-inside space-y-1.5 text-amber-800">
-                  <li>Go to <span className="font-mono bg-amber-100 px-1 rounded">Google Cloud Console → APIs &amp; Services → Credentials</span></li>
-                  <li>Create or copy an API key with <strong>Maps JavaScript API</strong> and <strong>Geocoding API</strong> enabled</li>
-                  <li>Open your <span className="font-mono bg-amber-100 px-1 rounded">.env</span> file and set:<br />
-                    <span className="font-mono bg-amber-100 px-2 py-0.5 rounded text-xs mt-1 inline-block">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-actual-key-here</span>
-                  </li>
-                  <li>Restart the development server</li>
-                </ol>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-xs text-amber-700">
-                <Info size={13} className="shrink-0" />
-                <span>Collateral location data is stored in Supabase and will be available once the map is configured.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature Preview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { icon: MapPin, title: 'Risk-Coded Pins', desc: 'Collateral locations color-coded by risk zone (Low / Medium / High)' },
-            { icon: Layers, title: 'Heatmap Layer', desc: 'Density heatmap overlay showing portfolio concentration by area' },
-            { icon: Shield, title: 'Address Validation', desc: 'Cross-reference ID address vs collateral address with match scoring' },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white border border-border rounded-xl p-4 shadow-card opacity-60">
-              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center mb-3">
-                <Icon size={16} className="text-muted-foreground" />
-              </div>
-              <p className="text-sm font-600 text-foreground mb-1">{title}</p>
-              <p className="text-xs text-muted-foreground">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -250,9 +162,7 @@ export default function GeomappingContent() {
   const [geocodeLoading, setGeocodeLoading] = useState(false);
   const [loadingPins, setLoadingPins] = useState(true);
   const [loadingValidations, setLoadingValidations] = useState(true);
-
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const [flyToPin, setFlyToPin] = useState<{ lat: number; lng: number } | null>(null);
 
   // Load real collateral pins from Supabase
   useEffect(() => {
@@ -265,7 +175,7 @@ export default function GeomappingContent() {
         .not('longitude', 'is', null)
         .then(({ data }) => {
           if (data && data.length > 0) {
-            const livePins: CollateralPin[] = data.map((row: any, idx: number) => ({
+            const livePins: CollateralPin[] = data.map((row: any) => ({
               id: row.id,
               collateralId: row.collateral_id,
               titleDeed: row.collateral_id,
@@ -283,7 +193,6 @@ export default function GeomappingContent() {
             }));
             setPins(livePins);
           } else {
-            // Fall back to mock data if no geo-tagged records exist
             setPins(mockPins);
           }
           setLoadingPins(false);
@@ -296,7 +205,6 @@ export default function GeomappingContent() {
   }, []);
 
   // Load live address validations from Supabase
-  // Joins collateral_records with obligors to compare obligor ID address vs collateral location address
   useEffect(() => {
     import('@/lib/supabase/client').then(({ createClient }) => {
       const supabase = createClient();
@@ -318,7 +226,6 @@ export default function GeomappingContent() {
         .limit(50)
         .then(({ data, error }) => {
           if (error) {
-            console.error('GeomappingContent: validations query error:', error.message);
             setLoadingValidations(false);
             return;
           }
@@ -351,14 +258,9 @@ export default function GeomappingContent() {
     });
   }, []);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    geocoderRef.current = new google.maps.Geocoder();
-  }, []);
-
   const filtered = pins.filter((p) => {
     const matchSearch = !search || p.collateralId.toLowerCase().includes(search.toLowerCase()) || p.obligor.toLowerCase().includes(search.toLowerCase()) || p.region.toLowerCase().includes(search.toLowerCase());
-    const matchType = typeFilter === 'All' || p.type === typeFilter;
+    let matchType = typeFilter === 'All' || p.type === typeFilter;
     const matchStatus = statusFilter === 'All' || p.status === statusFilter;
     const matchRisk = riskFilter === 'All' || p.riskZone === riskFilter;
     return matchSearch && matchType && matchStatus && matchRisk;
@@ -368,70 +270,51 @@ export default function GeomappingContent() {
   const unverified = pins.filter((p) => !p.addressVerified).length;
   const flagged = validations.filter((v) => v.flagged).length;
 
-  // Geocode a single pin's address to update its coordinates
+  // Geocode a single pin's address using Nominatim
   const geocodePin = useCallback(async (pin: CollateralPin) => {
-    if (!geocoderRef.current) return;
     setGeocodingStatus((prev) => ({ ...prev, [pin.id]: 'loading' }));
-    try {
-      const result = await geocodeAddress(pin.address, geocoderRef.current);
-      if (result.isValid) {
-        setPins((prev) =>
-          prev.map((p) =>
-            p.id === pin.id
-              ? { ...p, lat: result.lat, lng: result.lng, addressVerified: true }
-              : p
-          )
-        );
-        setGeocodingStatus((prev) => ({ ...prev, [pin.id]: 'done' }));
-      } else {
-        setGeocodingStatus((prev) => ({ ...prev, [pin.id]: 'error' }));
-      }
-    } catch {
+    const result = await nominatimGeocode(pin.address);
+    if (result) {
+      setPins((prev) =>
+        prev.map((p) =>
+          p.id === pin.id ? { ...p, lat: result.lat, lng: result.lng, addressVerified: true } : p
+        )
+      );
+      setGeocodingStatus((prev) => ({ ...prev, [pin.id]: 'done' }));
+    } else {
       setGeocodingStatus((prev) => ({ ...prev, [pin.id]: 'error' }));
     }
   }, []);
 
-  // Validate all address pairs using Google Maps Geocoding
+  // Validate all address pairs using Nominatim
   const validateAllAddresses = useCallback(async () => {
-    if (!geocoderRef.current) return;
     setValidatingAll(true);
     const updated: AddressValidation[] = [];
     for (const v of validations) {
-      const result = await validateAddressPair(v.idAddress, v.collateralAddress, geocoderRef.current);
+      const result = await nominatimGeocode(v.collateralAddress);
       updated.push({
         ...v,
-        matchScore: result.matchScore,
-        matchType: result.matchType,
-        sameRegion: result.sameRegion,
-        flagged: result.flagged,
-        geocodedLat: result.geocoded?.lat,
-        geocodedLng: result.geocoded?.lng,
+        geocodedLat: result?.lat,
+        geocodedLng: result?.lng,
       });
+      // Nominatim rate limit: 1 req/sec
+      await new Promise((r) => setTimeout(r, 1100));
     }
     setValidations(updated);
     setValidatingAll(false);
   }, [validations]);
 
-  // Geocode a custom address search
+  // Geocode a custom address search using Nominatim
   const handleGeocodeSearch = useCallback(async () => {
-    if (!geocoderRef.current || !geocodeSearch.trim()) return;
+    if (!geocodeSearch.trim()) return;
     setGeocodeLoading(true);
-    const result = await geocodeAddress(geocodeSearch, geocoderRef.current);
-    if (result.isValid && mapRef.current) {
-      mapRef.current.panTo({ lat: result.lat, lng: result.lng });
-      mapRef.current.setZoom(14);
-      setGeocodeResult({ lat: result.lat, lng: result.lng, address: result.formattedAddress });
+    const result = await nominatimGeocode(geocodeSearch);
+    if (result) {
+      setGeocodeResult({ lat: result.lat, lng: result.lng, address: result.displayName });
+      setFlyToPin({ lat: result.lat, lng: result.lng });
     }
     setGeocodeLoading(false);
   }, [geocodeSearch]);
-
-  // Heatmap data points
-  const heatmapData = isLoaded
-    ? filtered.map((p) => ({
-        location: new google.maps.LatLng(p.lat, p.lng),
-        weight: p.riskZone === 'HIGH' ? 3 : p.riskZone === 'MEDIUM' ? 2 : 1,
-      }))
-    : [];
 
   return (
     <div className="p-6 space-y-6">
@@ -445,17 +328,6 @@ export default function GeomappingContent() {
           <p className="text-sm text-muted-foreground">Interactive collateral map, geographic risk zones, and borrower address validation</p>
         </div>
       </div>
-
-      {/* API Key Warning */}
-      {!hasValidKey && (
-        <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-600" />
-          <span>
-            <strong>Google Maps API key not configured.</strong> Add{' '}
-            <code className="bg-amber-100 px-1 rounded">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> to your environment variables to enable the interactive map.
-          </span>
-        </div>
-      )}
 
       {/* KPI Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -543,29 +415,27 @@ export default function GeomappingContent() {
             </div>
 
             {/* Geocode Search Bar */}
-            {isLoaded && (
-              <div className="flex items-center gap-2 mb-4">
-                <div className="relative flex-1">
-                  <Navigation size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Geocode an address (e.g. Kariakoo Market, Dar es Salaam)..."
-                    value={geocodeSearch}
-                    onChange={(e) => setGeocodeSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleGeocodeSearch()}
-                    className="w-full pl-8 pr-3 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-                <button
-                  onClick={handleGeocodeSearch}
-                  disabled={geocodeLoading || !geocodeSearch.trim()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg disabled:opacity-50 hover:bg-primary/90 transition-colors"
-                >
-                  {geocodeLoading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-                  Geocode
-                </button>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="relative flex-1">
+                <Navigation size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Geocode an address (e.g. Kariakoo Market, Dar es Salaam)..."
+                  value={geocodeSearch}
+                  onChange={(e) => setGeocodeSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleGeocodeSearch()}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
-            )}
+              <button
+                onClick={handleGeocodeSearch}
+                disabled={geocodeLoading || !geocodeSearch.trim()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-lg disabled:opacity-50 hover:bg-primary/90 transition-colors"
+              >
+                {geocodeLoading ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                Geocode
+              </button>
+            </div>
 
             {geocodeResult && (
               <div className="mb-3 flex items-center gap-2 p-2.5 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800">
@@ -577,98 +447,24 @@ export default function GeomappingContent() {
             )}
 
             <div className="flex gap-4 h-[420px]">
-              {/* Map */}
+              {/* Leaflet Map */}
               <div className="flex-1 rounded-xl overflow-hidden border border-border">
-                {!hasValidKey ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 gap-3 text-center px-6">
-                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Map size={26} className="text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-600 text-foreground">Interactive Map Unavailable</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Configure <code className="font-mono text-xs bg-muted px-1 rounded">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> in your environment variables to enable the map.
-                      </p>
-                    </div>
-                  </div>
-                ) : loadError ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 text-red-600 text-sm gap-2">
-                    <AlertTriangle size={24} />
-                    <p className="font-600">Failed to load Google Maps</p>
-                    <p className="text-xs text-red-500">Check your API key and network connection</p>
-                  </div>
-                ) : !isLoaded ? (
+                {loadingPins ? (
                   <div className="w-full h-full flex items-center justify-center bg-muted/20">
                     <Loader2 size={24} className="animate-spin text-primary" />
                   </div>
                 ) : (
-                  <GoogleMap
-                    mapContainerStyle={{ width: '100%', height: '100%' }}
+                  <LeafletMap
+                    pins={filtered}
+                    selectedPin={selectedPin}
+                    onPinSelect={setSelectedPin}
+                    showHeatmap={showHeatmap}
+                    geocodeResult={geocodeResult}
+                    flyToPin={flyToPin}
+                    onFlyToDone={() => setFlyToPin(null)}
                     center={TANZANIA_CENTER}
                     zoom={6}
-                    onLoad={onMapLoad}
-                    options={{
-                      styles: MAP_STYLES,
-                      mapTypeControl: false,
-                      streetViewControl: false,
-                      fullscreenControl: true,
-                      zoomControl: true,
-                    }}
-                  >
-                    {/* Heatmap Layer */}
-                    {showHeatmap && heatmapData.length > 0 && (
-                      <HeatmapLayer
-                        data={heatmapData.map((d) => d.location)}
-                        options={{ radius: 40, opacity: 0.6 }}
-                      />
-                    )}
-
-                    {/* Collateral Markers */}
-                    {filtered.map((pin) => (
-                      <Marker
-                        key={pin.id}
-                        position={{ lat: pin.lat, lng: pin.lng }}
-                        icon={getMarkerIcon(pin, selectedPin?.id === pin.id)}
-                        onClick={() => setSelectedPin(pin)}
-                        title={`${pin.collateralId} — ${pin.obligor}`}
-                      >
-                        {selectedPin?.id === pin.id && (
-                          <InfoWindow
-                            onCloseClick={() => setSelectedPin(null)}
-                          >
-                            <div className="text-xs min-w-[160px]">
-                              <p className="font-700 text-sm text-gray-900 mb-1">{pin.collateralId}</p>
-                              <p className="text-gray-600 mb-0.5">{pin.obligor}</p>
-                              <p className="text-gray-500 mb-1">{pin.address}</p>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`px-1.5 py-0.5 rounded-full text-xs font-600 ${statusColors[pin.status]}`}>{pin.status}</span>
-                                <span className="px-1.5 py-0.5 rounded-full text-xs font-600" style={{ backgroundColor: riskZoneConfig[pin.riskZone].markerColor + '20', color: riskZoneConfig[pin.riskZone].markerColor }}>
-                                  {pin.riskZone} Risk
-                                </span>
-                              </div>
-                              <p className="text-gray-500 mt-1 font-mono text-xs">{pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}</p>
-                            </div>
-                          </InfoWindow>
-                        )}
-                      </Marker>
-                    ))}
-
-                    {/* Geocode result marker */}
-                    {geocodeResult && (
-                      <Marker
-                        position={{ lat: geocodeResult.lat, lng: geocodeResult.lng }}
-                        icon={{
-                          path: google.maps.SymbolPath.CIRCLE,
-                          fillColor: '#0ea5e9',
-                          fillOpacity: 1,
-                          strokeColor: '#ffffff',
-                          strokeWeight: 2,
-                          scale: 8,
-                        }}
-                        title={geocodeResult.address}
-                      />
-                    )}
-                  </GoogleMap>
+                  />
                 )}
               </div>
 
@@ -721,7 +517,7 @@ export default function GeomappingContent() {
                         <p className="text-sm font-600 text-foreground">{selectedPin.valueTZS}</p>
                       </div>
                       {/* Geocode button for unverified */}
-                      {!selectedPin.addressVerified && isLoaded && (
+                      {!selectedPin.addressVerified && (
                         <button
                           onClick={() => geocodePin(selectedPin)}
                           disabled={geocodingStatus[selectedPin.id] === 'loading'}
@@ -753,10 +549,7 @@ export default function GeomappingContent() {
                         key={pin.id}
                         onClick={() => {
                           setSelectedPin(pin);
-                          if (mapRef.current) {
-                            mapRef.current.panTo({ lat: pin.lat, lng: pin.lng });
-                            mapRef.current.setZoom(12);
-                          }
+                          setFlyToPin({ lat: pin.lat, lng: pin.lng });
                         }}
                         className={`w-full text-left p-2.5 rounded-lg border text-xs transition-colors ${selectedPin?.id === pin.id ? 'border-primary bg-primary/5' : 'border-border bg-white hover:bg-muted/30'}`}
                       >
@@ -780,18 +573,16 @@ export default function GeomappingContent() {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-sm font-700 text-foreground mb-1">Borrower Address Validation</h3>
-                <p className="text-xs text-muted-foreground">Comparing borrower address from ID document against collateral registration address using Google Maps Geocoding</p>
+                <p className="text-xs text-muted-foreground">Comparing borrower address from ID document against collateral registration address using OpenStreetMap Nominatim</p>
               </div>
-              {isLoaded && (
-                <button
-                  onClick={validateAllAddresses}
-                  disabled={validatingAll}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
-                >
-                  {validatingAll ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
-                  Re-validate All
-                </button>
-              )}
+              <button
+                onClick={validateAllAddresses}
+                disabled={validatingAll}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
+              >
+                {validatingAll ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+                Re-validate All
+              </button>
             </div>
             <div className="space-y-3">
               {loadingValidations ? (
@@ -887,11 +678,11 @@ export default function GeomappingContent() {
                 </div>
               ))}
             </div>
-            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
               <div className="flex items-start gap-2">
-                <Info size={14} className="text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-800">
-                  Risk zones are sourced from external risk APIs and static GIS data. High-risk collateral may require additional LTV adjustments or supplementary collateral. Google Maps Geocoding powers address validation and coordinate resolution.
+                <Info size={14} className="text-teal-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-teal-800">
+                  Risk zones are sourced from external risk APIs and static GIS data. High-risk collateral may require additional LTV adjustments or supplementary collateral. Address geocoding is powered by OpenStreetMap Nominatim — no API key required.
                 </p>
               </div>
             </div>

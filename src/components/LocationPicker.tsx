@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { MapPin, Search, X, Loader2, Navigation, CheckCircle2 } from 'lucide-react';
 
 interface LocationValue {
@@ -15,6 +15,27 @@ interface LocationPickerProps {
 
 const TANZANIA_CENTER = { lat: -6.3690, lng: 34.8888 };
 
+async function nominatimGeocode(address: string): Promise<{ lat: number; lng: number; displayName: string } | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=tz`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'CollateralMS/1.0' } });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), displayName: data[0].display_name };
+    }
+    // Retry without country restriction if no results
+    const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+    const res2 = await fetch(url2, { headers: { 'Accept-Language': 'en', 'User-Agent': 'CollateralMS/1.0' } });
+    const data2 = await res2.json();
+    if (data2 && data2.length > 0) {
+      return { lat: parseFloat(data2[0].lat), lng: parseFloat(data2[0].lon), displayName: data2[0].display_name };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default function LocationPicker({ value, onChange }: LocationPickerProps) {
   const [open, setOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -23,9 +44,6 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
   const [mode, setMode] = useState<'search' | 'manual'>('search');
-
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
-  const hasGoogleMaps = apiKey && apiKey !== 'your-google-maps-api-key-here';
 
   useEffect(() => {
     if (value) {
@@ -38,29 +56,16 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
     if (!searchText.trim()) return;
     setSearching(true);
     setSearchError(null);
-    try {
-      const res = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchText)}&key=${apiKey}`
-      );
-      const json = await res.json();
-      if (json.status === 'OK' && json.results?.[0]) {
-        const loc = json.results[0].geometry.location;
-        onChange({
-          lat: loc.lat,
-          lng: loc.lng,
-          address: json.results[0].formatted_address,
-        });
-        setOpen(false);
-        setSearchText('');
-      } else {
-        setSearchError('Address not found. Try a more specific address.');
-      }
-    } catch {
-      setSearchError('Geocoding failed. Check your connection.');
-    } finally {
-      setSearching(false);
+    const result = await nominatimGeocode(searchText);
+    if (result) {
+      onChange({ lat: result.lat, lng: result.lng, address: result.displayName });
+      setOpen(false);
+      setSearchText('');
+    } else {
+      setSearchError('Address not found. Try a more specific address or use coordinate entry.');
     }
-  }, [searchText, apiKey, onChange]);
+    setSearching(false);
+  }, [searchText, onChange]);
 
   const handleManualSave = () => {
     const lat = parseFloat(manualLat);
@@ -77,10 +82,6 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
     setOpen(false);
     setSearchError(null);
   };
-
-  const mapSrc = value
-    ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${value.lat},${value.lng}&zoom=14`
-    : `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${TANZANIA_CENTER.lat},${TANZANIA_CENTER.lng}&zoom=6`;
 
   return (
     <div className="space-y-2">
@@ -107,8 +108,8 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
         </div>
       )}
 
-      {/* Map preview (when Google Maps key available and value set) */}
-      {hasGoogleMaps && value && (
+      {/* OSM static map preview when value is set */}
+      {value && (
         <div className="rounded-lg overflow-hidden border border-border" style={{ height: 160 }}>
           <iframe
             title="Collateral Location Preview"
@@ -116,7 +117,7 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
             height="160"
             style={{ border: 0 }}
             loading="lazy"
-            src={mapSrc}
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=${value.lng - 0.01},${value.lat - 0.01},${value.lng + 0.01},${value.lat + 0.01}&layer=mapnik&marker=${value.lat},${value.lng}`}
           />
         </div>
       )}
@@ -164,11 +165,7 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
 
               {mode === 'search' ? (
                 <div className="space-y-3">
-                  {!hasGoogleMaps && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                      Google Maps API key not configured. Use coordinate entry instead.
-                    </div>
-                  )}
+                  <p className="text-xs text-muted-foreground">Powered by OpenStreetMap Nominatim — no API key required.</p>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -179,13 +176,12 @@ export default function LocationPicker({ value, onChange }: LocationPickerProps)
                         onKeyDown={(e) => e.key === 'Enter' && handleGeocode()}
                         placeholder="e.g. Plot 245, Kinondoni, Dar es Salaam"
                         className="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        disabled={!hasGoogleMaps}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleGeocode}
-                      disabled={searching || !searchText.trim() || !hasGoogleMaps}
+                      disabled={searching || !searchText.trim()}
                       className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white text-sm font-600 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shrink-0"
                     >
                       {searching ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}
