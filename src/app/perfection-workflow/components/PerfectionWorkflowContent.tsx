@@ -491,6 +491,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   const [activeAction, setActiveAction] = useState<'perfected' | 'reject' | 'return' | 'review' | 'comment' | null>(null);
   const [activeTab, setActiveTab] = useState<'activity' | 'history' | 'documents'>('activity');
   const [showSmsModal, setShowSmsModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{ open: boolean; action: 'reject' | 'return' | null }>({ open: false, action: null });
 
   // ── Document upload state ──────────────────────────────────────────────────
   const [documents, setDocuments] = useState<CollateralDocument[]>([]);
@@ -1036,11 +1037,11 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                               <Award size={16} />
                               <span>Mark Perfected</span>
                             </button>
-                            <button onClick={() => setActiveAction('return')} className="flex-1 flex flex-col items-center gap-1 bg-orange-500 text-white text-xs font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">
+                            <button onClick={() => setConfirmModal({ open: true, action: 'return' })} className="flex-1 flex flex-col items-center gap-1 bg-orange-500 text-white text-xs font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">
                               <RotateCcw size={16} />
                               <span>Return for Revision</span>
                             </button>
-                            <button onClick={() => setActiveAction('reject')} className="flex-1 flex flex-col items-center gap-1 bg-red-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors shadow-sm">
+                            <button onClick={() => setConfirmModal({ open: true, action: 'reject' })} className="flex-1 flex flex-col items-center gap-1 bg-red-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors shadow-sm">
                               <XCircle size={16} />
                               <span>Reject</span>
                             </button>
@@ -1083,6 +1084,79 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
           </div>
         </div>
       {showSmsModal && <SmsApprovalModal request={request} onClose={() => setShowSmsModal(false)} />}
+      <ConfirmActionModal
+        open={confirmModal.open}
+        action={confirmModal.action}
+        collateralId={request.collateralId}
+        onConfirm={() => {
+          const action = confirmModal.action!;
+          setConfirmModal({ open: false, action: null });
+          setActiveAction(action);
+        }}
+        onCancel={() => setConfirmModal({ open: false, action: null })}
+      />
+    </div>
+  );
+}
+
+// ─── Confirm Action Modal ──────────────────────────────────────────────────────
+interface ConfirmActionModalProps {
+  open: boolean;
+  action: 'reject' | 'return' | null;
+  collateralId: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmActionModal({ open, action, collateralId, onConfirm, onCancel }: ConfirmActionModalProps) {
+  if (!open || !action) return null;
+
+  const config = {
+    reject: {
+      icon: <XCircle size={22} className="text-red-500" />,
+      title: 'Reject this Request?',
+      description: `You are about to reject perfection request for collateral ${collateralId}. This action will notify the Credit Officer and require a reason.`,
+      confirmLabel: 'Yes, Reject',
+      confirmStyle: 'bg-red-600 hover:bg-red-700 text-white',
+      headerBg: 'bg-red-50 border-red-200',
+    },
+    return: {
+      icon: <RotateCcw size={22} className="text-orange-500" />,
+      title: 'Return for Revision?',
+      description: `You are about to return perfection request for collateral ${collateralId} to the Credit Officer for revision. Please provide revision instructions on the next step.`,
+      confirmLabel: 'Yes, Return',
+      confirmStyle: 'bg-orange-600 hover:bg-orange-700 text-white',
+      headerBg: 'bg-orange-50 border-orange-200',
+    },
+  }[action];
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div className={`px-6 py-4 border-b ${config.headerBg}`}>
+          <div className="flex items-center gap-3">
+            {config.icon}
+            <h3 className="text-base font-semibold text-gray-900">{config.title}</h3>
+          </div>
+        </div>
+        <div className="px-6 py-4">
+          <p className="text-sm text-gray-600 leading-relaxed">{config.description}</p>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className={`px-5 py-2 text-sm font-semibold rounded-lg transition-colors ${config.confirmStyle}`}
+          >
+            {config.confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

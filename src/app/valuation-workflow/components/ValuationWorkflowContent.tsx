@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CalendarClock, CheckCircle2, Clock, AlertTriangle, Plus, RefreshCw, Eye, X, Loader2, ChevronRight, LayoutGrid } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Clock, AlertTriangle, Plus, RefreshCw, Eye, X, Loader2, ChevronRight, LayoutGrid, XCircle } from 'lucide-react';
 import {
   listValuations,
   createValuation,
@@ -361,6 +361,7 @@ export default function ValuationWorkflowContent() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [actionDialog, setActionDialog] = useState<{ open: boolean; valuation: CollateralValuation | null; action: ValuationActionType | null }>({ open: false, valuation: null, action: null });
   const [actionLoading, setActionLoading] = useState(false);
+  const [rejectConfirm, setRejectConfirm] = useState<{ open: boolean; valuation: CollateralValuation | null }>({ open: false, valuation: null });
 
   // Schedule form
   const [scheduleForm, setScheduleForm] = useState({
@@ -679,7 +680,7 @@ export default function ValuationWorkflowContent() {
                               Approve
                             </button>
                             <button
-                              onClick={() => { setSelectedValuation(v); setActionDialog({ open: true, valuation: v, action: 'reject' }); }}
+                              onClick={() => { setSelectedValuation(v); setRejectConfirm({ open: true, valuation: v }); }}
                               className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                             >
                               Reject
@@ -712,7 +713,13 @@ export default function ValuationWorkflowContent() {
           <ValuationDetailPanel
             valuation={selectedValuation}
             onClose={() => { setValuationDrawerOpen(false); setTimeout(() => setSelectedValuation(null), 300); }}
-            onOpenAction={(action) => setActionDialog({ open: true, valuation: selectedValuation, action })}
+            onOpenAction={(action) => {
+              if (action === 'reject') {
+                setRejectConfirm({ open: true, valuation: selectedValuation });
+              } else {
+                setActionDialog({ open: true, valuation: selectedValuation, action });
+              }
+            }}
           />
         )}
       </WorkflowDrawer>
@@ -794,6 +801,43 @@ export default function ValuationWorkflowContent() {
         onReject={handleReject}
         loading={actionLoading}
       />
+
+      {/* Reject Confirmation Modal */}
+      {rejectConfirm.open && rejectConfirm.valuation && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50 border-red-200">
+              <div className="flex items-center gap-3">
+                <XCircle size={22} className="text-red-500" />
+                <h3 className="text-base font-semibold text-gray-900">Reject this Valuation?</h3>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600 leading-relaxed">
+                You are about to reject the valuation for <span className="font-semibold">{rejectConfirm.valuation.collateralId}</span>. This action will be recorded and the valuer will be notified. Please provide a rejection reason on the next step.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setRejectConfirm({ open: false, valuation: null })}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const v = rejectConfirm.valuation!;
+                  setRejectConfirm({ open: false, valuation: null });
+                  setActionDialog({ open: true, valuation: v, action: 'reject' });
+                }}
+                className="px-5 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Yes, Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

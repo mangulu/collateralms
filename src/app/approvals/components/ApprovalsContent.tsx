@@ -227,6 +227,13 @@ export default function ApprovalsContent() {
   const [processing, setProcessing] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Confirmation pre-modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    item: CollateralApprovalRequest | null;
+    action: 'reject' | 'return' | null;
+  }>({ open: false, item: null, action: null });
+
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -297,9 +304,13 @@ export default function ApprovalsContent() {
   };
 
   const openAction = (item: CollateralApprovalRequest, action: 'approve' | 'reject' | 'return') => {
-    setActionModal({ open: true, item, action });
-    setActionNote('');
-    setComplianceAttested(false);
+    if (action === 'reject' || action === 'return') {
+      setConfirmModal({ open: true, item, action });
+    } else {
+      setActionModal({ open: true, item, action });
+      setActionNote('');
+      setComplianceAttested(false);
+    }
   };
 
   const handleAction = async () => {
@@ -604,10 +615,10 @@ export default function ApprovalsContent() {
       </WorkflowDrawer>
 
       {/* ── Action Modal ── */}
-      {actionModal.open && actionModal.item && (
+      {actionModal.open && actionModal.item && actionModal.action && (
         <ActionModal
           item={actionModal.item}
-          action={actionModal.action!}
+          action={actionModal.action}
           actionNote={actionNote}
           setActionNote={setActionNote}
           complianceAttested={complianceAttested}
@@ -616,6 +627,51 @@ export default function ApprovalsContent() {
           onConfirm={handleAction}
           onCancel={() => setActionModal({ open: false, item: null, action: null })}
         />
+      )}
+
+      {/* Confirmation pre-modal */}
+      {confirmModal.open && confirmModal.item && confirmModal.action && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className={`px-6 py-4 border-b ${confirmModal.action === 'reject' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+              <div className="flex items-center gap-3">
+                {confirmModal.action === 'reject'
+                  ? <XCircle size={22} className="text-red-500" />
+                  : <RotateCcw size={22} className="text-gray-500" />}
+                <h3 className="text-base font-semibold text-gray-900">
+                  {confirmModal.action === 'reject' ? 'Reject this Request?' : 'Return for Revision?'}
+                </h3>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {confirmModal.action === 'reject'
+                  ? `You are about to reject the approval request for ${confirmModal.item.collateralRef} (${confirmModal.item.requestType}). This action will be recorded in the audit trail and the submitter will be notified.`
+                  : `You are about to return the approval request for ${confirmModal.item.collateralRef} to the originator for revision. Please provide revision notes on the next step.`}
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setConfirmModal({ open: false, item: null, action: null })}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const { item, action } = confirmModal;
+                  setConfirmModal({ open: false, item: null, action: null });
+                  setActionModal({ open: true, item: item!, action: action! });
+                  setActionNote('');
+                  setComplianceAttested(false);
+                }}
+                className={`px-5 py-2 text-sm font-semibold rounded-lg transition-colors ${confirmModal.action === 'reject' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-700 hover:bg-gray-800 text-white'}`}
+              >
+                {confirmModal.action === 'reject' ? 'Yes, Reject' : 'Yes, Return'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
