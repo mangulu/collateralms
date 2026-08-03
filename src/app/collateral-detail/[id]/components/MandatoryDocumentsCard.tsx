@@ -42,6 +42,42 @@ function getFileIconDetail(mimeType: string) {
   return <FileText size={16} className="text-slate-500" />;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const VALID_DOC_TYPES: DocumentType[] = [
+  'Title Deed',
+  'Charge Certificate',
+  'Valuation Report',
+  'BRELA Confirmation',
+  'Insurance Certificate',
+  'Board Resolution',
+  'Deed',
+  'Appraisal',
+  'Insurance Policy',
+  'Other',
+];
+
+// Map a free-text required-doc name to the closest DocumentType enum value.
+// Priority: 1) exact match (case-insensitive), 2) keyword heuristics, 3) 'Other'
+function resolveDocType(name: string): DocumentType {
+  const trimmed = name.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. Exact match against known DocumentType values (case-insensitive)
+  const exactMatch = VALID_DOC_TYPES.find((t) => t.toLowerCase() === lower);
+  if (exactMatch) return exactMatch;
+
+  // 2. Keyword heuristics
+  if (lower.includes('title') || lower.includes('deed')) return 'Title Deed';
+  if (lower.includes('charge')) return 'Charge Certificate';
+  if (lower.includes('valuation') || lower.includes('appraisal')) return 'Valuation Report';
+  if (lower.includes('brela')) return 'BRELA Confirmation';
+  if (lower.includes('insurance')) return 'Insurance Certificate';
+  if (lower.includes('board') || lower.includes('resolution')) return 'Board Resolution';
+
+  return 'Other';
+}
+
 // ─── Inline Upload Modal ──────────────────────────────────────────────────────
 
 interface InlineUploadModalProps {
@@ -60,18 +96,6 @@ function InlineUploadModal({ collateral, userId, userName, docTypeName, onClose,
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
-
-  // Map the required doc name to the closest DocumentType enum value
-  const resolveDocType = (name: string): DocumentType => {
-    const lower = name.toLowerCase();
-    if (lower.includes('title') || lower.includes('deed')) return 'Title Deed';
-    if (lower.includes('charge')) return 'Charge Certificate';
-    if (lower.includes('valuation') || lower.includes('appraisal')) return 'Valuation Report';
-    if (lower.includes('brela')) return 'BRELA Confirmation';
-    if (lower.includes('insurance')) return 'Insurance Certificate';
-    if (lower.includes('board') || lower.includes('resolution')) return 'Board Resolution';
-    return 'Other';
-  };
 
   const docType = resolveDocType(docTypeName);
 
@@ -256,18 +280,17 @@ export default function MandatoryDocumentsCard({ collateral, onDocumentUploaded 
 
   if (!loading && mandatoryList.length === 0) return null;
 
-  // Match uploaded docs to mandatory list using exact document_type match
-  // Falls back to case-insensitive name match for flexibility
+  // Match uploaded docs to mandatory list using resolved DocumentType on both sides
   const docStatus = mandatoryList.map((req) => {
-    const reqNameLower = req.documentName.toLowerCase().trim();
+    const resolvedReqType = resolveDocType(req.documentName).toLowerCase().trim();
     const match = uploadedDocs.find((u) => {
       const uploadedTypeLower = (u.docType ?? '').toLowerCase().trim();
-      // Exact match first
+      // Primary: compare resolved type on both sides
+      if (uploadedTypeLower === resolvedReqType) return true;
+      // Fallback: compare raw required name against uploaded type
+      const reqNameLower = req.documentName.toLowerCase().trim();
       if (uploadedTypeLower === reqNameLower) return true;
-      // Partial keyword match as fallback
-      const reqWords = reqNameLower.split(/\s+/);
-      const uploadedWords = uploadedTypeLower.split(/\s+/);
-      return reqWords.some((w) => w.length > 3 && uploadedWords.some((uw) => uw.includes(w) || w.includes(uw)));
+      return false;
     });
     return { required: req.documentName, uploaded: !!match, fileName: match?.fileName };
   });
