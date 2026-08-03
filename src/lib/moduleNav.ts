@@ -186,8 +186,11 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Reports',
         items: [
           { label: 'Reports Hub', icon: BarChart2, href: '/reports', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Officer Workload', icon: Users, href: '/reports-dashboard', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Collateral Reports', icon: ScrollText, href: '/collateral-reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Custom Reports', icon: ScrollText, href: '/custom-reports', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Export', icon: Download, href: '/export', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Performance Export', icon: TrendingUp, href: '/performance-export', permission: PERMISSIONS.REPORTS_VIEW },
         ],
       },
       {
@@ -196,6 +199,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Scheduled Report Delivery', icon: Mail, href: '/scheduled-report-delivery', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Regulatory Submission Tracking', icon: FileCheck, href: '/regulatory-submission-tracking', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'LTV Breach Alerts', icon: TrendingDown, href: '/ltv-breach-alerts', permission: PERMISSIONS.REPORTS_VIEW },
+          { label: 'Audit Report', icon: BookOpen, href: '/audit-report', permission: PERMISSIONS.REPORTS_VIEW },
         ],
       },
     ],

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import Link from 'next/link';
 import { ArrowLeft, CheckSquare, ChevronDown, AlertTriangle, Info, Lightbulb, ClipboardList, FlaskConical, Database, Eye, User, ShieldCheck, ArrowRight, CheckCircle2, Circle, BookOpen,  } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
+
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
