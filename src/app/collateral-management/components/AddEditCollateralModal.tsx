@@ -113,6 +113,10 @@ export default function AddEditCollateralModal({
   const [selectedObligor, setSelectedObligor] = useState<{ id: string; name: string; code: string } | null>(null);
   const [obligorError, setObligorError] = useState<string | null>(null);
 
+  // Location picker state
+  const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
   // Loan picker state
   const [availableLoans, setAvailableLoans] = useState<Loan[]>([]);
   const [selectedLoanId, setSelectedLoanId] = useState<string>('');
@@ -125,9 +129,6 @@ export default function AddEditCollateralModal({
   const [loanSaving, setLoanSaving] = useState(false);
   const [loanSaveError, setLoanSaveError] = useState<string | null>(null);
   const [allObligors, setAllObligors] = useState<ObligorFull[]>([]);
-
-  // Location picker state
-  const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
   // Document state
   const [documents, setDocuments] = useState<CollateralDocument[]>([]);
@@ -271,12 +272,26 @@ export default function AddEditCollateralModal({
       setRetryCount(0);
       lastSubmitDataRef.current = null;
       setObligorError(null);
+      setLocationError(null);
       setShowNewLoanModal(false);
       setLoanForm(emptyLoanForm);
       setLoanFormErrors({});
       setLoanSaveError(null);
+      // Pre-populate location when editing an existing record
+      if (editItem) {
+        const lat = (editItem as any).latitude;
+        const lng = (editItem as any).longitude;
+        const addr = (editItem as any).locationAddress;
+        if (lat != null && lng != null) {
+          setLocation({ lat: Number(lat), lng: Number(lng), address: addr || `${lat}, ${lng}` });
+        } else {
+          setLocation(null);
+        }
+      } else {
+        setLocation(null);
+      }
     }
-  }, [open]);
+  }, [open, editItem]);
 
   // Load loans when obligor changes
   useEffect(() => {
@@ -437,6 +452,12 @@ export default function AddEditCollateralModal({
       return;
     }
     setObligorError(null);
+
+    if (!location) {
+      setLocationError('Location is required. Please set the collateral coordinates before saving.');
+      return;
+    }
+    setLocationError(null);
 
     const savedData: Partial<Collateral> = {
       obligor: selectedObligor.name,
@@ -1255,10 +1276,23 @@ export default function AddEditCollateralModal({
           <div className="mb-6">
             <h3 className="text-sm font-600 text-foreground mb-3 pb-2 border-b border-border flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-700">4</span>
-              Geolocation <span className="text-xs font-400 text-muted-foreground ml-1">(optional)</span>
+              Geolocation <span className="text-xs font-500 text-red-500 ml-1">*</span>
+              <span className="text-xs font-400 text-muted-foreground ml-1">(required)</span>
             </h3>
-            <p className="text-xs text-muted-foreground mb-3">Pin the physical location of this collateral asset on the map.</p>
-            <LocationPicker value={location} onChange={setLocation} />
+            <p className="text-xs text-muted-foreground mb-3">Pin the physical location of this collateral asset on the map. Coordinates are required for geomapping.</p>
+            <LocationPicker
+              value={location}
+              onChange={(val) => {
+                setLocation(val);
+                if (val) setLocationError(null);
+              }}
+            />
+            {locationError && (
+              <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                <AlertCircle size={12} className="shrink-0" />
+                {locationError}
+              </p>
+            )}
           </div>
 
           {/* Section 5: Required Documents */}
