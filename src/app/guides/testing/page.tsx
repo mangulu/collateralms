@@ -272,7 +272,7 @@ const TEST_DATA: TestDataEntry[] = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function PrerequisiteCard({ category, icon: Icon, color, items }: typeof PREREQUISITES[0]) {
+function PrerequisiteCard({ category, icon: IconComp, color, items }: typeof PREREQUISITES[0]) {
   return (
     <div
       className="rounded-xl p-5"
@@ -280,7 +280,7 @@ function PrerequisiteCard({ category, icon: Icon, color, items }: typeof PREREQU
     >
       <div className="flex items-center gap-2.5 mb-4">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + '15' }}>
-          <Icon size={16} style={{ color }} />
+          <IconComp size={16} style={{ color }} />
         </div>
         <h3 className="text-sm font-bold" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>{category}</h3>
       </div>

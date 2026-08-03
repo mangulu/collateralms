@@ -70,6 +70,11 @@
     opacity: 0.6;
   }
 
+  button:disabled,
+  button[disabled] {
+    color: #0d4f7a !important;
+  }
+
   .font-mono {
     font-family: 'IBM Plex Mono', monospace;
   }
