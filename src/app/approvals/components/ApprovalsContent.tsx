@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, Eye, Search, Loader2, Calendar, User, RefreshCw, ShieldCheck, X, ChevronRight, AlertTriangle, Scale, CreditCard, FileCheck, ArrowRight, Send, Lock, Unlock, CornerDownRight, Info, RotateCcw, TrendingUp, LayoutGrid } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, Search, Loader2, Calendar, User, RefreshCw, ShieldCheck, X, ChevronRight, AlertTriangle, Scale, CreditCard, FileCheck, ArrowRight, Send, Lock, Unlock, CornerDownRight, RotateCcw, TrendingUp, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import { collateralApprovalService, CollateralApprovalRequest, ApprovalComment, ApprovalPipelineLog, ApprovalRequestStatus, ApproverRole } from '@/lib/supabase/collateralApprovalService';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/AppIcon';
+import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -209,10 +210,11 @@ export default function ApprovalsContent() {
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('All');
   const [selectedItem, setSelectedItem] = useState<CollateralApprovalRequest | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [comments, setComments] = useState<ApprovalComment[]>([]);
   const [pipelineLog, setPipelineLog] = useState<ApprovalPipelineLog[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [detailTab, setDetailTab] = useState<'details' | 'comments' | 'pipeline'>('details');
+  const [detailTab, setDetailTab] = useState<'comments' | 'pipeline'>('comments');
 
   // Action modal
   const [actionModal, setActionModal] = useState<{
@@ -260,8 +262,14 @@ export default function ApprovalsContent() {
 
   const selectItem = (item: CollateralApprovalRequest) => {
     setSelectedItem(item);
-    setDetailTab('details');
+    setDetailTab('comments');
+    setDrawerOpen(true);
     loadDetailData(item);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerOpen(false);
+    setTimeout(() => setSelectedItem(null), 300);
   };
 
   // Filtering
@@ -453,8 +461,8 @@ export default function ApprovalsContent() {
         <PipelineView items={items} loading={loading} onSelect={selectItem} />
       ) : (
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* List Panel */}
-          <div className={`flex flex-col ${selectedItem ? 'w-[42%]' : 'w-full'} border-r border-gray-200 bg-white min-h-0`}>
+          {/* Full-width List Panel */}
+          <div className="flex flex-col w-full border-r border-gray-200 bg-white min-h-0">
             {/* Filters */}
             <div className="px-4 py-3 border-b border-gray-100 shrink-0 space-y-2">
               <div className="flex items-center gap-2">
@@ -499,7 +507,7 @@ export default function ApprovalsContent() {
                 filtered.map((item) => {
                   const typeCfg = REQUEST_TYPE_CONFIG[item.requestType] ?? REQUEST_TYPE_CONFIG['Legal Review'];
                   const statusCfg = STATUS_CONFIG[item.requestStatus];
-                  const isSelected = selectedItem?.id === item.id;
+                  const isSelected = selectedItem?.id === item.id && drawerOpen;
                   const isActive = item.requestStatus === 'Pending' || item.requestStatus === 'Under Review';
 
                   return (
@@ -570,23 +578,30 @@ export default function ApprovalsContent() {
               )}
             </div>
           </div>
-
-          {/* Detail Panel */}
-          {selectedItem && (
-            <DetailPanel
-              item={selectedItem}
-              comments={comments}
-              pipelineLog={pipelineLog}
-              commentsLoading={commentsLoading}
-              detailTab={detailTab}
-              setDetailTab={setDetailTab}
-              onClose={() => setSelectedItem(null)}
-              onAction={openAction}
-              onAddComment={handleAddComment}
-            />
-          )}
         </div>
       )}
+
+      {/* ── Workflow Drawer ── */}
+      <WorkflowDrawer
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        width="w-[520px]"
+        deadline={selectedItem?.dueDate ?? undefined}
+      >
+        {selectedItem && (
+          <DetailPanel
+            item={selectedItem}
+            comments={comments}
+            pipelineLog={pipelineLog}
+            commentsLoading={commentsLoading}
+            detailTab={detailTab}
+            setDetailTab={setDetailTab}
+            onClose={handleCloseDrawer}
+            onAction={openAction}
+            onAddComment={handleAddComment}
+          />
+        )}
+      </WorkflowDrawer>
 
       {/* ── Action Modal ── */}
       {actionModal.open && actionModal.item && (
@@ -623,8 +638,8 @@ function DetailPanel({
   comments: ApprovalComment[];
   pipelineLog: ApprovalPipelineLog[];
   commentsLoading: boolean;
-  detailTab: 'details' | 'comments' | 'pipeline';
-  setDetailTab: (t: 'details' | 'comments' | 'pipeline') => void;
+  detailTab: 'comments' | 'pipeline';
+  setDetailTab: (t: 'comments' | 'pipeline') => void;
   onClose: () => void;
   onAction: (item: CollateralApprovalRequest, action: 'approve' | 'reject' | 'return') => void;
   onAddComment: (text: string, isInternal: boolean) => Promise<void>;
@@ -634,10 +649,10 @@ function DetailPanel({
   const isActive = item.requestStatus === 'Pending' || item.requestStatus === 'Under Review';
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 bg-white overflow-hidden">
       {/* Detail Header */}
       <div className="px-5 py-4 border-b border-gray-200 shrink-0">
-        <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-start justify-between gap-3 mb-1">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${typeCfg.color} ${typeCfg.bg} ${typeCfg.border}`}>
@@ -659,13 +674,11 @@ function DetailPanel({
             <X size={16} />
           </button>
         </div>
-        {/* Pipeline tracker */}
-        <PipelineTracker stage={item.pipelineStage} status={item.requestStatus} />
       </div>
 
       {/* Detail Tabs */}
       <div className="flex border-b border-gray-200 shrink-0 px-5">
-        {(['details', 'comments', 'pipeline'] as const).map((t) => (
+        {(['comments', 'pipeline'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setDetailTab(t)}
@@ -673,104 +686,13 @@ function DetailPanel({
               detailTab === t ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t === 'comments' ? `Comments (${comments.length})` : t === 'pipeline' ? 'Pipeline Log' : 'Details'}
+            {t === 'comments' ? `Comments (${comments.length})` : 'Pipeline Log'}
           </button>
         ))}
       </div>
 
       {/* Detail Body */}
       <div className="flex-1 overflow-y-auto px-5 py-4">
-        {detailTab === 'details' && (
-          <div className="space-y-5">
-            {/* Key info grid */}
-            <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Request Details</h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                {[
-                  { label: 'Collateral Ref', value: item.collateralRef },
-                  { label: 'Collateral Type', value: item.collateralType },
-                  { label: 'Obligor', value: item.obligor },
-                  { label: 'Assigned Role', value: item.assignedToRole },
-                  { label: 'Routed By', value: item.routedByName || '—' },
-                  { label: 'Routed At', value: fmtDateTime(item.routedAt) },
-                  { label: 'Due Date', value: fmtDate(item.dueDate) },
-                  { label: 'Loan Ref', value: item.loanRef || '—' },
-                  { label: 'Collateral Value', value: fmtCurrency(item.collateralValue) },
-                  { label: 'Priority', value: item.priority },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
-                    <p className="text-sm text-gray-800 font-medium mt-0.5">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Supporting notes */}
-            {item.supportingNotes && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Supporting Notes</h3>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800 flex gap-2">
-                  <Info size={14} className="shrink-0 mt-0.5 text-blue-500" />
-                  {item.supportingNotes}
-                </div>
-              </div>
-            )}
-
-            {/* Decision info */}
-            {item.reviewedByName && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Decision</h3>
-                <div className={`rounded-lg border px-4 py-3 ${item.requestStatus === 'Approved' ? 'bg-green-50 border-green-200' : item.requestStatus === 'Rejected' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-gray-700">{item.reviewedByName}</span>
-                    <span className="text-xs text-gray-400">{fmtDateTime(item.reviewedAt)}</span>
-                  </div>
-                  {item.decisionNotes && <p className="text-sm text-gray-700">{item.decisionNotes}</p>}
-                  {item.complianceAttested && (
-                    <div className="flex items-center gap-1.5 mt-2 text-xs text-teal-700">
-                      <FileCheck size={12} /> Compliance attestation confirmed
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            {isActive && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
-                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
-                  <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                    <ShieldCheck size={12} className="text-teal-600" />
-                    Compliance attestation is required before approving or rejecting.
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => onAction(item, 'approve')}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                    >
-                      <CheckCircle size={14} /> Approve
-                    </button>
-                    <button
-                      onClick={() => onAction(item, 'reject')}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                    >
-                      <XCircle size={14} /> Reject
-                    </button>
-                    <button
-                      onClick={() => onAction(item, 'return')}
-                      className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <RotateCcw size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {detailTab === 'comments' && (
           <CommentThread comments={comments} onAdd={onAddComment} loading={commentsLoading} />
         )}
@@ -813,6 +735,56 @@ function DetailPanel({
           </div>
         )}
       </div>
+
+      {/* Action Zone */}
+      {isActive && (
+        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
+          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
+            <p className="text-xs text-gray-500 flex items-center gap-1.5">
+              <ShieldCheck size={12} className="text-teal-600" />
+              Compliance attestation is required before approving or rejecting.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onAction(item, 'approve')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+              >
+                <CheckCircle size={14} /> Approve
+              </button>
+              <button
+                onClick={() => onAction(item, 'reject')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                <XCircle size={14} /> Reject
+              </button>
+              <button
+                onClick={() => onAction(item, 'return')}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <RotateCcw size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isActive && item.reviewedByName && (
+        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
+          <div className={`rounded-lg border px-4 py-3 ${item.requestStatus === 'Approved' ? 'bg-green-50 border-green-200' : item.requestStatus === 'Rejected' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-semibold text-gray-700">{item.reviewedByName}</span>
+              <span className="text-xs text-gray-400">{fmtDateTime(item.reviewedAt)}</span>
+            </div>
+            {item.decisionNotes && <p className="text-sm text-gray-700">{item.decisionNotes}</p>}
+            {item.complianceAttested && (
+              <div className="flex items-center gap-1.5 mt-2 text-xs text-teal-700">
+                <FileCheck size={12} /> Compliance attestation confirmed
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

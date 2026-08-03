@@ -692,51 +692,10 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
           </button>
         </div>
 
-        {/* Modal Body — two columns */}
+        {/* Modal Body — single column action interface */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          {/* Left Column — Details & Workflow */}
-          <div className="w-80 shrink-0 border-r border-border flex flex-col overflow-y-auto bg-muted/20">
-
-            {/* Workflow Stage */}
-            <div className="px-5 py-5 border-b border-border">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Workflow Progress</p>
-              <WorkflowStageBar status={request.requestStatus} userRole={userRole} />
-              {request.decisionNotes && (request.requestStatus === 'Rejected' || request.requestStatus === 'Returned' || request.requestStatus === 'Perfected') && (
-                <div className={`mt-3 text-xs px-3 py-2 rounded-md ${
-                  request.requestStatus === 'Rejected' ? 'bg-red-50 text-red-700 border border-red-200' :
-                  request.requestStatus === 'Returned'? 'bg-orange-50 text-orange-700 border border-orange-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                }`}>
-                  <span className="font-semibold">Reason: </span>{request.decisionNotes}
-                </div>
-              )}
-            </div>
-
-            {/* Metadata */}
-            <div className="px-5 py-5 space-y-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Request Details</p>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
-                  <p className="text-xs text-muted-foreground mb-0.5">Submitted By</p>
-                  <p className="text-sm font-medium text-foreground">{request.submittedByName || '—'}</p>
-                </div>
-                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
-                  <p className="text-xs text-muted-foreground mb-0.5">Submitted At</p>
-                  <p className="text-sm font-medium text-foreground">{formatDate(request.submittedAt)}</p>
-                </div>
-                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
-                  <p className="text-xs text-muted-foreground mb-0.5">Reviewed By</p>
-                  <p className="text-sm font-medium text-foreground">{request.reviewedByName || '—'}</p>
-                </div>
-                <div className="bg-white rounded-lg px-3 py-2.5 border border-border">
-                  <p className="text-xs text-muted-foreground mb-0.5">Perfection Deadline</p>
-                  <p className="text-sm font-medium text-foreground">{request.perfectionDeadline || '—'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column — Tabs + Actions */}
+          {/* Action Interface */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
             {/* Tabs */}
