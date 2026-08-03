@@ -4,34 +4,8 @@ import { useRouter } from 'next/navigation';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
-import {
-  FolderOpen,
-  Brain,
-  Bell,
-  BarChart2,
-  ShieldCheck,
-  Settings,
-  LogOut,
-  ChevronRight,
-  Layers,
-  Archive,
-  Users,
-  CheckSquare,
-  BookOpen,
-  HelpCircle,
-  Settings2,
-  AlertTriangle,
-  Clock,
-  TrendingUp,
-  ArrowRight,
-  Calendar,
-  Activity,
-  Zap,
-  FileText,
-  Plus,
-  Eye,
-  RefreshCw,
-} from 'lucide-react';
+import { userTaskService } from '@/lib/supabase/userTaskService';
+import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, Settings2, AlertTriangle, Clock, TrendingUp, ArrowRight, Calendar, Activity, Zap, FileText, Plus, Eye,  } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -274,6 +248,7 @@ export default function ModuleHubPage() {
   const [priorityItems, setPriorityItems] = useState<PriorityItem[]>([]);
   const [moduleKPIs, setModuleKPIs] = useState<Record<string, ModuleKPI>>({});
   const [statsLoading, setStatsLoading] = useState(true);
+  const [taskCount, setTaskCount] = useState<number | null>(null);
 
   const displayName = userProfile?.full_name || userProfile?.email || 'User';
   const firstName = displayName.split(' ')[0];
@@ -436,6 +411,20 @@ export default function ModuleHubPage() {
     fetchStats();
   }, []);
 
+  // Fetch task count for current user
+  useEffect(() => {
+    async function fetchTaskCount() {
+      if (!userProfile?.id) return;
+      try {
+        const count = await userTaskService.getPendingCount(userProfile.id);
+        setTaskCount(count);
+      } catch {
+        setTaskCount(null);
+      }
+    }
+    fetchTaskCount();
+  }, [userProfile?.id]);
+
   const visibleModules = loading
     ? modules
     : modules.filter((m) => {
@@ -516,13 +505,33 @@ export default function ModuleHubPage() {
 
       {/* ── Hero Section ────────────────────────────────────────────────────── */}
       <div
-        className="px-6 pt-8 pb-6"
+        className="px-6 pt-8 pb-6 relative overflow-hidden"
         style={{
           background: 'linear-gradient(135deg, var(--izou-card) 0%, var(--izou-bg) 100%)',
           borderBottom: '1px solid var(--izou-border)',
         }}
       >
-        <div className="max-w-6xl mx-auto">
+        {/* Logo watermark */}
+        <div
+          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center"
+          aria-hidden="true"
+          style={{ zIndex: 0 }}
+        >
+          <img
+            src="/assets/images/app_logo.png"
+            alt=""
+            style={{
+              width: '420px',
+              height: '420px',
+              objectFit: 'contain',
+              opacity: 0.045,
+              filter: 'blur(6px) grayscale(30%)',
+              userSelect: 'none',
+            }}
+          />
+        </div>
+
+        <div className="max-w-6xl mx-auto relative" style={{ zIndex: 1 }}>
           {/* Welcome row */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
             <div>
@@ -545,52 +554,30 @@ export default function ModuleHubPage() {
             </div>
             <button
               onClick={() => router.push('/workflows/tasks')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
+              className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
               style={{ backgroundColor: 'var(--izou-primary)', color: '#fff' }}
               onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.9'; }}
               onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
             >
               <Activity size={14} />
               My Tasks
+              {taskCount !== null && taskCount > 0 && (
+                <span
+                  className="inline-flex items-center justify-center rounded-full text-xs font-bold leading-none"
+                  style={{
+                    minWidth: '18px',
+                    height: '18px',
+                    padding: '0 5px',
+                    backgroundColor: '#EF4444',
+                    color: '#fff',
+                    fontSize: '10px',
+                  }}
+                >
+                  {taskCount > 99 ? '99+' : taskCount}
+                </span>
+              )}
               <ChevronRight size={14} />
             </button>
-          </div>
-
-          {/* Summary stat bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: 'Total Collateral', value: statsLoading ? '—' : summaryStats.totalCollateral.toString(), icon: FolderOpen, color: '#007CB3', href: '/collateral-management' },
-              { label: 'Active Workflows', value: statsLoading ? '—' : summaryStats.activeWorkflows.toString(), icon: RefreshCw, color: '#D97706', href: '/workflows/instances' },
-              { label: 'Pending Actions', value: statsLoading ? '—' : summaryStats.pendingActions.toString(), icon: CheckSquare, color: '#7C3AED', href: '/my-tasks' },
-              { label: 'Overdue Items', value: statsLoading ? '—' : summaryStats.overdueItems.toString(), icon: AlertTriangle, color: summaryStats.overdueItems > 0 ? '#DC2626' : '#059669', href: '/my-tasks' },
-            ].map((stat) => {
-              const StatIcon = stat.icon;
-              return (
-                <button
-                  key={stat.label}
-                  onClick={() => router.push(stat.href)}
-                  className="flex items-center gap-3 p-3 rounded-xl text-left transition-all"
-                  style={{
-                    backgroundColor: 'var(--izou-card)',
-                    border: '1px solid var(--izou-border)',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  }}
-                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
-                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
-                >
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${stat.color}18` }}
-                  >
-                    <StatIcon size={16} style={{ color: stat.color }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xl font-bold leading-none" style={{ color: stat.color }}>{stat.value}</p>
-                    <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--izou-muted)' }}>{stat.label}</p>
-                  </div>
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>
@@ -722,13 +709,13 @@ export default function ModuleHubPage() {
                     </div>
                   )}
 
-                  {/* Quick actions */}
+                  {/* Quick actions — limited to first 2 for uniformity */}
                   <div
-                    className="px-5 py-3 flex items-center gap-2 flex-wrap"
+                    className="px-5 py-3 flex items-center gap-2"
                     style={{ borderTop: '1px solid var(--izou-border)' }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {mod.quickActions.map((action) => {
+                    {mod.quickActions.slice(0, 2).map((action) => {
                       const ActionIcon = action.icon;
                       return (
                         <button
