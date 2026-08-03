@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Files, Plus, Upload, Trash2, Download, FileText, FileType2, FileImage, File, RefreshCw, X, ChevronDown, AlertCircle, Eye, LayoutGrid, List } from 'lucide-react';
+import { Files, Plus, Upload, Trash2, Download, FileText, FileType2, FileImage, File, RefreshCw, X, ChevronDown, AlertCircle, Eye, LayoutGrid, List, AlertTriangle, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
+import { collateralTypeRequiredDocsService } from '@/lib/supabase/collateralTypeRequiredDocsService';
 import { useAuth } from '@/contexts/AuthContext';
 
 function SectionHeader({ title, icon: IconComponent }: { title: string; icon: React.ElementType }) {
@@ -229,9 +230,11 @@ interface UploadDocumentModalProps {
   onClose: () => void;
   onUploaded: () => void;
   initialDocType?: DocumentType;
+  /** When set, the user is uploading a newer version to replace this existing doc */
+  replacingDoc?: CollateralDocument | null;
 }
 
-function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded, initialDocType }: UploadDocumentModalProps) {
+function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded, initialDocType, replacingDoc }: UploadDocumentModalProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docType, setDocType] = useState<DocumentType>(initialDocType ?? 'Other');
@@ -264,8 +267,25 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
     if (!selectedFile) { setError('Please select a file.'); return; }
     setUploading(true);
     setError('');
+
+    // If replacing, mark the previous doc as superseded first
+    if (replacingDoc) {
+      const supabase = (await import('@/lib/supabase/client')).createClient();
+      await supabase
+        .from('collateral_documents')
+        .update({
+          is_superseded: true,
+          superseded_at: new Date().toISOString(),
+        })
+        .eq('id', replacingDoc.id);
+    }
+
     const result = await documentService.upload(
-      selectedFile, collateral.id, collateral.collateralId, docType, notes, userId, userName,
+      selectedFile, collateral.id, collateral.collateralId, docType,
+      replacingDoc
+        ? `Newer version replacing v${replacingDoc.version}${notes ? ` — ${notes}` : ''}`
+        : notes,
+      userId, userName,
     );
     setUploading(false);
     if (result.error) { setError(result.error); return; }
@@ -273,15 +293,26 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
     onClose();
   };
 
+  const isVersionUpload = !!replacingDoc;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Upload Document</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Linked to: <span className="font-medium text-foreground">{collateral.collateralId} — {collateral.obligor}</span>
-            </p>
+            <h2 className="text-base font-semibold text-foreground">
+              {isVersionUpload ? 'Upload Newer Version' : 'Upload Document'}
+            </h2>
+            {isVersionUpload ? (
+              <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
+                <History size={11} />
+                Replacing <span className="font-medium">{replacingDoc.documentType}</span> v{replacingDoc.version} — previous will be marked superseded
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Linked to: <span className="font-medium text-foreground">{collateral.collateralId} — {collateral.obligor}</span>
+              </p>
+            )}
           </div>
           <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
             <X size={16} className="text-muted-foreground" />
@@ -320,20 +351,22 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
           {/* Preview panel — shown once a file is selected */}
           {selectedFile && <FilePreviewPanel file={selectedFile} />}
 
-          <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
-            <div className="relative">
-              <select value={docType} onChange={(e) => setDocType(e.target.value as DocumentType)}
-                className="w-full appearance-none border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8">
-                {DOC_TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          {!isVersionUpload && (
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
+              <div className="relative">
+                <select value={docType} onChange={(e) => setDocType(e.target.value as DocumentType)}
+                  className="w-full appearance-none border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8">
+                  {DOC_TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
-          </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-foreground mb-1.5">Notes <span className="text-muted-foreground font-normal">(optional)</span></label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-              placeholder="Add context or version notes…"
+              placeholder={isVersionUpload ? 'Describe what changed in this version…' : 'Add context or version notes…'}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
           </div>
           {error && (
@@ -345,9 +378,12 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border shrink-0">
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors">Cancel</button>
           <button onClick={handleSubmit} disabled={uploading || !selectedFile}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+              isVersionUpload
+                ? 'bg-amber-600 hover:bg-amber-700 text-white' :'bg-primary hover:bg-primary/90 text-white'
+            }`}>
             {uploading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
-            {uploading ? 'Uploading…' : 'Upload Document'}
+            {uploading ? 'Uploading…' : isVersionUpload ? 'Upload as Newer Version' : 'Upload Document'}
           </button>
         </div>
       </div>
@@ -437,6 +473,67 @@ function DocRow({ doc, collateralId, onView, onDelete, canDelete }: DocRowProps)
   );
 }
 
+// ─── Duplicate Block Dialog ───────────────────────────────────────────────────
+
+interface DuplicateBlockDialogProps {
+  existingDoc: CollateralDocument;
+  collateralId: string;
+  onCancel: () => void;
+  onUploadAsVersion: () => void;
+}
+
+function DuplicateBlockDialog({ existingDoc, collateralId, onCancel, onUploadAsVersion }: DuplicateBlockDialogProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-5 border-b border-border flex items-start gap-3">
+          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+            <AlertTriangle size={18} className="text-amber-600" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Document Already Exists</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              A <span className="font-medium text-foreground">{existingDoc.documentType}</span> is already uploaded for collateral <span className="font-medium text-foreground">{collateralId}</span>.
+              Only one document of this type is allowed per collateral.
+            </p>
+          </div>
+        </div>
+        <div className="px-6 py-4 space-y-2.5">
+          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-border/60">
+            <div className="w-8 h-8 rounded flex items-center justify-center shrink-0">
+              {getFileIconDetail(existingDoc.mimeType ?? '')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">{existingDoc.documentType}</p>
+              <p className="text-[10px] text-muted-foreground">
+                v{existingDoc.version} · {documentService.formatFileSize(existingDoc.fileSize)} · {new Date(existingDoc.createdAt).toLocaleDateString()}
+                {existingDoc.uploadedByName ? ` · ${existingDoc.uploadedByName}` : ''}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            You can upload this as a <strong>newer version</strong> — the existing document will be marked as <span className="text-amber-600 font-medium">superseded</span> and preserved in the audit history.
+          </p>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onUploadAsVersion}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+          >
+            <History size={14} /> Upload as Newer Version
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main DocumentsSection ────────────────────────────────────────────────────
 
 export default function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
@@ -447,6 +544,13 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
   const [uploadDocType, setUploadDocType] = useState<DocumentType | undefined>(undefined);
   const [viewingDoc, setViewingDoc] = useState<CollateralDocument | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  /** When set, show the duplicate-block dialog before opening the upload modal */
+  const [duplicateConflict, setDuplicateConflict] = useState<{
+    existingDoc: CollateralDocument;
+    requestedType: DocumentType;
+  } | null>(null);
+  /** When set, the upload modal will mark this doc as superseded on submit */
+  const [replacingDoc, setReplacingDoc] = useState<CollateralDocument | null>(null);
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -463,8 +567,51 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
     else toast.error('Failed to remove document');
   };
 
-  const openUploadFor = (docType?: DocumentType) => {
-    setUploadDocType(docType);
+  /**
+   * Entry point for all upload actions.
+   * If docType is provided and allow_multiple = false for that type,
+   * check whether an active (non-superseded) doc of that type already exists.
+   */
+  const openUploadFor = useCallback(async (docType?: DocumentType) => {
+    if (!docType) {
+      // Generic upload — no duplicate check needed
+      setUploadDocType(undefined);
+      setReplacingDoc(null);
+      setShowUploadModal(true);
+      return;
+    }
+
+    // Check allow_multiple setting for this doc type + collateral type
+    const collateralTypeName = collateral.collateralType ?? '';
+    const allowMultiple = await collateralTypeRequiredDocsService.getAllowMultiple(collateralTypeName, docType);
+
+    if (allowMultiple) {
+      setUploadDocType(docType);
+      setReplacingDoc(null);
+      setShowUploadModal(true);
+      return;
+    }
+
+    // allow_multiple = false → check for existing active doc of this type
+    const existingActive = docs.find(
+      (d) => d.documentType === docType && !(d as any).is_superseded
+    );
+
+    if (existingActive) {
+      // Block and show conflict dialog
+      setDuplicateConflict({ existingDoc: existingActive, requestedType: docType });
+    } else {
+      setUploadDocType(docType);
+      setReplacingDoc(null);
+      setShowUploadModal(true);
+    }
+  }, [collateral.collateralType, docs]);
+
+  const handleConfirmVersionUpload = () => {
+    if (!duplicateConflict) return;
+    setReplacingDoc(duplicateConflict.existingDoc);
+    setUploadDocType(duplicateConflict.requestedType);
+    setDuplicateConflict(null);
     setShowUploadModal(true);
   };
 
@@ -559,14 +706,28 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
         </div>
       )}
 
+      {/* Duplicate conflict dialog */}
+      {duplicateConflict && (
+        <DuplicateBlockDialog
+          existingDoc={duplicateConflict.existingDoc}
+          collateralId={collateral.collateralId}
+          onCancel={() => setDuplicateConflict(null)}
+          onUploadAsVersion={handleConfirmVersionUpload}
+        />
+      )}
+
       {showUploadModal && user && (
         <UploadDocumentModal
           collateral={collateral}
           userId={user.id}
           userName={user.email ?? 'Unknown'}
           initialDocType={uploadDocType}
-          onClose={() => { setShowUploadModal(false); setUploadDocType(undefined); }}
-          onUploaded={() => { loadDocs(); toast.success('Document uploaded successfully'); }}
+          replacingDoc={replacingDoc}
+          onClose={() => { setShowUploadModal(false); setUploadDocType(undefined); setReplacingDoc(null); }}
+          onUploaded={() => {
+            loadDocs();
+            toast.success(replacingDoc ? 'Newer version uploaded — previous marked as superseded' : 'Document uploaded successfully');
+          }}
         />
       )}
       {viewingDoc && (
