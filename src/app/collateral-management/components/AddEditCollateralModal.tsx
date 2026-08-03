@@ -544,7 +544,8 @@ export default function AddEditCollateralModal({
     }
   };
 
-  const getFileIcon = (mimeType: string) => {
+  const getFileIcon = (mimeType: string | undefined | null) => {
+    if (!mimeType) return '📎';
     if (mimeType === 'application/pdf') return '📄';
     if (mimeType.startsWith('image/')) return '🖼️';
     return '📎';
