@@ -447,4 +447,38 @@ export const documentService = {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   },
+
+  /**
+   * Returns a map of collateral_record_id → distinct document_type count (uploaded docs).
+   * Used for the Doc Compliance column in the Collateral Management registry.
+   */
+  async getUploadedDocCountsByCollateralIds(
+    collateralRecordIds: string[]
+  ): Promise<Record<string, number>> {
+    if (!collateralRecordIds.length) return {};
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('collateral_documents')
+        .select('collateral_record_id, document_type')
+        .in('collateral_record_id', collateralRecordIds);
+      if (error) {
+        console.error('getUploadedDocCountsByCollateralIds error:', error.message);
+        return {};
+      }
+      const counts: Record<string, Set<string>> = {};
+      for (const row of data ?? []) {
+        if (!counts[row.collateral_record_id]) counts[row.collateral_record_id] = new Set();
+        counts[row.collateral_record_id].add(row.document_type);
+      }
+      const result: Record<string, number> = {};
+      for (const [id, set] of Object.entries(counts)) {
+        result[id] = set.size;
+      }
+      return result;
+    } catch (err: any) {
+      console.error('getUploadedDocCountsByCollateralIds failed:', err.message);
+      return {};
+    }
+  },
 };

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
+import { collateralTypeRequiredDocsService } from '@/lib/supabase/collateralTypeRequiredDocsService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 import { userTaskService } from '@/lib/supabase/userTaskService';
@@ -55,6 +56,11 @@ export default function CollateralManagementContent() {
   const [filterRegistries, setFilterRegistries] = useState<string[]>([]);
   const [filterOfficers, setFilterOfficers] = useState<string[]>([]);
 
+  // Doc compliance state: uploaded count per collateral record id
+  const [docUploadedCounts, setDocUploadedCounts] = useState<Record<string, number>>({});
+  // Required doc counts per collateral type name
+  const [docRequiredCounts, setDocRequiredCounts] = useState<Record<string, number>>({});
+
   // Load lookup data once on mount
   useEffect(() => {
     Promise.all([
@@ -76,6 +82,19 @@ export default function CollateralManagementContent() {
     try {
       const data = await collateralService.getAll();
       setCollateralData(data);
+
+      // Fetch doc compliance data in parallel
+      const ids = data.map((c) => c.id);
+      const [uploadedCounts, requiredGrouped] = await Promise.all([
+        documentService.getUploadedDocCountsByCollateralIds(ids),
+        collateralTypeRequiredDocsService.getAllGrouped(),
+      ]);
+      setDocUploadedCounts(uploadedCounts);
+      const reqCounts: Record<string, number> = {};
+      for (const [typeName, docs] of Object.entries(requiredGrouped)) {
+        reqCounts[typeName] = docs.length;
+      }
+      setDocRequiredCounts(reqCounts);
     } catch (err: any) {
       toast.error('Failed to load collateral records');
       setFetchError('Unable to load collateral records. Check your connection and try again.');
@@ -595,19 +614,18 @@ export default function CollateralManagementContent() {
           data={paginated}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
-          allIds={filtered.map((c) => c.id)}
+          allIds={paginated.map((c) => c.id)}
           onEdit={(item) => setEditItem(item)}
-          onView={() => {}}
+          onView={(item) => {}}
           onStatusChange={handleStatusChange}
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={filtered.length}
           itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-          onItemsPerPageChange={(n) => {
-            setItemsPerPage(n);
-            setCurrentPage(1);
-          }}
+          onPageChange={(p) => setCurrentPage(p)}
+          onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }}
+          docUploadedCounts={docUploadedCounts}
+          docRequiredCounts={docRequiredCounts}
         />
       )}
 
