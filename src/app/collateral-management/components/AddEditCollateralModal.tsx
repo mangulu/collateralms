@@ -176,9 +176,35 @@ export default function AddEditCollateralModal({
         setOfficers(officerNames);
         setCollateralTypes(typeNames);
         setRegistries(registryNames);
+
+        // ── Pre-populate form fields for edit mode ──
+        // Must run AFTER lookups are loaded so <select> options exist
+        if (editItem) {
+          reset({
+            type: editItem.type ?? '',
+            description: editItem.description ?? '',
+            valueTS: editItem.valueTSh ?? '',
+            registry: editItem.registry ?? '',
+            registrationDate: editItem.registrationDate ?? '',
+            perfectionDeadline: editItem.perfectionDeadline ?? '',
+            assignedOfficer: editItem.assignedOfficer ?? '',
+            requiresPerfection: editItem.requiresPerfection ?? false,
+          });
+        } else {
+          reset({
+            type: '',
+            description: '',
+            valueTS: '',
+            registry: '',
+            registrationDate: '',
+            perfectionDeadline: '',
+            assignedOfficer: '',
+            requiresPerfection: true,
+          });
+        }
       }).catch(() => {});
     }
-  }, [open]);
+  }, [open, editItem]);
 
   const {
     register,
@@ -277,8 +303,25 @@ export default function AddEditCollateralModal({
       setLoanForm(emptyLoanForm);
       setLoanFormErrors({});
       setLoanSaveError(null);
-      // Pre-populate location when editing an existing record
+
       if (editItem) {
+        // Pre-populate obligor picker
+        if (editItem.obligorRefId || editItem.obligor) {
+          setSelectedObligor({
+            id: editItem.obligorRefId ?? '',
+            name: editItem.obligor ?? '',
+            code: editItem.obligorId ?? '',
+          });
+        } else {
+          setSelectedObligor(null);
+        }
+        // Pre-populate linked loan
+        if ((editItem as any).loanId) {
+          setSelectedLoanId((editItem as any).loanId);
+        } else {
+          setSelectedLoanId('');
+        }
+        // Pre-populate location
         const lat = (editItem as any).latitude;
         const lng = (editItem as any).longitude;
         const addr = (editItem as any).locationAddress;
@@ -288,25 +331,31 @@ export default function AddEditCollateralModal({
           setLocation(null);
         }
       } else {
+        setSelectedObligor(null);
+        setSelectedLoanId('');
         setLocation(null);
       }
     }
   }, [open, editItem]);
 
-  // Load loans when obligor changes
+  // Load loans when obligor changes (preserve selectedLoanId when editing)
   useEffect(() => {
     if (selectedObligor?.id) {
       setLoansLoading(true);
       loanService.getByObligorId(selectedObligor.id).then((ls) => {
         setAvailableLoans(ls);
         setLoansLoading(false);
+        // When editing, re-apply the pre-populated loanId after loans are loaded
+        if (editItem && (editItem as any).loanId) {
+          setSelectedLoanId((editItem as any).loanId);
+        }
       }).catch(() => {
         setAvailableLoans([]);
         setLoansLoading(false);
       });
     } else {
       setAvailableLoans([]);
-      setSelectedLoanId('');
+      if (!editItem) setSelectedLoanId('');
     }
   }, [selectedObligor?.id]);
 

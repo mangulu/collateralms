@@ -553,7 +553,6 @@ export default function CollateralDetailContent({
                 ))}
               </div>
             </div>
-            <MandatoryDocumentsCard collateral={collateral} />
           </div>
         </div>
       )}
@@ -564,7 +563,11 @@ export default function CollateralDetailContent({
       {/* Tab: Documents */}
       {activeTab === 'documents' && (
         <div className="space-y-6">
+          {/* Document Checklist — required docs for this collateral type */}
+          <MandatoryDocumentsCard collateral={collateral} />
+          {/* Uploaded Documents — full document library for this record */}
           <DocumentsSection collateral={collateral} />
+          {/* Legal Sign-Off */}
           <LegalSignOffSection collateral={collateral} />
         </div>
       )}

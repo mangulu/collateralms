@@ -88,9 +88,9 @@ export default function MandatoryDocumentsCard({ collateral }: MandatoryDocument
             <FileText size={14} className="text-primary" />
           </div>
           <div className="text-left">
-            <h3 className="text-sm font-700 text-foreground">Required Documents</h3>
+            <h3 className="text-sm font-700 text-foreground">Document Checklist</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {collateral.type} · {loading ? '…' : `${uploadedCount}/${totalCount} uploaded`}
+              Required for {collateral.type} · {loading ? '…' : `${uploadedCount}/${totalCount} uploaded`}
             </p>
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function MandatoryDocumentsCard({ collateral }: MandatoryDocument
 
           {!allComplete && !loading && mandatoryList.length > 0 && (
             <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
-              Upload missing documents in the <strong>Documents &amp; History</strong> tab to complete the document checklist for this {collateral.type}.
+              Upload missing documents using the <strong>Upload</strong> button in the Documents section below to complete the checklist for this {collateral.type}.
             </p>
           )}
         </div>
