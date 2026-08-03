@@ -72,11 +72,17 @@ function FilePreviewPanel({ file }: { file: File }) {
           <img src={previewUrl} alt="Preview" className="max-h-44 max-w-full object-contain rounded" />
         </div>
       ) : isPdf ? (
-        <iframe
-          src={previewUrl}
-          title="PDF Preview"
-          className="w-full h-52 border-0"
-        />
+        <object
+          data={previewUrl}
+          type="application/pdf"
+          className="w-full border-0"
+          style={{ height: '208px' }}
+        >
+          <div className="flex flex-col items-center justify-center py-6 text-xs text-muted-foreground gap-2">
+            <FileType2 size={24} className="text-red-400" />
+            <span>PDF preview not available in this browser.</span>
+          </div>
+        </object>
       ) : (
         <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
           <FileText size={20} className="mr-2 text-muted-foreground/50" />
@@ -160,7 +166,7 @@ function DocumentViewerModal({ doc, collateralId, onClose }: DocumentViewerModal
             </div>
           ) : isPdf ? (
             <iframe
-              src={doc.signedUrl}
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(doc.signedUrl)}&embedded=true`}
               title={displayName}
               className="w-full h-full border-0"
               style={{ minHeight: '500px' }}
