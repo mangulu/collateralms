@@ -8,7 +8,7 @@ import {
   ClipboardList, BookOpen, Scale, ShieldCheck, Radio, KeyRound, Settings,
   Landmark, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
   MailCheck, GitBranch, BadgeCheck, Brain, SlidersHorizontal, FolderArchive,
-  LayoutGrid, Sparkles, ArrowRight, Hash,
+  LayoutGrid, Sparkles, ArrowRight, Hash, CheckSquare,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -59,6 +59,7 @@ const NAV_INDEX: NavResult[] = [
 
   // ── Approvals ──
   { id: 'n-app-inbox', kind: 'screen', module: 'Approvals', moduleId: 'approvals', label: 'Approval Inbox', description: 'All pending approval requests in one place', href: '/approval-inbox', icon: MailCheck, keywords: ['inbox', 'pending', 'queue', 'review'] },
+  { id: 'n-app-tasks', kind: 'screen', module: 'Approvals', moduleId: 'approvals', label: 'My Tasks', description: 'Tasks assigned to you across all workflows', href: '/my-tasks', icon: CheckSquare, keywords: ['tasks', 'my tasks', 'assigned', 'todo', 'actions'] },
   { id: 'n-app-perf', kind: 'screen', module: 'Approvals', moduleId: 'approvals', label: 'Perfection Approval', description: 'Review and approve perfection workflows', href: '/perfection-workflow', icon: GitBranch, keywords: ['perfection', 'workflow', 'approve'] },
   { id: 'n-app-doc', kind: 'screen', module: 'Approvals', moduleId: 'approvals', label: 'Document Approval', description: 'Approve or reject submitted documents', href: '/document-approval', icon: BadgeCheck, keywords: ['document', 'approve', 'reject', 'review'] },
   { id: 'n-app-rel', kind: 'screen', module: 'Approvals', moduleId: 'approvals', label: 'Release Approval', description: 'Approve collateral release requests', href: '/release-approval', icon: Unlock, keywords: ['release', 'approve', 'discharge'] },
@@ -100,6 +101,7 @@ const NAV_INDEX: NavResult[] = [
   { id: 'n-adm-settings', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'System Settings', description: 'Configure system-wide settings', href: '/settings', icon: Settings, keywords: ['settings', 'config', 'system', 'configure'] },
   { id: 'n-adm-thresh', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Alert Thresholds', description: 'Set alert trigger thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, keywords: ['thresholds', 'alerts', 'trigger', 'configure'] },
   { id: 'n-adm-sysconf', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'System Config', description: 'Advanced system configuration options', href: '/system-config', icon: Brain, keywords: ['system', 'config', 'advanced', 'configuration'] },
+  { id: 'n-adm-glossary', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Glossary', description: 'Collateral management terms and definitions', href: '/glossary', icon: BookOpen, keywords: ['glossary', 'terms', 'definitions', 'reference', 'help'] },
 
   // ── Archive ──
   { id: 'n-arc-vault', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Vault Management', description: 'Manage physical vault storage locations', href: '/archive/vault-management', icon: Building2, keywords: ['vault', 'storage', 'physical', 'manage'] },

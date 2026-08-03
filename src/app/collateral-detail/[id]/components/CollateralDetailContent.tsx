@@ -135,6 +135,7 @@ export default function CollateralDetailContent({
   const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
   const [obligorData, setObligorData] = useState<Obligor | null>(null);
   const [loanData, setLoanData] = useState<Loan | null>(null);
+  const [docRefreshKey, setDocRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!collateral?.id) return;
@@ -553,7 +554,6 @@ export default function CollateralDetailContent({
                 ))}
               </div>
             </div>
-            <MandatoryDocumentsCard collateral={collateral} />
           </div>
         </div>
       )}
@@ -564,7 +564,14 @@ export default function CollateralDetailContent({
       {/* Tab: Documents */}
       {activeTab === 'documents' && (
         <div className="space-y-6">
-          <DocumentsSection collateral={collateral} />
+          {/* Document Checklist — required docs for this collateral type */}
+          <MandatoryDocumentsCard
+            collateral={collateral}
+            onDocumentUploaded={() => setDocRefreshKey((k) => k + 1)}
+          />
+          {/* Uploaded Documents — full document library for this record */}
+          <DocumentsSection key={docRefreshKey} collateral={collateral} />
+          {/* Legal Sign-Off */}
           <LegalSignOffSection collateral={collateral} />
         </div>
       )}

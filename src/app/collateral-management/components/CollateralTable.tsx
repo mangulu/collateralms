@@ -1,12 +1,14 @@
 'use client';
 import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
+import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock, TrendingUp, FileCheck, FileX, FileClock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { FolderOpen } from 'lucide-react';
+import Icon from '@/components/ui/AppIcon';
+
 
 // Helper to format TSh values compactly
 function fmtTShCompact(n: number | null | undefined): string {
@@ -34,6 +36,8 @@ interface CollateralTableProps {
   itemsPerPage: number;
   onPageChange: (page: number) => void;
   onItemsPerPageChange: (n: number) => void;
+  docUploadedCounts?: Record<string, number>;
+  docRequiredCounts?: Record<string, number>;
 }
 
 const statusBadgeMap: Record<CollateralStatus, 'perfected' | 'pending' | 'overdue' | 'draft' | 'released' | 'monitoring' | 'rejected' | 'under-review' | 'submitted'> = {
@@ -67,6 +71,7 @@ const columns = [
   { key: 'registry', label: 'Registry', sortable: true },
   { key: 'perfectionDeadline', label: 'Deadline', sortable: true },
   { key: 'assignedOfficer', label: 'Officer', sortable: true },
+  { key: 'docCompliance', label: 'Doc Compliance', sortable: false },
 ];
 
 export default function CollateralTable({
@@ -83,6 +88,8 @@ export default function CollateralTable({
   itemsPerPage,
   onPageChange,
   onItemsPerPageChange,
+  docUploadedCounts = {},
+  docRequiredCounts = {},
 }: CollateralTableProps) {
   const router = useRouter();
   const [sortKey, setSortKey] = useState<SortKey>('id');
@@ -137,6 +144,54 @@ export default function CollateralTable({
           actionLabel="Register Collateral"
           onAction={() => {}}
         />
+      </div>
+    );
+  }
+
+  // Helper: render doc compliance cell content
+  function DocComplianceCell({ item }: { item: Collateral }) {
+    const uploaded = docUploadedCounts[item.id] ?? 0;
+    const required = docRequiredCounts[item.type] ?? 0;
+
+    if (required === 0) {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <FileClock size={12} />
+          No req.
+        </span>
+      );
+    }
+
+    const pct = Math.min(100, Math.round((uploaded / required) * 100));
+    const isComplete = uploaded >= required;
+    const isMissing = uploaded === 0;
+
+    const barColor = isComplete
+      ? 'bg-green-500'
+      : isMissing
+      ? 'bg-red-400' :'bg-amber-400';
+
+    const textColor = isComplete
+      ? 'text-green-700'
+      : isMissing
+      ? 'text-red-600' :'text-amber-700';
+
+    const Icon = isComplete ? FileCheck : isMissing ? FileX : FileClock;
+
+    return (
+      <div className="min-w-[100px]">
+        <div className={`flex items-center gap-1 mb-1 ${textColor}`}>
+          <Icon size={11} />
+          <span className="text-[11px] font-600 whitespace-nowrap">
+            {uploaded}/{required} docs
+          </span>
+        </div>
+        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${barColor}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       </div>
     );
   }
@@ -264,6 +319,11 @@ export default function CollateralTable({
                   )}
                 </div>
                 <span className="text-xs text-muted-foreground">{item.assignedOfficer}</span>
+              </div>
+              {/* Doc Compliance (mobile) */}
+              <div className="mt-2.5 pt-2.5 border-t border-border">
+                <p className="text-[10px] text-muted-foreground uppercase font-600 mb-1">Doc Compliance</p>
+                <DocComplianceCell item={item} />
               </div>
             </div>
           );
@@ -440,6 +500,10 @@ export default function CollateralTable({
                   </td>
                   {/* Officer */}
                   <td className="px-4 py-3 text-sm text-foreground whitespace-nowrap">{item.assignedOfficer}</td>
+                  {/* Doc Compliance */}
+                  <td className="px-4 py-3">
+                    <DocComplianceCell item={item} />
+                  </td>
                   {/* Actions */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

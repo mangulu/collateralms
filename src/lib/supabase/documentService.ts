@@ -3,8 +3,31 @@
 import { createClient } from '@/lib/supabase/client';
 
 export type DocumentType =
-  | 'Title Deed' |'Charge Certificate' |'Valuation Report' |'BRELA Confirmation' |'Insurance Certificate' |'Board Resolution'
-  | 'Deed'| 'Appraisal' | 'Insurance Policy' |'Other';
+  | 'Title Deed' | 'Charge Certificate' | 'Valuation Report' | 'BRELA Confirmation' | 'Insurance Certificate' | 'Board Resolution'
+  | 'Deed' | 'Appraisal' | 'Insurance Policy' | 'Other'
+  // Motor Vehicle
+  | 'Vehicle Registration Certificate (Original)' | 'Logbook (Original)' | 'TRA Encumbrance Search Certificate'
+  | 'Comprehensive Insurance Policy' | 'Hire Purchase / Charge Agreement'
+  // Mortgage
+  | 'Title Deed (Original)' | 'Valuation Report (Certified)' | 'Land Rent Clearance Certificate'
+  | 'Mortgage Deed / Charge Instrument' | 'Lands Registry Search Certificate' | 'Survey Plan / Plot Map'
+  | 'Building Permit (if applicable)'
+  // Debenture
+  | 'Debenture Deed (Executed)' | 'Certificate of Incorporation' | 'Board Resolution (Authorising Charge)'
+  | 'BRELA Registration Certificate'| 'Memorandum & Articles of Association' |'Audited Financial Statements (Latest)' | 'Asset Schedule / Inventory List'
+  // Shares (DSE)
+  | 'Share Certificate(s) (Original)' | 'DSE Pledge Confirmation Letter' | 'CDS Account Statement'
+  | 'Board Resolution (Authorising Pledge)' | 'Share Transfer Form (Blank, Signed)' | 'DSE Registry Search'
+  // FDR
+  | 'Fixed Deposit Receipt (Original)' | 'Bank Lien Letter / Pledge Confirmation' | 'Account Statement'
+  | 'Deed of Assignment'
+  // Guarantee
+  | 'Guarantee Deed (Executed)' | 'Guarantor Financial Statements' | 'Board Resolution (if Corporate Guarantor)'
+  | 'Certificate of Incorporation (if Corporate)' | 'Guarantor ID / KYC Documents'
+  // Ship/Vessel
+  | 'Ship Registration Certificate (TASAC)' | 'Mortgage of Ship Deed' | 'TASAC Encumbrance Search'
+  | 'Hull & Machinery Insurance Policy' | 'Valuation / Survey Report' | 'Classification Society Certificate'
+  | 'Crew & Manning Certificate';
 
 export interface CollateralDocument {
   id: string;
@@ -423,5 +446,39 @@ export const documentService = {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  },
+
+  /**
+   * Returns a map of collateral_record_id → distinct document_type count (uploaded docs).
+   * Used for the Doc Compliance column in the Collateral Management registry.
+   */
+  async getUploadedDocCountsByCollateralIds(
+    collateralRecordIds: string[]
+  ): Promise<Record<string, number>> {
+    if (!collateralRecordIds.length) return {};
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('collateral_documents')
+        .select('collateral_record_id, document_type')
+        .in('collateral_record_id', collateralRecordIds);
+      if (error) {
+        console.error('getUploadedDocCountsByCollateralIds error:', error.message);
+        return {};
+      }
+      const counts: Record<string, Set<string>> = {};
+      for (const row of data ?? []) {
+        if (!counts[row.collateral_record_id]) counts[row.collateral_record_id] = new Set();
+        counts[row.collateral_record_id].add(row.document_type);
+      }
+      const result: Record<string, number> = {};
+      for (const [id, set] of Object.entries(counts)) {
+        result[id] = set.size;
+      }
+      return result;
+    } catch (err: any) {
+      console.error('getUploadedDocCountsByCollateralIds failed:', err.message);
+      return {};
+    }
   },
 };

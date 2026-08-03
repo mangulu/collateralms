@@ -1,13 +1,11 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 
-import {
-  Files, Plus, Upload, Trash2, Download, ExternalLink, FileText, FileType2, FileImage, File,
-  RefreshCw, X, ChevronDown, AlertCircle,
-} from 'lucide-react';
+import { Files, Plus, Upload, Trash2, Download, FileText, FileType2, FileImage, File, RefreshCw, X, ChevronDown, AlertCircle, Eye, LayoutGrid, List, AlertTriangle, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
+import { collateralTypeRequiredDocsService } from '@/lib/supabase/collateralTypeRequiredDocsService';
 import { useAuth } from '@/contexts/AuthContext';
 
 function SectionHeader({ title, icon: IconComponent }: { title: string; icon: React.ElementType }) {
@@ -47,6 +45,184 @@ function getFileIconDetail(mimeType: string) {
   return <FileText size={18} className="text-slate-500" />;
 }
 
+function getFileIconLarge(mimeType: string) {
+  if (mimeType?.includes('pdf')) return <FileType2 size={28} className="text-red-500" />;
+  if (mimeType?.includes('image')) return <FileImage size={28} className="text-blue-500" />;
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={28} className="text-indigo-500" />;
+  return <FileText size={28} className="text-slate-500" />;
+}
+
+// ─── File Preview Panel (for upload modal) ────────────────────────────────────
+
+function FilePreviewPanel({ file }: { file: File }) {
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewSrc(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    return () => { setPreviewSrc(null); };
+  }, [file]);
+
+  if (!previewSrc) return null;
+
+  const isImage = file.type.startsWith('image/');
+  const isPdf = file.type === 'application/pdf';
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-muted/20">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+        <Eye size={12} className="text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">Preview</span>
+      </div>
+      {isImage ? (
+        <div className="flex items-center justify-center p-3 max-h-52 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewSrc} alt="Preview" className="max-h-44 max-w-full object-contain rounded" />
+        </div>
+      ) : isPdf ? (
+        <iframe
+          src={previewSrc}
+          title="PDF Preview"
+          className="w-full border-0"
+          style={{ height: '208px' }}
+        />
+      ) : (
+        <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
+          <FileText size={20} className="mr-2 text-muted-foreground/50" />
+          Preview not available for this file type
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── In-App Document Viewer Modal ─────────────────────────────────────────────
+
+interface DocumentViewerModalProps {
+  doc: CollateralDocument;
+  collateralId: string;
+  onClose: () => void;
+}
+
+function DocumentViewerModal({ doc, collateralId, onClose }: DocumentViewerModalProps) {
+  const displayName = `${doc.documentType} - ${collateralId}`;
+  const isImage = doc.mimeType?.startsWith('image/');
+  const isPdf = doc.mimeType === 'application/pdf';
+  const isWord = doc.mimeType?.includes('word') || doc.mimeType?.includes('document');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="shrink-0">{getFileIconDetail(doc.mimeType ?? '')}</div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-muted-foreground">v{doc.version}</span>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                {doc.uploadedByName && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span className="text-xs text-muted-foreground">by {doc.uploadedByName}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            {doc.signedUrl && (
+              <a
+                href={doc.signedUrl}
+                download={doc.fileName}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+              >
+                <Download size={13} /> Download
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors"
+            >
+              <X size={16} className="text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Document notes */}
+        {doc.notes && (
+          <div className="px-5 py-2 bg-amber-50 border-b border-amber-100 shrink-0">
+            <p className="text-xs text-amber-700 italic">{doc.notes}</p>
+          </div>
+        )}
+
+        {/* Viewer body */}
+        <div className="flex-1 overflow-hidden bg-muted/30 flex items-center justify-center">
+          {!doc.signedUrl ? (
+            <div className="text-center py-12">
+              <FileText size={40} className="mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">Document URL not available</p>
+            </div>
+          ) : isPdf ? (
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(doc.signedUrl)}&embedded=true`}
+              title={displayName}
+              className="w-full h-full border-0"
+              style={{ minHeight: '500px' }}
+            />
+          ) : isImage ? (
+            <div className="flex items-center justify-center w-full h-full p-6 overflow-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={doc.signedUrl}
+                alt={displayName}
+                className="max-w-full max-h-full object-contain rounded shadow-sm"
+                style={{ maxHeight: '60vh' }}
+              />
+            </div>
+          ) : isWord ? (
+            <div className="text-center py-12 px-6">
+              <File size={40} className="mx-auto text-indigo-400 mb-3" />
+              <p className="text-sm font-medium text-foreground mb-1">{displayName}</p>
+              <p className="text-xs text-muted-foreground mb-4">Word documents cannot be previewed inline.</p>
+              <a
+                href={doc.signedUrl}
+                download={doc.fileName}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Download size={14} /> Download to view
+              </a>
+            </div>
+          ) : (
+            <div className="text-center py-12 px-6">
+              <FileText size={40} className="mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground mb-4">Preview not available for this file type.</p>
+              {doc.signedUrl && (
+                <a
+                  href={doc.signedUrl}
+                  download={doc.fileName}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Download size={14} /> Download
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Upload Document Modal ────────────────────────────────────────────────────
+
 interface UploadDocumentModalProps {
   collateral: CollateralRecord;
   userId: string;
@@ -54,9 +230,11 @@ interface UploadDocumentModalProps {
   onClose: () => void;
   onUploaded: () => void;
   initialDocType?: DocumentType;
+  /** When set, the user is uploading a newer version to replace this existing doc */
+  replacingDoc?: CollateralDocument | null;
 }
 
-function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded, initialDocType }: UploadDocumentModalProps) {
+function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded, initialDocType, replacingDoc }: UploadDocumentModalProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docType, setDocType] = useState<DocumentType>(initialDocType ?? 'Other');
@@ -89,8 +267,25 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
     if (!selectedFile) { setError('Please select a file.'); return; }
     setUploading(true);
     setError('');
+
+    // If replacing, mark the previous doc as superseded first
+    if (replacingDoc) {
+      const supabase = (await import('@/lib/supabase/client')).createClient();
+      await supabase
+        .from('collateral_documents')
+        .update({
+          is_superseded: true,
+          superseded_at: new Date().toISOString(),
+        })
+        .eq('id', replacingDoc.id);
+    }
+
     const result = await documentService.upload(
-      selectedFile, collateral.id, collateral.collateralId, docType, notes, userId, userName,
+      selectedFile, collateral.id, collateral.collateralId, docType,
+      replacingDoc
+        ? `Newer version replacing v${replacingDoc.version}${notes ? ` — ${notes}` : ''}`
+        : notes,
+      userId, userName,
     );
     setUploading(false);
     if (result.error) { setError(result.error); return; }
@@ -98,21 +293,32 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
     onClose();
   };
 
+  const isVersionUpload = !!replacingDoc;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Upload Document</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Linked to: <span className="font-medium text-foreground">{collateral.collateralId} — {collateral.obligor}</span>
-            </p>
+            <h2 className="text-base font-semibold text-foreground">
+              {isVersionUpload ? 'Upload Newer Version' : 'Upload Document'}
+            </h2>
+            {isVersionUpload ? (
+              <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
+                <History size={11} />
+                Replacing <span className="font-medium">{replacingDoc.documentType}</span> v{replacingDoc.version} — previous will be marked superseded
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Linked to: <span className="font-medium text-foreground">{collateral.collateralId} — {collateral.obligor}</span>
+              </p>
+            )}
           </div>
           <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
             <X size={16} className="text-muted-foreground" />
           </button>
         </div>
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -141,20 +347,26 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
               </>
             )}
           </div>
-          <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
-            <div className="relative">
-              <select value={docType} onChange={(e) => setDocType(e.target.value as DocumentType)}
-                className="w-full appearance-none border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8">
-                {DOC_TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+
+          {/* Preview panel — shown once a file is selected */}
+          {selectedFile && <FilePreviewPanel file={selectedFile} />}
+
+          {!isVersionUpload && (
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
+              <div className="relative">
+                <select value={docType} onChange={(e) => setDocType(e.target.value as DocumentType)}
+                  className="w-full appearance-none border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8">
+                  {DOC_TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
-          </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-foreground mb-1.5">Notes <span className="text-muted-foreground font-normal">(optional)</span></label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-              placeholder="Add context or version notes…"
+              placeholder={isVersionUpload ? 'Describe what changed in this version…' : 'Add context or version notes…'}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
           </div>
           {error && (
@@ -163,12 +375,15 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
             </div>
           )}
         </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border shrink-0">
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors">Cancel</button>
           <button onClick={handleSubmit} disabled={uploading || !selectedFile}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+              isVersionUpload
+                ? 'bg-amber-600 hover:bg-amber-700 text-white' :'bg-primary hover:bg-primary/90 text-white'
+            }`}>
             {uploading ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
-            {uploading ? 'Uploading…' : 'Upload Document'}
+            {uploading ? 'Uploading…' : isVersionUpload ? 'Upload as Newer Version' : 'Upload Document'}
           </button>
         </div>
       </div>
@@ -176,12 +391,166 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
   );
 }
 
+// ─── Document Thumbnail Card (grid view) ──────────────────────────────────────
+
+interface DocCardProps {
+  doc: CollateralDocument;
+  collateralId: string;
+  onView: (doc: CollateralDocument) => void;
+  onDelete: (doc: CollateralDocument) => void;
+  canDelete: boolean;
+}
+
+function DocCard({ doc, collateralId, onView, onDelete, canDelete }: DocCardProps) {
+  const displayName = `${doc.documentType} - ${collateralId}`;
+  return (
+    <div className="group relative flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border/60 bg-white hover:border-primary/40 hover:bg-primary/3 transition-all cursor-pointer"
+      onClick={() => onView(doc)}
+      title={displayName}
+    >
+      <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+        {getFileIconLarge(doc.mimeType ?? '')}
+      </div>
+      <p className="text-xs font-medium text-foreground text-center leading-tight line-clamp-2 w-full">{doc.documentType}</p>
+      <span className="text-[10px] text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+      {canDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(doc); }}
+          className="absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-all"
+        >
+          <Trash2 size={11} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Document List Row (list view) ────────────────────────────────────────────
+
+interface DocRowProps {
+  doc: CollateralDocument;
+  collateralId: string;
+  onView: (doc: CollateralDocument) => void;
+  onDelete: (doc: CollateralDocument) => void;
+  canDelete: boolean;
+}
+
+function DocRow({ doc, collateralId, onView, onDelete, canDelete }: DocRowProps) {
+  const displayName = `${doc.documentType} - ${collateralId}`;
+  return (
+    <div className="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-muted/30 transition-colors">
+      <div className="w-7 h-7 rounded flex items-center justify-center shrink-0">
+        {getFileIconDetail(doc.mimeType ?? '')}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground truncate">{displayName}</p>
+        <span className="text-[10px] text-muted-foreground">{documentService.formatFileSize(doc.fileSize)} · {new Date(doc.createdAt).toLocaleDateString()}</span>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {doc.signedUrl && (
+          <>
+            <button
+              onClick={() => onView(doc)}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors"
+            >
+              <Eye size={10} /> View
+            </button>
+            <a href={doc.signedUrl} download={doc.fileName}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors">
+              <Download size={10} /> DL
+            </a>
+          </>
+        )}
+        {canDelete && (
+          <button onClick={() => onDelete(doc)}
+            className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
+            <Trash2 size={11} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Duplicate Block Dialog ───────────────────────────────────────────────────
+
+interface DuplicateBlockDialogProps {
+  existingDoc: CollateralDocument;
+  collateralId: string;
+  onCancel: () => void;
+  onUploadAsVersion: () => void;
+}
+
+function DuplicateBlockDialog({ existingDoc, collateralId, onCancel, onUploadAsVersion }: DuplicateBlockDialogProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-5 border-b border-border flex items-start gap-3">
+          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+            <AlertTriangle size={18} className="text-amber-600" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Document Already Exists</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              A <span className="font-medium text-foreground">{existingDoc.documentType}</span> is already uploaded for collateral <span className="font-medium text-foreground">{collateralId}</span>.
+              Only one document of this type is allowed per collateral.
+            </p>
+          </div>
+        </div>
+        <div className="px-6 py-4 space-y-2.5">
+          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-border/60">
+            <div className="w-8 h-8 rounded flex items-center justify-center shrink-0">
+              {getFileIconDetail(existingDoc.mimeType ?? '')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">{existingDoc.documentType}</p>
+              <p className="text-[10px] text-muted-foreground">
+                v{existingDoc.version} · {documentService.formatFileSize(existingDoc.fileSize)} · {new Date(existingDoc.createdAt).toLocaleDateString()}
+                {existingDoc.uploadedByName ? ` · ${existingDoc.uploadedByName}` : ''}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            You can upload this as a <strong>newer version</strong> — the existing document will be marked as <span className="text-amber-600 font-medium">superseded</span> and preserved in the audit history.
+          </p>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onUploadAsVersion}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+          >
+            <History size={14} /> Upload as Newer Version
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main DocumentsSection ────────────────────────────────────────────────────
+
 export default function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
   const { user } = useAuth();
   const [docs, setDocs] = useState<CollateralDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadDocType, setUploadDocType] = useState<DocumentType | undefined>(undefined);
+  const [viewingDoc, setViewingDoc] = useState<CollateralDocument | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  /** When set, show the duplicate-block dialog before opening the upload modal */
+  const [duplicateConflict, setDuplicateConflict] = useState<{
+    existingDoc: CollateralDocument;
+    requestedType: DocumentType;
+  } | null>(null);
+  /** When set, the upload modal will mark this doc as superseded on submit */
+  const [replacingDoc, setReplacingDoc] = useState<CollateralDocument | null>(null);
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -198,24 +567,78 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
     else toast.error('Failed to remove document');
   };
 
-  const openUploadFor = (docType?: DocumentType) => {
-    setUploadDocType(docType);
+  /**
+   * Entry point for all upload actions.
+   * If docType is provided and allow_multiple = false for that type,
+   * check whether an active (non-superseded) doc of that type already exists.
+   */
+  const openUploadFor = useCallback(async (docType?: DocumentType) => {
+    if (!docType) {
+      // Generic upload — no duplicate check needed
+      setUploadDocType(undefined);
+      setReplacingDoc(null);
+      setShowUploadModal(true);
+      return;
+    }
+
+    // Check allow_multiple setting for this doc type + collateral type
+    const collateralTypeName = collateral.collateralType ?? '';
+    const allowMultiple = await collateralTypeRequiredDocsService.getAllowMultiple(collateralTypeName, docType);
+
+    if (allowMultiple) {
+      setUploadDocType(docType);
+      setReplacingDoc(null);
+      setShowUploadModal(true);
+      return;
+    }
+
+    // allow_multiple = false → check for existing active doc of this type
+    const existingActive = docs.find(
+      (d) => d.documentType === docType && !(d as any).is_superseded
+    );
+
+    if (existingActive) {
+      // Block and show conflict dialog
+      setDuplicateConflict({ existingDoc: existingActive, requestedType: docType });
+    } else {
+      setUploadDocType(docType);
+      setReplacingDoc(null);
+      setShowUploadModal(true);
+    }
+  }, [collateral.collateralType, docs]);
+
+  const handleConfirmVersionUpload = () => {
+    if (!duplicateConflict) return;
+    setReplacingDoc(duplicateConflict.existingDoc);
+    setUploadDocType(duplicateConflict.requestedType);
+    setDuplicateConflict(null);
     setShowUploadModal(true);
   };
 
-  const docsByType = docs.reduce<Record<string, CollateralDocument[]>>((acc, doc) => {
-    const key = doc.documentType ?? 'Other';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(doc);
-    return acc;
-  }, {});
-
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
-      <div className="flex items-center justify-between mb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
         <SectionHeader title="Related Documents" icon={Files} />
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
+          {/* View toggle */}
+          <div className="flex items-center border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+              title="Grid view"
+            >
+              <LayoutGrid size={13} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+              title="List view"
+            >
+              <List size={13} />
+            </button>
+          </div>
           {user && (
             <button onClick={() => openUploadFor(undefined)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors">
@@ -224,6 +647,7 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
           )}
         </div>
       </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
@@ -231,92 +655,86 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
         </div>
+      ) : docs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Files size={32} className="text-muted-foreground/30 mb-2" />
+          <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
+          {user && (
+            <button onClick={() => openUploadFor(undefined)}
+              className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors">
+              <Plus size={12} /> Upload first document
+            </button>
+          )}
+        </div>
+      ) : viewMode === 'grid' ? (
+        /* ── Grid view ── */
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          {docs.map((doc) => (
+            <DocCard
+              key={doc.id}
+              doc={doc}
+              collateralId={collateral.collateralId}
+              onView={setViewingDoc}
+              onDelete={handleDelete}
+              canDelete={!!user}
+            />
+          ))}
+          {user && (
+            <button
+              onClick={() => openUploadFor(undefined)}
+              className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/3 transition-all text-muted-foreground hover:text-primary"
+              title="Upload new document"
+            >
+              <Plus size={20} />
+              <span className="text-[10px] font-medium">Add</span>
+            </button>
+          )}
+        </div>
       ) : (
-        <div className="space-y-3">
-          {DOC_TYPE_OPTIONS.map((docType) => {
-            const typeDocs = docsByType[docType] ?? [];
-            const hasDocuments = typeDocs.length > 0;
-            return (
-              <div key={docType} className="rounded-lg border border-border/60 overflow-hidden">
-                <button type="button" onClick={() => user && openUploadFor(docType)} disabled={!user}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${hasDocuments ? 'bg-muted/30 hover:bg-muted/50' : 'bg-muted/10 hover:bg-primary/5'} ${!user ? 'cursor-default' : 'cursor-pointer'}`}>
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${hasDocuments ? 'bg-primary/10' : 'bg-muted/60'}`}>
-                      <FileText size={13} className={hasDocuments ? 'text-primary' : 'text-muted-foreground/50'} />
-                    </div>
-                    <div>
-                      <span className="text-sm font-500 text-foreground">{docType}</span>
-                      {hasDocuments && <span className="ml-2 text-xs text-muted-foreground">{typeDocs.length} file{typeDocs.length !== 1 ? 's' : ''}</span>}
-                    </div>
-                  </div>
-                  {user && !hasDocuments && (
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                      <Upload size={12} /><span>Upload</span>
-                    </span>
-                  )}
-                </button>
-                {hasDocuments && (
-                  <div className="divide-y divide-border/40">
-                    {typeDocs.map((doc) => (
-                      <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-muted/20 transition-colors group">
-                        <div className="w-6 h-6 rounded flex items-center justify-center shrink-0">{getFileIconDetail(doc.mimeType ?? '')}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-500 text-foreground truncate">{doc.fileName}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground">v{doc.version}</span>
-                            <span className="text-muted-foreground/40">·</span>
-                            <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                            <span className="text-muted-foreground/40">·</span>
-                            <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
-                          </div>
-                          {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {doc.signedUrl ? (
-                            <>
-                              <a href={doc.signedUrl} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors">
-                                <ExternalLink size={12} /> View
-                              </a>
-                              <a href={doc.signedUrl} download={doc.fileName}
-                                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors">
-                                <Download size={12} /> Download
-                              </a>
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground/50 italic px-2">No URL</span>
-                          )}
-                          <button onClick={() => handleDelete(doc)}
-                            className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {!hasDocuments && user && (
-                  <div onClick={() => openUploadFor(docType)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white cursor-pointer hover:bg-primary/5 transition-colors border-t border-border/40">
-                    <div className="w-5 h-5 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center shrink-0">
-                      <Plus size={10} className="text-muted-foreground/40" />
-                    </div>
-                    <span className="text-xs text-muted-foreground/60 italic">No document — click to upload</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        /* ── List view ── */
+        <div className="divide-y divide-border/30">
+          {docs.map((doc) => (
+            <DocRow
+              key={doc.id}
+              doc={doc}
+              collateralId={collateral.collateralId}
+              onView={setViewingDoc}
+              onDelete={handleDelete}
+              canDelete={!!user}
+            />
+          ))}
         </div>
       )}
+
+      {/* Duplicate conflict dialog */}
+      {duplicateConflict && (
+        <DuplicateBlockDialog
+          existingDoc={duplicateConflict.existingDoc}
+          collateralId={collateral.collateralId}
+          onCancel={() => setDuplicateConflict(null)}
+          onUploadAsVersion={handleConfirmVersionUpload}
+        />
+      )}
+
       {showUploadModal && user && (
         <UploadDocumentModal
           collateral={collateral}
           userId={user.id}
           userName={user.email ?? 'Unknown'}
           initialDocType={uploadDocType}
-          onClose={() => { setShowUploadModal(false); setUploadDocType(undefined); }}
-          onUploaded={() => { loadDocs(); toast.success('Document uploaded successfully'); }}
+          replacingDoc={replacingDoc}
+          onClose={() => { setShowUploadModal(false); setUploadDocType(undefined); setReplacingDoc(null); }}
+          onUploaded={() => {
+            loadDocs();
+            toast.success(replacingDoc ? 'Newer version uploaded — previous marked as superseded' : 'Document uploaded successfully');
+          }}
+        />
+      )}
+      {viewingDoc && (
+        <DocumentViewerModal
+          doc={viewingDoc}
+          collateralId={collateral.collateralId}
+          onClose={() => setViewingDoc(null)}
         />
       )}
     </div>

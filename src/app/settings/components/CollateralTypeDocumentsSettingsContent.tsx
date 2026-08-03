@@ -1,9 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  FileText, Plus, Pencil, Trash2, Save, X, CheckCircle2, AlertTriangle,
-  Loader2, ChevronDown, ChevronUp, RefreshCw, AlertCircle,
-} from 'lucide-react';
+import { FileText, Plus, Pencil, Trash2, Save, X, CheckCircle2, AlertTriangle, Loader2, ChevronDown, ChevronUp, RefreshCw, AlertCircle,  } from 'lucide-react';
 import {
   collateralTypeRequiredDocsService,
   CollateralTypeRequiredDoc,
@@ -21,6 +18,7 @@ interface EditState {
   documentName: string;
   description: string;
   isMandatory: boolean;
+  allowMultiple: boolean;
 }
 
 const emptyEdit = (typeName: string): EditState => ({
@@ -29,7 +27,37 @@ const emptyEdit = (typeName: string): EditState => ({
   documentName: '',
   description: '',
   isMandatory: true,
+  allowMultiple: true,
 });
+
+// ─── Allow Multiple Toggle ────────────────────────────────────────────────────
+function AllowMultipleToggle({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(!value)}
+      title={value ? 'Multiple uploads allowed — click to restrict to one' : 'Single upload only — click to allow multiple'}
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus:outline-none disabled:opacity-50 ${
+        value ? 'bg-primary' : 'bg-muted-foreground/30'
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+          value ? 'translate-x-4' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  );
+}
 
 export default function CollateralTypeDocumentsSettingsContent() {
   const [collateralTypes, setCollateralTypes] = useState<CollateralType[]>([]);
@@ -40,6 +68,8 @@ export default function CollateralTypeDocumentsSettingsContent() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [expandedTypes, setExpandedTypes] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  // Track which doc IDs are currently being toggled (to show spinner)
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -58,7 +88,6 @@ export default function CollateralTypeDocumentsSettingsContent() {
       const types: CollateralType[] = (typesData ?? []).map((r: any) => ({ id: r.id, name: r.name }));
       setCollateralTypes(types);
       setGrouped(groupedDocs);
-      // Auto-expand all types on first load
       const expanded: Record<string, boolean> = {};
       types.forEach((t) => { expanded[t.name] = true; });
       setExpandedTypes((prev) => ({ ...expanded, ...prev }));
@@ -82,6 +111,7 @@ export default function CollateralTypeDocumentsSettingsContent() {
       documentName: doc.documentName,
       description: doc.description,
       isMandatory: doc.isMandatory,
+      allowMultiple: doc.allowMultiple,
     });
 
   const handleSave = async () => {
@@ -93,6 +123,7 @@ export default function CollateralTypeDocumentsSettingsContent() {
           documentName: edit.documentName.trim(),
           description: edit.description.trim(),
           isMandatory: edit.isMandatory,
+          allowMultiple: edit.allowMultiple,
         });
         if (updated) {
           setGrouped((prev) => ({
@@ -112,6 +143,7 @@ export default function CollateralTypeDocumentsSettingsContent() {
           documentName: edit.documentName.trim(),
           description: edit.description.trim(),
           isMandatory: edit.isMandatory,
+          allowMultiple: edit.allowMultiple,
           sortOrder: existing.length + 1,
         });
         if (created) {
@@ -158,9 +190,11 @@ export default function CollateralTypeDocumentsSettingsContent() {
   };
 
   const handleToggleMandatory = async (doc: CollateralTypeRequiredDoc) => {
+    setTogglingIds((prev) => new Set(prev).add(doc.id + '_mandatory'));
     const updated = await collateralTypeRequiredDocsService.update(doc.id, {
       isMandatory: !doc.isMandatory,
     });
+    setTogglingIds((prev) => { const s = new Set(prev); s.delete(doc.id + '_mandatory'); return s; });
     if (updated) {
       setGrouped((prev) => ({
         ...prev,
@@ -168,6 +202,30 @@ export default function CollateralTypeDocumentsSettingsContent() {
           d.id === doc.id ? updated : d
         ),
       }));
+    }
+  };
+
+  const handleToggleAllowMultiple = async (doc: CollateralTypeRequiredDoc) => {
+    setTogglingIds((prev) => new Set(prev).add(doc.id + '_multiple'));
+    const updated = await collateralTypeRequiredDocsService.update(doc.id, {
+      allowMultiple: !doc.allowMultiple,
+    });
+    setTogglingIds((prev) => { const s = new Set(prev); s.delete(doc.id + '_multiple'); return s; });
+    if (updated) {
+      setGrouped((prev) => ({
+        ...prev,
+        [doc.collateralTypeName]: (prev[doc.collateralTypeName] ?? []).map((d) =>
+          d.id === doc.id ? updated : d
+        ),
+      }));
+      showToast(
+        updated.allowMultiple
+          ? `"${doc.documentName}" now allows multiple uploads.`
+          : `"${doc.documentName}" restricted to one upload per collateral.`,
+        'success'
+      );
+    } else {
+      showToast('Failed to update setting.', 'error');
     }
   };
 
@@ -194,7 +252,7 @@ export default function CollateralTypeDocumentsSettingsContent() {
       {/* Toast */}
       {toast && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm border ${
-          toast.type === 'success' ?'bg-green-50 border-green-200 text-green-700' :'bg-red-50 border-red-200 text-red-700'
+          toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
         }`}>
           {toast.type === 'success'
             ? <CheckCircle2 size={15} className="shrink-0" />
@@ -244,6 +302,7 @@ export default function CollateralTypeDocumentsSettingsContent() {
             const docs = grouped[ct.name] ?? [];
             const isExpanded = expandedTypes[ct.name] ?? true;
             const mandatoryCount = docs.filter((d) => d.isMandatory).length;
+            const singleOnlyCount = docs.filter((d) => !d.allowMultiple).length;
 
             return (
               <div key={ct.id} className="bg-card rounded-lg border border-border shadow-card overflow-hidden">
@@ -259,6 +318,7 @@ export default function CollateralTypeDocumentsSettingsContent() {
                     <span className="text-sm font-semibold text-foreground">{ct.name}</span>
                     <span className="text-xs text-muted-foreground">
                       {docs.length} doc{docs.length !== 1 ? 's' : ''} · {mandatoryCount} mandatory
+                      {singleOnlyCount > 0 && ` · ${singleOnlyCount} single-only`}
                     </span>
                     {isExpanded
                       ? <ChevronUp size={14} className="text-muted-foreground ml-auto" />
@@ -304,15 +364,29 @@ export default function CollateralTypeDocumentsSettingsContent() {
                             />
                           </div>
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={edit.isMandatory}
-                            onChange={(e) => setEdit({ ...edit, isMandatory: e.target.checked })}
-                            className="w-4 h-4 accent-primary"
-                          />
-                          <span className="text-sm text-foreground">Mandatory (shown in checklist)</span>
-                        </label>
+                        <div className="flex flex-wrap items-center gap-5">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={edit.isMandatory}
+                              onChange={(e) => setEdit({ ...edit, isMandatory: e.target.checked })}
+                              className="w-4 h-4 accent-primary"
+                            />
+                            <span className="text-sm text-foreground">Mandatory (shown in checklist)</span>
+                          </label>
+                          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                            <AllowMultipleToggle
+                              value={edit.allowMultiple}
+                              onChange={(v) => setEdit({ ...edit, allowMultiple: v })}
+                            />
+                            <span className="text-sm text-foreground">
+                              Allow Multiple
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                {edit.allowMultiple ? '(multiple uploads allowed)' : '(one per collateral)'}
+                              </span>
+                            </span>
+                          </label>
+                        </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={handleSave}
@@ -332,6 +406,16 @@ export default function CollateralTypeDocumentsSettingsContent() {
                       </div>
                     )}
 
+                    {/* Column headers */}
+                    {docs.length > 0 && (
+                      <div className="flex items-center gap-3 px-4 py-1.5 bg-muted/10">
+                        <span className="flex-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Document</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-20 text-center">Mandatory</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-24 text-center">Allow Multiple</span>
+                        <span className="w-14" />
+                      </div>
+                    )}
+
                     {docs.length === 0 ? (
                       <div className="px-4 py-4 text-xs text-muted-foreground italic">
                         No documents configured. Click <strong>Add</strong> to define the required checklist for {ct.name}.
@@ -345,30 +429,57 @@ export default function CollateralTypeDocumentsSettingsContent() {
                               <p className="text-xs text-muted-foreground truncate">{doc.description}</p>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleToggleMandatory(doc)}
-                            title="Toggle mandatory"
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors hover:opacity-80 cursor-pointer shrink-0 ${
-                              doc.isMandatory
-                                ? 'bg-red-100 text-red-700' :'bg-muted text-muted-foreground'
-                            }`}
-                          >
-                            {doc.isMandatory ? 'Mandatory' : 'Optional'}
-                          </button>
-                          <button
-                            onClick={() => openEdit(doc)}
-                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors shrink-0"
-                            title="Edit"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget({ id: doc.id, name: doc.documentName })}
-                            className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-colors shrink-0"
-                            title="Remove"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+
+                          {/* Mandatory badge/toggle */}
+                          <div className="w-20 flex justify-center">
+                            <button
+                              onClick={() => handleToggleMandatory(doc)}
+                              disabled={togglingIds.has(doc.id + '_mandatory')}
+                              title="Toggle mandatory"
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors hover:opacity-80 cursor-pointer shrink-0 disabled:opacity-50 ${
+                                doc.isMandatory ? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {togglingIds.has(doc.id + '_mandatory')
+                                ? <Loader2 size={10} className="animate-spin" />
+                                : doc.isMandatory ? 'Mandatory' : 'Optional'}
+                            </button>
+                          </div>
+
+                          {/* Allow Multiple toggle */}
+                          <div className="w-24 flex items-center justify-center gap-1.5">
+                            {togglingIds.has(doc.id + '_multiple') ? (
+                              <Loader2 size={13} className="animate-spin text-muted-foreground" />
+                            ) : (
+                              <>
+                                <AllowMultipleToggle
+                                  value={doc.allowMultiple}
+                                  onChange={() => handleToggleAllowMultiple(doc)}
+                                />
+                                <span className={`text-[10px] font-medium ${doc.allowMultiple ? 'text-primary' : 'text-amber-600'}`}>
+                                  {doc.allowMultiple ? 'On' : 'Off'}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Edit / Delete */}
+                          <div className="flex items-center gap-1 w-14 justify-end">
+                            <button
+                              onClick={() => openEdit(doc)}
+                              className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors shrink-0"
+                              title="Edit"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteTarget({ id: doc.id, name: doc.documentName })}
+                              className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-colors shrink-0"
+                              title="Remove"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}

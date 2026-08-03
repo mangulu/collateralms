@@ -1,11 +1,13 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { Download, RefreshCw, CheckCircle2, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, FileText, Sheet, TrendingUp, TrendingDown, Shield, Building2, Filter, Target, Award, PieChart as PieChartIcon, Layers } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, PieChart, Pie, Cell, AreaChart, Area,  } from 'recharts';
+import { Download, RefreshCw, CheckCircle2, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, FileText, Sheet, TrendingUp, TrendingDown, Shield, Building2, Filter, Target, Award, PieChart as PieChartIcon, Layers, Users, BarChart2 as BarChart2Icon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, PieChart, Pie, Cell, AreaChart, Area, LineChart, Legend } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 import { type CollateralRecord } from '@/lib/supabase/collateralService';
 import Icon from '@/components/ui/AppIcon';
 import { collateralLinkService } from '@/lib/supabase/collateralLinkService';
+
+
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,6 +58,72 @@ interface UtilizationReportRow {
   utilizationPercentage: number;
   utilizationStatus: string;
   linkedLoanCount: number;
+}
+
+// ─── Officer Workload Types ───────────────────────────────────────────────────
+
+interface OfficerWorkload {
+  officer: string;
+  total: number;
+  perfected: number;
+  pending: number;
+  overdue: number;
+  perfectionRate: number;
+}
+
+interface RegistryComplianceItem {
+  collateralId: string;
+  obligor: string;
+  type: string;
+  registry: string;
+  status: string;
+  valueTSh: string;
+  perfectionDeadline: string;
+  daysToDeadline: number | null;
+  complianceStatus: 'Compliant' | 'Non-Compliant' | 'Pending' | 'Overdue';
+}
+
+// ─── Collateral Reports Types ─────────────────────────────────────────────────
+
+type CollateralReportType = 'monthly_perfection' | 'registry_compliance' | 'overdue_summary';
+
+interface MonthlyTrendPoint {
+  month: string;
+  total: number;
+  perfected: number;
+  submitted: number;
+  overdue: number;
+  perfectionRate: number;
+}
+
+interface RegistryComplianceRow {
+  registry: string;
+  total: number;
+  perfected: number;
+  submitted: number;
+  overdue: number;
+  complianceRate: number;
+  status: 'Compliant' | 'At Risk' | 'Non-Compliant';
+}
+
+interface OverdueRow {
+  id: string;
+  obligor: string;
+  collateralType: string;
+  registry: string;
+  valueTsh: string;
+  deadline: string;
+  daysOverdue: number;
+  officer: string;
+}
+
+interface CollateralReportData {
+  monthlyTrend: MonthlyTrendPoint[];
+  registryCompliance: RegistryComplianceRow[];
+  overdueSummary: OverdueRow[];
+  generatedAt: string;
+  dateFrom: string;
+  dateTo: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -349,10 +417,22 @@ export default function ReportsContent() {
   const [utilizationRows, setUtilizationRows] = useState<UtilizationReportRow[]>([]);
   const [utilizationLoading, setUtilizationLoading] = useState(false);
 
+  const [workloadLoading, setWorkloadLoading] = useState(false);
+  const [officerWorkload, setOfficerWorkload] = useState<OfficerWorkload[]>([]);
+  const [registryCompliance, setRegistryCompliance] = useState<RegistryComplianceItem[]>([]);
+  const [workloadFilter, setWorkloadFilter] = useState<string>('All');
+  const [crLoading, setCrLoading] = useState(false);
+  const [crExporting, setCrExporting] = useState(false);
+  const [crReportData, setCrReportData] = useState<CollateralReportData | null>(null);
+  const [crReportType, setCrReportType] = useState<CollateralReportType>('monthly_perfection');
+  const today = new Date();
+  const [crDateFrom, setCrDateFrom] = useState<string>(new Date(today.getFullYear(), today.getMonth() - 5, 1).toISOString().slice(0, 10));
+  const [crDateTo, setCrDateTo] = useState<string>(today.toISOString().slice(0, 10));
+
   // Filters
   const [complianceFilter, setComplianceFilter] = useState<string>('All');
   const [registryFilter, setRegistryFilter] = useState<string>('All');
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'summary' | 'calendar' | 'deadlines' | 'utilization'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'summary' | 'calendar' | 'deadlines' | 'utilization' | 'officer_workload' | 'collateral_reports'>('dashboard');
   const [utilizationFilter, setUtilizationFilter] = useState<string>('All');
 
   // Calendar state
@@ -465,6 +545,165 @@ export default function ReportsContent() {
   useEffect(() => {
     if (activeTab === 'utilization') loadUtilizationReport();
   }, [activeTab, loadUtilizationReport]);
+
+  // Load officer workload data
+  const loadOfficerWorkload = useCallback(async () => {
+    setWorkloadLoading(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('collateral_id, obligor, collateral_type, registry, status, value_tsh, perfection_deadline, days_to_deadline, assigned_officer');
+      if (error || !data) return;
+
+      // Build officer workload
+      const officerMap = new Map<string, OfficerWorkload>();
+      const regItems: RegistryComplianceItem[] = [];
+
+      data.forEach((r: any) => {
+        const officer = r.assigned_officer || 'Unassigned';
+        if (!officerMap.has(officer)) {
+          officerMap.set(officer, { officer, total: 0, perfected: 0, pending: 0, overdue: 0, perfectionRate: 0 });
+        }
+        const w = officerMap.get(officer)!;
+        w.total++;
+        if (r.status === 'Perfected' || r.status === 'Monitoring' || r.status === 'Released') w.perfected++;
+        else if (r.status === 'Overdue') w.overdue++;
+        else w.pending++;
+
+        const cs: RegistryComplianceItem['complianceStatus'] =
+          r.status === 'Perfected' || r.status === 'Monitoring' || r.status === 'Released' ? 'Compliant'
+          : r.status === 'Overdue' || r.status === 'Rejected' ? 'Non-Compliant'
+          : (r.days_to_deadline !== null && r.days_to_deadline < 0) ? 'Overdue' : 'Pending';
+
+        regItems.push({
+          collateralId: r.collateral_id,
+          obligor: r.obligor ?? '',
+          type: r.collateral_type ?? '',
+          registry: r.registry ?? '',
+          status: r.status ?? '',
+          valueTSh: r.value_tsh ?? '0',
+          perfectionDeadline: r.perfection_deadline ?? '',
+          daysToDeadline: r.days_to_deadline ?? null,
+          complianceStatus: cs,
+        });
+      });
+
+      officerMap.forEach((w) => {
+        w.perfectionRate = w.total > 0 ? Math.round((w.perfected / w.total) * 100) : 0;
+      });
+
+      setOfficerWorkload(Array.from(officerMap.values()).sort((a, b) => b.total - a.total));
+      setRegistryCompliance(regItems);
+    } finally {
+      setWorkloadLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'officer_workload') loadOfficerWorkload();
+  }, [activeTab, loadOfficerWorkload]);
+
+  // Build collateral report data
+  const buildCollateralReport = useCallback(async () => {
+    setCrLoading(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('id, status, registry, collateral_type, value_tsh, perfection_deadline, created_at, obligor, assigned_officer');
+      if (error || !data) return;
+
+      const from = new Date(crDateFrom);
+      const to = new Date(crDateTo);
+      to.setHours(23, 59, 59);
+
+      const rows = (data as any[]).filter((r) => {
+        const d = new Date(r.created_at);
+        return d >= from && d <= to;
+      });
+
+      // Monthly trend
+      const monthMap = new Map<string, MonthlyTrendPoint>();
+      rows.forEach((r) => {
+        const d = new Date(r.created_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const label = d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+        if (!monthMap.has(key)) monthMap.set(key, { month: label, total: 0, perfected: 0, submitted: 0, overdue: 0, perfectionRate: 0 });
+        const m = monthMap.get(key)!;
+        m.total++;
+        if (r.status === 'Perfected') m.perfected++;
+        else if (r.status === 'Submitted' || r.status === 'Under Review') m.submitted++;
+        else if (r.status === 'Overdue') m.overdue++;
+      });
+      monthMap.forEach((m) => { m.perfectionRate = m.total > 0 ? Math.round((m.perfected / m.total) * 100) : 0; });
+      const monthlyTrend = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v);
+
+      // Registry compliance
+      const regMap = new Map<string, RegistryComplianceRow>();
+      rows.forEach((r) => {
+        const reg = r.registry || 'Unknown';
+        if (!regMap.has(reg)) regMap.set(reg, { registry: reg, total: 0, perfected: 0, submitted: 0, overdue: 0, complianceRate: 0, status: 'Compliant' });
+        const m = regMap.get(reg)!;
+        m.total++;
+        if (r.status === 'Perfected') m.perfected++;
+        else if (r.status === 'Submitted' || r.status === 'Under Review') m.submitted++;
+        else if (r.status === 'Overdue') m.overdue++;
+      });
+      regMap.forEach((m) => {
+        m.complianceRate = m.total > 0 ? Math.round((m.perfected / m.total) * 100) : 0;
+        m.status = m.complianceRate >= 80 ? 'Compliant' : m.complianceRate >= 60 ? 'At Risk' : 'Non-Compliant';
+      });
+      const registryCompliance = Array.from(regMap.values()).sort((a, b) => b.total - a.total);
+
+      // Overdue summary
+      const now = new Date();
+      const overdueSummary: OverdueRow[] = rows
+        .filter((r) => r.status === 'Overdue' || (r.perfection_deadline && new Date(r.perfection_deadline) < now && r.status !== 'Perfected' && r.status !== 'Released'))
+        .map((r) => {
+          const deadline = r.perfection_deadline ? new Date(r.perfection_deadline) : null;
+          const daysOverdue = deadline ? Math.floor((now.getTime() - deadline.getTime()) / 86400000) : 0;
+          return {
+            id: r.id,
+            obligor: r.obligor ?? '',
+            collateralType: r.collateral_type ?? '',
+            registry: r.registry ?? '',
+            valueTsh: r.value_tsh ?? '0',
+            deadline: r.perfection_deadline ?? '',
+            daysOverdue: Math.max(0, daysOverdue),
+            officer: r.assigned_officer ?? 'Unassigned',
+          };
+        })
+        .sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+      setCrReportData({ monthlyTrend, registryCompliance, overdueSummary, generatedAt: new Date().toISOString(), dateFrom: crDateFrom, dateTo: crDateTo });
+    } finally {
+      setCrLoading(false);
+    }
+  }, [crDateFrom, crDateTo]);
+
+  useEffect(() => {
+    if (activeTab === 'collateral_reports') buildCollateralReport();
+  }, [activeTab, buildCollateralReport]);
+
+  const exportCrCSV = useCallback(() => {
+    if (!crReportData) return;
+    setCrExporting(true);
+    let csv = '';
+    if (crReportType === 'monthly_perfection') {
+      csv = ['Month,Total,Perfected,Submitted,Overdue,Perfection Rate', ...crReportData.monthlyTrend.map(r => `${r.month},${r.total},${r.perfected},${r.submitted},${r.overdue},${r.perfectionRate}%`)].join('\n');
+    } else if (crReportType === 'registry_compliance') {
+      csv = ['Registry,Total,Perfected,Submitted,Overdue,Compliance Rate,Status', ...crReportData.registryCompliance.map(r => `${r.registry},${r.total},${r.perfected},${r.submitted},${r.overdue},${r.complianceRate}%,${r.status}`)].join('\n');
+    } else {
+      csv = ['ID,Obligor,Type,Registry,Value (TSh),Deadline,Days Overdue,Officer', ...crReportData.overdueSummary.map(r => `${r.id},"${r.obligor}",${r.collateralType},${r.registry},${r.valueTsh},${r.deadline},${r.daysOverdue},"${r.officer}"`)].join('\n');
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `collateral_report_${crReportType}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    setCrExporting(false);
+  }, [crReportData, crReportType]);
 
   // Filtered rows
   const filteredRows = records.filter(r => {
@@ -598,6 +837,8 @@ export default function ReportsContent() {
           { key: 'calendar', label: 'Calendar', icon: CalendarDays },
           { key: 'deadlines', label: 'Deadlines', icon: AlertTriangle },
           { key: 'utilization', label: 'Utilization', icon: PieChartIcon },
+          { key: 'officer_workload', label: 'Officer Workload', icon: Users },
+          { key: 'collateral_reports', label: 'Collateral Reports', icon: BarChart2Icon },
         ].map(tab => (
           <button
             key={tab.key}
@@ -1314,6 +1555,343 @@ export default function ReportsContent() {
               <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Near Limit (70–90%)</div>
               <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Critical (&gt;90%)</div>
             </div>
+          </div>
+        )}
+
+        {/* ── TAB: Officer Workload ── */}
+        {activeTab === 'officer_workload' && (
+          <div className="space-y-5">
+            {workloadLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-16 bg-muted animate-pulse rounded-xl" />)}
+              </div>
+            ) : (
+              <>
+                {/* KPI row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Officers', value: officerWorkload.length, color: 'text-primary' },
+                    { label: 'Total Collaterals', value: officerWorkload.reduce((s, o) => s + o.total, 0), color: 'text-foreground' },
+                    { label: 'Avg Perfection Rate', value: officerWorkload.length > 0 ? Math.round(officerWorkload.reduce((s, o) => s + o.perfectionRate, 0) / officerWorkload.length) + '%' : '—', color: 'text-emerald-700' },
+                    { label: 'Total Overdue', value: officerWorkload.reduce((s, o) => s + o.overdue, 0), color: 'text-red-600' },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="bg-white rounded-xl border border-border p-4">
+                      <p className="text-xs text-muted-foreground mb-1">{kpi.label}</p>
+                      <p className={`text-2xl font-700 tabular-nums ${kpi.color}`}>{kpi.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Officer workload chart */}
+                {officerWorkload.length > 0 && (
+                  <div className="bg-white rounded-xl border border-border p-5">
+                    <h2 className="text-sm font-700 text-foreground mb-4">Officer Workload Distribution</h2>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={officerWorkload.slice(0, 10)} barSize={28} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,92%)" vertical={false} />
+                        <XAxis dataKey="officer" tick={{ fontSize: 10, fill: 'hsl(215,16%,47%)' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: 'hsl(215,16%,47%)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(214,20%,88%)' }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="perfected" name="Perfected" fill="hsl(142,71%,45%)" radius={[3, 3, 0, 0]} stackId="a" />
+                        <Bar dataKey="pending" name="Pending" fill="hsl(38,92%,50%)" radius={[0, 0, 0, 0]} stackId="a" />
+                        <Bar dataKey="overdue" name="Overdue" fill="hsl(0,84%,60%)" radius={[3, 3, 0, 0]} stackId="a" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Officer table */}
+                <div className="bg-white rounded-xl border border-border overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                    <h2 className="text-sm font-700 text-foreground">Officer Performance Table</h2>
+                    <select
+                      value={workloadFilter}
+                      onChange={(e) => setWorkloadFilter(e.target.value)}
+                      className="text-xs border border-border rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-primary/30"
+                    >
+                      <option value="All">All Officers</option>
+                      <option value="High">High Performers (≥80%)</option>
+                      <option value="Low">Needs Attention (&lt;60%)</option>
+                    </select>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/20">
+                          {['Officer', 'Total', 'Perfected', 'Pending', 'Overdue', 'Perfection Rate'].map((h) => (
+                            <th key={h} className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {officerWorkload
+                          .filter((o) => workloadFilter === 'All' || (workloadFilter === 'High' && o.perfectionRate >= 80) || (workloadFilter === 'Low' && o.perfectionRate < 60))
+                          .map((o) => (
+                            <tr key={o.officer} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                              <td className="px-4 py-3 font-600 text-foreground text-xs">{o.officer}</td>
+                              <td className="px-4 py-3 text-xs text-foreground tabular-nums">{o.total}</td>
+                              <td className="px-4 py-3 text-xs text-emerald-700 font-600 tabular-nums">{o.perfected}</td>
+                              <td className="px-4 py-3 text-xs text-amber-700 tabular-nums">{o.pending}</td>
+                              <td className="px-4 py-3 text-xs text-red-600 font-600 tabular-nums">{o.overdue}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${o.perfectionRate >= 80 ? 'bg-emerald-500' : o.perfectionRate >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                      style={{ width: `${o.perfectionRate}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-xs font-700 ${o.perfectionRate >= 80 ? 'text-emerald-700' : o.perfectionRate >= 60 ? 'text-amber-700' : 'text-red-600'}`}>
+                                    {o.perfectionRate}%
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        {officerWorkload.length === 0 && (
+                          <tr><td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">No officer data found.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Registry compliance table */}
+                <div className="bg-white rounded-xl border border-border overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border bg-muted/30">
+                    <h2 className="text-sm font-700 text-foreground">Registry Compliance Overview</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/20">
+                          {['Collateral ID', 'Obligor', 'Type', 'Registry', 'Status', 'Value (TSh)', 'Deadline', 'Compliance'].map((h) => (
+                            <th key={h} className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {registryCompliance.slice(0, 50).map((r, i) => (
+                          <tr key={i} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                            <td className="px-4 py-2.5 font-mono text-xs font-600 text-primary">{r.collateralId}</td>
+                            <td className="px-4 py-2.5 text-xs text-foreground">{r.obligor}</td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.type}</td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.registry}</td>
+                            <td className="px-4 py-2.5 text-xs">{r.status}</td>
+                            <td className="px-4 py-2.5 text-xs font-mono">{r.valueTSh}</td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.perfectionDeadline ? new Date(r.perfectionDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                            <td className="px-4 py-2.5">
+                              <span className={`text-[10px] font-700 px-2 py-0.5 rounded-full ${r.complianceStatus === 'Compliant' ? 'bg-green-100 text-green-700' : r.complianceStatus === 'Non-Compliant' ? 'bg-red-100 text-red-700' : r.complianceStatus === 'Overdue' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-700'}`}>
+                                {r.complianceStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {registryCompliance.length === 0 && (
+                          <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No data found.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB: Collateral Reports ── */}
+        {activeTab === 'collateral_reports' && (
+          <div className="space-y-5">
+            {/* Controls */}
+            <div className="bg-white rounded-xl border border-border p-4">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                {/* Report type selector */}
+                <div className="flex-1">
+                  <p className="text-xs font-600 text-muted-foreground mb-2">Report Type</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      { id: 'monthly_perfection' as const, label: 'Monthly Perfection Trends', icon: TrendingUp, accent: 'text-blue-700', bg: 'bg-blue-50' },
+                      { id: 'registry_compliance' as const, label: 'Registry Compliance', icon: Shield, accent: 'text-purple-700', bg: 'bg-purple-50' },
+                      { id: 'overdue_summary' as const, label: 'Overdue Summary', icon: AlertTriangle, accent: 'text-red-700', bg: 'bg-red-50' },
+                    ] as const).map((rt) => {
+                      const RtIcon = rt.icon;
+                      const active = crReportType === rt.id;
+                      return (
+                        <button
+                          key={rt.id}
+                          onClick={() => setCrReportType(rt.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-500 transition-all ${active ? 'border-primary bg-primary/5 text-primary ring-1 ring-primary/20' : 'border-border hover:border-primary/30 text-foreground'}`}
+                        >
+                          <RtIcon size={13} className={active ? 'text-primary' : rt.accent} />
+                          {rt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Date range */}
+                <div className="flex items-end gap-2">
+                  <div>
+                    <label className="block text-xs font-500 text-muted-foreground mb-1">From</label>
+                    <input type="date" value={crDateFrom} onChange={(e) => setCrDateFrom(e.target.value)} className="px-2.5 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-500 text-muted-foreground mb-1">To</label>
+                    <input type="date" value={crDateTo} onChange={(e) => setCrDateTo(e.target.value)} className="px-2.5 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+                  </div>
+                  <button
+                    onClick={buildCollateralReport}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-600 hover:bg-primary/90 transition-colors"
+                  >
+                    <RefreshCw size={13} className={crLoading ? 'animate-spin' : ''} />
+                    Run
+                  </button>
+                  <button
+                    onClick={exportCrCSV}
+                    disabled={!crReportData || crExporting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-sm text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+                  >
+                    <Download size={13} />
+                    CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {crLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-xl" />)}
+              </div>
+            ) : !crReportData ? (
+              <div className="bg-white rounded-xl border border-border p-12 text-center text-muted-foreground text-sm">
+                Click <span className="font-600 text-primary">Run</span> to generate the report.
+              </div>
+            ) : (
+              <>
+                {/* Monthly Perfection Trends */}
+                {crReportType === 'monthly_perfection' && (
+                  <div className="space-y-5">
+                    <div className="bg-white rounded-xl border border-border p-5">
+                      <h2 className="text-sm font-700 text-foreground mb-4">Monthly Perfection Trends</h2>
+                      {crReportData.monthlyTrend.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">No data for selected period.</p>
+                      ) : (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <AreaChart data={crReportData.monthlyTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,92%)" vertical={false} />
+                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsl(215,16%,47%)' }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: 'hsl(215,16%,47%)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                            <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(214,20%,88%)' }} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                            <Area type="monotone" dataKey="perfected" name="Perfected" stroke="hsl(142,71%,45%)" fill="hsl(142,71%,45%,0.1)" strokeWidth={2} />
+                            <Area type="monotone" dataKey="submitted" name="Submitted" stroke="hsl(38,92%,50%)" fill="hsl(38,92%,50%,0.1)" strokeWidth={2} />
+                            <Area type="monotone" dataKey="overdue" name="Overdue" stroke="hsl(0,84%,60%)" fill="hsl(0,84%,60%,0.1)" strokeWidth={2} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
+                    {/* Perfection rate line */}
+                    {crReportData.monthlyTrend.length > 0 && (
+                      <div className="bg-white rounded-xl border border-border p-5">
+                        <h2 className="text-sm font-700 text-foreground mb-4">Perfection Rate vs 80% Target</h2>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <LineChart data={crReportData.monthlyTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,92%)" vertical={false} />
+                            <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsl(215,16%,47%)' }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: 'hsl(215,16%,47%)' }} axisLine={false} tickLine={false} domain={[0, 100]} unit="%" />
+                            <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(214,20%,88%)' }} formatter={(v: number) => [`${v}%`, 'Rate']} />
+                            <Line type="monotone" dataKey="perfectionRate" name="Perfection Rate" stroke="hsl(221,83%,53%)" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Registry Compliance */}
+                {crReportType === 'registry_compliance' && (
+                  <div className="bg-white rounded-xl border border-border overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border bg-muted/30">
+                      <h2 className="text-sm font-700 text-foreground">Registry Compliance Summary</h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/20">
+                            {['Registry', 'Total', 'Perfected', 'Submitted', 'Overdue', 'Compliance Rate', 'Status'].map((h) => (
+                              <th key={h} className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {crReportData.registryCompliance.length === 0 ? (
+                            <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No data for selected period.</td></tr>
+                          ) : crReportData.registryCompliance.map((r) => (
+                            <tr key={r.registry} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                              <td className="px-4 py-3 font-600 text-foreground text-xs">{r.registry}</td>
+                              <td className="px-4 py-3 text-xs tabular-nums">{r.total}</td>
+                              <td className="px-4 py-3 text-xs text-emerald-700 font-600 tabular-nums">{r.perfected}</td>
+                              <td className="px-4 py-3 text-xs text-amber-700 tabular-nums">{r.submitted}</td>
+                              <td className="px-4 py-3 text-xs text-red-600 font-600 tabular-nums">{r.overdue}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${r.complianceRate >= 80 ? 'bg-emerald-500' : r.complianceRate >= 60 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${r.complianceRate}%` }} />
+                                  </div>
+                                  <span className={`text-xs font-700 ${r.complianceRate >= 80 ? 'text-emerald-700' : r.complianceRate >= 60 ? 'text-amber-700' : 'text-red-600'}`}>{r.complianceRate}%</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`text-[10px] font-700 px-2 py-0.5 rounded-full ${r.status === 'Compliant' ? 'bg-green-100 text-green-700' : r.status === 'At Risk' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.status}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Overdue Summary */}
+                {crReportType === 'overdue_summary' && (
+                  <div className="bg-white rounded-xl border border-border overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                      <h2 className="text-sm font-700 text-foreground">Overdue Collateral Summary</h2>
+                      <span className="text-xs font-600 text-red-600 bg-red-50 px-2 py-0.5 rounded-full">{crReportData.overdueSummary.length} overdue</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/20">
+                            {['Obligor', 'Type', 'Registry', 'Value (TSh)', 'Deadline', 'Days Overdue', 'Officer'].map((h) => (
+                              <th key={h} className="text-left px-4 py-2.5 text-xs font-600 text-muted-foreground uppercase tracking-wide">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {crReportData.overdueSummary.length === 0 ? (
+                            <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No overdue collaterals found.</td></tr>
+                          ) : crReportData.overdueSummary.map((r) => (
+                            <tr key={r.id} className="border-b border-border/50 hover:bg-red-50/30 transition-colors">
+                              <td className="px-4 py-3 font-600 text-foreground text-xs">{r.obligor}</td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{r.collateralType}</td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{r.registry}</td>
+                              <td className="px-4 py-3 text-xs font-mono">{r.valueTsh}</td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{r.deadline ? new Date(r.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                              <td className="px-4 py-3">
+                                <span className={`text-xs font-700 ${r.daysOverdue > 30 ? 'text-red-700' : r.daysOverdue > 7 ? 'text-orange-600' : 'text-amber-600'}`}>{r.daysOverdue}d</span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{r.officer}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

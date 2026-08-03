@@ -248,7 +248,23 @@ export default function LoginForm() {
           <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} />
           <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-12">
             <div className="text-center">
-              <AppLogo size={48} />
+              {/* Large centered logo with glowing circle border */}
+              <div className="flex justify-center mb-6">
+                <div
+                  className="relative flex items-center justify-center rounded-full"
+                  style={{
+                    width: 220,
+                    height: 220,
+                    background: 'rgba(255,255,255,0.08)',
+                    border: '3px solid transparent',
+                    backgroundClip: 'padding-box',
+                    boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(53,200,243,0.55), 0 0 64px 16px rgba(0,169,224,0.35)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <AppLogo size={200} />
+                </div>
+              </div>
               <h2 className="mt-6 text-3xl font-bold text-white">CollateralMS</h2>
               <p className="mt-2 text-white/70 text-sm">EXIM Bank Tanzania</p>
             </div>
@@ -353,7 +369,23 @@ export default function LoginForm() {
           <main className="relative z-10 flex flex-1 flex-col justify-center px-8 py-12 sm:px-10">
             <div className="mx-auto w-full max-w-sm">
               <header className="mb-8">
-                <AppLogo size={40} />
+                {/* Large centered logo with glowing circle border */}
+                <div className="flex justify-center mb-6">
+                  <div
+                    className="relative flex items-center justify-center rounded-full"
+                    style={{
+                      width: 220,
+                      height: 220,
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '3px solid transparent',
+                      backgroundClip: 'padding-box',
+                      boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(53,200,243,0.55), 0 0 64px 16px rgba(0,169,224,0.35)',
+                      backdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    <AppLogo size={200} />
+                  </div>
+                </div>
                 <h1 className="mt-5 text-2xl font-bold tracking-tight text-white sm:text-[1.75rem]">Welcome back</h1>
                 <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
                   Sign in to your <span className="font-semibold text-white">CollateralMS</span> account

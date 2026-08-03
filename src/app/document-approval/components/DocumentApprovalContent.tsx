@@ -469,6 +469,7 @@ export default function DocumentApprovalContent() {
   const [actionModal, setActionModal] = useState<ActionModalState>({ open: false, doc: null, action: null });
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success\' | \'error' } | null>(null);
+  const [rejectConfirm, setRejectConfirm] = useState<{ open: boolean; doc: DocumentApprovalRecord | null }>({ open: false, doc: null });
 
   const isLegalOfficer = userProfile?.role === 'legal_officer' || userProfile?.role === 'system_admin';
 
@@ -700,7 +701,7 @@ export default function DocumentApprovalContent() {
                         )}
                         {doc.approvalStatus !== 'rejected' && (
                           <button
-                            onClick={() => { setSelectedDoc(doc); setActionModal({ open: true, doc, action: 'reject' }); }}
+                            onClick={() => { setSelectedDoc(doc); setRejectConfirm({ open: true, doc }); }}
                             className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                           >
                             <XCircle size={11} /> Reject
@@ -741,7 +742,13 @@ export default function DocumentApprovalContent() {
             doc={selectedDoc}
             canAct={isLegalOfficer}
             onClose={handleCloseDrawer}
-            onAction={(action) => setActionModal({ open: true, doc: selectedDoc, action })}
+            onAction={(action) => {
+              if (action === 'reject') {
+                setRejectConfirm({ open: true, doc: selectedDoc });
+              } else {
+                setActionModal({ open: true, doc: selectedDoc, action });
+              }
+            }}
           />
         )}
       </WorkflowDrawer>
@@ -753,6 +760,43 @@ export default function DocumentApprovalContent() {
         onSubmit={handleAction}
         submitting={submitting}
       />
+
+      {/* Reject Confirmation Modal */}
+      {rejectConfirm.open && rejectConfirm.doc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b bg-red-50 border-red-200">
+              <div className="flex items-center gap-3">
+                <XCircle size={22} className="text-red-500" />
+                <h3 className="text-base font-semibold text-gray-900">Reject this Document?</h3>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600 leading-relaxed">
+                You are about to reject <span className="font-semibold">{rejectConfirm.doc.fileName}</span> ({rejectConfirm.doc.documentType}). The submitter will be notified and a reason is required on the next step.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setRejectConfirm({ open: false, doc: null })}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const doc = rejectConfirm.doc!;
+                  setRejectConfirm({ open: false, doc: null });
+                  setActionModal({ open: true, doc, action: 'reject' });
+                }}
+                className="px-5 py-2 text-sm font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Yes, Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (

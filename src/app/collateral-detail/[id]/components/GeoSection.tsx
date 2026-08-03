@@ -16,13 +16,12 @@ function SectionHeader({ title, icon: IconComponent }: { title: string; icon: Re
 }
 
 export default function GeoSection({ collateral }: { collateral: CollateralRecord }) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
-  const hasGoogleMaps = apiKey && apiKey !== 'your-google-maps-api-key-here';
   const hasCoords = collateral.latitude != null && collateral.longitude != null;
 
-  const mapSrc = hasCoords
-    ? `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${collateral.latitude},${collateral.longitude}&zoom=15`
-    : `https://www.google.com/maps/embed/v1/search?key=${apiKey}&q=${encodeURIComponent((collateral.description ?? '') + ', Tanzania')}`;
+  // OpenStreetMap embed — no API key required
+  const osmSrc = hasCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${(collateral.longitude! - 0.01).toFixed(6)},${(collateral.latitude! - 0.01).toFixed(6)},${(collateral.longitude! + 0.01).toFixed(6)},${(collateral.latitude! + 0.01).toFixed(6)}&layer=mapnik&marker=${collateral.latitude!.toFixed(6)},${collateral.longitude!.toFixed(6)}`
+    : null;
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
@@ -41,7 +40,7 @@ export default function GeoSection({ collateral }: { collateral: CollateralRecor
         </div>
       )}
       <div className="rounded-lg overflow-hidden border border-border bg-muted/30">
-        {hasGoogleMaps ? (
+        {osmSrc ? (
           <iframe
             title="Collateral Location"
             width="100%"
@@ -49,7 +48,7 @@ export default function GeoSection({ collateral }: { collateral: CollateralRecor
             style={{ border: 0 }}
             loading="lazy"
             allowFullScreen
-            src={mapSrc}
+            src={osmSrc}
           />
         ) : (
           <div className="h-64 flex flex-col items-center justify-center gap-3 text-center px-6">
@@ -57,15 +56,10 @@ export default function GeoSection({ collateral }: { collateral: CollateralRecor
               <MapPin size={22} className="text-primary" />
             </div>
             <div>
-              <p className="text-sm font-600 text-foreground">Geomapping Available</p>
+              <p className="text-sm font-600 text-foreground">No Coordinates Stored</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Configure <span className="font-mono text-xs bg-muted px-1 rounded">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</span> to enable interactive maps.
+                Use the Location Picker when editing this collateral to pin its exact location on the map.
               </p>
-              {hasCoords && (
-                <p className="text-xs text-muted-foreground mt-1 font-mono">
-                  Stored: {collateral.latitude?.toFixed(6)}, {collateral.longitude?.toFixed(6)}
-                </p>
-              )}
             </div>
           </div>
         )}
@@ -73,7 +67,7 @@ export default function GeoSection({ collateral }: { collateral: CollateralRecor
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <MapPin size={12} />
-          <span>{hasCoords ? 'Pinned location stored in database' : 'Asset location derived from collateral description'}</span>
+          <span>{hasCoords ? 'Pinned location stored in database' : 'Asset location not yet geo-tagged'}</span>
         </div>
         <Link
           href="/geomapping"
