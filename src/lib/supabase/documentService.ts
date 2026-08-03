@@ -3,8 +3,31 @@
 import { createClient } from '@/lib/supabase/client';
 
 export type DocumentType =
-  | 'Title Deed' |'Charge Certificate' |'Valuation Report' |'BRELA Confirmation' |'Insurance Certificate' |'Board Resolution'
-  | 'Deed'| 'Appraisal' | 'Insurance Policy' |'Other';
+  | 'Title Deed' | 'Charge Certificate' | 'Valuation Report' | 'BRELA Confirmation' | 'Insurance Certificate' | 'Board Resolution'
+  | 'Deed' | 'Appraisal' | 'Insurance Policy' | 'Other'
+  // Motor Vehicle
+  | 'Vehicle Registration Certificate (Original)' | 'Logbook (Original)' | 'TRA Encumbrance Search Certificate'
+  | 'Comprehensive Insurance Policy' | 'Hire Purchase / Charge Agreement'
+  // Mortgage
+  | 'Title Deed (Original)' | 'Valuation Report (Certified)' | 'Land Rent Clearance Certificate'
+  | 'Mortgage Deed / Charge Instrument' | 'Lands Registry Search Certificate' | 'Survey Plan / Plot Map'
+  | 'Building Permit (if applicable)'
+  // Debenture
+  | 'Debenture Deed (Executed)' | 'Certificate of Incorporation' | 'Board Resolution (Authorising Charge)'
+  | 'BRELA Registration Certificate'| 'Memorandum & Articles of Association' |'Audited Financial Statements (Latest)' | 'Asset Schedule / Inventory List'
+  // Shares (DSE)
+  | 'Share Certificate(s) (Original)' | 'DSE Pledge Confirmation Letter' | 'CDS Account Statement'
+  | 'Board Resolution (Authorising Pledge)' | 'Share Transfer Form (Blank, Signed)' | 'DSE Registry Search'
+  // FDR
+  | 'Fixed Deposit Receipt (Original)' | 'Bank Lien Letter / Pledge Confirmation' | 'Account Statement'
+  | 'Deed of Assignment'
+  // Guarantee
+  | 'Guarantee Deed (Executed)' | 'Guarantor Financial Statements' | 'Board Resolution (if Corporate Guarantor)'
+  | 'Certificate of Incorporation (if Corporate)' | 'Guarantor ID / KYC Documents'
+  // Ship/Vessel
+  | 'Ship Registration Certificate (TASAC)' | 'Mortgage of Ship Deed' | 'TASAC Encumbrance Search'
+  | 'Hull & Machinery Insurance Policy' | 'Valuation / Survey Report' | 'Classification Society Certificate'
+  | 'Crew & Manning Certificate';
 
 export interface CollateralDocument {
   id: string;
