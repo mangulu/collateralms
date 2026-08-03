@@ -1,10 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 
-import {
-  Files, Plus, Upload, Trash2, Download, ExternalLink, FileText, FileType2, FileImage, File,
-  RefreshCw, X, ChevronDown, AlertCircle,
-} from 'lucide-react';
+import { Files, Plus, Upload, Trash2, Download, FileText, FileType2, FileImage, File, RefreshCw, X, ChevronDown, AlertCircle, Eye,  } from 'lucide-react';
 import { toast } from 'sonner';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
@@ -46,6 +43,173 @@ function getFileIconDetail(mimeType: string) {
   if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={18} className="text-indigo-500" />;
   return <FileText size={18} className="text-slate-500" />;
 }
+
+// ─── File Preview Panel (for upload modal) ────────────────────────────────────
+
+function FilePreviewPanel({ file }: { file: File }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  if (!previewUrl) return null;
+
+  const isImage = file.type.startsWith('image/');
+  const isPdf = file.type === 'application/pdf';
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-muted/20">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+        <Eye size={12} className="text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">Preview</span>
+      </div>
+      {isImage ? (
+        <div className="flex items-center justify-center p-3 max-h-52 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewUrl} alt="Preview" className="max-h-44 max-w-full object-contain rounded" />
+        </div>
+      ) : isPdf ? (
+        <iframe
+          src={previewUrl}
+          title="PDF Preview"
+          className="w-full h-52 border-0"
+        />
+      ) : (
+        <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
+          <FileText size={20} className="mr-2 text-muted-foreground/50" />
+          Preview not available for this file type
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── In-App Document Viewer Modal ─────────────────────────────────────────────
+
+interface DocumentViewerModalProps {
+  doc: CollateralDocument;
+  collateralId: string;
+  onClose: () => void;
+}
+
+function DocumentViewerModal({ doc, collateralId, onClose }: DocumentViewerModalProps) {
+  const displayName = `${doc.documentType} - ${collateralId}`;
+  const isImage = doc.mimeType?.startsWith('image/');
+  const isPdf = doc.mimeType === 'application/pdf';
+  const isWord = doc.mimeType?.includes('word') || doc.mimeType?.includes('document');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="shrink-0">{getFileIconDetail(doc.mimeType ?? '')}</div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-muted-foreground">v{doc.version}</span>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                {doc.uploadedByName && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span className="text-xs text-muted-foreground">by {doc.uploadedByName}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            {doc.signedUrl && (
+              <a
+                href={doc.signedUrl}
+                download={doc.fileName}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+              >
+                <Download size={13} /> Download
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors"
+            >
+              <X size={16} className="text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+
+        {/* Document notes */}
+        {doc.notes && (
+          <div className="px-5 py-2 bg-amber-50 border-b border-amber-100 shrink-0">
+            <p className="text-xs text-amber-700 italic">{doc.notes}</p>
+          </div>
+        )}
+
+        {/* Viewer body */}
+        <div className="flex-1 overflow-hidden bg-muted/30 flex items-center justify-center">
+          {!doc.signedUrl ? (
+            <div className="text-center py-12">
+              <FileText size={40} className="mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">Document URL not available</p>
+            </div>
+          ) : isPdf ? (
+            <iframe
+              src={doc.signedUrl}
+              title={displayName}
+              className="w-full h-full border-0"
+              style={{ minHeight: '500px' }}
+            />
+          ) : isImage ? (
+            <div className="flex items-center justify-center w-full h-full p-6 overflow-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={doc.signedUrl}
+                alt={displayName}
+                className="max-w-full max-h-full object-contain rounded shadow-sm"
+                style={{ maxHeight: '60vh' }}
+              />
+            </div>
+          ) : isWord ? (
+            <div className="text-center py-12 px-6">
+              <File size={40} className="mx-auto text-indigo-400 mb-3" />
+              <p className="text-sm font-medium text-foreground mb-1">{displayName}</p>
+              <p className="text-xs text-muted-foreground mb-4">Word documents cannot be previewed inline.</p>
+              <a
+                href={doc.signedUrl}
+                download={doc.fileName}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Download size={14} /> Download to view
+              </a>
+            </div>
+          ) : (
+            <div className="text-center py-12 px-6">
+              <FileText size={40} className="mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground mb-4">Preview not available for this file type.</p>
+              {doc.signedUrl && (
+                <a
+                  href={doc.signedUrl}
+                  download={doc.fileName}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Download size={14} /> Download
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Upload Document Modal ────────────────────────────────────────────────────
 
 interface UploadDocumentModalProps {
   collateral: CollateralRecord;
@@ -100,8 +264,8 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div>
             <h2 className="text-base font-semibold text-foreground">Upload Document</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -112,7 +276,7 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
             <X size={16} className="text-muted-foreground" />
           </button>
         </div>
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -141,6 +305,10 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
               </>
             )}
           </div>
+
+          {/* Preview panel — shown once a file is selected */}
+          {selectedFile && <FilePreviewPanel file={selectedFile} />}
+
           <div>
             <label className="block text-xs font-medium text-foreground mb-1.5">Document Type</label>
             <div className="relative">
@@ -163,7 +331,7 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
             </div>
           )}
         </div>
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border shrink-0">
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors">Cancel</button>
           <button onClick={handleSubmit} disabled={uploading || !selectedFile}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
@@ -182,6 +350,7 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
   const [loading, setLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadDocType, setUploadDocType] = useState<DocumentType | undefined>(undefined);
+  const [viewingDoc, setViewingDoc] = useState<CollateralDocument | null>(null);
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -257,42 +426,48 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
                 </button>
                 {hasDocuments && (
                   <div className="divide-y divide-border/40">
-                    {typeDocs.map((doc) => (
-                      <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-muted/20 transition-colors group">
-                        <div className="w-6 h-6 rounded flex items-center justify-center shrink-0">{getFileIconDetail(doc.mimeType ?? '')}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-500 text-foreground truncate">{doc.fileName}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground">v{doc.version}</span>
-                            <span className="text-muted-foreground/40">·</span>
-                            <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                            <span className="text-muted-foreground/40">·</span>
-                            <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                    {typeDocs.map((doc) => {
+                      // Display name: Category - CollateralID
+                      const displayName = `${doc.documentType} - ${doc.collateralId}`;
+                      return (
+                        <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-muted/20 transition-colors group">
+                          <div className="w-6 h-6 rounded flex items-center justify-center shrink-0">{getFileIconDetail(doc.mimeType ?? '')}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-500 text-foreground truncate">{displayName}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-muted-foreground">v{doc.version}</span>
+                              <span className="text-muted-foreground/40">·</span>
+                              <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                              <span className="text-muted-foreground/40">·</span>
+                              <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
                           </div>
-                          {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
+                          <div className="flex items-center gap-1">
+                            {doc.signedUrl ? (
+                              <>
+                                <button
+                                  onClick={() => setViewingDoc(doc)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors"
+                                >
+                                  <Eye size={12} /> View
+                                </button>
+                                <a href={doc.signedUrl} download={doc.fileName}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors">
+                                  <Download size={12} /> Download
+                                </a>
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/50 italic px-2">No URL</span>
+                            )}
+                            <button onClick={() => handleDelete(doc)}
+                              className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {doc.signedUrl ? (
-                            <>
-                              <a href={doc.signedUrl} target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors">
-                                <ExternalLink size={12} /> View
-                              </a>
-                              <a href={doc.signedUrl} download={doc.fileName}
-                                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors">
-                                <Download size={12} /> Download
-                              </a>
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground/50 italic px-2">No URL</span>
-                          )}
-                          <button onClick={() => handleDelete(doc)}
-                            className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
                 {!hasDocuments && user && (
@@ -317,6 +492,13 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
           initialDocType={uploadDocType}
           onClose={() => { setShowUploadModal(false); setUploadDocType(undefined); }}
           onUploaded={() => { loadDocs(); toast.success('Document uploaded successfully'); }}
+        />
+      )}
+      {viewingDoc && (
+        <DocumentViewerModal
+          doc={viewingDoc}
+          collateralId={collateral.collateralId}
+          onClose={() => setViewingDoc(null)}
         />
       )}
     </div>

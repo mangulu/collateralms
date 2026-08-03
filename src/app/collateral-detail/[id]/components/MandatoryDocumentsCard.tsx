@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   FileText, CheckCircle2, AlertCircle, Clock, ChevronDown, ChevronUp,
-  Upload, X, RefreshCw, FileType2, FileImage, File,
+  Upload, X, RefreshCw, FileType2, FileImage, File, Eye,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
@@ -126,6 +126,74 @@ function resolveDocType(name: string): DocumentType {
   return 'Other';
 }
 
+/**
+ * Check whether a stored document_type value matches a required document name.
+ * Uses three strategies:
+ *   1. Direct case-insensitive match between stored type and required name
+ *   2. Stored type matches the resolved DocumentType of the required name
+ *   3. Required name matches the resolved DocumentType of the stored type
+ */
+function docTypeMatchesRequired(storedDocType: string, requiredDocName: string): boolean {
+  const storedLower = storedDocType.toLowerCase().trim();
+  const requiredLower = requiredDocName.toLowerCase().trim();
+
+  // Strategy 1: direct name match
+  if (storedLower === requiredLower) return true;
+
+  // Strategy 2: stored type equals resolved type of required name
+  const resolvedRequired = resolveDocType(requiredDocName).toLowerCase().trim();
+  if (storedLower === resolvedRequired) return true;
+
+  // Strategy 3: resolved type of stored value equals resolved type of required name
+  const resolvedStored = resolveDocType(storedDocType).toLowerCase().trim();
+  if (resolvedStored === resolvedRequired) return true;
+
+  return false;
+}
+
+// ─── File Preview Panel ───────────────────────────────────────────────────────
+
+function FilePreviewPanel({ file }: { file: File }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  if (!previewUrl) return null;
+
+  const isImage = file.type.startsWith('image/');
+  const isPdf = file.type === 'application/pdf';
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-muted/20">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
+        <Eye size={12} className="text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">Preview</span>
+      </div>
+      {isImage ? (
+        <div className="flex items-center justify-center p-3 max-h-48 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={previewUrl} alt="Preview" className="max-h-40 max-w-full object-contain rounded" />
+        </div>
+      ) : isPdf ? (
+        <iframe
+          src={previewUrl}
+          title="PDF Preview"
+          className="w-full h-48 border-0"
+        />
+      ) : (
+        <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
+          <FileText size={20} className="mr-2 text-muted-foreground/50" />
+          Preview not available for this file type
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Inline Upload Modal ──────────────────────────────────────────────────────
 
 interface InlineUploadModalProps {
@@ -183,8 +251,8 @@ function InlineUploadModal({ collateral, userId, userName, docTypeName, onClose,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Upload: {docTypeName}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -195,7 +263,7 @@ function InlineUploadModal({ collateral, userId, userName, docTypeName, onClose,
             <X size={15} className="text-muted-foreground" />
           </button>
         </div>
-        <div className="px-5 py-4 space-y-3">
+        <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1">
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -232,6 +300,10 @@ function InlineUploadModal({ collateral, userId, userName, docTypeName, onClose,
               </>
             )}
           </div>
+
+          {/* Preview panel — shown once a file is selected */}
+          {selectedFile && <FilePreviewPanel file={selectedFile} />}
+
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">Document Type</label>
             <div className="px-3 py-2 border border-border rounded-lg bg-muted/30 text-sm text-foreground">
@@ -256,7 +328,7 @@ function InlineUploadModal({ collateral, userId, userName, docTypeName, onClose,
             </div>
           )}
         </div>
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border shrink-0">
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors">
             Cancel
           </button>
@@ -328,18 +400,9 @@ export default function MandatoryDocumentsCard({ collateral, onDocumentUploaded 
 
   if (!loading && mandatoryList.length === 0) return null;
 
-  // Match uploaded docs to mandatory list using resolved DocumentType on both sides
+  // Match uploaded docs to mandatory list using multi-strategy matching
   const docStatus = mandatoryList.map((req) => {
-    const resolvedReqType = resolveDocType(req.documentName).toLowerCase().trim();
-    const match = uploadedDocs.find((u) => {
-      const uploadedTypeLower = (u.docType ?? '').toLowerCase().trim();
-      // Primary: compare resolved type on both sides
-      if (uploadedTypeLower === resolvedReqType) return true;
-      // Fallback: compare raw required name against uploaded type
-      const reqNameLower = req.documentName.toLowerCase().trim();
-      if (uploadedTypeLower === reqNameLower) return true;
-      return false;
-    });
+    const match = uploadedDocs.find((u) => docTypeMatchesRequired(u.docType, req.documentName));
     return { required: req.documentName, uploaded: !!match, fileName: match?.fileName };
   });
 
