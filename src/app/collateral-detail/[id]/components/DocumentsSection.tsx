@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Files, Plus, Upload, Trash2, Download, FileText, FileType2, FileImage, File, RefreshCw, X, ChevronDown, AlertCircle, Eye,  } from 'lucide-react';
+import { Files, Plus, Upload, Trash2, Download, FileText, FileType2, FileImage, File, RefreshCw, X, ChevronDown, AlertCircle, Eye, LayoutGrid, List } from 'lucide-react';
 import { toast } from 'sonner';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
@@ -44,18 +44,28 @@ function getFileIconDetail(mimeType: string) {
   return <FileText size={18} className="text-slate-500" />;
 }
 
+function getFileIconLarge(mimeType: string) {
+  if (mimeType?.includes('pdf')) return <FileType2 size={28} className="text-red-500" />;
+  if (mimeType?.includes('image')) return <FileImage size={28} className="text-blue-500" />;
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={28} className="text-indigo-500" />;
+  return <FileText size={28} className="text-slate-500" />;
+}
+
 // ─── File Preview Panel (for upload modal) ────────────────────────────────────
 
 function FilePreviewPanel({ file }: { file: File }) {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewSrc(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    return () => { setPreviewSrc(null); };
   }, [file]);
 
-  if (!previewUrl) return null;
+  if (!previewSrc) return null;
 
   const isImage = file.type.startsWith('image/');
   const isPdf = file.type === 'application/pdf';
@@ -69,20 +79,15 @@ function FilePreviewPanel({ file }: { file: File }) {
       {isImage ? (
         <div className="flex items-center justify-center p-3 max-h-52 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="Preview" className="max-h-44 max-w-full object-contain rounded" />
+          <img src={previewSrc} alt="Preview" className="max-h-44 max-w-full object-contain rounded" />
         </div>
       ) : isPdf ? (
-        <object
-          data={previewUrl}
-          type="application/pdf"
+        <iframe
+          src={previewSrc}
+          title="PDF Preview"
           className="w-full border-0"
           style={{ height: '208px' }}
-        >
-          <div className="flex flex-col items-center justify-center py-6 text-xs text-muted-foreground gap-2">
-            <FileType2 size={24} className="text-red-400" />
-            <span>PDF preview not available in this browser.</span>
-          </div>
-        </object>
+        />
       ) : (
         <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
           <FileText size={20} className="mr-2 text-muted-foreground/50" />
@@ -350,6 +355,90 @@ function UploadDocumentModal({ collateral, userId, userName, onClose, onUploaded
   );
 }
 
+// ─── Document Thumbnail Card (grid view) ──────────────────────────────────────
+
+interface DocCardProps {
+  doc: CollateralDocument;
+  collateralId: string;
+  onView: (doc: CollateralDocument) => void;
+  onDelete: (doc: CollateralDocument) => void;
+  canDelete: boolean;
+}
+
+function DocCard({ doc, collateralId, onView, onDelete, canDelete }: DocCardProps) {
+  const displayName = `${doc.documentType} - ${collateralId}`;
+  return (
+    <div className="group relative flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border/60 bg-white hover:border-primary/40 hover:bg-primary/3 transition-all cursor-pointer"
+      onClick={() => onView(doc)}
+      title={displayName}
+    >
+      <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+        {getFileIconLarge(doc.mimeType ?? '')}
+      </div>
+      <p className="text-xs font-medium text-foreground text-center leading-tight line-clamp-2 w-full">{doc.documentType}</p>
+      <span className="text-[10px] text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+      {canDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(doc); }}
+          className="absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-all"
+        >
+          <Trash2 size={11} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Document List Row (list view) ────────────────────────────────────────────
+
+interface DocRowProps {
+  doc: CollateralDocument;
+  collateralId: string;
+  onView: (doc: CollateralDocument) => void;
+  onDelete: (doc: CollateralDocument) => void;
+  canDelete: boolean;
+}
+
+function DocRow({ doc, collateralId, onView, onDelete, canDelete }: DocRowProps) {
+  const displayName = `${doc.documentType} - ${collateralId}`;
+  return (
+    <div className="group flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-muted/30 transition-colors">
+      <div className="w-7 h-7 rounded flex items-center justify-center shrink-0">
+        {getFileIconDetail(doc.mimeType ?? '')}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-foreground truncate">{displayName}</p>
+        <span className="text-[10px] text-muted-foreground">{documentService.formatFileSize(doc.fileSize)} · {new Date(doc.createdAt).toLocaleDateString()}</span>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        {doc.signedUrl && (
+          <>
+            <button
+              onClick={() => onView(doc)}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors"
+            >
+              <Eye size={10} /> View
+            </button>
+            <a href={doc.signedUrl} download={doc.fileName}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors">
+              <Download size={10} /> DL
+            </a>
+          </>
+        )}
+        {canDelete && (
+          <button onClick={() => onDelete(doc)}
+            className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
+            <Trash2 size={11} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main DocumentsSection ────────────────────────────────────────────────────
+
 export default function DocumentsSection({ collateral }: { collateral: CollateralRecord }) {
   const { user } = useAuth();
   const [docs, setDocs] = useState<CollateralDocument[]>([]);
@@ -357,6 +446,7 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadDocType, setUploadDocType] = useState<DocumentType | undefined>(undefined);
   const [viewingDoc, setViewingDoc] = useState<CollateralDocument | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const loadDocs = useCallback(async () => {
     setLoading(true);
@@ -378,19 +468,30 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
     setShowUploadModal(true);
   };
 
-  const docsByType = docs.reduce<Record<string, CollateralDocument[]>>((acc, doc) => {
-    const key = doc.documentType ?? 'Other';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(doc);
-    return acc;
-  }, {});
-
   return (
     <div className="bg-white rounded-xl border border-border shadow-card p-5">
-      <div className="flex items-center justify-between mb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
         <SectionHeader title="Related Documents" icon={Files} />
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
+          {/* View toggle */}
+          <div className="flex items-center border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+              title="Grid view"
+            >
+              <LayoutGrid size={13} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+              title="List view"
+            >
+              <List size={13} />
+            </button>
+          </div>
           {user && (
             <button onClick={() => openUploadFor(undefined)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors">
@@ -399,6 +500,7 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
           )}
         </div>
       </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <svg className="animate-spin w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none">
@@ -406,90 +508,57 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
         </div>
+      ) : docs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Files size={32} className="text-muted-foreground/30 mb-2" />
+          <p className="text-sm text-muted-foreground">No documents uploaded yet</p>
+          {user && (
+            <button onClick={() => openUploadFor(undefined)}
+              className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors">
+              <Plus size={12} /> Upload first document
+            </button>
+          )}
+        </div>
+      ) : viewMode === 'grid' ? (
+        /* ── Grid view ── */
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          {docs.map((doc) => (
+            <DocCard
+              key={doc.id}
+              doc={doc}
+              collateralId={collateral.collateralId}
+              onView={setViewingDoc}
+              onDelete={handleDelete}
+              canDelete={!!user}
+            />
+          ))}
+          {user && (
+            <button
+              onClick={() => openUploadFor(undefined)}
+              className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/3 transition-all text-muted-foreground hover:text-primary"
+              title="Upload new document"
+            >
+              <Plus size={20} />
+              <span className="text-[10px] font-medium">Add</span>
+            </button>
+          )}
+        </div>
       ) : (
-        <div className="space-y-3">
-          {DOC_TYPE_OPTIONS.map((docType) => {
-            const typeDocs = docsByType[docType] ?? [];
-            const hasDocuments = typeDocs.length > 0;
-            return (
-              <div key={docType} className="rounded-lg border border-border/60 overflow-hidden">
-                <button type="button" onClick={() => user && openUploadFor(docType)} disabled={!user}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors ${hasDocuments ? 'bg-muted/30 hover:bg-muted/50' : 'bg-muted/10 hover:bg-primary/5'} ${!user ? 'cursor-default' : 'cursor-pointer'}`}>
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${hasDocuments ? 'bg-primary/10' : 'bg-muted/60'}`}>
-                      <FileText size={13} className={hasDocuments ? 'text-primary' : 'text-muted-foreground/50'} />
-                    </div>
-                    <div>
-                      <span className="text-sm font-500 text-foreground">{docType}</span>
-                      {hasDocuments && <span className="ml-2 text-xs text-muted-foreground">{typeDocs.length} file{typeDocs.length !== 1 ? 's' : ''}</span>}
-                    </div>
-                  </div>
-                  {user && !hasDocuments && (
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                      <Upload size={12} /><span>Upload</span>
-                    </span>
-                  )}
-                </button>
-                {hasDocuments && (
-                  <div className="divide-y divide-border/40">
-                    {typeDocs.map((doc) => {
-                      // Display name: Category - CollateralID
-                      const displayName = `${doc.documentType} - ${doc.collateralId}`;
-                      return (
-                        <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 bg-white hover:bg-muted/20 transition-colors group">
-                          <div className="w-6 h-6 rounded flex items-center justify-center shrink-0">{getFileIconDetail(doc.mimeType ?? '')}</div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-500 text-foreground truncate">{displayName}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs text-muted-foreground">v{doc.version}</span>
-                              <span className="text-muted-foreground/40">·</span>
-                              <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                              <span className="text-muted-foreground/40">·</span>
-                              <span className="text-xs text-muted-foreground">{new Date(doc.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            {doc.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{doc.notes}</p>}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {doc.signedUrl ? (
-                              <>
-                                <button
-                                  onClick={() => setViewingDoc(doc)}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary bg-primary/5 hover:bg-primary/15 transition-colors"
-                                >
-                                  <Eye size={12} /> View
-                                </button>
-                                <a href={doc.signedUrl} download={doc.fileName}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-muted-foreground bg-muted/40 hover:bg-muted hover:text-foreground transition-colors">
-                                  <Download size={12} /> Download
-                                </a>
-                              </>
-                            ) : (
-                              <span className="text-xs text-muted-foreground/50 italic px-2">No URL</span>
-                            )}
-                            <button onClick={() => handleDelete(doc)}
-                              className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100">
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {!hasDocuments && user && (
-                  <div onClick={() => openUploadFor(docType)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white cursor-pointer hover:bg-primary/5 transition-colors border-t border-border/40">
-                    <div className="w-5 h-5 rounded border border-dashed border-muted-foreground/30 flex items-center justify-center shrink-0">
-                      <Plus size={10} className="text-muted-foreground/40" />
-                    </div>
-                    <span className="text-xs text-muted-foreground/60 italic">No document — click to upload</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        /* ── List view ── */
+        <div className="divide-y divide-border/30">
+          {docs.map((doc) => (
+            <DocRow
+              key={doc.id}
+              doc={doc}
+              collateralId={collateral.collateralId}
+              onView={setViewingDoc}
+              onDelete={handleDelete}
+              canDelete={!!user}
+            />
+          ))}
         </div>
       )}
+
       {showUploadModal && user && (
         <UploadDocumentModal
           collateral={collateral}
