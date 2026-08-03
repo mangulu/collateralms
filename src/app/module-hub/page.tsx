@@ -445,22 +445,49 @@ export default function ModuleHubPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--izou-bg)' }}>
+    <div
+      className="min-h-screen flex flex-col relative overflow-x-hidden"
+      style={{
+        background: 'linear-gradient(160deg, #0a1628 0%, #0f2044 30%, #1a2a4a 60%, #1e2d3d 100%)',
+      }}
+    >
+      {/* ── Full-page logo watermark ─────────────────────────────────────────── */}
+      <div
+        className="pointer-events-none select-none fixed inset-0 flex items-center justify-center"
+        aria-hidden="true"
+        style={{ zIndex: 0 }}
+      >
+        <img
+          src="/assets/images/app_logo.png"
+          alt=""
+          style={{
+            width: '680px',
+            height: '680px',
+            objectFit: 'contain',
+            opacity: 0.04,
+            filter: 'blur(2px) grayscale(20%)',
+            userSelect: 'none',
+          }}
+        />
+      </div>
 
       {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
       <header
-        className="flex items-center justify-between px-6 py-3 shrink-0"
+        className="flex items-center justify-between px-6 py-3 shrink-0 relative"
         style={{
-          backgroundColor: 'var(--izou-card)',
-          borderBottom: '1px solid var(--izou-border)',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          backgroundColor: 'rgba(10, 22, 40, 0.75)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 1px 12px rgba(0,0,0,0.3)',
+          zIndex: 10,
         }}
       >
         <div className="flex items-center gap-3">
           <AppLogo size={32} />
           <div>
-            <p className="text-sm font-bold leading-tight" style={{ color: 'var(--izou-text)' }}>CollateralMS</p>
-            <p className="text-xs leading-tight" style={{ color: 'var(--izou-muted)' }}>Module Hub</p>
+            <p className="text-sm font-bold leading-tight text-white">CollateralMS</p>
+            <p className="text-xs leading-tight" style={{ color: 'rgba(255,255,255,0.5)' }}>Module Hub</p>
           </div>
         </div>
 
@@ -468,16 +495,16 @@ export default function ModuleHubPage() {
           <button
             onClick={() => router.push('/onboarding-guide')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{ color: 'var(--izou-primary)', border: '1px solid var(--izou-border)' }}
+            style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.15)', backgroundColor: 'rgba(255,255,255,0.06)' }}
             title="Open Onboarding Guide"
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.12)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
           >
             <HelpCircle size={14} />
             <span className="hidden sm:inline">Guide</span>
           </button>
 
-          <div className="hidden sm:flex items-center gap-2.5 pl-2 border-l" style={{ borderColor: 'var(--izou-border)' }}>
+          <div className="hidden sm:flex items-center gap-2.5 pl-2 border-l" style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
               style={{ background: 'var(--izou-primary)' }}
@@ -485,17 +512,17 @@ export default function ModuleHubPage() {
               <span className="text-white text-xs font-bold">{initials}</span>
             </div>
             <div>
-              <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--izou-text)' }}>{displayName}</p>
-              <p className="text-xs leading-tight" style={{ color: 'var(--izou-muted)' }}>{displayRole}</p>
+              <p className="text-sm font-semibold leading-tight text-white">{displayName}</p>
+              <p className="text-xs leading-tight" style={{ color: 'rgba(255,255,255,0.5)' }}>{displayRole}</p>
             </div>
           </div>
 
           <button
             onClick={() => signOut?.()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ml-1"
-            style={{ color: 'var(--izou-muted)' }}
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-muted)'; }}
+            style={{ color: 'rgba(255,255,255,0.5)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.5)'; }}
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">Sign out</span>
@@ -505,49 +532,29 @@ export default function ModuleHubPage() {
 
       {/* ── Hero Section ────────────────────────────────────────────────────── */}
       <div
-        className="px-6 pt-8 pb-6 relative overflow-hidden"
+        className="px-6 pt-8 pb-6 relative"
         style={{
-          background: 'linear-gradient(135deg, var(--izou-card) 0%, var(--izou-bg) 100%)',
-          borderBottom: '1px solid var(--izou-border)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          zIndex: 1,
         }}
       >
-        {/* Logo watermark */}
-        <div
-          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center"
-          aria-hidden="true"
-          style={{ zIndex: 0 }}
-        >
-          <img
-            src="/assets/images/app_logo.png"
-            alt=""
-            style={{
-              width: '420px',
-              height: '420px',
-              objectFit: 'contain',
-              opacity: 0.045,
-              filter: 'blur(6px) grayscale(30%)',
-              userSelect: 'none',
-            }}
-          />
-        </div>
-
-        <div className="max-w-6xl mx-auto relative" style={{ zIndex: 1 }}>
+        <div className="max-w-6xl mx-auto relative">
           {/* Welcome row */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span
                   className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary-dark)' }}
+                  style={{ backgroundColor: 'rgba(0,124,179,0.25)', color: '#60C8F0', border: '1px solid rgba(0,124,179,0.35)' }}
                 >
                   <Layers size={10} />
                   Command Centre
                 </span>
               </div>
-              <h1 className="text-2xl font-bold leading-tight" style={{ color: 'var(--izou-text)' }}>
+              <h1 className="text-2xl font-bold leading-tight text-white">
                 Good {greeting || '—'}, {firstName}
               </h1>
-              <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--izou-muted)' }}>
+              <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 <Calendar size={13} />
                 {todayStr || '—'}
               </p>
@@ -555,7 +562,7 @@ export default function ModuleHubPage() {
             <button
               onClick={() => router.push('/workflows/tasks')}
               className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
-              style={{ backgroundColor: 'var(--izou-primary)', color: '#fff' }}
+              style={{ backgroundColor: 'var(--izou-primary)', color: '#fff', boxShadow: '0 4px 14px rgba(0,124,179,0.4)' }}
               onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.9'; }}
               onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
             >
@@ -585,13 +592,13 @@ export default function ModuleHubPage() {
       {/* ── Priority Tray ────────────────────────────────────────────────────── */}
       {!statsLoading && priorityItems.length > 0 && (
         <div
-          className="px-6 py-3"
-          style={{ backgroundColor: 'rgba(220,38,38,0.03)', borderBottom: '1px solid rgba(220,38,38,0.12)' }}
+          className="px-6 py-3 relative"
+          style={{ backgroundColor: 'rgba(220,38,38,0.08)', borderBottom: '1px solid rgba(220,38,38,0.18)', zIndex: 1 }}
         >
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle size={13} style={{ color: '#DC2626' }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#DC2626' }}>
+              <AlertTriangle size={13} style={{ color: '#F87171' }} />
+              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#F87171' }}>
                 Priority Attention Required
               </span>
             </div>
@@ -604,9 +611,14 @@ export default function ModuleHubPage() {
                     key={item.id}
                     onClick={() => router.push(item.href)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                    style={{ backgroundColor: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}30` }}
-                    onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.8'; }}
-                    onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      color: cfg.color,
+                      border: `1px solid ${cfg.color}40`,
+                      backdropFilter: 'blur(8px)',
+                    }}
+                    onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+                    onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
                   >
                     <ItemIcon size={11} />
                     <span className="font-bold">{cfg.label}</span>
@@ -622,14 +634,14 @@ export default function ModuleHubPage() {
       )}
 
       {/* ── Module Grid ──────────────────────────────────────────────────────── */}
-      <div className="flex-1 px-6 py-8">
+      <div className="flex-1 px-6 py-8 relative" style={{ zIndex: 1 }}>
         <div className="max-w-6xl mx-auto">
 
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--izou-muted)' }}>
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.4)' }}>
               Modules
             </h2>
-            <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
+            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
               {visibleModules.length} available
             </span>
           </div>
@@ -639,35 +651,38 @@ export default function ModuleHubPage() {
               const ModIcon = mod.icon;
               const kpi = moduleKPIs[mod.id];
               const borderColor = CATEGORY_BORDER[mod.category];
-              const cardBg = CATEGORY_BG[mod.category];
 
               return (
                 <div
                   key={mod.id}
                   className="group relative flex flex-col rounded-xl overflow-hidden transition-all duration-200 cursor-pointer"
                   style={{
-                    backgroundColor: 'var(--izou-card)',
-                    border: '1px solid var(--izou-border)',
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                     borderLeft: `4px solid ${borderColor}`,
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
                     minHeight: '200px',
                   }}
                   onClick={() => router.push(mod.href)}
                   onMouseOver={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px ${borderColor}40`;
+                    (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px ${borderColor}50`;
                     (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
                   }}
                   onMouseOut={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+                    (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.06)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)';
                     (e.currentTarget as HTMLElement).style.transform = 'none';
                   }}
                 >
                   {/* Card header */}
-                  <div className="p-5 pb-3 flex-1" style={{ background: cardBg }}>
+                  <div className="p-5 pb-3 flex-1">
                     <div className="flex items-start justify-between mb-3">
                       <div
                         className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
-                        style={{ backgroundColor: mod.iconBg }}
+                        style={{ backgroundColor: mod.iconBg, boxShadow: `0 4px 12px ${mod.iconBg}60` }}
                       >
                         <ModIcon size={18} color="#fff" />
                       </div>
@@ -679,17 +694,17 @@ export default function ModuleHubPage() {
                             className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: statusDot(kpi.status) }}
                           />
-                          <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
+                          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
                             {kpi.status === 'ok' ? 'All clear' : kpi.status === 'warn' ? 'Attention' : 'Critical'}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    <h2 className="text-sm font-bold mb-1" style={{ color: 'var(--izou-text)' }}>
+                    <h2 className="text-sm font-bold mb-1 text-white">
                       {mod.title}
                     </h2>
-                    <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
+                    <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)' }}>
                       {mod.description}
                     </p>
                   </div>
@@ -698,21 +713,21 @@ export default function ModuleHubPage() {
                   {kpi && (
                     <div
                       className="px-5 py-2.5 flex items-center gap-3"
-                      style={{ borderTop: '1px solid var(--izou-border)', backgroundColor: 'var(--izou-card)' }}
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex-1 min-w-0">
                         <span className="text-sm font-bold" style={{ color: borderColor }}>{kpi.primary}</span>
-                        <span className="text-xs ml-2" style={{ color: 'var(--izou-muted)' }}>{kpi.secondary}</span>
+                        <span className="text-xs ml-2" style={{ color: 'rgba(255,255,255,0.4)' }}>{kpi.secondary}</span>
                       </div>
                       <TrendingUp size={13} style={{ color: borderColor, opacity: 0.5 }} />
                     </div>
                   )}
 
-                  {/* Quick actions — limited to first 2 for uniformity */}
+                  {/* Quick actions */}
                   <div
                     className="px-5 py-3 flex items-center gap-2"
-                    style={{ borderTop: '1px solid var(--izou-border)' }}
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {mod.quickActions.slice(0, 2).map((action) => {
@@ -724,11 +739,11 @@ export default function ModuleHubPage() {
                           className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all"
                           style={{
                             color: borderColor,
-                            backgroundColor: `${borderColor}10`,
-                            border: `1px solid ${borderColor}20`,
+                            backgroundColor: `${borderColor}18`,
+                            border: `1px solid ${borderColor}30`,
                           }}
-                          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}20`; }}
-                          onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}10`; }}
+                          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}30`; }}
+                          onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}18`; }}
                         >
                           <ActionIcon size={10} />
                           {action.label}
@@ -744,8 +759,8 @@ export default function ModuleHubPage() {
           {/* Empty state */}
           {!loading && visibleModules.length === 0 && (
             <div className="text-center py-20">
-              <ShieldCheck size={40} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--izou-primary)' }} />
-              <p className="text-sm" style={{ color: 'var(--izou-muted)' }}>
+              <ShieldCheck size={40} className="mx-auto mb-3 opacity-30 text-white" />
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
                 No modules are available for your current role. Contact your administrator.
               </p>
             </div>
@@ -755,28 +770,30 @@ export default function ModuleHubPage() {
           <div
             className="mt-8 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
             style={{
-              background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%)',
-              border: '1px solid rgba(37,99,235,0.15)',
+              background: 'rgba(37,99,235,0.15)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(37,99,235,0.3)',
             }}
           >
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-              style={{ backgroundColor: '#2563EB' }}
+              style={{ backgroundColor: '#2563EB', boxShadow: '0 4px 12px rgba(37,99,235,0.4)' }}
             >
               <BookOpen size={18} color="#fff" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold mb-0.5" style={{ color: '#1D4ED8' }}>
+              <h3 className="text-sm font-bold mb-0.5 text-white">
                 New to CollateralMS? Start with the Onboarding Guide
               </h3>
-              <p className="text-xs leading-relaxed" style={{ color: '#3B82F6' }}>
+              <p className="text-xs leading-relaxed" style={{ color: 'rgba(147,197,253,0.8)' }}>
                 Step-by-step walkthroughs for all modules — from registering collateral to running compliance audits.
               </p>
             </div>
             <button
               onClick={() => router.push('/onboarding-guide')}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all"
-              style={{ backgroundColor: '#2563EB', color: '#fff' }}
+              style={{ backgroundColor: '#2563EB', color: '#fff', boxShadow: '0 4px 12px rgba(37,99,235,0.4)' }}
               onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8'; }}
               onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB'; }}
             >
@@ -789,14 +806,14 @@ export default function ModuleHubPage() {
       </div>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="text-center py-4 text-xs" style={{ color: 'var(--izou-muted)' }}>
+      <footer className="text-center py-4 text-xs relative" style={{ color: 'rgba(255,255,255,0.3)', zIndex: 1 }}>
         Powered by{' '}
         <a
           href="https://contentpro.co.tz"
           target="_blank"
           rel="noopener noreferrer"
           className="font-semibold hover:underline"
-          style={{ color: 'var(--izou-primary)' }}
+          style={{ color: 'rgba(255,255,255,0.5)' }}
         >
           Contentpro
         </a>
