@@ -465,14 +465,14 @@ export default function ModuleHubPage() {
         >
           <defs>
             <pattern id="mesh-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#9CA3AF" strokeWidth="0.5" opacity="0.35" />
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#007CB3" strokeWidth="0.5" opacity="0.18" />
             </pattern>
             <pattern id="mesh-dots" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-              <circle cx="0" cy="0" r="1.2" fill="#9CA3AF" opacity="0.25" />
-              <circle cx="48" cy="0" r="1.2" fill="#9CA3AF" opacity="0.25" />
-              <circle cx="0" cy="48" r="1.2" fill="#9CA3AF" opacity="0.25" />
-              <circle cx="48" cy="48" r="1.2" fill="#9CA3AF" opacity="0.25" />
-              <circle cx="24" cy="24" r="1" fill="#9CA3AF" opacity="0.18" />
+              <circle cx="0" cy="0" r="1.2" fill="#007CB3" opacity="0.15" />
+              <circle cx="48" cy="0" r="1.2" fill="#007CB3" opacity="0.15" />
+              <circle cx="0" cy="48" r="1.2" fill="#007CB3" opacity="0.15" />
+              <circle cx="48" cy="48" r="1.2" fill="#007CB3" opacity="0.15" />
+              <circle cx="24" cy="24" r="1" fill="#00A9E0" opacity="0.12" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#mesh-grid)" />
@@ -486,18 +486,32 @@ export default function ModuleHubPage() {
         aria-hidden="true"
         style={{ zIndex: 0 }}
       >
-        <img
-          src="/assets/images/app_logo.png"
-          alt=""
+        <div
           style={{
-            width: '600px',
-            height: '600px',
-            objectFit: 'contain',
-            opacity: 0.04,
-            filter: 'grayscale(100%)',
-            userSelect: 'none',
+            width: 560,
+            height: 560,
+            borderRadius: '50%',
+            border: '2px solid rgba(0,124,179,0.12)',
+            boxShadow: '0 0 0 12px rgba(0,124,179,0.04), 0 0 80px 20px rgba(0,169,224,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0,124,179,0.02)',
           }}
-        />
+        >
+          <img
+            src="/assets/app_logo_shield.svg"
+            alt=""
+            style={{
+              width: '340px',
+              height: '340px',
+              objectFit: 'contain',
+              opacity: 0.055,
+              filter: 'invert(27%) sepia(80%) saturate(600%) hue-rotate(175deg) brightness(85%) contrast(90%)',
+              userSelect: 'none',
+            }}
+          />
+        </div>
       </div>
 
       {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
