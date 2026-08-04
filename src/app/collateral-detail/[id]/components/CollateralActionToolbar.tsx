@@ -740,11 +740,37 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
     workflow?: WorkflowType;
     action?: ActionType;
   }>({});
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const gates = getWorkflowGates(collateral);
   const isAdmin = userRole === 'admin' || userRole === 'system_admin';
 
   const closeAll = () => setActiveModal({});
+
+  const handleGenerateReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const response = await fetch(`/api/collateral/summary-report?id=${collateral.id}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.error ?? 'Failed to generate report');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `collateral-summary-${collateral.collateralId}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Report downloaded successfully');
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to generate report');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   // Quick Edit items
   const quickEditItems: DropdownItem[] = [
@@ -824,11 +850,9 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       color: 'text-orange-700',
     },
     {
-      label: 'Generate Report',
+      label: generatingReport ? 'Generating…' : 'Generate Report',
       icon: FileBarChart2,
-      onClick: () => {
-        window.location.href = `/collateral-reports?id=${collateral.id}`;
-      },
+      onClick: handleGenerateReport,
     },
   ];
 
@@ -838,7 +862,7 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       <div className="flex items-center gap-2 flex-wrap">
         <ToolbarDropdown label="Quick Edit" icon={UserCog} items={quickEditItems} accentColor="text-foreground" />
         <ToolbarDropdown label="Initiate Workflow" icon={Workflow} items={workflowItems} accentColor="text-primary" />
-        <ToolbarDropdown label="Actions" icon={FileBarChart2} items={actionItems} accentColor="text-foreground" />
+        <ToolbarDropdown label="Actions" icon={generatingReport ? Loader2 : FileBarChart2} items={actionItems} accentColor="text-foreground" />
       </div>
 
       {/* Quick Edit Modals */}
