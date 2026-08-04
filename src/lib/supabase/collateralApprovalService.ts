@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { sendCollateralStatusEmail } from '@/lib/supabase/collateralStatusEmailService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -228,6 +229,17 @@ export const collateralApprovalService = {
           .eq('id', collateralRecordId)
           .then(() => {})
           .catch((e) => console.warn('[approvals] collateral status write-back failed:', e.message));
+
+        // ── Send email alert for Rejected status ────────────────────────────
+        if (status === 'Rejected') {
+          sendCollateralStatusEmail({
+            collateralRecordId,
+            newStatus: 'Rejected',
+            changedBy: reviewedByName,
+            notes: decisionNotes || undefined,
+            workflowType: 'Collateral Approval',
+          }).catch((e) => console.warn('[approvals] status email failed:', e.message));
+        }
       }
     }
 

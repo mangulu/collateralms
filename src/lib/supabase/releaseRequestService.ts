@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { sendCollateralStatusEmail } from '@/lib/supabase/collateralStatusEmailService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -197,14 +198,40 @@ export const releaseRequestService = {
             .eq('id', collateralRecordId)
             .then(() => {})
             .catch((e) => console.warn('[releaseRequest] collateral status write-back failed:', e.message));
+
+          // ── Send Released status email alert ──────────────────────────────
+          sendCollateralStatusEmail({
+            collateralRecordId,
+            newStatus: 'Released',
+            changedBy: reviewedByName ?? 'System',
+            notes: notes || undefined,
+            workflowType: 'Release / Settlement Workflow',
+          }).catch((e) => console.warn('[releaseRequest] status email failed:', e.message));
         } else if (current?.collateral_ref) {
           // Fallback: look up by collateral_id text field
+          const { data: crRow } = await supabase
+            .from('collateral_records')
+            .select('id')
+            .eq('collateral_id', current.collateral_ref)
+            .maybeSingle();
+
           await supabase
             .from('collateral_records')
             .update({ status: 'Released' })
             .eq('collateral_id', current.collateral_ref)
             .then(() => {})
             .catch((e) => console.warn('[releaseRequest] collateral status write-back (by ref) failed:', e.message));
+
+          // ── Send Released status email alert (fallback path) ──────────────
+          if (crRow?.id) {
+            sendCollateralStatusEmail({
+              collateralRecordId: crRow.id,
+              newStatus: 'Released',
+              changedBy: reviewedByName ?? 'System',
+              notes: notes || undefined,
+              workflowType: 'Release / Settlement Workflow',
+            }).catch((e) => console.warn('[releaseRequest] status email (fallback) failed:', e.message));
+          }
         }
       }
 

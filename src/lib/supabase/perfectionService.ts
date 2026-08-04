@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { sendCollateralStatusEmail } from '@/lib/supabase/collateralStatusEmailService';
 
 export type PerfectionRequestStatus =
   | 'Draft' |'Submitted' |'Under Review' |'Approved' |'Perfected' |'Rejected' |'Returned';
@@ -333,6 +334,15 @@ export const perfectionService = {
         .eq('id', collateralRecordId)
         .then(() => {})
         .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+
+      // ── Send Rejected status email alert ──────────────────────────────────
+      sendCollateralStatusEmail({
+        collateralRecordId,
+        newStatus: 'Rejected',
+        changedBy: userName,
+        notes: decisionNotes || undefined,
+        workflowType: 'Perfection Workflow',
+      }).catch((e) => console.warn('[perfection] status email failed:', e.message));
     }
 
     const { error: commentError } = await supabase
@@ -488,6 +498,15 @@ export const perfectionService = {
         .eq('id', collateralRecordId)
         .then(() => {})
         .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+
+      // ── Send Perfected status email alert ─────────────────────────────────
+      sendCollateralStatusEmail({
+        collateralRecordId,
+        newStatus: 'Perfected',
+        changedBy: userName,
+        notes: decisionNotes || undefined,
+        workflowType: 'Perfection Workflow',
+      }).catch((e) => console.warn('[perfection] status email failed:', e.message));
     }
 
     const { error: commentError } = await supabase
