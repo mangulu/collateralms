@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +31,8 @@ import {
   FileText,
   Plus,
   Eye,
+  Search,
+  ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -269,13 +271,41 @@ const modules: ModuleCard[] = [
   },
 ];
 
-// ─── KPI data per module (fetched from Supabase) ──────────────────────────────
+// ─── KPI data per module ──────────────────────────────────────────────────────
 
 interface ModuleKPI {
   primary: string;
   secondary: string;
   status: 'ok' | 'warn' | 'critical';
 }
+
+// ─── Skeleton Loader ──────────────────────────────────────────────────────────
+
+const ModuleSkeleton = () => (
+  <div className="rounded-xl p-4 border border-gray-100 bg-white animate-pulse">
+    <div className="flex items-start gap-3">
+      <div className="w-9 h-9 rounded-lg bg-gray-200" />
+      <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <div className="h-4 bg-gray-200 rounded w-1/2" />
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+        </div>
+        <div className="h-3 bg-gray-200 rounded w-full mt-1.5" />
+        <div className="h-3 bg-gray-200 rounded w-2/3 mt-1" />
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="h-3 bg-gray-200 rounded w-12" />
+            <div className="h-2 bg-gray-200 rounded w-16" />
+          </div>
+          <div className="flex gap-1">
+            <div className="w-6 h-5 bg-gray-200 rounded" />
+            <div className="w-6 h-5 bg-gray-200 rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -296,6 +326,9 @@ export default function ModuleHubPage() {
   const [moduleKPIs, setModuleKPIs] = useState<Record<string, ModuleKPI>>({});
   const [statsLoading, setStatsLoading] = useState(true);
   const [taskCount, setTaskCount] = useState<number | null>(null);
+  const [recentModules, setRecentModules] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDismissed, setShowDismissed] = useState(false);
 
   const displayName = userProfile?.full_name || userProfile?.email || 'User';
   const firstName = displayName.split(' ')[0];
@@ -311,7 +344,29 @@ export default function ModuleHubPage() {
         .slice(0, 2)
     : 'U';
 
-  // Set today's date client-side to avoid hydration mismatch
+  // ─── Compute visible modules ──────────────────────────────────────────────
+  const visibleModules = useMemo(() => {
+    if (loading) return modules;
+    return modules.filter((m) => {
+      if (m.adminOnly && !isSystemAdmin) return false;
+      if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission))
+        return false;
+      return true;
+    });
+  }, [loading, isSystemAdmin, hasPermission]);
+
+  // Filter modules based on search
+  const filteredModules = useMemo(() => {
+    if (!searchQuery) return visibleModules;
+    return visibleModules.filter(
+      (m) =>
+        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [visibleModules, searchQuery]);
+
+  // ─── Effects ──────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const d = new Date();
     setTodayStr(
@@ -325,7 +380,29 @@ export default function ModuleHubPage() {
     setGreeting(getGreeting());
   }, []);
 
-  // Fetch summary stats and priority items
+  useEffect(() => {
+    const recent = JSON.parse(localStorage.getItem('recentModules') || '[]');
+    setRecentModules(recent);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
+      }
+      if ((e.metaKey || e.ctrlKey) && /^[1-9]$/.test(e.key)) {
+        const index = parseInt(e.key) - 1;
+        if (filteredModules[index]) {
+          handleModuleClick(filteredModules[index].id, filteredModules[index].href);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredModules]);
+
   useEffect(() => {
     async function fetchStats() {
       try {
@@ -364,7 +441,6 @@ export default function ModuleHubPage() {
           overdueItems: overdueTasks.length,
         });
 
-        // Build priority tray
         const items: PriorityItem[] = [];
         overdueTasks.slice(0, 3).forEach((t) => {
           items.push({
@@ -385,7 +461,6 @@ export default function ModuleHubPage() {
           });
         });
 
-        // Escalated workflows
         const escalatedRes = await supabase
           .from('workflow_instances')
           .select('id, collateral_id')
@@ -403,15 +478,11 @@ export default function ModuleHubPage() {
 
         setPriorityItems(items.slice(0, 6));
 
-        // Module KPIs — use correct collateral_status enum values
         const collateralData = collateralDataRes.data ?? [];
         const perfectedCount = collateralData.filter((c) => c.status === 'Perfected').length;
         const overdueCount = collateralData.filter((c) => c.status === 'Overdue').length;
         const pendingReviewCount = collateralData.filter(
           (c) => c.status === 'Submitted' || c.status === 'Under Review'
-        ).length;
-        const activeCount = collateralData.filter(
-          (c) => c.status !== 'Released' && c.status !== 'Rejected'
         ).length;
 
         const kpis: Record<string, ModuleKPI> = {
@@ -468,7 +539,7 @@ export default function ModuleHubPage() {
         };
         setModuleKPIs(kpis);
       } catch {
-        // Silently fail — stats are supplementary
+        // Silently fail
       } finally {
         setStatsLoading(false);
       }
@@ -476,7 +547,6 @@ export default function ModuleHubPage() {
     fetchStats();
   }, []);
 
-  // Fetch task count for current user
   useEffect(() => {
     async function fetchTaskCount() {
       if (!userProfile?.id) return;
@@ -490,14 +560,7 @@ export default function ModuleHubPage() {
     fetchTaskCount();
   }, [userProfile?.id]);
 
-  const visibleModules = loading
-    ? modules
-    : modules.filter((m) => {
-        if (m.adminOnly && !isSystemAdmin) return false;
-        if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission))
-          return false;
-        return true;
-      });
+  // ─── Helper functions ──────────────────────────────────────────────────────
 
   const priorityTypeConfig = {
     overdue: {
@@ -515,11 +578,34 @@ export default function ModuleHubPage() {
     return map[status];
   };
 
+  const handleModuleClick = (modId: string, href: string) => {
+    const recent = JSON.parse(localStorage.getItem('recentModules') || '[]');
+    const updated = [modId, ...recent.filter((id: string) => id !== modId)].slice(0, 4);
+    localStorage.setItem('recentModules', JSON.stringify(updated));
+    setRecentModules(updated);
+    router.push(href);
+  };
+
+  const handleDismissPriority = (id: string) => {
+    const dismissed = JSON.parse(localStorage.getItem('dismissedPriority') || '[]');
+    localStorage.setItem('dismissedPriority', JSON.stringify([...dismissed, id]));
+    setPriorityItems(priorityItems.filter((item) => item.id !== id));
+  };
+
+  const handleDismissAll = () => {
+    const dismissed = JSON.parse(localStorage.getItem('dismissedPriority') || '[]');
+    const allIds = priorityItems.map((item) => item.id);
+    localStorage.setItem('dismissedPriority', JSON.stringify([...dismissed, ...allIds]));
+    setPriorityItems([]);
+  };
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div
       className="min-h-screen flex flex-col relative overflow-x-hidden"
       style={{
-        background: '#F5F4F2',
+        background: 'linear-gradient(145deg, #F8F7F5 0%, #F0EFEC 100%)',
       }}
     >
       {/* ── Geometric mesh / grid background pattern ─────────────────────── */}
@@ -548,7 +634,7 @@ export default function ModuleHubPage() {
                 fill="none"
                 stroke="#007CB3"
                 strokeWidth="0.5"
-                opacity="0.18"
+                opacity="0.12"
               />
             </pattern>
             <pattern
@@ -559,11 +645,11 @@ export default function ModuleHubPage() {
               height="48"
               patternUnits="userSpaceOnUse"
             >
-              <circle cx="0" cy="0" r="1.2" fill="#007CB3" opacity="0.15" />
-              <circle cx="48" cy="0" r="1.2" fill="#007CB3" opacity="0.15" />
-              <circle cx="0" cy="48" r="1.2" fill="#007CB3" opacity="0.15" />
-              <circle cx="48" cy="48" r="1.2" fill="#007CB3" opacity="0.15" />
-              <circle cx="24" cy="24" r="1" fill="#00A9E0" opacity="0.12" />
+              <circle cx="0" cy="0" r="1.2" fill="#007CB3" opacity="0.1" />
+              <circle cx="48" cy="0" r="1.2" fill="#007CB3" opacity="0.1" />
+              <circle cx="0" cy="48" r="1.2" fill="#007CB3" opacity="0.1" />
+              <circle cx="48" cy="48" r="1.2" fill="#007CB3" opacity="0.1" />
+              <circle cx="24" cy="24" r="1" fill="#00A9E0" opacity="0.08" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#mesh-grid)" />
@@ -582,12 +668,12 @@ export default function ModuleHubPage() {
             width: 560,
             height: 560,
             borderRadius: '50%',
-            border: '2px solid rgba(0,124,179,0.12)',
-            boxShadow: '0 0 0 12px rgba(0,124,179,0.04), 0 0 80px 20px rgba(0,169,224,0.06)',
+            border: '2px solid rgba(0,124,179,0.08)',
+            boxShadow: '0 0 0 12px rgba(0,124,179,0.03), 0 0 80px 20px rgba(0,169,224,0.04)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(0,124,179,0.02)',
+            background: 'rgba(0,124,179,0.01)',
           }}
         >
           <img
@@ -597,7 +683,7 @@ export default function ModuleHubPage() {
               width: '340px',
               height: '340px',
               objectFit: 'contain',
-              opacity: 0.055,
+              opacity: 0.04,
               filter:
                 'invert(27%) sepia(80%) saturate(600%) hue-rotate(175deg) brightness(85%) contrast(90%)',
               userSelect: 'none',
@@ -618,7 +704,7 @@ export default function ModuleHubPage() {
           zIndex: 10,
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <AppLogo size={32} />
           <div>
             <p className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>
@@ -630,7 +716,66 @@ export default function ModuleHubPage() {
           </div>
         </div>
 
+        {/* Search Bar */}
+        <div className="hidden md:flex flex-1 max-w-md mx-6">
+          <div className="relative w-full">
+            <input
+              type="search"
+              placeholder="Search modules, collateral, obligors... (⌘K)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 pl-10 rounded-lg text-sm transition-all"
+              style={{
+                backgroundColor: 'rgba(0,0,0,0.04)',
+                border: '1px solid rgba(0,0,0,0.06)',
+                color: '#111827',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.backgroundColor = '#fff';
+                e.currentTarget.style.borderColor = '#007CB3';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,124,179,0.1)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)';
+                e.currentTarget.style.borderColor = 'rgba(0,0,0,0.06)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+            <Search size={16} className="absolute left-3 top-2.5" style={{ color: '#9CA3AF' }} />
+            <kbd
+              className="absolute right-3 top-2.5 text-xs px-1.5 py-0.5 rounded"
+              style={{
+                color: '#9CA3AF',
+                backgroundColor: 'rgba(0,0,0,0.06)',
+                border: '1px solid rgba(0,0,0,0.08)',
+              }}
+            >
+              ⌘K
+            </kbd>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
+          {/* Notification Bell */}
+          <button
+            className="relative p-2 rounded-lg transition-colors"
+            style={{ color: '#6B7280' }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.06)')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            onClick={() => router.push('/notifications')}
+            aria-label="Notifications"
+          >
+            <Bell size={18} />
+            {taskCount !== null && taskCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white text-[10px] font-bold leading-none min-w-[18px] h-[18px] px-1"
+                style={{ backgroundColor: '#EF4444' }}
+              >
+                {taskCount > 9 ? '9+' : taskCount}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={() => router.push('/onboarding-guide')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
@@ -639,7 +784,6 @@ export default function ModuleHubPage() {
               border: '1px solid rgba(0,0,0,0.12)',
               backgroundColor: 'rgba(0,0,0,0.04)',
             }}
-            title="Open Onboarding Guide"
             onMouseOver={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)';
             }}
@@ -651,24 +795,28 @@ export default function ModuleHubPage() {
             <span className="hidden sm:inline">Guide</span>
           </button>
 
-          <div
-            className="hidden sm:flex items-center gap-2.5 pl-2 border-l"
-            style={{ borderColor: 'rgba(0,0,0,0.1)' }}
-          >
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: 'var(--izou-primary)' }}
+          {/* Profile */}
+          <div className="relative group">
+            <button
+              className="flex items-center gap-2.5 pl-2 border-l border-r border-transparent hover:border-gray-200 transition-colors"
+              style={{ borderColor: 'rgba(0,0,0,0.1)' }}
             >
-              <span className="text-white text-xs font-bold">{initials}</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>
-                {displayName}
-              </p>
-              <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>
-                {displayRole}
-              </p>
-            </div>
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: 'var(--izou-primary)' }}
+              >
+                <span className="text-white text-xs font-bold">{initials}</span>
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>
+                  {displayName}
+                </p>
+                <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>
+                  {displayRole}
+                </p>
+              </div>
+              <ChevronDown size={14} className="hidden sm:block" style={{ color: '#9CA3AF' }} />
+            </button>
           </div>
 
           <button
@@ -676,8 +824,8 @@ export default function ModuleHubPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ml-1"
             style={{ color: '#6B7280' }}
             onMouseOver={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.06)';
-              (e.currentTarget as HTMLElement).style.color = '#111827';
+              (e.currentTarget as HTMLElement).style.backgroundColor = '#FEE2E2';
+              (e.currentTarget as HTMLElement).style.color = '#DC2626';
             }}
             onMouseOut={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
@@ -702,15 +850,6 @@ export default function ModuleHubPage() {
           {/* Welcome row */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
             <div>
-              {/* <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: 'rgba(0,124,179,0.1)', color: '#007CB3', border: '1px solid rgba(0,124,179,0.2)' }}
-                >
-                  <Layers size={10} />
-                  Command Centre
-                </span>
-              </div> */}
               <h1 className="text-2xl font-bold leading-tight" style={{ color: '#007CB3' }}>
                 Good {greeting || '—'}, {firstName}
               </h1>
@@ -754,59 +893,182 @@ export default function ModuleHubPage() {
               <ChevronRight size={14} />
             </button>
           </div>
+
+          {/* Quick Stats Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div
+              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
+              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs" style={{ color: '#6B7280' }}>
+                    Total Collateral
+                  </p>
+                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>
+                    {summaryStats.totalCollateral}
+                  </p>
+                </div>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,124,179,0.08)' }}>
+                  <FolderOpen size={16} style={{ color: '#007CB3' }} />
+                </div>
+              </div>
+            </div>
+            <div
+              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
+              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs" style={{ color: '#6B7280' }}>
+                    Active Workflows
+                  </p>
+                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>
+                    {summaryStats.activeWorkflows}
+                  </p>
+                </div>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(217,119,6,0.08)' }}>
+                  <Activity size={16} style={{ color: '#D97706' }} />
+                </div>
+              </div>
+            </div>
+            <div
+              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
+              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs" style={{ color: '#6B7280' }}>
+                    Pending Actions
+                  </p>
+                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>
+                    {summaryStats.pendingActions}
+                  </p>
+                </div>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(124,58,237,0.08)' }}>
+                  <CheckSquare size={16} style={{ color: '#7C3AED' }} />
+                </div>
+              </div>
+            </div>
+            <div
+              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
+              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs" style={{ color: '#6B7280' }}>
+                    Overdue
+                  </p>
+                  <p
+                    className="text-2xl font-bold"
+                    style={{ color: summaryStats.overdueItems > 0 ? '#DC2626' : '#111827' }}
+                  >
+                    {summaryStats.overdueItems}
+                  </p>
+                </div>
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.08)' }}>
+                  <AlertTriangle size={16} style={{ color: '#DC2626' }} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* ── Priority Tray ────────────────────────────────────────────────────── */}
-      {!statsLoading && priorityItems.length > 0 && (
+      {!statsLoading && priorityItems.length > 0 && !showDismissed && (
         <div
-          className="px-6 py-3 relative"
+          className="px-6 py-4 relative"
           style={{
-            backgroundColor: 'rgba(254,242,242,0.9)',
-            borderBottom: '1px solid rgba(220,38,38,0.15)',
+            background: 'linear-gradient(135deg, #FEF2F2 0%, #FEF9F9 100%)',
+            borderBottom: '2px solid rgba(220,38,38,0.1)',
             zIndex: 1,
           }}
         >
           <div className="max-w-6xl mx-auto">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle size={13} style={{ color: '#DC2626' }} />
-              <span
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: '#DC2626' }}
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="p-1 rounded-full bg-red-100 animate-pulse">
+                  <AlertTriangle size={14} style={{ color: '#DC2626' }} />
+                </div>
+                <span className="text-sm font-semibold" style={{ color: '#DC2626' }}>
+                  {priorityItems.length} {priorityItems.length === 1 ? 'item' : 'items'} need your
+                  attention
+                </span>
+              </div>
+              <button
+                onClick={handleDismissAll}
+                className="text-xs hover:underline transition-colors"
+                style={{ color: '#9CA3AF' }}
               >
-                Priority Attention Required
-              </span>
+                Dismiss all
+              </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {priorityItems.map((item) => {
+            <div className="flex flex-wrap gap-2.5">
+              {priorityItems.slice(0, 4).map((item) => {
                 const cfg = priorityTypeConfig[item.type];
                 const ItemIcon = cfg.icon;
                 return (
                   <button
                     key={item.id}
                     onClick={() => router.push(item.href)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all group"
                     style={{
                       backgroundColor: '#fff',
                       color: cfg.color,
-                      border: `1px solid ${cfg.color}40`,
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                      border: `1px solid ${cfg.color}25`,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     }}
                     onMouseOver={(e) => {
                       (e.currentTarget as HTMLElement).style.backgroundColor = cfg.bg;
+                      (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)';
+                      (e.currentTarget as HTMLElement).style.borderColor = cfg.color;
                     }}
                     onMouseOut={(e) => {
                       (e.currentTarget as HTMLElement).style.backgroundColor = '#fff';
+                      (e.currentTarget as HTMLElement).style.transform = 'none';
+                      (e.currentTarget as HTMLElement).style.borderColor = `${cfg.color}25`;
                     }}
                   >
-                    <ItemIcon size={11} />
+                    <ItemIcon size={12} />
                     <span className="font-bold">{cfg.label}</span>
-                    <span className="opacity-50">·</span>
-                    <span>{item.detail}</span>
-                    <ArrowRight size={10} />
+                    <span className="opacity-30">·</span>
+                    <span className="max-w-[120px] truncate">{item.detail}</span>
+                    <ArrowRight
+                      size={10}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismissPriority(item.id);
+                      }}
+                      className="ml-1 opacity-40 hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
                   </button>
                 );
               })}
+              {priorityItems.length > 4 && (
+                <button
+                  onClick={() => router.push('/priority-center')}
+                  className="px-3.5 py-2 rounded-xl text-xs font-medium transition-colors"
+                  style={{
+                    color: '#6B7280',
+                    backgroundColor: 'rgba(0,0,0,0.03)',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                  }}
+                  onMouseOver={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.06)';
+                  }}
+                  onMouseOut={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.03)';
+                  }}
+                >
+                  +{priorityItems.length - 4} more
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -815,158 +1077,204 @@ export default function ModuleHubPage() {
       {/* ── Module Grid ──────────────────────────────────────────────────────── */}
       <div className="flex-1 px-6 py-8 relative" style={{ zIndex: 1 }}>
         <div className="max-w-6xl mx-auto">
-          {/* <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>
-              Modules
-            </h2>
-            <span className="text-xs" style={{ color: '#9CA3AF' }}>
-              {visibleModules.length} available
-            </span>
-          </div> */}
+          {/* Recently Used Modules */}
+          {recentModules.length > 0 && !searchQuery && (
+            <div className="mb-6">
+              <h3
+                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                style={{ color: '#9CA3AF' }}
+              >
+                Recently Used
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {recentModules.map((id) => {
+                  const mod = modules.find((m) => m.id === id);
+                  if (!mod) return null;
+                  const ModIcon = mod.icon;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => handleModuleClick(id, mod.href)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all"
+                      style={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        color: '#111827',
+                      }}
+                      onMouseOver={(e) => {
+                        (e.currentTarget as HTMLElement).style.borderColor = mod.iconBg;
+                        (e.currentTarget as HTMLElement).style.backgroundColor =
+                          'rgba(255,255,255,0.9)';
+                      }}
+                      onMouseOut={(e) => {
+                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,0,0,0.06)';
+                        (e.currentTarget as HTMLElement).style.backgroundColor = '#ffffff';
+                      }}
+                    >
+                      <ModIcon size={14} style={{ color: mod.iconBg }} />
+                      {mod.title}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Search Results Info */}
+          {searchQuery && (
+            <div className="mb-4 text-sm" style={{ color: '#6B7280' }}>
+              Found {filteredModules.length} {filteredModules.length === 1 ? 'module' : 'modules'} for "
+              {searchQuery}"
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visibleModules.map((mod) => {
-              const ModIcon = mod.icon;
-              const kpi = moduleKPIs[mod.id];
-              const borderColor = CATEGORY_BORDER[mod.category];
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => <ModuleSkeleton key={i} />)
+            ) : (
+              filteredModules.map((mod) => {
+                const ModIcon = mod.icon;
+                const kpi = moduleKPIs[mod.id];
+                const borderColor = CATEGORY_BORDER[mod.category];
 
-              return (
-                <div
-                  key={mod.id}
-                  className="group relative flex flex-col rounded-xl overflow-hidden transition-all duration-200 cursor-pointer"
-                  style={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid rgba(0,0,0,0.07)',
-                    borderLeft: `4px solid ${borderColor}`,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                    minHeight: '200px',
-                  }}
-                  onClick={() => router.push(mod.href)}
-                  onMouseOver={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow =
-                      `0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px ${borderColor}30`;
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseOut={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
-                    (e.currentTarget as HTMLElement).style.transform = 'none';
-                  }}
-                >
-                  {/* Card header */}
-                  <div className="p-5 pb-3 flex-1">
-                    <div className="flex items-start gap-3">
-                      {/* Icon - Left side */}
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 mt-0.5"
-                        style={{
-                          backgroundColor: mod.iconBg,
-                          boxShadow: `0 4px 12px ${mod.iconBg}50`,
-                        }}
-                      >
-                        <ModIcon size={18} color="#fff" />
-                      </div>
+                return (
+                  <div
+                    key={mod.id}
+                    className="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer"
+                    style={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid rgba(0,0,0,0.05)',
+                      boxShadow:
+                        '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+                      minHeight: '160px',
+                    }}
+                    onClick={() => handleModuleClick(mod.id, mod.href)}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        `0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.04)`;
+                      e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)';
+                      e.currentTarget.style.borderColor = `${borderColor}40`;
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)';
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.borderColor = 'rgba(0,0,0,0.05)';
+                    }}
+                  >
+                    {/* Gradient border top */}
+                    <div
+                      className="absolute top-0 left-0 right-0 h-0.5"
+                      style={{
+                        background: `linear-gradient(90deg, ${borderColor}80, ${borderColor}20)`,
+                        opacity: 0.6,
+                      }}
+                    />
 
-                      {/* Content - Right side */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <h2 className="text-sm font-bold mb-1" style={{ color: '#111827' }}>
+                    {/* Row 1: Icon + Title + Status */}
+                    <div className="p-4 pb-1">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
+                          style={{
+                            backgroundColor: mod.iconBg,
+                            boxShadow: `0 4px 12px ${mod.iconBg}40`,
+                          }}
+                        >
+                          <ModIcon size={16} color="#fff" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h2 className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>
                               {mod.title}
                             </h2>
-                            <p className="text-xs leading-relaxed" style={{ color: '#6B7280' }}>
-                              {mod.description}
-                            </p>
+                            {kpi && (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{ backgroundColor: statusDot(kpi.status) }}
+                                />
+                                <span
+                                  className="text-[10px] whitespace-nowrap"
+                                  style={{ color: '#9CA3AF' }}
+                                >
+                                  {kpi.status === 'ok'
+                                    ? 'All clear'
+                                    : kpi.status === 'warn'
+                                      ? 'Attention'
+                                      : 'Critical'}
+                                </span>
+                              </div>
+                            )}
                           </div>
+                        </div>
+                      </div>
+                    </div>
 
-                          {/* Status indicator - Top right */}
-                          {kpi && (
-                            <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                              <span
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: statusDot(kpi.status) }}
-                              />
-                              <span
-                                className="text-xs whitespace-nowrap"
-                                style={{ color: '#9CA3AF' }}
+                    {/* Row 2: Description + KPI + Actions */}
+                    <div className="px-4 py-1 flex-1 flex flex-col justify-between">
+                      <p className="text-xs leading-relaxed line-clamp-2" style={{ color: '#6B7280' }}>
+                        {mod.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t" style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
+                        {kpi && (
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs font-semibold" style={{ color: borderColor }}>
+                              {kpi.primary}
+                            </span>
+                            <span className="text-[10px] truncate" style={{ color: '#9CA3AF' }}>
+                              {kpi.secondary}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          {mod.quickActions.slice(0, 2).map((action) => {
+                            const ActionIcon = action.icon;
+                            return (
+                              <button
+                                key={action.label}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(action.href);
+                                }}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all"
+                                style={{
+                                  color: borderColor,
+                                  backgroundColor: `${borderColor}12`,
+                                  border: `1px solid ${borderColor}25`,
+                                }}
+                                onMouseOver={(e) => {
+                                  (e.currentTarget as HTMLElement).style.backgroundColor =
+                                    `${borderColor}25`;
+                                }}
+                                onMouseOut={(e) => {
+                                  (e.currentTarget as HTMLElement).style.backgroundColor =
+                                    `${borderColor}12`;
+                                }}
                               >
-                                {kpi.status === 'ok'
-                                  ? 'All clear'
-                                  : kpi.status === 'warn'
-                                    ? 'Attention'
-                                    : 'Critical'}
-                              </span>
-                            </div>
-                          )}
+                                <ActionIcon size={8} />
+                                <span className="hidden sm:inline">{action.label}</span>
+                              </button>
+                            );
+                          })}
+                          <span
+                            className="text-[9px] opacity-20 group-hover:opacity-50 transition-opacity ml-0.5"
+                            style={{ color: '#6B7280' }}
+                          >
+                            ⌘{filteredModules.indexOf(mod) + 1}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* KPI strip */}
-                  {kpi && (
-                    <div
-                      className="px-5 py-2.5 flex items-center gap-3"
-                      style={{
-                        borderTop: '1px solid rgba(0,0,0,0.06)',
-                        backgroundColor: 'rgba(0,0,0,0.015)',
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-bold" style={{ color: borderColor }}>
-                          {kpi.primary}
-                        </span>
-                        <span className="text-xs ml-2" style={{ color: '#9CA3AF' }}>
-                          {kpi.secondary}
-                        </span>
-                      </div>
-                      <TrendingUp size={13} style={{ color: borderColor, opacity: 0.5 }} />
-                    </div>
-                  )}
-
-                  {/* Quick actions */}
-                  <div
-                    className="px-5 py-3 flex items-center gap-2"
-                    style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {mod.quickActions.slice(0, 2).map((action) => {
-                      const ActionIcon = action.icon;
-                      return (
-                        <button
-                          key={action.label}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(action.href);
-                          }}
-                          className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all"
-                          style={{
-                            color: borderColor,
-                            backgroundColor: `${borderColor}12`,
-                            border: `1px solid ${borderColor}25`,
-                          }}
-                          onMouseOver={(e) => {
-                            (e.currentTarget as HTMLElement).style.backgroundColor =
-                              `${borderColor}25`;
-                          }}
-                          onMouseOut={(e) => {
-                            (e.currentTarget as HTMLElement).style.backgroundColor =
-                              `${borderColor}12`;
-                          }}
-                        >
-                          <ActionIcon size={10} />
-                          {action.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {/* Empty state */}
-          {!loading && visibleModules.length === 0 && (
+          {!loading && filteredModules.length === 0 && (
             <div className="text-center py-20">
               <ShieldCheck
                 size={40}
@@ -974,16 +1282,18 @@ export default function ModuleHubPage() {
                 style={{ color: '#6B7280' }}
               />
               <p className="text-sm" style={{ color: '#9CA3AF' }}>
-                No modules are available for your current role. Contact your administrator.
+                {searchQuery
+                  ? `No modules found for "${searchQuery}"`
+                  : 'No modules are available for your current role. Contact your administrator.'}
               </p>
             </div>
           )}
 
           {/* Onboarding Guide Section */}
           <div
-            className="mt-8 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+            className="mt-8 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-lg"
             style={{
-              background: '#EFF6FF',
+              background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
               border: '1px solid rgba(37,99,235,0.2)',
               boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
             }}
@@ -1013,9 +1323,11 @@ export default function ModuleHubPage() {
               }}
               onMouseOver={(e) => {
                 (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8';
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
               }}
               onMouseOut={(e) => {
                 (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB';
+                (e.currentTarget as HTMLElement).style.transform = 'none';
               }}
             >
               <BookOpen size={13} />
@@ -1026,6 +1338,47 @@ export default function ModuleHubPage() {
         </div>
       </div>
 
+      {/* ── Mobile Bottom Navigation ──────────────────────────────────────── */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50">
+        <div className="flex justify-around">
+          <button
+            className="flex flex-col items-center gap-1 text-xs"
+            style={{ color: '#007CB3' }}
+            onClick={() => router.push('/module-hub')}
+          >
+            <Layers size={20} />
+            <span>Modules</span>
+          </button>
+          <button
+            className="flex flex-col items-center gap-1 text-xs"
+            style={{ color: '#9CA3AF' }}
+            onClick={() => {
+              const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
+              if (searchInput) searchInput.focus();
+            }}
+          >
+            <Search size={20} />
+            <span>Search</span>
+          </button>
+          <button
+            className="flex flex-col items-center gap-1 text-xs relative"
+            style={{ color: '#9CA3AF' }}
+            onClick={() => router.push('/notifications')}
+          >
+            <Bell size={20} />
+            {taskCount !== null && taskCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center"
+                style={{ backgroundColor: '#EF4444' }}
+              >
+                {taskCount > 9 ? '9+' : taskCount}
+              </span>
+            )}
+            <span>Alerts</span>
+          </button>
+        </div>
+      </div>
+
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="text-center py-4 text-xs relative" style={{ color: '#9CA3AF', zIndex: 1 }}>
         Powered by{' '}
@@ -1033,11 +1386,15 @@ export default function ModuleHubPage() {
           href="https://contentpro.co.tz"
           target="_blank"
           rel="noopener noreferrer"
-          className="font-semibold hover:underline"
+          className="font-semibold hover:underline transition-colors"
           style={{ color: '#6B7280' }}
+          onMouseOver={(e) => (e.currentTarget.style.color = '#007CB3')}
+          onMouseOut={(e) => (e.currentTarget.style.color = '#6B7280')}
         >
           Contentpro
         </a>
+        <span className="mx-2 opacity-30">·</span>
+        <span>v2.0</span>
       </footer>
     </div>
   );
