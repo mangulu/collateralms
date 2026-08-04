@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File } from 'lucide-react';
+import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus, PerfectionStatusHistory } from '@/lib/supabase/perfectionService';
@@ -1052,14 +1053,17 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                             <button onClick={() => setActiveAction('perfected')} className="flex-1 flex flex-col items-center gap-1 bg-emerald-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
                               <Award size={16} />
                               <span>Mark Perfected</span>
+                              <ActionHelpIcon text="Confirm that all perfection requirements are met. The collateral status will be updated to Perfected and the Credit Officer will be notified." position="top" />
                             </button>
                             <button onClick={() => setConfirmModal({ open: true, action: 'return' })} className="flex-1 flex flex-col items-center gap-1 bg-orange-500 text-white text-xs font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">
                               <RotateCcw size={16} />
                               <span>Return for Revision</span>
+                              <ActionHelpIcon text="Send this request back to the Credit Officer with revision instructions. They will need to correct and resubmit." position="top" />
                             </button>
                             <button onClick={() => setConfirmModal({ open: true, action: 'reject' })} className="flex-1 flex flex-col items-center gap-1 bg-red-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors shadow-sm">
                               <XCircle size={16} />
                               <span>Reject</span>
+                              <ActionHelpIcon text="Permanently reject this perfection request. A rejection reason is required. This action closes the request and cannot be undone." position="top" />
                             </button>
                           </div>
                         </div>

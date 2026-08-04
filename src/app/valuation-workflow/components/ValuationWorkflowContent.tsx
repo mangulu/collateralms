@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { CalendarClock, CheckCircle2, Clock, AlertTriangle, Plus, RefreshCw, Eye, X, Loader2, ChevronRight, LayoutGrid, XCircle } from 'lucide-react';
+import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import {
   listValuations,
   createValuation,
@@ -340,12 +341,14 @@ function ValuationDetailPanel({
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
                 >
                   Reject
+                  <ActionHelpIcon text="Reject this valuation. You will be asked to provide a reason. The valuer will be notified and may need to resubmit." position="top" />
                 </button>
                 <button
                   onClick={() => onOpenAction('approve')}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
                 >
                   Approve
+                  <ActionHelpIcon text="Approve this valuation result. The collateral value will be updated and the workflow will advance to the next stage." position="top" />
                 </button>
               </>
             )}

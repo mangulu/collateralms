@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Eye, Search, RefreshCw, Clock, FileText, X, Loader2, AlertCircle, ShieldCheck, Download, FileCheck, FileMinus, FileSearch, ChevronRight, LayoutGrid, Info,  } from 'lucide-react';
+import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import Link from 'next/link';
 import {
   documentApprovalService,
@@ -295,6 +296,7 @@ function DetailPanel({
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
                 >
                   <CheckCircle size={14} /> Approve
+                  <ActionHelpIcon text="Mark this document as approved. It will be recorded in the audit trail and the collateral record will be updated." position="top" />
                 </button>
               )}
               {doc.approvalStatus !== 'rejected' && (
@@ -303,12 +305,14 @@ function DetailPanel({
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
                 >
                   <XCircle size={14} /> Reject
+                  <ActionHelpIcon text="Reject this document. You will be asked to provide rejection notes. The submitter will be notified to resubmit." position="top" />
                 </button>
               )}
               {doc.approvalStatus === 'pending' && (
                 <button
                   onClick={() => onAction('under_review')}
                   className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                  title="Mark as Under Review"
                 >
                   <Eye size={14} />
                 </button>

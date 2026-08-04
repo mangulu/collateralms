@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Clock, Eye, Search, Loader2, Calendar, User, RefreshCw, ShieldCheck, X, ChevronRight, AlertTriangle, Scale, CreditCard, FileCheck, ArrowRight, Send, Lock, Unlock, CornerDownRight, RotateCcw, TrendingUp, LayoutGrid } from 'lucide-react';
+import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import Link from 'next/link';
 import { collateralApprovalService, CollateralApprovalRequest, ApprovalComment, ApprovalPipelineLog, ApprovalRequestStatus, ApproverRole } from '@/lib/supabase/collateralApprovalService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -807,16 +808,19 @@ function DetailPanel({
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
               >
                 <CheckCircle size={14} /> Approve
+                <ActionHelpIcon text="Approve this collateral request. The applicant will be notified and the request moves to the next pipeline stage." position="top" />
               </button>
               <button
                 onClick={() => onAction(item, 'reject')}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
                 <XCircle size={14} /> Reject
+                <ActionHelpIcon text="Reject this request. You will be asked to provide a reason. This action is final and closes the request." position="top" />
               </button>
               <button
                 onClick={() => onAction(item, 'return')}
                 className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Return for Revision"
               >
                 <RotateCcw size={14} />
               </button>
