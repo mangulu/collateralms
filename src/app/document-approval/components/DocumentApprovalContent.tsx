@@ -239,19 +239,15 @@ function DetailPanel({
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Panel Header */}
-      <div className="px-5 py-4 border-b border-gray-200 shrink-0">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${statusCfg.bgColor} ${statusCfg.textColor} ${statusCfg.borderColor}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-                {statusCfg.label}
-              </span>
-              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">v{doc.version}</span>
-            </div>
+      {/* Panel Header — title + status badge only */}
+      <div className="px-5 py-3.5 border-b border-gray-200 shrink-0">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <h2 className="text-base font-semibold text-gray-900 truncate">{doc.fileName}</h2>
-            <p className="text-sm text-gray-500">{doc.documentType}{doc.collateralId ? ` · ${doc.collateralId}` : ''}</p>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${statusCfg.bgColor} ${statusCfg.textColor} ${statusCfg.borderColor}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+              {statusCfg.label}
+            </span>
           </div>
           <button onClick={onClose} className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
             <X size={16} />
@@ -259,179 +255,185 @@ function DetailPanel({
         </div>
       </div>
 
-      {/* Inline Document Viewer — shown by default when signedUrl is available */}
-      {doc.signedUrl && (
-        <InlineDocViewer
-          signedUrl={doc.signedUrl}
-          fileName={doc.fileName}
-        />
-      )}
+      {/* Two-column body */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 shrink-0 px-5">
-        {(['details', 'audit'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setDetailTab(t)}
-            className={`px-3 py-2.5 text-xs font-medium border-b-2 capitalize transition-colors ${
-              detailTab === t ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t === 'audit' ? 'Audit Trail' : 'Details'}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Body */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        {detailTab === 'details' && (
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Document Info</h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                {[
-                  { label: 'Uploaded By', value: doc.uploadedByName || '—' },
-                  { label: 'Upload Date', value: formatDateTime(doc.uploadedAt) },
-                  { label: 'File Size', value: formatFileSize(doc.fileSize) },
-                  { label: 'Version', value: `v${doc.version}` },
-                  { label: 'Collateral ID', value: doc.collateralId || '—' },
-                  { label: 'Document Type', value: doc.documentType },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
-                    <p className="text-sm text-gray-800 font-medium mt-0.5">{value}</p>
-                  </div>
-                ))}
-              </div>
+        {/* LEFT — 60% — Inline Document Viewer */}
+        <div className="flex flex-col min-h-0 overflow-hidden border-r border-gray-200" style={{ width: '60%' }}>
+          {/* Inline viewer fills the left pane */}
+          {doc.signedUrl ? (
+            <div className="flex-1 overflow-hidden">
+              <InlineDocViewer signedUrl={doc.signedUrl} fileName={doc.fileName} />
             </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-gray-50 p-8">
+              <FileText size={40} className="text-gray-200" />
+              <p className="text-sm text-gray-400 text-center">No preview available for this document.</p>
+            </div>
+          )}
+        </div>
 
-            {doc.notes && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Upload Notes</h3>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800 flex gap-2">
-                  <Info size={14} className="shrink-0 mt-0.5 text-blue-500" />
-                  {doc.notes}
-                </div>
-              </div>
-            )}
+        {/* RIGHT — 40% — Details + Action Zone */}
+        <div className="flex flex-col min-h-0 overflow-hidden bg-gray-50" style={{ width: '40%' }}>
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 shrink-0 bg-white">
+            {(['details', 'audit'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setDetailTab(t)}
+                className={`px-4 py-2.5 text-xs font-medium border-b-2 capitalize transition-colors ${
+                  detailTab === t ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {t === 'audit' ? 'Audit Trail' : 'Details'}
+              </button>
+            ))}
+          </div>
 
-            {doc.approvalNotes && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Review Notes</h3>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800 italic">
-                  &ldquo;{doc.approvalNotes}&rdquo;
-                </div>
-              </div>
-            )}
-
-            {doc.approvedByName && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Decision</h3>
-                <div className={`rounded-lg border px-4 py-3 ${doc.approvalStatus === 'approved' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-gray-700">{doc.approvedByName}</span>
-                    <span className="text-xs text-gray-400">{formatDateTime(doc.approvedAt)}</span>
+          {/* Scrollable details area */}
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            {detailTab === 'details' && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Document Info</h3>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                    {[
+                      { label: 'Uploaded By', value: doc.uploadedByName || '—' },
+                      { label: 'Upload Date', value: formatDateTime(doc.uploadedAt) },
+                      { label: 'File Size', value: formatFileSize(doc.fileSize) },
+                      { label: 'Version', value: `v${doc.version}` },
+                      { label: 'Collateral ID', value: doc.collateralId || '—' },
+                      { label: 'Document Type', value: doc.documentType },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
+                        <p className="text-xs text-gray-800 font-medium mt-0.5">{value}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Document links shown only when no inline viewer (no signedUrl) */}
-            {!doc.signedUrl && (
-              <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Document</h3>
-                <p className="text-sm text-gray-400 italic">No preview available.</p>
-              </div>
-            )}
-          </div>
-        )}
+                {doc.notes && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Upload Notes</h3>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5 text-xs text-blue-800 flex gap-2">
+                      <Info size={13} className="shrink-0 mt-0.5 text-blue-500" />
+                      {doc.notes}
+                    </div>
+                  </div>
+                )}
 
-        {detailTab === 'audit' && (
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Approval Audit Trail</h3>
-            {auditLoading ? (
-              <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500">
-                <Loader2 size={16} className="animate-spin" /> Loading audit trail…
-              </div>
-            ) : auditEntries.length === 0 ? (
-              <p className="text-sm text-gray-400 italic py-4">No audit entries found for this document.</p>
-            ) : (
-              <div className="space-y-3">
-                {auditEntries.map((entry) => {
-                  const cfg = auditActionConfig[entry.action] ?? auditActionConfig['pending'];
-                  return (
-                    <div key={entry.id} className="flex gap-3">
-                      <div className="mt-0.5 shrink-0">{cfg.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.color}`}>{cfg.label}</span>
-                          <span className="text-xs text-gray-500">{formatDateTime(entry.createdAt)}</span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-800 mt-0.5">{entry.performedByName}</p>
-                        {entry.performedByRole && <p className="text-xs text-gray-500">{entry.performedByRole}</p>}
-                        {entry.notes && <p className="text-xs text-gray-600 mt-1 italic">&ldquo;{entry.notes}&rdquo;</p>}
+                {doc.approvalNotes && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Review Notes</h3>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800 italic">
+                      &ldquo;{doc.approvalNotes}&rdquo;
+                    </div>
+                  </div>
+                )}
+
+                {doc.approvedByName && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Decision</h3>
+                    <div className={`rounded-lg border px-3 py-2.5 ${doc.approvalStatus === 'approved' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold text-gray-700">{doc.approvedByName}</span>
+                        <span className="text-xs text-gray-400">{formatDateTime(doc.approvedAt)}</span>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {detailTab === 'audit' && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Approval Audit Trail</h3>
+                {auditLoading ? (
+                  <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500">
+                    <Loader2 size={16} className="animate-spin" /> Loading audit trail…
+                  </div>
+                ) : auditEntries.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic py-4">No audit entries found for this document.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {auditEntries.map((entry) => {
+                      const cfg = auditActionConfig[entry.action] ?? auditActionConfig['pending'];
+                      return (
+                        <div key={entry.id} className="flex gap-3">
+                          <div className="mt-0.5 shrink-0">{cfg.icon}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.color}`}>{cfg.label}</span>
+                              <span className="text-xs text-gray-500">{formatDateTime(entry.createdAt)}</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-800 mt-0.5">{entry.performedByName}</p>
+                            {entry.performedByRole && <p className="text-xs text-gray-500">{entry.performedByRole}</p>}
+                            {entry.notes && <p className="text-xs text-gray-600 mt-1 italic">&ldquo;{entry.notes}&rdquo;</p>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Action Zone */}
-      {isActive && canAct && (
-        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
-            <p className="text-xs text-gray-500 flex items-center gap-1.5">
-              <ShieldCheck size={12} className="text-teal-600" />
-              Review the document before approving or rejecting.
-            </p>
-            <div className="flex items-center gap-2">
-              {doc.approvalStatus !== 'approved' && (
-                <button
-                  onClick={() => onAction('approve')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                >
-                  <CheckCircle size={14} /> Approve
-                  <ActionHelpIcon text="Mark this document as approved. It will be recorded in the audit trail and the collateral record will be updated." position="top" />
-                </button>
-              )}
-              {doc.approvalStatus !== 'rejected' && (
-                <button
-                  onClick={() => onAction('reject')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                >
-                  <XCircle size={14} /> Reject
-                  <ActionHelpIcon text="Reject this document. You will be asked to provide rejection notes. The submitter will be notified to resubmit." position="top" />
-                </button>
-              )}
-              {doc.approvalStatus === 'pending' && (
-                <button
-                  onClick={() => onAction('under_review')}
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                  title="Mark as Under Review"
-                >
-                  <Eye size={14} />
-                </button>
-              )}
+          {/* Pinned Action Footer */}
+          {isActive && canAct && (
+            <div className="px-4 py-4 border-t border-gray-200 bg-white shrink-0">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 space-y-3">
+                <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                  <ShieldCheck size={12} className="text-teal-600" />
+                  Review the document before approving or rejecting.
+                </p>
+                <div className="flex items-center gap-2">
+                  {doc.approvalStatus !== 'approved' && (
+                    <button
+                      onClick={() => onAction('approve')}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                    >
+                      <CheckCircle size={14} /> Approve
+                      <ActionHelpIcon text="Mark this document as approved. It will be recorded in the audit trail and the collateral record will be updated." position="top" />
+                    </button>
+                  )}
+                  {doc.approvalStatus !== 'rejected' && (
+                    <button
+                      onClick={() => onAction('reject')}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                    >
+                      <XCircle size={14} /> Reject
+                      <ActionHelpIcon text="Reject this document. You will be asked to provide rejection notes. The submitter will be notified to resubmit." position="top" />
+                    </button>
+                  )}
+                  {doc.approvalStatus === 'pending' && (
+                    <button
+                      onClick={() => onAction('under_review')}
+                      className="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="Mark as Under Review"
+                    >
+                      <Eye size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {!isActive && (
-        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
-            doc.approvalStatus === 'approved' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
-          }`}>
-            {doc.approvalStatus === 'approved' ? <CheckCircle size={16} /> : <XCircle size={16} />}
-            This document has been {doc.approvalStatus}.
-          </div>
+          {!isActive && (
+            <div className="px-4 py-4 border-t border-gray-200 bg-white shrink-0">
+              <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
+                doc.approvalStatus === 'approved' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'
+              }`}>
+                {doc.approvalStatus === 'approved' ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                This document has been {doc.approvalStatus}.
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1124,7 +1126,7 @@ export default function DocumentApprovalContent() {
       <WorkflowDrawer
         open={drawerOpen}
         onClose={handleCloseDrawer}
-        width="w-[640px]"
+        width="w-[1000px]"
         overdueHours={
           selectedDoc &&
           (selectedDoc.approvalStatus === 'pending' || selectedDoc.approvalStatus === 'under_review')

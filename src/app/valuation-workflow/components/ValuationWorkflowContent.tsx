@@ -616,22 +616,19 @@ function ValuationDetailPanel({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-200 shrink-0">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${sc.bg} ${sc.text} ${sc.border}`}>
-                {valuation.valuationStatus}
-              </span>
-              {isOverdue && (
-                <span className="flex items-center gap-1 text-xs font-medium text-red-600">
-                  <AlertTriangle size={11} /> {agingDays(valuation.scheduledDate)}d overdue
-                </span>
-              )}
-            </div>
+      {/* Header — title + status badge only */}
+      <div className="px-5 py-3.5 border-b border-gray-200 shrink-0">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <h2 className="text-base font-semibold text-gray-900 truncate">{valuation.collateralDescription ?? '—'}</h2>
-            <p className="text-sm text-gray-500">{valuation.collateralType} · {valuation.valuationType}</p>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${sc.bg} ${sc.text} ${sc.border}`}>
+              {valuation.valuationStatus}
+            </span>
+            {isOverdue && (
+              <span className="flex items-center gap-1 text-xs font-medium text-red-600 shrink-0">
+                <AlertTriangle size={11} /> {agingDays(valuation.scheduledDate)}d overdue
+              </span>
+            )}
           </div>
           <button onClick={onClose} className="shrink-0 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
             <X size={16} />
@@ -639,85 +636,98 @@ function ValuationDetailPanel({
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-        {/* Supporting Documents — inline viewer */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Supporting Documents</h3>
-          <ValuationDocumentsSection collateralId={valuation.collateralId} />
+      {/* Two-column body */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+        {/* LEFT — 60% — Document Viewer */}
+        <div className="flex flex-col min-h-0 overflow-hidden border-r border-gray-200" style={{ width: '60%' }}>
+          <div className="px-4 py-3 border-b border-gray-100 shrink-0 bg-gray-50">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Supporting Documents</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            <ValuationDocumentsSection collateralId={valuation.collateralId} />
+          </div>
         </div>
 
-        <div>
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Valuation Details</h3>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-            {[
-              { label: 'Scheduled Date', value: formatDate(valuation.scheduledDate) },
-              { label: 'Valuation Method', value: valuation.valuationMethod },
-              { label: 'Valuer Name', value: valuation.valuerName ?? '—' },
-              { label: 'Valuer Firm', value: valuation.valuerFirm ?? '—' },
-              { label: 'Completed Date', value: formatDate(valuation.completedDate) },
-              { label: 'Report Reference', value: valuation.reportReference ?? '—' },
-              { label: 'Valuation Amount', value: formatCurrency(valuation.valuationAmount) },
-              { label: 'Approved At', value: formatDate(valuation.approvedAt) },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
-                <p className="text-sm text-gray-800 font-medium mt-0.5">{value}</p>
+        {/* RIGHT — 40% — Details + Pinned Action Zone */}
+        <div className="flex flex-col min-h-0 overflow-hidden bg-gray-50" style={{ width: '40%' }}>
+          {/* Scrollable details */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Valuation Details</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {[
+                  { label: 'Collateral Type', value: valuation.collateralType },
+                  { label: 'Valuation Type', value: valuation.valuationType },
+                  { label: 'Scheduled Date', value: formatDate(valuation.scheduledDate) },
+                  { label: 'Valuation Method', value: valuation.valuationMethod },
+                  { label: 'Valuer Name', value: valuation.valuerName ?? '—' },
+                  { label: 'Valuer Firm', value: valuation.valuerFirm ?? '—' },
+                  { label: 'Completed Date', value: formatDate(valuation.completedDate) },
+                  { label: 'Report Reference', value: valuation.reportReference ?? '—' },
+                  { label: 'Valuation Amount', value: formatCurrency(valuation.valuationAmount) },
+                  { label: 'Approved At', value: formatDate(valuation.approvedAt) },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
+                    <p className="text-xs text-gray-800 font-medium mt-0.5">{value}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {valuation.notes && (
+              <div>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Notes</h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5 text-xs text-blue-800">{valuation.notes}</div>
+              </div>
+            )}
+
+            {valuation.rejectionReason && (
+              <div>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Rejection Reason</h3>
+                <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-xs text-red-800">{valuation.rejectionReason}</div>
+              </div>
+            )}
           </div>
+
+          {/* Pinned Action Footer */}
+          {(canRecord || canApproveReject) && (
+            <div className="px-4 py-4 border-t border-gray-200 bg-white shrink-0">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
+              <div className="flex items-center gap-2">
+                {canRecord && (
+                  <button
+                    onClick={() => onOpenAction('record')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors"
+                    style={{ backgroundColor: '#7c3aed' }}
+                  >
+                    Record Result
+                  </button>
+                )}
+                {canApproveReject && (
+                  <>
+                    <button
+                      onClick={() => onOpenAction('reject')}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                    >
+                      Reject
+                      <ActionHelpIcon text="Reject this valuation. You will be asked to provide a reason. The valuer will be notified and may need to resubmit." position="top" />
+                    </button>
+                    <button
+                      onClick={() => onOpenAction('approve')}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                    >
+                      Approve
+                      <ActionHelpIcon text="Approve this valuation result. The collateral value will be updated and the workflow will advance to the next stage." position="top" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-
-        {valuation.notes && (
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Notes</h3>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">{valuation.notes}</div>
-          </div>
-        )}
-
-        {valuation.rejectionReason && (
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Rejection Reason</h3>
-            <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">{valuation.rejectionReason}</div>
-          </div>
-        )}
       </div>
-
-      {/* Action Zone */}
-      {(canRecord || canApproveReject) && (
-        <div className="px-5 py-4 border-t border-gray-200 shrink-0">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Take Action</h3>
-          <div className="flex items-center gap-2">
-            {canRecord && (
-              <button
-                onClick={() => onOpenAction('record')}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors"
-                style={{ backgroundColor: '#7c3aed' }}
-              >
-                Record Result
-              </button>
-            )}
-            {canApproveReject && (
-              <>
-                <button
-                  onClick={() => onOpenAction('reject')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                >
-                  Reject
-                  <ActionHelpIcon text="Reject this valuation. You will be asked to provide a reason. The valuer will be notified and may need to resubmit." position="top" />
-                </button>
-                <button
-                  onClick={() => onOpenAction('approve')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                >
-                  Approve
-                  <ActionHelpIcon text="Approve this valuation result. The collateral value will be updated and the workflow will advance to the next stage." position="top" />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1199,7 +1209,7 @@ export default function ValuationWorkflowContent() {
       <WorkflowDrawer
         open={valuationDrawerOpen}
         onClose={() => { setValuationDrawerOpen(false); setTimeout(() => setSelectedValuation(null), 300); }}
-                width="w-[680px]"
+                width="w-[1000px]"
         deadline={selectedValuation?.scheduledDate ?? undefined}
         overdueHours={
           selectedValuation?.valuationStatus === 'Overdue'
