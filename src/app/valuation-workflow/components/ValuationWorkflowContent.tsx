@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CalendarClock, CheckCircle2, Clock, AlertTriangle, Plus, RefreshCw, Eye, X, Loader2, ChevronRight, LayoutGrid, XCircle, CheckSquare, Square, Layers } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Clock, AlertTriangle, Plus, RefreshCw, Eye, X, Loader2, ChevronRight, LayoutGrid, XCircle, CheckSquare, Square, Layers, FileText, Download, ExternalLink, Maximize2, Minimize2, ChevronDown, ChevronUp } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import {
   listValuations,
@@ -21,6 +21,8 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
+import { CollateralDocument } from '@/lib/supabase/documentService';
+import { createClient } from '@/lib/supabase/client';
 
 
 const STATUS_COLORS: Record<ValuationStatus, { text: string; bg: string; border: string }> = {
@@ -47,6 +49,209 @@ function formatDate(d: string | null): string {
 
 function agingDays(scheduledDate: string): number {
   return Math.ceil((new Date().getTime() - new Date(scheduledDate).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// ─── Inline Document Viewer ───────────────────────────────────────────────────
+
+function InlineDocViewer({ signedUrl, fileName, mimeType }: { signedUrl: string; fileName: string; mimeType?: string }) {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(false);
+
+  const isPdf = fileName.toLowerCase().endsWith('.pdf') || mimeType?.includes('pdf');
+  const isImage = mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName);
+
+  return (
+    <div className={`border border-gray-200 rounded-xl overflow-hidden bg-gray-50 ${fullscreen ? 'fixed inset-0 z-[80] flex flex-col bg-white rounded-none border-0' : ''}`}>
+      {/* Toolbar */}
+      <div className={`flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-white ${fullscreen ? 'shrink-0' : ''}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={13} className="text-blue-600 shrink-0" />
+          <span className="text-xs font-semibold text-gray-700 truncate max-w-[200px]">{fileName}</span>
+          <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
+            {isPdf ? 'PDF' : isImage ? 'Image' : 'Document'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors" title="Open in new tab">
+            <ExternalLink size={13} />
+          </a>
+          <a href={signedUrl} download={fileName} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors" title="Download">
+            <Download size={13} />
+          </a>
+          <button onClick={() => setFullscreen(f => !f)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors" title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+            {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+          {!fullscreen && (
+            <button onClick={() => setCollapsed(c => !c)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors" title={collapsed ? 'Show document' : 'Hide document'}>
+              {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            </button>
+          )}
+          {fullscreen && (
+            <button onClick={() => setFullscreen(false)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors ml-1" title="Close">
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+      {/* Body */}
+      {(!collapsed || fullscreen) && (
+        <div className={fullscreen ? 'flex-1 overflow-hidden' : 'h-[320px] overflow-hidden'}>
+          {isPdf ? (
+            <iframe src={`${signedUrl}#toolbar=0&navpanes=0&scrollbar=1`} className="w-full h-full border-0" title={fileName} />
+          ) : isImage ? (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 overflow-auto p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={signedUrl} alt={fileName} className="max-w-full max-h-full object-contain rounded" />
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50 p-6">
+              <FileText size={36} className="text-gray-300" />
+              <p className="text-sm text-gray-500 text-center">This file type cannot be previewed inline.</p>
+              <a href={signedUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
+                <ExternalLink size={13} /> Open Document
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Valuation Documents Section ─────────────────────────────────────────────
+
+const VALUATION_DOC_TYPES = ['Valuation Report', 'Valuation / Survey Report', 'Appraisal', 'Insurance Certificate', 'Insurance Policy', 'Other'];
+
+function ValuationDocumentsSection({ collateralId }: { collateralId: string }) {
+  const [docs, setDocs] = useState<CollateralDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeDocIdx, setActiveDocIdx] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchDocs() {
+      setLoading(true);
+      try {
+        const supabase = createClient();
+        // Query by collateral_id string ref
+        const { data, error } = await supabase
+          .from('collateral_documents')
+          .select('*')
+          .eq('collateral_id', collateralId)
+          .order('created_at', { ascending: false });
+
+        if (error || !data) { if (!cancelled) setDocs([]); return; }
+
+        const mapped = data.map((row: any): CollateralDocument => ({
+          id: row.id,
+          collateralRecordId: row.collateral_record_id,
+          collateralId: row.collateral_id,
+          fileName: row.file_name,
+          filePath: row.file_path,
+          fileSize: row.file_size,
+          mimeType: row.mime_type,
+          documentType: row.document_type,
+          version: row.version,
+          notes: row.notes ?? '',
+          uploadedBy: row.uploaded_by,
+          uploadedByName: row.uploaded_by_name ?? '',
+          createdAt: row.created_at,
+          workflowStage: row.workflow_stage ?? undefined,
+          isRollback: row.is_rollback ?? false,
+          rolledBackFromVersion: row.rolled_back_from_version ?? null,
+          rolledBackByName: row.rolled_back_by_name ?? null,
+          rolledBackAt: row.rolled_back_at ?? null,
+        }));
+
+        // Generate signed URLs
+        const withUrls = await Promise.all(
+          mapped.map(async (doc) => {
+            try {
+              const { data: urlData } = await supabase.storage
+                .from('collateral-documents')
+                .createSignedUrl(doc.filePath, 3600);
+              return { ...doc, signedUrl: urlData?.signedUrl };
+            } catch { return doc; }
+          })
+        );
+
+        if (!cancelled) {
+          // Prioritise valuation-related doc types first
+          const sorted = [...withUrls].sort((a, b) => {
+            const aIsVal = VALUATION_DOC_TYPES.includes(a.documentType);
+            const bIsVal = VALUATION_DOC_TYPES.includes(b.documentType);
+            if (aIsVal && !bIsVal) return -1;
+            if (!aIsVal && bIsVal) return 1;
+            return 0;
+          });
+          setDocs(sorted);
+          setActiveDocIdx(0);
+        }
+      } catch { if (!cancelled) setDocs([]); }
+      finally { if (!cancelled) setLoading(false); }
+    }
+    fetchDocs();
+    return () => { cancelled = true; };
+  }, [collateralId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-sm text-gray-400">
+        <Loader2 size={14} className="animate-spin" /> Loading documents…
+      </div>
+    );
+  }
+
+  if (docs.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-5 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+        <FileText size={24} className="text-gray-300" />
+        <p className="text-xs text-gray-400">No supporting documents uploaded for this collateral.</p>
+      </div>
+    );
+  }
+
+  const activeDoc = docs[activeDocIdx];
+
+  return (
+    <div className="space-y-3">
+      {/* Document selector tabs (if multiple) */}
+      {docs.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {docs.map((doc, idx) => (
+            <button
+              key={doc.id}
+              onClick={() => setActiveDocIdx(idx)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors truncate max-w-[160px] ${
+                idx === activeDocIdx
+                  ? 'bg-blue-600 text-white border-blue-600' :'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              }`}
+              title={doc.fileName}
+            >
+              <FileText size={11} className="shrink-0" />
+              <span className="truncate">{doc.documentType}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Inline viewer */}
+      {activeDoc.signedUrl ? (
+        <InlineDocViewer
+          signedUrl={activeDoc.signedUrl}
+          fileName={activeDoc.fileName}
+          mimeType={activeDoc.mimeType}
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-2 py-5 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+          <FileText size={24} className="text-gray-300" />
+          <p className="text-xs text-gray-400">Document URL unavailable — storage access may be restricted.</p>
+        </div>
+      )}
+      <p className="text-[10px] text-gray-400">
+        {docs.length} document{docs.length !== 1 ? 's' : ''} attached · Showing: <span className="font-medium text-gray-600">{activeDoc.documentType}</span> · v{activeDoc.version}
+      </p>
+    </div>
+  );
 }
 
 // ─── Action Dialog ─────────────────────────────────────────────────────────────
@@ -436,6 +641,12 @@ function ValuationDetailPanel({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        {/* Supporting Documents — inline viewer */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Supporting Documents</h3>
+          <ValuationDocumentsSection collateralId={valuation.collateralId} />
+        </div>
+
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Valuation Details</h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
@@ -988,7 +1199,7 @@ export default function ValuationWorkflowContent() {
       <WorkflowDrawer
         open={valuationDrawerOpen}
         onClose={() => { setValuationDrawerOpen(false); setTimeout(() => setSelectedValuation(null), 300); }}
-        width="w-[520px]"
+                width="w-[680px]"
         deadline={selectedValuation?.scheduledDate ?? undefined}
         overdueHours={
           selectedValuation?.valuationStatus === 'Overdue'
