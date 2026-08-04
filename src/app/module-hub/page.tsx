@@ -5,7 +5,33 @@ import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
-import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, Settings2, AlertTriangle, Clock, TrendingUp, ArrowRight, Calendar, Activity, Zap, FileText, Plus, Eye,  } from 'lucide-react';
+import {
+  FolderOpen,
+  Brain,
+  Bell,
+  BarChart2,
+  ShieldCheck,
+  Settings,
+  LogOut,
+  ChevronRight,
+  Layers,
+  Archive,
+  Users,
+  CheckSquare,
+  BookOpen,
+  HelpCircle,
+  Settings2,
+  AlertTriangle,
+  Clock,
+  TrendingUp,
+  ArrowRight,
+  Calendar,
+  Activity,
+  Zap,
+  FileText,
+  Plus,
+  Eye,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -18,7 +44,15 @@ interface ModuleCard {
   href: string;
   borderColor: string;
   iconBg: string;
-  category: 'collateral' | 'workflow' | 'archive' | 'intelligence' | 'alerts' | 'reports' | 'audit' | 'admin';
+  category:
+    | 'collateral'
+    | 'workflow'
+    | 'archive'
+    | 'intelligence'
+    | 'alerts'
+    | 'reports'
+    | 'audit'
+    | 'admin';
   quickActions: { label: string; href: string; icon: React.ElementType }[];
   requiredPermission?: string;
   adminOnly?: boolean;
@@ -43,24 +77,24 @@ interface SummaryStats {
 
 const CATEGORY_BORDER: Record<string, string> = {
   collateral: '#007CB3',
-  workflow:   '#D97706',
-  archive:    '#059669',
+  workflow: '#D97706',
+  archive: '#059669',
   intelligence: '#7C3AED',
-  alerts:     '#DC2626',
-  reports:    '#065F46',
-  audit:      '#9D174D',
-  admin:      '#374151',
+  alerts: '#DC2626',
+  reports: '#065F46',
+  audit: '#9D174D',
+  admin: '#374151',
 };
 
 const CATEGORY_BG: Record<string, string> = {
-  collateral:   'rgba(0,124,179,0.06)',
-  workflow:     'rgba(217,119,6,0.06)',
-  archive:      'rgba(5,150,105,0.06)',
+  collateral: 'rgba(0,124,179,0.06)',
+  workflow: 'rgba(217,119,6,0.06)',
+  archive: 'rgba(5,150,105,0.06)',
   intelligence: 'rgba(124,58,237,0.06)',
-  alerts:       'rgba(220,38,38,0.06)',
-  reports:      'rgba(6,95,70,0.06)',
-  audit:        'rgba(157,23,77,0.06)',
-  admin:        'rgba(55,65,81,0.06)',
+  alerts: 'rgba(220,38,38,0.06)',
+  reports: 'rgba(6,95,70,0.06)',
+  audit: 'rgba(157,23,77,0.06)',
+  admin: 'rgba(55,65,81,0.06)',
 };
 
 // ─── Module definitions ───────────────────────────────────────────────────────
@@ -85,7 +119,8 @@ const modules: ModuleCard[] = [
   {
     id: 'obligors',
     title: 'Obligors',
-    description: 'Manage obligor profiles, credit risk scores, exposure metrics, and approval trends.',
+    description:
+      'Manage obligor profiles, credit risk scores, exposure metrics, and approval trends.',
     icon: Users,
     href: '/obligors',
     borderColor: CATEGORY_BORDER.collateral,
@@ -100,7 +135,8 @@ const modules: ModuleCard[] = [
   {
     id: 'approvals',
     title: 'Workflows',
-    description: 'Centralised approval inbox for perfection, document, release, and archive request workflows.',
+    description:
+      'Centralised approval inbox for perfection, document, release, and archive request workflows.',
     icon: CheckSquare,
     href: '/approval-inbox',
     borderColor: CATEGORY_BORDER.workflow,
@@ -116,7 +152,8 @@ const modules: ModuleCard[] = [
   {
     id: 'workflows-admin',
     title: 'Workflows Admin',
-    description: 'Design templates, configure auto-triggers, manage escalations, and monitor workflow KPIs.',
+    description:
+      'Design templates, configure auto-triggers, manage escalations, and monitor workflow KPIs.',
     icon: Settings2,
     href: '/workflows-admin',
     borderColor: CATEGORY_BORDER.admin,
@@ -133,7 +170,8 @@ const modules: ModuleCard[] = [
   {
     id: 'intelligence',
     title: 'Intelligence',
-    description: 'AI-powered risk assessment, fraud prevention, deadline predictions, and analytics.',
+    description:
+      'AI-powered risk assessment, fraud prevention, deadline predictions, and analytics.',
     icon: Brain,
     href: '/executive-dashboard',
     borderColor: CATEGORY_BORDER.intelligence,
@@ -164,7 +202,8 @@ const modules: ModuleCard[] = [
   {
     id: 'reports',
     title: 'Reports',
-    description: 'Reports Hub with regulatory and utilization views, custom reports, and unified export.',
+    description:
+      'Reports Hub with regulatory and utilization views, custom reports, and unified export.',
     icon: BarChart2,
     href: '/reports',
     borderColor: CATEGORY_BORDER.reports,
@@ -180,7 +219,8 @@ const modules: ModuleCard[] = [
   {
     id: 'audit',
     title: 'Audit & Compliance',
-    description: 'Full audit trails, archive audit log, compliance rules, live activity streams, and audit reports.',
+    description:
+      'Full audit trails, archive audit log, compliance rules, live activity streams, and audit reports.',
     icon: ShieldCheck,
     href: '/audit-center',
     borderColor: CATEGORY_BORDER.audit,
@@ -196,7 +236,8 @@ const modules: ModuleCard[] = [
   {
     id: 'administration',
     title: 'Administration',
-    description: 'User management, officer permissions, system settings, alert thresholds, and client bank accounts.',
+    description:
+      'User management, officer permissions, system settings, alert thresholds, and client bank accounts.',
     icon: Settings,
     href: '/user-management',
     borderColor: CATEGORY_BORDER.admin,
@@ -212,7 +253,8 @@ const modules: ModuleCard[] = [
   {
     id: 'archive',
     title: 'Archive',
-    description: 'Physical vault management, collateral placement, document management, file loan workflow, and custody tracking.',
+    description:
+      'Physical vault management, collateral placement, document management, file loan workflow, and custody tracking.',
     icon: Archive,
     href: '/archive/vault-management',
     borderColor: CATEGORY_BORDER.archive,
@@ -244,7 +286,12 @@ export default function ModuleHubPage() {
 
   const [todayStr, setTodayStr] = useState('');
   const [greeting, setGreeting] = useState('');
-  const [summaryStats, setSummaryStats] = useState<SummaryStats>({ totalCollateral: 0, activeWorkflows: 0, pendingActions: 0, overdueItems: 0 });
+  const [summaryStats, setSummaryStats] = useState<SummaryStats>({
+    totalCollateral: 0,
+    activeWorkflows: 0,
+    pendingActions: 0,
+    overdueItems: 0,
+  });
   const [priorityItems, setPriorityItems] = useState<PriorityItem[]>([]);
   const [moduleKPIs, setModuleKPIs] = useState<Record<string, ModuleKPI>>({});
   const [statsLoading, setStatsLoading] = useState(true);
@@ -256,13 +303,25 @@ export default function ModuleHubPage() {
     ? userProfile.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
     : '';
   const initials = userProfile?.full_name
-    ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    ? userProfile.full_name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
     : 'U';
 
   // Set today's date client-side to avoid hydration mismatch
   useEffect(() => {
     const d = new Date();
-    setTodayStr(d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+    setTodayStr(
+      d.toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    );
     setGreeting(getGreeting());
   }, []);
 
@@ -273,12 +332,18 @@ export default function ModuleHubPage() {
         const [collateralCountRes, collateralDataRes, workflowRes, tasksRes] = await Promise.all([
           supabase.from('collateral_records').select('*', { count: 'exact', head: true }),
           supabase.from('collateral_records').select('id, status'),
-          supabase.from('workflow_instances').select('id, status', { count: 'exact', head: false }).in('status', ['active', 'pending', 'in_progress']),
-          supabase.from('user_tasks').select('id, status, due_date, priority').eq('status', 'pending'),
+          supabase
+            .from('workflow_instances')
+            .select('id, status', { count: 'exact', head: false })
+            .in('status', ['active', 'pending', 'in_progress']),
+          supabase
+            .from('user_tasks')
+            .select('id, status, due_date, priority')
+            .eq('status', 'pending'),
         ]);
 
-        const totalCollateral = collateralCountRes.count ?? (collateralDataRes.data?.length ?? 0);
-        const activeWorkflows = workflowRes.count ?? (workflowRes.data?.length ?? 0);
+        const totalCollateral = collateralCountRes.count ?? collateralDataRes.data?.length ?? 0;
+        const activeWorkflows = workflowRes.count ?? workflowRes.data?.length ?? 0;
 
         const tasks = tasksRes.data ?? [];
         const today = new Date();
@@ -429,14 +494,20 @@ export default function ModuleHubPage() {
     ? modules
     : modules.filter((m) => {
         if (m.adminOnly && !isSystemAdmin) return false;
-        if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission)) return false;
+        if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission))
+          return false;
         return true;
       });
 
   const priorityTypeConfig = {
-    overdue:    { color: '#DC2626', bg: 'rgba(220,38,38,0.08)', label: 'OVERDUE', icon: AlertTriangle },
-    escalated:  { color: '#D97706', bg: 'rgba(217,119,6,0.08)', label: 'ESCALATED', icon: Zap },
-    'due-today':{ color: '#007CB3', bg: 'rgba(0,124,179,0.08)', label: 'DUE TODAY', icon: Clock },
+    overdue: {
+      color: '#DC2626',
+      bg: 'rgba(220,38,38,0.08)',
+      label: 'OVERDUE',
+      icon: AlertTriangle,
+    },
+    escalated: { color: '#D97706', bg: 'rgba(217,119,6,0.08)', label: 'ESCALATED', icon: Zap },
+    'due-today': { color: '#007CB3', bg: 'rgba(0,124,179,0.08)', label: 'DUE TODAY', icon: Clock },
   };
 
   const statusDot = (status: 'ok' | 'warn' | 'critical') => {
@@ -464,10 +535,30 @@ export default function ModuleHubPage() {
           style={{ position: 'absolute', inset: 0 }}
         >
           <defs>
-            <pattern id="mesh-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#007CB3" strokeWidth="0.5" opacity="0.18" />
+            <pattern
+              id="mesh-grid"
+              x="0"
+              y="0"
+              width="48"
+              height="48"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M 48 0 L 0 0 0 48"
+                fill="none"
+                stroke="#007CB3"
+                strokeWidth="0.5"
+                opacity="0.18"
+              />
             </pattern>
-            <pattern id="mesh-dots" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+            <pattern
+              id="mesh-dots"
+              x="0"
+              y="0"
+              width="48"
+              height="48"
+              patternUnits="userSpaceOnUse"
+            >
               <circle cx="0" cy="0" r="1.2" fill="#007CB3" opacity="0.15" />
               <circle cx="48" cy="0" r="1.2" fill="#007CB3" opacity="0.15" />
               <circle cx="0" cy="48" r="1.2" fill="#007CB3" opacity="0.15" />
@@ -507,7 +598,8 @@ export default function ModuleHubPage() {
               height: '340px',
               objectFit: 'contain',
               opacity: 0.055,
-              filter: 'invert(27%) sepia(80%) saturate(600%) hue-rotate(175deg) brightness(85%) contrast(90%)',
+              filter:
+                'invert(27%) sepia(80%) saturate(600%) hue-rotate(175deg) brightness(85%) contrast(90%)',
               userSelect: 'none',
             }}
           />
@@ -529,8 +621,12 @@ export default function ModuleHubPage() {
         <div className="flex items-center gap-3">
           <AppLogo size={32} />
           <div>
-            <p className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>CollateralMS</p>
-            <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>Module Hub</p>
+            <p className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>
+              CollateralMS
+            </p>
+            <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>
+              Module Hub
+            </p>
           </div>
         </div>
 
@@ -538,16 +634,27 @@ export default function ModuleHubPage() {
           <button
             onClick={() => router.push('/onboarding-guide')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{ color: '#374151', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' }}
+            style={{
+              color: '#374151',
+              border: '1px solid rgba(0,0,0,0.12)',
+              backgroundColor: 'rgba(0,0,0,0.04)',
+            }}
             title="Open Onboarding Guide"
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)'; }}
+            onMouseOver={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)';
+            }}
+            onMouseOut={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)';
+            }}
           >
             <HelpCircle size={14} />
             <span className="hidden sm:inline">Guide</span>
           </button>
 
-          <div className="hidden sm:flex items-center gap-2.5 pl-2 border-l" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+          <div
+            className="hidden sm:flex items-center gap-2.5 pl-2 border-l"
+            style={{ borderColor: 'rgba(0,0,0,0.1)' }}
+          >
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
               style={{ background: 'var(--izou-primary)' }}
@@ -555,8 +662,12 @@ export default function ModuleHubPage() {
               <span className="text-white text-xs font-bold">{initials}</span>
             </div>
             <div>
-              <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>{displayName}</p>
-              <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>{displayRole}</p>
+              <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>
+                {displayName}
+              </p>
+              <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>
+                {displayRole}
+              </p>
             </div>
           </div>
 
@@ -564,8 +675,14 @@ export default function ModuleHubPage() {
             onClick={() => signOut?.()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ml-1"
             style={{ color: '#6B7280' }}
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.06)'; (e.currentTarget as HTMLElement).style.color = '#111827'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#6B7280'; }}
+            onMouseOver={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.06)';
+              (e.currentTarget as HTMLElement).style.color = '#111827';
+            }}
+            onMouseOut={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              (e.currentTarget as HTMLElement).style.color = '#6B7280';
+            }}
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">Sign out</span>
@@ -605,9 +722,17 @@ export default function ModuleHubPage() {
             <button
               onClick={() => router.push('/workflows/tasks')}
               className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
-              style={{ backgroundColor: 'var(--izou-primary)', color: '#fff', boxShadow: '0 4px 14px rgba(0,124,179,0.3)' }}
-              onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.9'; }}
-              onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+              style={{
+                backgroundColor: 'var(--izou-primary)',
+                color: '#fff',
+                boxShadow: '0 4px 14px rgba(0,124,179,0.3)',
+              }}
+              onMouseOver={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = '0.9';
+              }}
+              onMouseOut={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = '1';
+              }}
             >
               <Activity size={14} />
               My Tasks
@@ -636,12 +761,19 @@ export default function ModuleHubPage() {
       {!statsLoading && priorityItems.length > 0 && (
         <div
           className="px-6 py-3 relative"
-          style={{ backgroundColor: 'rgba(254,242,242,0.9)', borderBottom: '1px solid rgba(220,38,38,0.15)', zIndex: 1 }}
+          style={{
+            backgroundColor: 'rgba(254,242,242,0.9)',
+            borderBottom: '1px solid rgba(220,38,38,0.15)',
+            zIndex: 1,
+          }}
         >
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle size={13} style={{ color: '#DC2626' }} />
-              <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#DC2626' }}>
+              <span
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: '#DC2626' }}
+              >
                 Priority Attention Required
               </span>
             </div>
@@ -660,8 +792,12 @@ export default function ModuleHubPage() {
                       border: `1px solid ${cfg.color}40`,
                       boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                     }}
-                    onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = cfg.bg; }}
-                    onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#fff'; }}
+                    onMouseOver={(e) => {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = cfg.bg;
+                    }}
+                    onMouseOut={(e) => {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = '#fff';
+                    }}
                   >
                     <ItemIcon size={11} />
                     <span className="font-bold">{cfg.label}</span>
@@ -679,7 +815,6 @@ export default function ModuleHubPage() {
       {/* ── Module Grid ──────────────────────────────────────────────────────── */}
       <div className="flex-1 px-6 py-8 relative" style={{ zIndex: 1 }}>
         <div className="max-w-6xl mx-auto">
-
           {/* <div className="flex items-center justify-between mb-5">
             <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>
               Modules
@@ -708,7 +843,8 @@ export default function ModuleHubPage() {
                   }}
                   onClick={() => router.push(mod.href)}
                   onMouseOver={(e) => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px ${borderColor}30`;
+                    (e.currentTarget as HTMLElement).style.boxShadow =
+                      `0 8px 24px rgba(0,0,0,0.12), 0 0 0 1px ${borderColor}30`;
                     (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
                   }}
                   onMouseOut={(e) => {
@@ -718,46 +854,71 @@ export default function ModuleHubPage() {
                 >
                   {/* Card header */}
                   <div className="p-5 pb-3 flex-1">
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-3">
+                      {/* Icon - Left side */}
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
-                        style={{ backgroundColor: mod.iconBg, boxShadow: `0 4px 12px ${mod.iconBg}50` }}
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 mt-0.5"
+                        style={{
+                          backgroundColor: mod.iconBg,
+                          boxShadow: `0 4px 12px ${mod.iconBg}50`,
+                        }}
                       >
                         <ModIcon size={18} color="#fff" />
                       </div>
 
-                      {/* Status indicator */}
-                      {kpi && (
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: statusDot(kpi.status) }}
-                          />
-                          <span className="text-xs" style={{ color: '#9CA3AF' }}>
-                            {kpi.status === 'ok' ? 'All clear' : kpi.status === 'warn' ? 'Attention' : 'Critical'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                      {/* Content - Right side */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h2 className="text-sm font-bold mb-1" style={{ color: '#111827' }}>
+                              {mod.title}
+                            </h2>
+                            <p className="text-xs leading-relaxed" style={{ color: '#6B7280' }}>
+                              {mod.description}
+                            </p>
+                          </div>
 
-                    <h2 className="text-sm font-bold mb-1" style={{ color: '#111827' }}>
-                      {mod.title}
-                    </h2>
-                    <p className="text-xs leading-relaxed" style={{ color: '#6B7280' }}>
-                      {mod.description}
-                    </p>
+                          {/* Status indicator - Top right */}
+                          {kpi && (
+                            <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                              <span
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: statusDot(kpi.status) }}
+                              />
+                              <span
+                                className="text-xs whitespace-nowrap"
+                                style={{ color: '#9CA3AF' }}
+                              >
+                                {kpi.status === 'ok'
+                                  ? 'All clear'
+                                  : kpi.status === 'warn'
+                                    ? 'Attention'
+                                    : 'Critical'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* KPI strip */}
                   {kpi && (
                     <div
                       className="px-5 py-2.5 flex items-center gap-3"
-                      style={{ borderTop: '1px solid rgba(0,0,0,0.06)', backgroundColor: 'rgba(0,0,0,0.015)' }}
+                      style={{
+                        borderTop: '1px solid rgba(0,0,0,0.06)',
+                        backgroundColor: 'rgba(0,0,0,0.015)',
+                      }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm font-bold" style={{ color: borderColor }}>{kpi.primary}</span>
-                        <span className="text-xs ml-2" style={{ color: '#9CA3AF' }}>{kpi.secondary}</span>
+                        <span className="text-sm font-bold" style={{ color: borderColor }}>
+                          {kpi.primary}
+                        </span>
+                        <span className="text-xs ml-2" style={{ color: '#9CA3AF' }}>
+                          {kpi.secondary}
+                        </span>
                       </div>
                       <TrendingUp size={13} style={{ color: borderColor, opacity: 0.5 }} />
                     </div>
@@ -774,15 +935,24 @@ export default function ModuleHubPage() {
                       return (
                         <button
                           key={action.label}
-                          onClick={(e) => { e.stopPropagation(); router.push(action.href); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(action.href);
+                          }}
                           className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all"
                           style={{
                             color: borderColor,
                             backgroundColor: `${borderColor}12`,
                             border: `1px solid ${borderColor}25`,
                           }}
-                          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}25`; }}
-                          onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}12`; }}
+                          onMouseOver={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor =
+                              `${borderColor}25`;
+                          }}
+                          onMouseOut={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor =
+                              `${borderColor}12`;
+                          }}
                         >
                           <ActionIcon size={10} />
                           {action.label}
@@ -798,7 +968,11 @@ export default function ModuleHubPage() {
           {/* Empty state */}
           {!loading && visibleModules.length === 0 && (
             <div className="text-center py-20">
-              <ShieldCheck size={40} className="mx-auto mb-3 opacity-20" style={{ color: '#6B7280' }} />
+              <ShieldCheck
+                size={40}
+                className="mx-auto mb-3 opacity-20"
+                style={{ color: '#6B7280' }}
+              />
               <p className="text-sm" style={{ color: '#9CA3AF' }}>
                 No modules are available for your current role. Contact your administrator.
               </p>
@@ -825,15 +999,24 @@ export default function ModuleHubPage() {
                 New to CollateralMS? Start with the Onboarding Guide
               </h3>
               <p className="text-xs leading-relaxed" style={{ color: '#3B82F6' }}>
-                Step-by-step walkthroughs for all modules — from registering collateral to running compliance audits.
+                Step-by-step walkthroughs for all modules — from registering collateral to running
+                compliance audits.
               </p>
             </div>
             <button
               onClick={() => router.push('/onboarding-guide')}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all"
-              style={{ backgroundColor: '#2563EB', color: '#fff', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' }}
-              onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8'; }}
-              onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB'; }}
+              style={{
+                backgroundColor: '#2563EB',
+                color: '#fff',
+                boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
+              }}
+              onMouseOver={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8';
+              }}
+              onMouseOut={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB';
+              }}
             >
               <BookOpen size={13} />
               Open Guide
