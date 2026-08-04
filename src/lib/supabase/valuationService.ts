@@ -145,10 +145,10 @@ export async function approveValuation(
 ): Promise<CollateralValuation> {
   const supabase = createClient();
 
-  // Fetch current record for audit trail
+  // Fetch current record for audit trail + collateral write-back
   const { data: current } = await supabase
     .from('collateral_valuations')
-    .select('valuation_status, collateral_id, collateral_records(description)')
+    .select('valuation_status, collateral_id, valuation_amount, collateral_records(description, id)')
     .eq('id', id)
     .maybeSingle();
 
@@ -163,6 +163,20 @@ export async function approveValuation(
     .select('*, collateral_records(description, collateral_type)')
     .single();
   if (error) throw error;
+
+  // ── Write back collateral_records: status → Monitoring + update current_value ──
+  const collateralRecordDbId = (current as any)?.collateral_records?.id ?? null;
+  const valuationAmount = current?.valuation_amount ?? null;
+  if (collateralRecordDbId) {
+    const updatePayload: any = { status: 'Monitoring' };
+    if (valuationAmount !== null) updatePayload.current_value = valuationAmount;
+    await supabase
+      .from('collateral_records')
+      .update(updatePayload)
+      .eq('id', collateralRecordDbId)
+      .then(() => {})
+      .catch((e) => console.warn('[valuation] collateral status write-back failed:', e.message));
+  }
 
   // ── Write audit trail ──────────────────────────────────────────────────────
   const collateralDesc = (current as any)?.collateral_records?.description ?? current?.collateral_id ?? id;

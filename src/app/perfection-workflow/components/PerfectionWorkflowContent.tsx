@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File, ExternalLink, Maximize2, Minimize2, ChevronUp, ChevronDown } from 'lucide-react';
+import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { perfectionService, PerfectionRequest, PerfectionComment, PerfectionRequestStatus, PerfectionStatusHistory } from '@/lib/supabase/perfectionService';
@@ -65,6 +66,133 @@ function formatDate(iso: string | null): string {
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Inline Document Viewer ───────────────────────────────────────────────────
+
+function InlineDocViewer({ signedUrl, fileName, mimeType }: { signedUrl: string; fileName: string; mimeType?: string }) {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(false);
+  const [pdfError, setPdfError] = React.useState(false);
+
+  const isPdf = fileName.toLowerCase().endsWith('.pdf') || mimeType?.includes('pdf');
+  const isImage = mimeType?.startsWith('image/') ||
+    /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName);
+
+  // Google Docs Viewer proxies the PDF, bypassing Chrome's cross-origin iframe block
+  const googleDocsViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`;
+
+  return (
+    <div className={`border border-border rounded-xl overflow-hidden bg-muted/20 ${fullscreen ? 'fixed inset-0 z-[80] flex flex-col bg-white rounded-none border-0' : ''}`}>
+      {/* Viewer toolbar */}
+      <div className={`flex items-center justify-between px-3 py-2 border-b border-border bg-white ${fullscreen ? 'shrink-0' : ''}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={13} className="text-primary shrink-0" />
+          <span className="text-xs font-semibold text-foreground truncate max-w-[200px]">{fileName}</span>
+          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+            {isPdf ? 'PDF' : isImage ? 'Image' : 'Document'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <a
+            href={signedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+            title="Open in new tab"
+          >
+            <ExternalLink size={13} />
+          </a>
+          <a
+            href={signedUrl}
+            download={fileName}
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Download"
+          >
+            <Download size={13} />
+          </a>
+          <button
+            onClick={() => setFullscreen(f => !f)}
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+          {!fullscreen && (
+            <button
+              onClick={() => setCollapsed(c => !c)}
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title={collapsed ? 'Show document' : 'Hide document'}
+            >
+              {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            </button>
+          )}
+          {fullscreen && (
+            <button
+              onClick={() => setFullscreen(false)}
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
+              title="Close"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Viewer body */}
+      {(!collapsed || fullscreen) && (
+        <div className={fullscreen ? 'flex-1 overflow-hidden' : 'h-[320px] overflow-hidden'}>
+          {isPdf ? (
+            pdfError ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-muted/20 p-6">
+                <FileText size={36} className="text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground text-center">PDF preview unavailable in this browser.</p>
+                <a
+                  href={signedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  <ExternalLink size={13} /> Open PDF
+                </a>
+              </div>
+            ) : (
+              <iframe
+                src={googleDocsViewerUrl}
+                className="w-full h-full border-0"
+                title={fileName}
+                onError={() => setPdfError(true)}
+              />
+            )
+          ) : isImage ? (
+            <div className="w-full h-full flex items-center justify-center bg-muted/30 overflow-auto p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={signedUrl}
+                alt={fileName}
+                className="max-w-full max-h-full object-contain rounded"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-muted/20 p-6">
+              <FileText size={36} className="text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground text-center">
+                This file type cannot be previewed inline.
+              </p>
+              <a
+                href={signedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors"
+              >
+                <ExternalLink size={13} /> Open Document
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Role Guidance Banner ──────────────────────────────────────────────────────
@@ -489,7 +617,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   const [commentText, setCommentText] = useState('');
   const [decisionNotes, setDecisionNotes] = useState('');
   const [activeAction, setActiveAction] = useState<'perfected' | 'reject' | 'return' | 'review' | 'comment' | null>(null);
-  const [activeTab, setActiveTab] = useState<'activity' | 'history' | 'documents'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'history' | 'documents'>('documents');
   const [showSmsModal, setShowSmsModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ open: boolean; action: 'reject' | 'return' | null }>({ open: false, action: null });
 
@@ -668,68 +796,63 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white">
 
-        {/* Modal Header */}
-        <div className="flex items-start justify-between px-6 py-5 border-b border-border bg-white shrink-0">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-              <Award size={20} className="text-primary" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-sm font-mono text-muted-foreground">{request.collateralId}</span>
-                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${statusCfg.bg} ${statusCfg.color}`}>
-                  {statusCfg.icon}{statusCfg.label}
-                </span>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${priorityCfg.bg} ${priorityCfg.color}`}>
-                  {request.priority} Priority
-                </span>
-              </div>
-              <h2 className="text-lg font-semibold text-foreground">{request.obligor}</h2>
-              <p className="text-sm text-muted-foreground">{request.collateralType} · {request.registry}</p>
-            </div>
+        {/* Modal Header — title + status badge only, no duplicate collateral details */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-white shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h2 className="text-base font-semibold text-foreground truncate">{request.obligor}</h2>
+            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${statusCfg.bg} ${statusCfg.color}`}>
+              {statusCfg.icon}{statusCfg.label}
+            </span>
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${priorityCfg.bg} ${priorityCfg.color}`}>
+              {request.priority}
+            </span>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors shrink-0">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors shrink-0 ml-3">
             <X size={18} />
           </button>
         </div>
 
-        {/* Modal Body — single column action interface */}
+        {/* Two-column body */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          {/* Action Interface */}
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* LEFT — 60% — Document Viewer */}
+          <div className="flex flex-col min-h-0 overflow-hidden border-r border-border" style={{ width: '60%' }}>
+            {/* Workflow stage bar */}
+            <div className="px-5 py-3 border-b border-border shrink-0 bg-muted/20">
+              <WorkflowStageBar status={request.requestStatus} userRole={userRole} />
+            </div>
 
             {/* Tabs */}
             <div className="flex border-b border-border shrink-0 bg-white">
               <button
-                onClick={() => setActiveTab('activity')}
-                className={`flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <MessageSquare size={15} /> Activity
-                {comments.length > 0 && (
-                  <span className="ml-1 bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">{comments.length}</span>
-                )}
-              </button>
-              <button
                 onClick={() => setActiveTab('documents')}
-                className={`flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 ${
+                className={`flex items-center justify-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === 'documents' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <Upload size={15} /> Documents
+                <Upload size={14} /> Documents
                 {(documents.length > 0 || pendingFiles.length > 0) && (
                   <span className="ml-1 bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">{documents.length + pendingFiles.length}</span>
                 )}
               </button>
               <button
+                onClick={() => setActiveTab('activity')}
+                className={`flex items-center justify-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <MessageSquare size={14} /> Activity
+                {comments.length > 0 && (
+                  <span className="ml-1 bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">{comments.length}</span>
+                )}
+              </button>
+              <button
                 onClick={() => setActiveTab('history')}
-                className={`flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 ${
+                className={`flex items-center justify-center gap-2 px-5 py-3 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <History size={15} /> Status History
+                <History size={14} /> History
                 {history.length > 0 && (
                   <span className="ml-1 bg-primary/10 text-primary text-xs font-bold px-1.5 py-0.5 rounded-full">{history.length}</span>
                 )}
@@ -737,7 +860,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
             </div>
 
             {/* Tab Content — scrollable */}
-            <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="flex-1 overflow-y-auto px-5 py-4">
               {activeTab === 'activity' ? (
                 <>
                   {comments.length === 0 ? (
@@ -884,52 +1007,66 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                             <p className="text-xs mt-1">Upload title deeds, receipts, and perfection proofs above</p>
                           </div>
                         ) : (
-                          <div className="space-y-2">
-                            {documents.map((doc) => (
-                              <div key={doc.id} className="flex items-start gap-3 p-3 bg-white border border-border rounded-lg hover:border-primary/30 transition-colors group">
-                                <span className="mt-0.5">{getFileIcon(doc.mimeType)}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-medium text-foreground truncate max-w-[180px]">{doc.fileName}</p>
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                                      {doc.documentType}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">v{doc.version}</span>
+                          <div className="space-y-3">
+                            {/* Inline viewer for the first document with a signedUrl */}
+                            {(() => {
+                              const previewDoc = documents.find(d => d.signedUrl);
+                              return previewDoc ? (
+                                <InlineDocViewer
+                                  signedUrl={previewDoc.signedUrl!}
+                                  fileName={previewDoc.fileName}
+                                  mimeType={previewDoc.mimeType}
+                                />
+                              ) : null;
+                            })()}
+                            {/* Document list */}
+                            <div className="space-y-2">
+                              {documents.map((doc) => (
+                                <div key={doc.id} className="flex items-start gap-3 p-3 bg-white border border-border rounded-lg hover:border-primary/30 transition-colors group">
+                                  <span className="mt-0.5">{getFileIcon(doc.mimeType)}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="text-sm font-medium text-foreground truncate max-w-[180px]">{doc.fileName}</p>
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                        {doc.documentType}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">v{doc.version}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                      <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                                      <span className="text-xs text-muted-foreground">·</span>
+                                      <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
+                                      <span className="text-xs text-muted-foreground">·</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                      </span>
+                                    </div>
+                                    {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
                                   </div>
-                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                    <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                                    <span className="text-xs text-muted-foreground">·</span>
-                                    <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
-                                    <span className="text-xs text-muted-foreground">·</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                    </span>
-                                  </div>
-                                  {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
-                                </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {doc.signedUrl && (
-                                    <a
-                                      href={doc.signedUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                                      title="Download"
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {doc.signedUrl && (
+                                      <a
+                                        href={doc.signedUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                                        title="Download"
+                                      >
+                                        <Download size={13} />
+                                      </a>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteDocument(doc)}
+                                      className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                      title="Delete"
                                     >
-                                      <Download size={13} />
-                                    </a>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteDocument(doc)}
-                                    className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -940,147 +1077,212 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                 <StatusHistoryPanel history={history} />
               )}
             </div>
+          </div>
 
-            {/* Action Footer */}
-            {!isRoleResolved && (request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review' || request.requestStatus === 'Draft' || request.requestStatus === 'Returned') && (
-              <div className="border-t border-border px-6 py-4 bg-white shrink-0 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 size={14} className="animate-spin" /> Loading actions...
-              </div>
-            )}
-            {(hasActions || showSmsButton) && isRoleResolved && (
-              <div className="border-t-2 border-primary/20 bg-white shrink-0">
-                {actionHeaderLabel && (
-                  <div className={`flex items-center gap-2 px-6 py-2.5 text-xs font-semibold border-b ${actionHeaderLabel.color}`}>
-                    {actionHeaderLabel.icon}
-                    <span>Your action required:</span>
-                    <span className="font-normal">{actionHeaderLabel.text}</span>
-                  </div>
-                )}
-
-                <div className="px-6 py-4 space-y-3">
-                  {canSubmit && (
-                    <div className="space-y-2">
-                      <textarea
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="Add a note for the Legal Officer (optional)..."
-                        rows={2}
-                        className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                      <button
-                        onClick={() => handleAction('submit')}
-                        disabled={actionLoading}
-                        className="w-full flex items-center justify-center gap-2 bg-primary text-white text-sm font-semibold py-3 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
-                      >
-                        <Send size={15} /> {actionLoading ? 'Submitting...' : 'Submit to Legal Officer'}
-                        {!actionLoading && <ArrowRight size={14} className="ml-auto" />}
-                      </button>
+          {/* RIGHT — 40% — Action Zone */}
+          <div className="flex flex-col min-h-0 overflow-hidden bg-gray-50" style={{ width: '40%' }}>
+            {/* Scrollable context area */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+              {/* Collateral meta */}
+              <div className="bg-white rounded-xl border border-border p-4 space-y-2">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Request Details</h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {[
+                    { label: 'Collateral ID', value: request.collateralId },
+                    { label: 'Type', value: request.collateralType },
+                    { label: 'Registry', value: request.registry },
+                    { label: 'Submitted', value: formatDate(request.submittedAt) },
+                    { label: 'Due Date', value: formatDate(request.dueDate) },
+                    { label: 'Assigned To', value: request.assignedTo || '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{label}</p>
+                      <p className="text-xs text-foreground font-medium mt-0.5 truncate">{value || '—'}</p>
                     </div>
-                  )}
-
-                  {canReview && (
-                    <button
-                      onClick={() => handleAction('review')}
-                      disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white text-sm font-semibold py-3 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors shadow-sm"
-                    >
-                      <Eye size={15} /> {actionLoading ? 'Starting...' : 'Start Review'}
-                      {!actionLoading && <ArrowRight size={14} className="ml-auto" />}
-                    </button>
-                  )}
-
-                  {canDecide && (
-                    <div className="space-y-3">
-                      {activeAction && (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-semibold text-foreground">
-                            {activeAction === 'perfected' ? '✅ Perfection Notes (required)' :
-                             activeAction === 'reject' ? '❌ Rejection Reason (required)' : '↩ Revision Instructions (required)'}
-                          </label>
-                          <textarea
-                            value={decisionNotes}
-                            onChange={(e) => setDecisionNotes(e.target.value)}
-                            placeholder={
-                              activeAction === 'perfected' ? 'Describe how the collateral was perfected...' :
-                              activeAction === 'reject' ? 'Provide reason for rejection (required)...' :
-                              'Provide revision instructions (required)...'
-                            }
-                            rows={3}
-                            className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleAction(activeAction)}
-                              disabled={actionLoading}
-                              className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 rounded-lg disabled:opacity-50 transition-colors text-white shadow-sm ${
-                                activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                                activeAction === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
-                              }`}
-                            >
-                              {actionLoading ? 'Processing...' :
-                                activeAction === 'perfected' ? <><Award size={14} /> Confirm Perfected</> :
-                                activeAction === 'reject' ? <><XCircle size={14} /> Confirm Rejection</> :
-                                <><RotateCcw size={14} /> Confirm Return</>
-                              }
-                            </button>
-                            <button onClick={() => { setActiveAction(null); setDecisionNotes(''); }} className="px-4 py-3 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      {!activeAction && (
-                        <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground font-medium">Choose your decision:</p>
-                          <div className="flex gap-2">
-                            <button onClick={() => setActiveAction('perfected')} className="flex-1 flex flex-col items-center gap-1 bg-emerald-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
-                              <Award size={16} />
-                              <span>Mark Perfected</span>
-                            </button>
-                            <button onClick={() => setConfirmModal({ open: true, action: 'return' })} className="flex-1 flex flex-col items-center gap-1 bg-orange-500 text-white text-xs font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">
-                              <RotateCcw size={16} />
-                              <span>Return for Revision</span>
-                            </button>
-                            <button onClick={() => setConfirmModal({ open: true, action: 'reject' })} className="flex-1 flex flex-col items-center gap-1 bg-red-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors shadow-sm">
-                              <XCircle size={16} />
-                              <span>Reject</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {canComment && !canSubmit && !canReview && !canDecide && (
-                    <div className="space-y-2">
-                      <textarea
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="Add a comment..."
-                        rows={2}
-                        className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                      <button
-                        onClick={() => handleAction('comment')}
-                        disabled={actionLoading || !commentText.trim()}
-                        className="w-full flex items-center justify-center gap-2 bg-muted text-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-muted/80 disabled:opacity-50 transition-colors border border-border"
-                      >
-                        <MessageSquare size={14} /> {actionLoading ? 'Adding...' : 'Add Comment'}
-                      </button>
-                    </div>
-                  )}
-
-                  {showSmsButton && (
-                    <button
-                      onClick={() => setShowSmsModal(true)}
-                      className="w-full flex items-center justify-center gap-2 bg-violet-50 text-violet-700 border border-violet-200 text-sm font-medium py-2.5 rounded-lg hover:bg-violet-100 transition-colors"
-                    >
-                      <MessageSquare size={14} /> Send Approval Request SMS
-                    </button>
-                  )}
+                  ))}
                 </div>
               </div>
-            )}
+
+              {/* SMS button */}
+              {showSmsButton && (
+                <button
+                  onClick={() => setShowSmsModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors"
+                >
+                  <Send size={12} /> Send SMS Alert
+                </button>
+              )}
+            </div>
+
+            {/* Pinned Action Footer */}
+            <div className="border-t-2 border-primary/20 bg-white shrink-0">
+              {!isRoleResolved && (request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review' || request.requestStatus === 'Draft' || request.requestStatus === 'Returned') && (
+                <div className="px-5 py-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 size={14} className="animate-spin" /> Loading actions...
+                </div>
+              )}
+              {(hasActions || showSmsButton) && isRoleResolved && (
+                <>
+                  {actionHeaderLabel && (
+                    <div className={`flex items-center gap-2 px-5 py-2.5 text-xs font-semibold border-b ${actionHeaderLabel.color}`}>
+                      {actionHeaderLabel.icon}
+                      <span className="font-normal">{actionHeaderLabel.text}</span>
+                    </div>
+                  )}
+
+                  <div className="px-5 py-4 space-y-3">
+                    {canSubmit && (
+                      <div className="space-y-2">
+                        <textarea
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          placeholder="Add a note for the Legal Officer (optional)..."
+                          rows={2}
+                          className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        <button
+                          onClick={() => handleAction('submit')}
+                          disabled={actionLoading}
+                          className="w-full flex items-center justify-center gap-2 bg-primary text-white text-sm font-semibold py-3 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
+                        >
+                          <Send size={15} /> {actionLoading ? 'Submitting...' : 'Submit to Legal Officer'}
+                          {!actionLoading && <ArrowRight size={14} className="ml-auto" />}
+                        </button>
+                      </div>
+                    )}
+
+                    {canReview && (
+                      <button
+                        onClick={() => handleAction('review')}
+                        disabled={actionLoading}
+                        className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white text-sm font-semibold py-3 rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors shadow-sm"
+                      >
+                        <Eye size={15} /> {actionLoading ? 'Starting...' : 'Start Review'}
+                        {!actionLoading && <ArrowRight size={14} className="ml-auto" />}
+                      </button>
+                    )}
+
+                    {canDecide && (
+                      <div className="space-y-3">
+                        {activeAction && (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-foreground">
+                              {activeAction === 'perfected' ? '✅ Perfection Notes (required)' :
+                               activeAction === 'reject' ? '❌ Rejection Reason (required)' : '↩ Revision Instructions (required)'}
+                            </label>
+                            <textarea
+                              value={decisionNotes}
+                              onChange={(e) => setDecisionNotes(e.target.value)}
+                              placeholder={
+                                activeAction === 'perfected' ? 'Describe how the collateral was perfected...' :
+                                activeAction === 'reject' ? 'Provide reason for rejection (required)...' :
+                                'Provide revision instructions (required)...'
+                              }
+                              rows={3}
+                              className={`w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 transition-colors ${
+                                decisionNotes.trim().length === 0
+                                  ? 'border-red-300 focus:ring-red-400/30 bg-red-50/30' :'border-border focus:ring-primary/30'
+                              }`}
+                            />
+                            {decisionNotes.trim().length === 0 && (
+                              <p className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                                <AlertCircle size={12} />
+                                {activeAction === 'perfected' ? 'Perfection notes are required before confirming.'
+                                  : activeAction === 'reject' ? 'A rejection reason is required — explain why this request is being rejected.' : 'Revision instructions are required — describe what needs to be corrected.'}
+                              </p>
+                            )}
+                            {decisionNotes.trim().length > 0 && decisionNotes.trim().length < 10 && (
+                              <p className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                                <AlertCircle size={12} />
+                                Please provide a more detailed explanation (at least 10 characters).
+                              </p>
+                            )}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAction(activeAction)}
+                                disabled={actionLoading || decisionNotes.trim().length < 10}
+                                className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 rounded-lg disabled:opacity-50 transition-colors text-white shadow-sm ${
+                                  activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                  activeAction === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
+                                }`}
+                              >
+                                {actionLoading ? 'Processing...' :
+                                  activeAction === 'perfected' ? <><Award size={14} /> Confirm Perfected</> :
+                                  activeAction === 'reject' ? <><XCircle size={14} /> Confirm Rejection</> :
+                                  <><RotateCcw size={14} /> Confirm Return</>
+                                }
+                              </button>
+                              <button onClick={() => { setActiveAction(null); setDecisionNotes(''); }} className="px-4 py-3 text-sm border border-border rounded-lg hover:bg-muted transition-colors">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {!activeAction && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground font-medium">Choose your decision:</p>
+                            <div className="flex gap-2">
+                              <button onClick={() => setActiveAction('perfected')} className="flex-1 flex flex-col items-center gap-1 bg-emerald-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                                <Award size={16} />
+                                <span>Mark Perfected</span>
+                                <ActionHelpIcon text="Confirm that all perfection requirements are met. The collateral status will be updated to Perfected and the Credit Officer will be notified." position="top" />
+                              </button>
+                              <button onClick={() => setConfirmModal({ open: true, action: 'return' })} className="flex-1 flex flex-col items-center gap-1 bg-orange-500 text-white text-xs font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">
+                                <RotateCcw size={16} />
+                                <span>Return</span>
+                                <ActionHelpIcon text="Send this request back to the Credit Officer with revision instructions. They will need to correct and resubmit." position="top" />
+                              </button>
+                              <button onClick={() => setConfirmModal({ open: true, action: 'reject' })} className="flex-1 flex flex-col items-center gap-1 bg-red-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors shadow-sm">
+                                <XCircle size={16} />
+                                <span>Reject</span>
+                                <ActionHelpIcon text="Permanently reject this perfection request. A rejection reason is required. This action closes the request and cannot be undone." position="top" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {canComment && !canSubmit && !canReview && !canDecide && (
+                      <div className="space-y-2">
+                        <textarea
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          placeholder="Add a comment..."
+                          rows={2}
+                          className={`w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 transition-colors ${
+                            commentText.length > 0 && commentText.trim().length === 0
+                              ? 'border-red-300 focus:ring-red-400/30' :'border-border focus:ring-primary/30'
+                          }`}
+                        />
+                        {commentText.length > 0 && commentText.trim().length === 0 && (
+                          <p className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                            <AlertCircle size={12} />
+                            Comment cannot be blank — please enter a meaningful message.
+                          </p>
+                        )}
+                        <button
+                          onClick={() => handleAction('comment')}
+                          disabled={actionLoading || !commentText.trim()}
+                          className="w-full flex items-center justify-center gap-2 bg-muted text-foreground text-sm font-medium py-2.5 rounded-lg hover:bg-muted/80 disabled:opacity-50 transition-colors border border-border"
+                        >
+                          <MessageSquare size={14} /> {actionLoading ? 'Adding...' : 'Add Comment'}
+                        </button>
+                      </div>
+                    )}
+
+                    {showSmsButton && (
+                      <button
+                        onClick={() => setShowSmsModal(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-violet-50 text-violet-700 border border-violet-200 text-sm font-medium py-2.5 rounded-lg hover:bg-violet-100 transition-colors"
+                      >
+                        <MessageSquare size={14} /> Send Approval Request SMS
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       {showSmsModal && <SmsApprovalModal request={request} onClose={() => setShowSmsModal(false)} />}
@@ -1903,7 +2105,7 @@ export default function PerfectionWorkflowContent() {
       <WorkflowDrawer
         open={!!selectedRequest && !batchMode}
         onClose={() => setSelectedRequest(null)}
-        width="w-[720px]"
+        width="w-[1000px]"
         deadline={selectedRequest?.perfectionDeadline ?? undefined}
         overdueHours={
           selectedRequest?.perfectionDeadline &&

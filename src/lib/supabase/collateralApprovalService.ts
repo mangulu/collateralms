@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { sendCollateralStatusEmail } from '@/lib/supabase/collateralStatusEmailService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -177,9 +178,18 @@ export const collateralApprovalService = {
     reviewedByName: string,
     decisionNotes?: string,
     complianceAttested?: boolean,
-    complianceAttestedById?: string
+    complianceAttestedById?: string,
+    reviewedByRole?: string,
   ): Promise<void> {
     const supabase = createClient();
+
+    // Fetch current record for collateral write-back and workflow sync
+    const { data: current } = await supabase
+      .from('collateral_approval_requests')
+      .select('request_status, collateral_record_id')
+      .eq('id', id)
+      .maybeSingle();
+
     const updates: any = {
       request_status: status,
       reviewed_by: reviewedById,
@@ -203,6 +213,91 @@ export const collateralApprovalService = {
       .update(updates)
       .eq('id', id);
     if (error) throw error;
+
+    // ── Write back collateral_records.status ─────────────────────────────────
+    const collateralRecordId = current?.collateral_record_id ?? null;
+    if (collateralRecordId) {
+      let newCollateralStatus: string | null = null;
+      if (status === 'Approved') newCollateralStatus = 'Monitoring';
+      else if (status === 'Rejected') newCollateralStatus = 'Rejected';
+      else if (status === 'Returned') newCollateralStatus = 'Under Review';
+
+      if (newCollateralStatus) {
+        await supabase
+          .from('collateral_records')
+          .update({ status: newCollateralStatus })
+          .eq('id', collateralRecordId)
+          .then(() => {})
+          .catch((e) => console.warn('[approvals] collateral status write-back failed:', e.message));
+
+        // ── Send email alert for Rejected status ────────────────────────────
+        if (status === 'Rejected') {
+          sendCollateralStatusEmail({
+            collateralRecordId,
+            newStatus: 'Rejected',
+            changedBy: reviewedByName,
+            notes: decisionNotes || undefined,
+            workflowType: 'Collateral Approval',
+          }).catch((e) => console.warn('[approvals] status email failed:', e.message));
+        }
+      }
+    }
+
+    // ── Sync workflow_instances ───────────────────────────────────────────────
+    if (status === 'Approved' || status === 'Rejected') {
+      try {
+        const wfAction = status === 'Approved' ? 'approve' : 'reject';
+        const { data: instances } = await supabase
+          .from('workflow_instances')
+          .select('id, instance_status')
+          .eq('reference_id', id)
+          .eq('reference_type', 'collateral_approval')
+          .in('instance_status', ['active', 'escalated'])
+          .limit(1);
+
+        const instance = instances?.[0];
+        if (instance) {
+          const { data: currentStep } = await supabase
+            .from('workflow_instance_steps')
+            .select('id, step_id')
+            .eq('instance_id', instance.id)
+            .eq('step_status', 'active')
+            .maybeSingle();
+
+          const now = new Date().toISOString();
+          if (currentStep) {
+            await supabase.from('workflow_instance_steps').update({
+              step_status: wfAction === 'approve' ? 'completed' : 'rejected',
+              completed_at: now,
+              completed_by: reviewedById,
+              action_taken: wfAction,
+              notes: decisionNotes ?? null,
+            }).eq('id', currentStep.id);
+          }
+
+          await supabase.from('workflow_instances').update({
+            instance_status: wfAction === 'approve' ? 'completed' : 'cancelled',
+            current_step_id: null,
+            completed_by: reviewedById,
+            completed_at: now,
+          }).eq('id', instance.id);
+
+          await supabase.from('workflow_transition_log').insert({
+            instance_id: instance.id,
+            instance_step_id: currentStep?.id ?? null,
+            from_step_id: currentStep?.step_id ?? null,
+            to_step_id: null,
+            action: wfAction,
+            performed_by: reviewedById,
+            performed_by_name: reviewedByName,
+            performed_by_role: reviewedByRole ?? null,
+            comment: decisionNotes ?? null,
+          }).then(() => {}).catch((e) => console.warn('[approvals] workflow transition log failed:', e.message));
+        }
+      } catch (err) {
+        console.warn('[approvals] workflow instance sync failed:', err);
+      }
+    }
   },
 
   async advancePipelineStage(id: string, stage: number): Promise<void> {

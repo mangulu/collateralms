@@ -26,6 +26,7 @@ export interface DocumentApprovalRecord {
   filePath: string;
   version: number;
   notes: string;
+  isMandatory?: boolean;
 }
 
 export interface DocumentApprovalAuditEntry {
@@ -70,6 +71,7 @@ function rowToApprovalRecord(row: any): DocumentApprovalRecord {
     filePath: row.file_path ?? '',
     version: row.version ?? 1,
     notes: row.notes ?? '',
+    isMandatory: row.is_mandatory ?? false,
   };
 }
 
@@ -88,6 +90,117 @@ function rowToAuditEntry(row: any): DocumentApprovalAuditEntry {
   };
 }
 
+// ─── Internal helper: check all mandatory docs and update collateral status ───
+
+async function _checkAndUpdateCollateralStatus(
+  supabase: ReturnType<typeof createClient>,
+  collateralRecordId: string | null,
+  collateralId: string,
+  triggerAction: 'approve' | 'reject',
+): Promise<void> {
+  if (!collateralRecordId && !collateralId) return;
+  try {
+    // Fetch all documents for this collateral
+    let query = collateralRecordId
+      ? supabase.from('collateral_documents').select('approval_status, is_mandatory').eq('collateral_record_id', collateralRecordId)
+      : supabase.from('collateral_documents').select('approval_status, is_mandatory').eq('collateral_id', collateralId);
+
+    const { data: docs } = await query;
+    if (!docs || docs.length === 0) return;
+
+    const mandatoryDocs = docs.filter((d: any) => d.is_mandatory === true);
+
+    if (triggerAction === 'reject') {
+      // If a mandatory doc is rejected → Under Review
+      const hasRejectedMandatory = mandatoryDocs.some((d: any) => d.approval_status === 'rejected');
+      if (hasRejectedMandatory) {
+        const target = collateralRecordId
+          ? supabase.from('collateral_records').update({ status: 'Under Review' }).eq('id', collateralRecordId)
+          : supabase.from('collateral_records').update({ status: 'Under Review' }).eq('collateral_id', collateralId);
+        await target.then(() => {}).catch((e) => console.warn('[docApproval] collateral status write-back failed:', e.message));
+      }
+    } else if (triggerAction === 'approve') {
+      // If all mandatory docs are approved → Perfected
+      if (mandatoryDocs.length > 0 && mandatoryDocs.every((d: any) => d.approval_status === 'approved')) {
+        const target = collateralRecordId
+          ? supabase.from('collateral_records').update({ status: 'Perfected' }).eq('id', collateralRecordId)
+          : supabase.from('collateral_records').update({ status: 'Perfected' }).eq('collateral_id', collateralId);
+        await target.then(() => {}).catch((e) => console.warn('[docApproval] collateral status write-back failed:', e.message));
+      }
+    }
+  } catch (err) {
+    console.warn('[docApproval] _checkAndUpdateCollateralStatus failed:', err);
+  }
+}
+
+// ─── Internal helper: sync workflow_instances ─────────────────────────────────
+
+async function _syncDocWorkflowInstance(
+  supabase: ReturnType<typeof createClient>,
+  collateralRecordId: string | null,
+  collateralId: string,
+  action: 'approve' | 'reject',
+  performedBy: string,
+  performedByName: string,
+  performedByRole: string,
+  notes?: string,
+): Promise<void> {
+  try {
+    const referenceId = collateralRecordId ?? collateralId;
+    if (!referenceId) return;
+
+    const { data: instances } = await supabase
+      .from('workflow_instances')
+      .select('id, instance_status')
+      .eq('reference_id', referenceId)
+      .eq('reference_type', 'document_approval')
+      .in('instance_status', ['active', 'escalated'])
+      .limit(1);
+
+    const instance = instances?.[0];
+    if (!instance) return;
+
+    const { data: currentStep } = await supabase
+      .from('workflow_instance_steps')
+      .select('id, step_id')
+      .eq('instance_id', instance.id)
+      .eq('step_status', 'active')
+      .maybeSingle();
+
+    const now = new Date().toISOString();
+    if (currentStep) {
+      await supabase.from('workflow_instance_steps').update({
+        step_status: action === 'approve' ? 'completed' : 'rejected',
+        completed_at: now,
+        completed_by: performedBy,
+        action_taken: action,
+        notes: notes ?? null,
+      }).eq('id', currentStep.id);
+    }
+
+    await supabase.from('workflow_instances').update({
+      instance_status: action === 'approve' ? 'completed' : 'cancelled',
+      current_step_id: null,
+      completed_by: performedBy,
+      completed_at: now,
+    }).eq('id', instance.id);
+
+    await supabase.from('workflow_transition_log').insert({
+      instance_id: instance.id,
+      instance_step_id: currentStep?.id ?? null,
+      from_step_id: currentStep?.step_id ?? null,
+      to_step_id: null,
+      action,
+      performed_by: performedBy,
+      performed_by_name: performedByName,
+      performed_by_role: performedByRole,
+      comment: notes ?? null,
+    }).then(() => {}).catch((e) => console.warn('[docApproval] workflow transition log failed:', e.message));
+  } catch (err) {
+    console.warn('[docApproval] workflow instance sync failed:', err);
+  }
+}
+
 // ─── documentApprovalService ──────────────────────────────────────────────────
 
 export const documentApprovalService = {
@@ -102,7 +215,6 @@ export const documentApprovalService = {
         .order('created_at', { ascending: false });
 
       if (!statusFilter || statusFilter === 'all') {
-        // default: show pending + under_review
         query = query.in('approval_status', ['pending', 'under_review']);
       } else {
         query = query.eq('approval_status', statusFilter);
@@ -116,7 +228,6 @@ export const documentApprovalService = {
 
       const docs = (data ?? []).map(rowToApprovalRecord);
 
-      // Generate signed URLs
       const docsWithUrls = await Promise.all(
         docs.map(async (doc) => {
           try {
@@ -210,7 +321,6 @@ export const documentApprovalService = {
         return false;
       }
 
-      // Insert approval audit record
       await supabase.from('document_approvals').insert({
         document_id: documentId,
         collateral_record_id: collateralRecordId,
@@ -224,7 +334,6 @@ export const documentApprovalService = {
         performed_by_role: userRole,
       });
 
-      // Write to main audit log
       await auditLogService.logDocumentApproved(
         collateralRecordId,
         collateralId,
@@ -234,6 +343,12 @@ export const documentApprovalService = {
         userName,
         notes
       );
+
+      // ── Check if all mandatory docs approved → set collateral Perfected ────
+      await _checkAndUpdateCollateralStatus(supabase, collateralRecordId, collateralId, 'approve');
+
+      // ── Sync workflow_instances ────────────────────────────────────────────
+      await _syncDocWorkflowInstance(supabase, collateralRecordId, collateralId, 'approve', userId, userName, userRole, notes);
 
       return true;
     } catch (err: any) {
@@ -296,6 +411,12 @@ export const documentApprovalService = {
         userName,
         reason
       );
+
+      // ── If mandatory doc rejected → set collateral Under Review ───────────
+      await _checkAndUpdateCollateralStatus(supabase, collateralRecordId, collateralId, 'reject');
+
+      // ── Sync workflow_instances ────────────────────────────────────────────
+      await _syncDocWorkflowInstance(supabase, collateralRecordId, collateralId, 'reject', userId, userName, userRole, reason);
 
       return true;
     } catch (err: any) {
