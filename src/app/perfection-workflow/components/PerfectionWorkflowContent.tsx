@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File, ExternalLink, Maximize2, Minimize2, ChevronUp, ChevronDown } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -66,6 +66,113 @@ function formatDate(iso: string | null): string {
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Inline Document Viewer ───────────────────────────────────────────────────
+
+function InlineDocViewer({ signedUrl, fileName, mimeType }: { signedUrl: string; fileName: string; mimeType?: string }) {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(false);
+
+  const isPdf = fileName.toLowerCase().endsWith('.pdf') || mimeType?.includes('pdf');
+  const isImage = mimeType?.startsWith('image/') ||
+    /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName);
+
+  return (
+    <div className={`border border-border rounded-xl overflow-hidden bg-muted/20 ${fullscreen ? 'fixed inset-0 z-[80] flex flex-col bg-white rounded-none border-0' : ''}`}>
+      {/* Viewer toolbar */}
+      <div className={`flex items-center justify-between px-3 py-2 border-b border-border bg-white ${fullscreen ? 'shrink-0' : ''}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={13} className="text-primary shrink-0" />
+          <span className="text-xs font-semibold text-foreground truncate max-w-[200px]">{fileName}</span>
+          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+            {isPdf ? 'PDF' : isImage ? 'Image' : 'Document'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <a
+            href={signedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+            title="Open in new tab"
+          >
+            <ExternalLink size={13} />
+          </a>
+          <a
+            href={signedUrl}
+            download={fileName}
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Download"
+          >
+            <Download size={13} />
+          </a>
+          <button
+            onClick={() => setFullscreen(f => !f)}
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+          {!fullscreen && (
+            <button
+              onClick={() => setCollapsed(c => !c)}
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title={collapsed ? 'Show document' : 'Hide document'}
+            >
+              {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            </button>
+          )}
+          {fullscreen && (
+            <button
+              onClick={() => setFullscreen(false)}
+              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
+              title="Close"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Viewer body */}
+      {(!collapsed || fullscreen) && (
+        <div className={fullscreen ? 'flex-1 overflow-hidden' : 'h-[320px] overflow-hidden'}>
+          {isPdf ? (
+            <iframe
+              src={`${signedUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+              className="w-full h-full border-0"
+              title={fileName}
+            />
+          ) : isImage ? (
+            <div className="w-full h-full flex items-center justify-center bg-muted/30 overflow-auto p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={signedUrl}
+                alt={fileName}
+                className="max-w-full max-h-full object-contain rounded"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-muted/20 p-6">
+              <FileText size={36} className="text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground text-center">
+                This file type cannot be previewed inline.
+              </p>
+              <a
+                href={signedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors"
+              >
+                <ExternalLink size={13} /> Open Document
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ─── Role Guidance Banner ──────────────────────────────────────────────────────
@@ -490,7 +597,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   const [commentText, setCommentText] = useState('');
   const [decisionNotes, setDecisionNotes] = useState('');
   const [activeAction, setActiveAction] = useState<'perfected' | 'reject' | 'return' | 'review' | 'comment' | null>(null);
-  const [activeTab, setActiveTab] = useState<'activity' | 'history' | 'documents'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'history' | 'documents'>('documents');
   const [showSmsModal, setShowSmsModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{ open: boolean; action: 'reject' | 'return' | null }>({ open: false, action: null });
 
@@ -885,52 +992,66 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                             <p className="text-xs mt-1">Upload title deeds, receipts, and perfection proofs above</p>
                           </div>
                         ) : (
-                          <div className="space-y-2">
-                            {documents.map((doc) => (
-                              <div key={doc.id} className="flex items-start gap-3 p-3 bg-white border border-border rounded-lg hover:border-primary/30 transition-colors group">
-                                <span className="mt-0.5">{getFileIcon(doc.mimeType)}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-medium text-foreground truncate max-w-[180px]">{doc.fileName}</p>
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-                                      {doc.documentType}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">v{doc.version}</span>
+                          <div className="space-y-3">
+                            {/* Inline viewer for the first document with a signedUrl */}
+                            {(() => {
+                              const previewDoc = documents.find(d => d.signedUrl);
+                              return previewDoc ? (
+                                <InlineDocViewer
+                                  signedUrl={previewDoc.signedUrl!}
+                                  fileName={previewDoc.fileName}
+                                  mimeType={previewDoc.mimeType}
+                                />
+                              ) : null;
+                            })()}
+                            {/* Document list */}
+                            <div className="space-y-2">
+                              {documents.map((doc) => (
+                                <div key={doc.id} className="flex items-start gap-3 p-3 bg-white border border-border rounded-lg hover:border-primary/30 transition-colors group">
+                                  <span className="mt-0.5">{getFileIcon(doc.mimeType)}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="text-sm font-medium text-foreground truncate max-w-[180px]">{doc.fileName}</p>
+                                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                                        {doc.documentType}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">v{doc.version}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                      <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
+                                      <span className="text-xs text-muted-foreground">·</span>
+                                      <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
+                                      <span className="text-xs text-muted-foreground">·</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                      </span>
+                                    </div>
+                                    {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
                                   </div>
-                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                    <span className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</span>
-                                    <span className="text-xs text-muted-foreground">·</span>
-                                    <span className="text-xs text-muted-foreground">{doc.uploadedByName}</span>
-                                    <span className="text-xs text-muted-foreground">·</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(doc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                    </span>
-                                  </div>
-                                  {doc.notes && <p className="text-xs text-muted-foreground mt-0.5 italic">{doc.notes}</p>}
-                                </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {doc.signedUrl && (
-                                    <a
-                                      href={doc.signedUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                                      title="Download"
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {doc.signedUrl && (
+                                      <a
+                                        href={doc.signedUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                                        title="Download"
+                                      >
+                                        <Download size={13} />
+                                      </a>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteDocument(doc)}
+                                      className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                      title="Delete"
                                     >
-                                      <Download size={13} />
-                                    </a>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteDocument(doc)}
-                                    className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                    title="Delete"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>

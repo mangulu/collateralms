@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Eye, Search, RefreshCw, Clock, FileText, X, Loader2, AlertCircle, ShieldCheck, Download, FileCheck, FileMinus, FileSearch, ChevronRight, LayoutGrid, Info, CheckSquare, Square, Layers } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Search, RefreshCw, Clock, FileText, X, Loader2, AlertCircle, ShieldCheck, Download, FileCheck, FileMinus, FileSearch, ChevronRight, LayoutGrid, Info, CheckSquare, Square, Layers, ChevronDown, ChevronUp, ExternalLink, Maximize2, Minimize2 } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import Link from 'next/link';
 import {
@@ -81,6 +81,113 @@ function StatsBar({ stats, activeFilter, onFilter }: {
   );
 }
 
+// ─── Inline Document Viewer ───────────────────────────────────────────────────
+
+function InlineDocViewer({ signedUrl, fileName, mimeType }: { signedUrl: string; fileName: string; mimeType?: string }) {
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(false);
+
+  const isPdf = fileName.toLowerCase().endsWith('.pdf') || mimeType?.includes('pdf');
+  const isImage = mimeType?.startsWith('image/') ||
+    /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName);
+
+  return (
+    <div className={`border-b border-gray-200 bg-gray-50 shrink-0 ${fullscreen ? 'fixed inset-0 z-[80] flex flex-col bg-white' : ''}`}>
+      {/* Viewer toolbar */}
+      <div className={`flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white ${fullscreen ? 'shrink-0' : ''}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <FileText size={13} className="text-blue-600 shrink-0" />
+          <span className="text-xs font-semibold text-gray-700 truncate max-w-[200px]">{fileName}</span>
+          <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
+            {isPdf ? 'PDF' : isImage ? 'Image' : 'Document'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <a
+            href={signedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
+            title="Open in new tab"
+          >
+            <ExternalLink size={13} />
+          </a>
+          <a
+            href={signedUrl}
+            download={fileName}
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+            title="Download"
+          >
+            <Download size={13} />
+          </a>
+          <button
+            onClick={() => setFullscreen(f => !f)}
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+            title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+          {!fullscreen && (
+            <button
+              onClick={() => setCollapsed(c => !c)}
+              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+              title={collapsed ? 'Show document' : 'Hide document'}
+            >
+              {collapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+            </button>
+          )}
+          {fullscreen && (
+            <button
+              onClick={() => setFullscreen(false)}
+              className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors ml-1"
+              title="Close"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Viewer body */}
+      {(!collapsed || fullscreen) && (
+        <div className={fullscreen ? 'flex-1 overflow-hidden' : 'h-[340px] overflow-hidden'}>
+          {isPdf ? (
+            <iframe
+              src={`${signedUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+              className="w-full h-full border-0"
+              title={fileName}
+            />
+          ) : isImage ? (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 overflow-auto p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={signedUrl}
+                alt={fileName}
+                className="max-w-full max-h-full object-contain rounded"
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-gray-50 p-6">
+              <FileText size={36} className="text-gray-300" />
+              <p className="text-sm text-gray-500 text-center">
+                This file type cannot be previewed inline.
+              </p>
+              <a
+                href={signedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <ExternalLink size={13} /> Open Document
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Detail Panel (used inside drawer) ────────────────────────────────────────
 
 type DetailTab = 'details' | 'audit';
@@ -152,6 +259,14 @@ function DetailPanel({
         </div>
       </div>
 
+      {/* Inline Document Viewer — shown by default when signedUrl is available */}
+      {doc.signedUrl && (
+        <InlineDocViewer
+          signedUrl={doc.signedUrl}
+          fileName={doc.fileName}
+        />
+      )}
+
       {/* Tabs */}
       <div className="flex border-b border-gray-200 shrink-0 px-5">
         {(['details', 'audit'] as const).map((t) => (
@@ -221,26 +336,11 @@ function DetailPanel({
               </div>
             )}
 
-            {doc.signedUrl && (
+            {/* Document links shown only when no inline viewer (no signedUrl) */}
+            {!doc.signedUrl && (
               <div>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Document</h3>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={doc.signedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    <Eye size={13} /> View Document
-                  </a>
-                  <a
-                    href={doc.signedUrl}
-                    download={doc.fileName}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <Download size={13} /> Download
-                  </a>
-                </div>
+                <p className="text-sm text-gray-400 italic">No preview available.</p>
               </div>
             )}
           </div>
@@ -1024,7 +1124,7 @@ export default function DocumentApprovalContent() {
       <WorkflowDrawer
         open={drawerOpen}
         onClose={handleCloseDrawer}
-        width="w-[520px]"
+        width="w-[640px]"
         overdueHours={
           selectedDoc &&
           (selectedDoc.approvalStatus === 'pending' || selectedDoc.approvalStatus === 'under_review')
