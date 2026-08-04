@@ -159,10 +159,10 @@ export const releaseRequestService = {
   ): Promise<ReleaseRequest | null> {
     const supabase = createClient();
     try {
-      // Fetch current record for audit trail
+      // Fetch current record for audit trail + collateral lookup
       const { data: current } = await supabase
         .from('release_requests')
-        .select('request_status, collateral_ref, client_name')
+        .select('request_status, collateral_ref, client_name, collateral_record_id')
         .eq('id', id)
         .maybeSingle();
 
@@ -184,6 +184,28 @@ export const releaseRequestService = {
         if (isSchemaError(error)) throw error;
         console.log('releaseRequestService.updateStatus error:', error.message);
         return null;
+      }
+
+      // ── Write back collateral_records.status → Released on Approve ─────────
+      if (status === 'Approved') {
+        // Prefer direct FK if available, otherwise look up by collateral_ref
+        const collateralRecordId = (current as any)?.collateral_record_id ?? null;
+        if (collateralRecordId) {
+          await supabase
+            .from('collateral_records')
+            .update({ status: 'Released' })
+            .eq('id', collateralRecordId)
+            .then(() => {})
+            .catch((e) => console.warn('[releaseRequest] collateral status write-back failed:', e.message));
+        } else if (current?.collateral_ref) {
+          // Fallback: look up by collateral_id text field
+          await supabase
+            .from('collateral_records')
+            .update({ status: 'Released' })
+            .eq('collateral_id', current.collateral_ref)
+            .then(() => {})
+            .catch((e) => console.warn('[releaseRequest] collateral status write-back (by ref) failed:', e.message));
+        }
       }
 
       // ── Write audit trail ──────────────────────────────────────────────────
@@ -224,7 +246,6 @@ export const releaseRequestService = {
         const instance = instances?.[0];
         if (instance) {
           const wfAction = status === 'Approved' ? 'approve' : 'reject';
-          // Get current step
           const { data: currentStep } = await supabase
             .from('workflow_instance_steps')
             .select('id, step_id')

@@ -139,6 +139,14 @@ export async function updateSubstitutionStatus(
   userRole?: string,
 ): Promise<void> {
   const supabase = createClient();
+
+  // Fetch substitution for collateral IDs
+  const { data: substitution } = await supabase
+    .from('collateral_substitutions')
+    .select('outgoing_collateral_id, incoming_collateral_id')
+    .eq('id', id)
+    .maybeSingle();
+
   const updatePayload: any = { substitution_status: newStatus };
   if (newStatus === 'Approved') {
     updatePayload.approved_by = userId;
@@ -156,6 +164,29 @@ export async function updateSubstitutionStatus(
     .update(updatePayload)
     .eq('id', id);
   if (updateError) throw updateError;
+
+  // ── Write back collateral_records.status on Approve ──────────────────────
+  if (newStatus === 'Approved') {
+    const outgoingId = substitution?.outgoing_collateral_id ?? null;
+    const incomingId = substitution?.incoming_collateral_id ?? null;
+
+    if (outgoingId) {
+      await supabase
+        .from('collateral_records')
+        .update({ status: 'Released' })
+        .eq('id', outgoingId)
+        .then(() => {})
+        .catch((e) => console.warn('[substitution] outgoing collateral status write-back failed:', e.message));
+    }
+    if (incomingId) {
+      await supabase
+        .from('collateral_records')
+        .update({ status: 'Monitoring' })
+        .eq('id', incomingId)
+        .then(() => {})
+        .catch((e) => console.warn('[substitution] incoming collateral status write-back failed:', e.message));
+    }
+  }
 
   // Append substitution-specific audit trail
   await supabase.from('substitution_audit_trail').insert({

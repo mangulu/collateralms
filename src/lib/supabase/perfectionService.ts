@@ -236,7 +236,7 @@ export const perfectionService = {
     // Fetch current record for audit trail + workflow instance linking
     const { data: current } = await supabase
       .from('perfection_requests')
-      .select('request_status, collateral_id, title')
+      .select('request_status, collateral_id, collateral_record_id, title')
       .eq('id', id)
       .maybeSingle();
 
@@ -251,6 +251,17 @@ export const perfectionService = {
       })
       .eq('id', id);
     if (updateError) throw updateError;
+
+    // ── Write back collateral_records.status → Monitoring ───────────────────
+    const collateralRecordId = current?.collateral_record_id ?? null;
+    if (collateralRecordId) {
+      await supabase
+        .from('collateral_records')
+        .update({ status: 'Monitoring' })
+        .eq('id', collateralRecordId)
+        .then(() => {})
+        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+    }
 
     const { error: commentError } = await supabase
       .from('perfection_comments')
@@ -297,7 +308,7 @@ export const perfectionService = {
 
     const { data: current } = await supabase
       .from('perfection_requests')
-      .select('request_status, collateral_id, title')
+      .select('request_status, collateral_id, collateral_record_id, title')
       .eq('id', id)
       .maybeSingle();
 
@@ -312,6 +323,17 @@ export const perfectionService = {
       })
       .eq('id', id);
     if (updateError) throw updateError;
+
+    // ── Write back collateral_records.status → Rejected ──────────────────────
+    const collateralRecordId = current?.collateral_record_id ?? null;
+    if (collateralRecordId) {
+      await supabase
+        .from('collateral_records')
+        .update({ status: 'Rejected' })
+        .eq('id', collateralRecordId)
+        .then(() => {})
+        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+    }
 
     const { error: commentError } = await supabase
       .from('perfection_comments')
@@ -355,6 +377,13 @@ export const perfectionService = {
     userRole: string
   ): Promise<boolean> {
     const supabase = createClient();
+
+    const { data: current } = await supabase
+      .from('perfection_requests')
+      .select('collateral_record_id')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error: updateError } = await supabase
       .from('perfection_requests')
       .update({
@@ -366,6 +395,17 @@ export const perfectionService = {
       })
       .eq('id', id);
     if (updateError) throw updateError;
+
+    // ── Write back collateral_records.status → Under Review ──────────────────
+    const collateralRecordId = current?.collateral_record_id ?? null;
+    if (collateralRecordId) {
+      await supabase
+        .from('collateral_records')
+        .update({ status: 'Under Review' })
+        .eq('id', collateralRecordId)
+        .then(() => {})
+        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+    }
 
     const { error: commentError } = await supabase
       .from('perfection_comments')
@@ -423,7 +463,7 @@ export const perfectionService = {
 
     const { data: current } = await supabase
       .from('perfection_requests')
-      .select('request_status, collateral_id, title')
+      .select('request_status, collateral_id, collateral_record_id, title')
       .eq('id', id)
       .maybeSingle();
 
@@ -438,6 +478,17 @@ export const perfectionService = {
       })
       .eq('id', id);
     if (updateError) throw updateError;
+
+    // ── Write back collateral_records.status → Perfected ────────────────────
+    const collateralRecordId = current?.collateral_record_id ?? null;
+    if (collateralRecordId) {
+      await supabase
+        .from('collateral_records')
+        .update({ status: 'Perfected' })
+        .eq('id', collateralRecordId)
+        .then(() => {})
+        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+    }
 
     const { error: commentError } = await supabase
       .from('perfection_comments')

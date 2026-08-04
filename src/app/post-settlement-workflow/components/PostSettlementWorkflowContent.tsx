@@ -464,6 +464,8 @@ export default function PostSettlementWorkflowContent() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [finalisingId, setFinalisingId] = useState<string | null>(null);
+  const [finaliseError, setFinaliseError] = useState<string | null>(null);
 
   const loadCases = useCallback(async () => {
     setIsLoading(true);
@@ -487,6 +489,56 @@ export default function PostSettlementWorkflowContent() {
   const setTab = useCallback((id: string, tab: PostSettlementCase['activeTab']) => {
     setCases(prev => prev.map(c => c.id === id ? { ...c, activeTab: tab } : c));
   }, []);
+
+  const handleFinaliseRelease = useCallback(async (caseId: string) => {
+    setFinalisingId(caseId);
+    setFinaliseError(null);
+    const supabase = createClient();
+    try {
+      // 1. Set loan status → Closed
+      const { error: loanError } = await supabase
+        .from('loans')
+        .update({ loan_status: 'Closed' })
+        .eq('id', caseId);
+      if (loanError) throw loanError;
+
+      // 2. Fetch all collateral_loan_links for this loan
+      const { data: links, error: linksError } = await supabase
+        .from('collateral_loan_links')
+        .select('id, collateral_record_id')
+        .eq('loan_id', caseId);
+      if (linksError) throw linksError;
+
+      if (links && links.length > 0) {
+        const collateralRecordIds = links
+          .map((l: any) => l.collateral_record_id)
+          .filter(Boolean) as string[];
+
+        // 3. Set all linked collateral_records.status → Released
+        if (collateralRecordIds.length > 0) {
+          await supabase
+            .from('collateral_records')
+            .update({ status: 'Released' })
+            .in('id', collateralRecordIds);
+        }
+
+        // 4. Set all loan_collateral_links.release_status → RELEASED
+        const linkIds = links.map((l: any) => l.id);
+        await supabase
+          .from('collateral_loan_links')
+          .update({ release_status: 'RELEASED' })
+          .in('id', linkIds);
+      }
+
+      // Reload cases to reflect updated status
+      await loadCases();
+    } catch (err: any) {
+      console.error('[postSettlement] finalise release failed:', err.message);
+      setFinaliseError('Failed to finalise release. Please try again.');
+    } finally {
+      setFinalisingId(null);
+    }
+  }, [loadCases]);
 
   const filtered = cases.filter(c => {
     const matchSearch = !search || c.loanRef.toLowerCase().includes(search.toLowerCase()) || c.obligorName.toLowerCase().includes(search.toLowerCase());
@@ -566,6 +618,15 @@ export default function PostSettlementWorkflowContent() {
         <span className="text-xs text-slate-400 ml-auto">{filtered.length} case{filtered.length !== 1 ? 's' : ''}</span>
       </div>
 
+      {/* Global finalise error */}
+      {finaliseError && (
+        <div className="mx-6 mb-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          {finaliseError}
+          <button onClick={() => setFinaliseError(null)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
+
       {/* Cases */}
       <div className="px-6 pb-8 space-y-4">
         {isLoading && (
@@ -596,6 +657,7 @@ export default function PostSettlementWorkflowContent() {
           const dischargesDone = c.dischargeDocuments.filter(d => d.status === 'Signed').length;
           const confirmsDone = c.stakeholderConfirmations.filter(s => s.status === 'Confirmed').length;
           const returnsDone = c.collateralReturns.filter(r => r.status === 'Delivered').length;
+          const isFinalising = finalisingId === c.id;
 
           return (
             <div key={c.id} className={`bg-white rounded-2xl border border-slate-200 border-l-4 ${osCfg.border} shadow-sm overflow-hidden`}>
@@ -698,8 +760,16 @@ export default function PostSettlementWorkflowContent() {
                       {c.overallStatus === 'Completed' ? '✓ All post-settlement steps completed' : `${c.overallStatus === 'Blocked' ? '⚠ Blocked — resolve issues to proceed' : 'Complete all steps to finalise release'}`}
                     </p>
                     {c.overallStatus !== 'Completed' && (
-                      <button className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50" disabled={c.overallStatus === 'Blocked'}>
-                        <ArrowRight className="w-3.5 h-3.5" /> Finalise Release
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleFinaliseRelease(c.id); }}
+                        disabled={c.overallStatus === 'Blocked' || isFinalising}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isFinalising ? (
+                          <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Finalising…</>
+                        ) : (
+                          <><ArrowRight className="w-3.5 h-3.5" /> Finalise Release</>
+                        )}
                       </button>
                     )}
                   </div>
