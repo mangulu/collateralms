@@ -1006,12 +1006,28 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                               'Provide revision instructions (required)...'
                             }
                             rows={3}
-                            className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className={`w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 transition-colors ${
+                              decisionNotes.trim().length === 0
+                                ? 'border-red-300 focus:ring-red-400/30 bg-red-50/30' :'border-border focus:ring-primary/30'
+                            }`}
                           />
+                          {decisionNotes.trim().length === 0 && (
+                            <p className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                              <AlertCircle size={12} />
+                              {activeAction === 'perfected' ?'Perfection notes are required before confirming.'
+                                : activeAction === 'reject' ?'A rejection reason is required — explain why this request is being rejected.' :'Revision instructions are required — describe what needs to be corrected.'}
+                            </p>
+                          )}
+                          {decisionNotes.trim().length > 0 && decisionNotes.trim().length < 10 && (
+                            <p className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                              <AlertCircle size={12} />
+                              Please provide a more detailed explanation (at least 10 characters).
+                            </p>
+                          )}
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleAction(activeAction)}
-                              disabled={actionLoading}
+                              disabled={actionLoading || decisionNotes.trim().length < 10}
                               className={`flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold py-3 rounded-lg disabled:opacity-50 transition-colors text-white shadow-sm ${
                                 activeAction === 'perfected' ? 'bg-emerald-600 hover:bg-emerald-700' :
                                 activeAction === 'reject' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
@@ -1058,8 +1074,17 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                         onChange={(e) => setCommentText(e.target.value)}
                         placeholder="Add a comment..."
                         rows={2}
-                        className="w-full text-sm border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className={`w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 transition-colors ${
+                          commentText.length > 0 && commentText.trim().length === 0
+                            ? 'border-red-300 focus:ring-red-400/30' :'border-border focus:ring-primary/30'
+                        }`}
                       />
+                      {commentText.length > 0 && commentText.trim().length === 0 && (
+                        <p className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                          <AlertCircle size={12} />
+                          Comment cannot be blank — please enter a meaningful message.
+                        </p>
+                      )}
                       <button
                         onClick={() => handleAction('comment')}
                         disabled={actionLoading || !commentText.trim()}

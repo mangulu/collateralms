@@ -951,6 +951,7 @@ function ActionModal({
   const isApprove = action === 'approve';
   const isReturn = action === 'return';
   const requiresAttestation = !isReturn;
+  const noteRequired = !isApprove && !isReturn;
   const canConfirm = !processing && (isReturn || complianceAttested) && (isApprove || actionNote.trim().length > 0 || isReturn);
 
   const headerConfig = {
@@ -985,15 +986,30 @@ function ActionModal({
 
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-              Decision Note {!isApprove && !isReturn ? '(required)' : '(optional)'}
+              Decision Note {noteRequired ? <span className="text-red-500 normal-case font-normal">(required)</span> : <span className="text-gray-400 normal-case font-normal">(optional)</span>}
             </label>
             <textarea
               rows={3}
               value={actionNote}
               onChange={(e) => setActionNote(e.target.value)}
               placeholder={isApprove ? 'Add approval notes…' : isReturn ? 'Describe what needs to be revised…' : 'Provide a reason for rejection…'}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className={`w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 resize-none transition-colors ${
+                noteRequired && actionNote.trim().length === 0
+                  ? 'border-red-300 focus:ring-red-400/30 bg-red-50/30' :'border-gray-200 focus:ring-indigo-500'
+              }`}
             />
+            {noteRequired && actionNote.trim().length === 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-red-600 font-medium mt-1.5">
+                <AlertTriangle size={12} />
+                {action === 'reject' ?'A rejection reason is required — the submitter needs to understand why.' :'Revision instructions are required — describe what needs to be corrected.'}
+              </p>
+            )}
+            {noteRequired && actionNote.trim().length > 0 && actionNote.trim().length < 10 && (
+              <p className="flex items-center gap-1.5 text-xs text-amber-600 font-medium mt-1.5">
+                <AlertTriangle size={12} />
+                Please provide a more detailed explanation (at least 10 characters).
+              </p>
+            )}
           </div>
 
           {/* Compliance Attestation */}

@@ -386,7 +386,7 @@ function ActionModal({ state, onClose, onSubmit, submitting }: ActionModalProps)
     },
   }[state.action];
 
-  const canSubmit = !config.required || notes.trim().length > 0;
+  const canSubmit = !config.required || notes.trim().length >= 10;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -428,8 +428,25 @@ function ActionModal({ state, onClose, onSubmit, submitting }: ActionModalProps)
               onChange={(e) => setNotes(e.target.value)}
               placeholder={config.placeholder}
               rows={4}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+              className={`w-full border rounded-xl px-3 py-2.5 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 transition-all ${
+                config.required && notes.trim().length === 0
+                  ? 'border-red-300 focus:ring-red-400/30 bg-red-50/30 focus:border-red-400'
+                  : config.required && notes.trim().length < 10
+                  ? 'border-amber-300 focus:ring-amber-400/30 focus:border-amber-400' :'border-gray-200 focus:ring-blue-500/30 focus:border-blue-400'
+              }`}
             />
+            {config.required && notes.trim().length === 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-red-600 font-medium mt-1.5">
+                <AlertCircle size={12} />
+                A rejection reason is required — the submitter needs to understand why this document was rejected.
+              </p>
+            )}
+            {config.required && notes.trim().length > 0 && notes.trim().length < 10 && (
+              <p className="flex items-center gap-1.5 text-xs text-amber-600 font-medium mt-1.5">
+                <AlertCircle size={12} />
+                Please provide a more detailed reason (at least 10 characters).
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
