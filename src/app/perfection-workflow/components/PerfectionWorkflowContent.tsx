@@ -73,10 +73,14 @@ function formatDateTime(iso: string | null): string {
 function InlineDocViewer({ signedUrl, fileName, mimeType }: { signedUrl: string; fileName: string; mimeType?: string }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [fullscreen, setFullscreen] = React.useState(false);
+  const [pdfError, setPdfError] = React.useState(false);
 
   const isPdf = fileName.toLowerCase().endsWith('.pdf') || mimeType?.includes('pdf');
   const isImage = mimeType?.startsWith('image/') ||
     /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName);
+
+  // Google Docs Viewer proxies the PDF, bypassing Chrome's cross-origin iframe block
+  const googleDocsViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`;
 
   return (
     <div className={`border border-border rounded-xl overflow-hidden bg-muted/20 ${fullscreen ? 'fixed inset-0 z-[80] flex flex-col bg-white rounded-none border-0' : ''}`}>
@@ -139,11 +143,27 @@ function InlineDocViewer({ signedUrl, fileName, mimeType }: { signedUrl: string;
       {(!collapsed || fullscreen) && (
         <div className={fullscreen ? 'flex-1 overflow-hidden' : 'h-[320px] overflow-hidden'}>
           {isPdf ? (
-            <iframe
-              src={`${signedUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-              className="w-full h-full border-0"
-              title={fileName}
-            />
+            pdfError ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-muted/20 p-6">
+                <FileText size={36} className="text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground text-center">PDF preview unavailable in this browser.</p>
+                <a
+                  href={signedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  <ExternalLink size={13} /> Open PDF
+                </a>
+              </div>
+            ) : (
+              <iframe
+                src={googleDocsViewerUrl}
+                className="w-full h-full border-0"
+                title={fileName}
+                onError={() => setPdfError(true)}
+              />
+            )
           ) : isImage ? (
             <div className="w-full h-full flex items-center justify-center bg-muted/30 overflow-auto p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
