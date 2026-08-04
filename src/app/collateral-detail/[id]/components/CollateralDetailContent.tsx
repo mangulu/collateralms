@@ -235,11 +235,6 @@ export default function CollateralDetailContent({
           <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2 transition-colors">
             <ArrowLeft size={14} /> Collateral Registry
           </button>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-700 text-foreground font-mono">{collateral.collateralId}</h1>
-            <Badge variant={statusBadgeMap[collateral.status]} label={collateral.status} />
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">{collateral.obligor} · {collateral.type} · {collateral.registry}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <Link href={`/collateral-library/${collateral.id}`}
