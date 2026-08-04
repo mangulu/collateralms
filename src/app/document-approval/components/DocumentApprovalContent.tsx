@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Eye, Search, RefreshCw, Clock, FileText, X, Loader2, AlertCircle, ShieldCheck, Download, FileCheck, FileMinus, FileSearch, ChevronRight, LayoutGrid, Info,  } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Search, RefreshCw, Clock, FileText, X, Loader2, AlertCircle, ShieldCheck, Download, FileCheck, FileMinus, FileSearch, ChevronRight, LayoutGrid, Info, CheckSquare, Square, Layers } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import Link from 'next/link';
 import {
@@ -475,6 +475,174 @@ function ActionModal({ state, onClose, onSubmit, submitting }: ActionModalProps)
   );
 }
 
+// ─── Batch Action Panel ────────────────────────────────────────────────────────
+
+type BatchDocAction = 'approve' | 'reject' | 'under_review';
+
+interface BatchDocPanelProps {
+  selectedIds: Set<string>;
+  selectedDocs: DocumentApprovalRecord[];
+  userId: string;
+  userName: string;
+  userRole: string;
+  canAct: boolean;
+  onClearSelection: () => void;
+  onBatchComplete: () => void;
+}
+
+function BatchDocPanel({ selectedIds, selectedDocs, userId, userName, userRole, canAct, onClearSelection, onBatchComplete }: BatchDocPanelProps) {
+  const [batchAction, setBatchAction] = useState<BatchDocAction | ''>('');
+  const [batchNote, setBatchNote] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [results, setResults] = useState<{ id: string; success: boolean; error?: string }[]>([]);
+  const [showResults, setShowResults] = useState(false);
+
+  // Only pending/under_review docs can be actioned
+  const eligibleDocs = selectedDocs.filter(d => d.approvalStatus === 'pending' || d.approvalStatus === 'under_review');
+
+  const availableActions: { value: BatchDocAction; label: string; color: string; icon: React.ReactNode; requiresNote: boolean }[] = [
+    { value: 'approve',      label: 'Approve All',      color: 'bg-green-600 hover:bg-green-700', icon: <CheckCircle size={14} />,  requiresNote: false },
+    { value: 'reject',       label: 'Reject All',       color: 'bg-red-600 hover:bg-red-700',    icon: <XCircle size={14} />,      requiresNote: true },
+    { value: 'under_review', label: 'Mark Under Review', color: 'bg-blue-600 hover:bg-blue-700', icon: <Eye size={14} />,          requiresNote: false },
+  ];
+
+  const selectedActionConfig = availableActions.find(a => a.value === batchAction);
+
+  async function handleBatchProcess() {
+    if (!batchAction) return;
+    if (selectedActionConfig?.requiresNote && !batchNote.trim()) return;
+    if (eligibleDocs.length === 0) return;
+
+    setProcessing(true);
+    setResults([]);
+
+    const settled = await Promise.allSettled(
+      eligibleDocs.map(async (doc) => {
+        try {
+          let success = false;
+          if (batchAction === 'approve') {
+            success = await documentApprovalService.approveDocument(
+              doc.documentId, doc.collateralId, doc.collateralRecordId,
+              doc.documentType, doc.fileName, batchNote, userId, userName, userRole
+            );
+          } else if (batchAction === 'reject') {
+            success = await documentApprovalService.rejectDocument(
+              doc.documentId, doc.collateralId, doc.collateralRecordId,
+              doc.documentType, doc.fileName, batchNote, userId, userName, userRole
+            );
+          } else if (batchAction === 'under_review') {
+            success = await documentApprovalService.markUnderReview(
+              doc.documentId, doc.collateralId, doc.collateralRecordId,
+              doc.documentType, doc.fileName, batchNote, userId, userName, userRole
+            );
+          }
+          return { id: doc.id, success: !!success };
+        } catch (err: any) {
+          return { id: doc.id, success: false, error: err.message || 'Failed' };
+        }
+      })
+    );
+
+    const resultList = settled.map((s, i) =>
+      s.status === 'fulfilled' ? s.value : { id: eligibleDocs[i].id, success: false, error: 'Unexpected error' }
+    );
+
+    setResults(resultList);
+    setShowResults(true);
+    setProcessing(false);
+
+    onBatchComplete();
+
+    const failCount = resultList.filter(r => !r.success).length;
+    if (failCount === 0) {
+      setTimeout(() => {
+        onClearSelection();
+        setBatchAction('');
+        setBatchNote('');
+        setShowResults(false);
+        setResults([]);
+      }, 1500);
+    }
+  }
+
+  return (
+    <div className="border-t-2 border-blue-500 bg-blue-50 px-4 py-3 shrink-0">
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg">
+            <Layers size={13} />
+            {selectedIds.size} selected
+          </div>
+          <span className="text-xs text-gray-500">({eligibleDocs.length} eligible)</span>
+          <button
+            onClick={onClearSelection}
+            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-md hover:bg-white transition-colors bg-white"
+          >
+            <X size={11} /> Clear
+          </button>
+        </div>
+
+        {!canAct ? (
+          <p className="text-xs text-amber-700 py-1.5">Read-only mode — only Legal Officers can perform batch actions.</p>
+        ) : eligibleDocs.length > 0 ? (
+          <div className="flex items-start gap-2 flex-1 flex-wrap">
+            <select
+              value={batchAction}
+              onChange={(e) => { setBatchAction(e.target.value as BatchDocAction | ''); setShowResults(false); }}
+              className="text-sm border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[200px]"
+            >
+              <option value="">— Choose batch action —</option>
+              {availableActions.map(a => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </select>
+
+            {batchAction && (
+              <div className="flex items-start gap-2 flex-1 flex-wrap">
+                <textarea
+                  value={batchNote}
+                  onChange={(e) => setBatchNote(e.target.value)}
+                  placeholder={
+                    selectedActionConfig?.requiresNote
+                      ? 'Shared rejection reason (required for all selected records)...'
+                      : 'Shared note (optional)...'
+                  }
+                  rows={1}
+                  className="flex-1 min-w-[200px] text-sm border border-gray-200 rounded-md px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <button
+                  onClick={handleBatchProcess}
+                  disabled={processing || (selectedActionConfig?.requiresNote && !batchNote.trim()) || eligibleDocs.length === 0}
+                  className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-md text-white disabled:opacity-50 transition-colors shrink-0 ${selectedActionConfig?.color ?? 'bg-blue-600 hover:bg-blue-700'}`}
+                >
+                  {processing ? (
+                    <><Loader2 size={13} className="animate-spin" /> Processing {eligibleDocs.length}...</>
+                  ) : (
+                    <>{selectedActionConfig?.icon} Apply to {eligibleDocs.length} doc{eligibleDocs.length !== 1 ? 's' : ''}</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 py-1.5">No eligible documents selected (only Pending/Under Review can be batch-actioned).</p>
+        )}
+
+        {showResults && results.length > 0 && (
+          <div className="w-full mt-2 space-y-1">
+            {results.map(r => (
+              <div key={r.id} className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${r.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {r.success ? <CheckCircle size={11} /> : <XCircle size={11} />}
+                {r.id}: {r.success ? 'Updated' : r.error}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Content ─────────────────────────────────────────────────────────────
 
 export default function DocumentApprovalContent() {
@@ -489,8 +657,12 @@ export default function DocumentApprovalContent() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [actionModal, setActionModal] = useState<ActionModalState>({ open: false, doc: null, action: null });
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success\' | \'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [rejectConfirm, setRejectConfirm] = useState<{ open: boolean; doc: DocumentApprovalRecord | null }>({ open: false, doc: null });
+
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchMode, setBatchMode] = useState(false);
 
   const isLegalOfficer = userProfile?.role === 'legal_officer' || userProfile?.role === 'system_admin';
 
@@ -534,7 +706,35 @@ export default function DocumentApprovalContent() {
     );
   });
 
+  // Batch helpers
+  const allFilteredIds = filteredDocs.map(d => d.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.has(id));
+  const someSelected = allFilteredIds.some(id => selectedIds.has(id));
+
+  function toggleSelectAll() {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(allFilteredIds));
+  }
+
+  function toggleSelectOne(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  }
+
+  const selectedBatchDocs = filteredDocs.filter(d => selectedIds.has(d.id));
+
   const handleSelectDoc = (doc: DocumentApprovalRecord) => {
+    if (batchMode) return;
     setSelectedDoc(doc);
     setDrawerOpen(true);
   };
@@ -614,14 +814,31 @@ export default function DocumentApprovalContent() {
               <p className="text-xs text-gray-500">Legal Officer review queue — approve or reject collateral documents before registry entry</p>
             </div>
           </div>
-          <button
-            onClick={() => loadData(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {!batchMode ? (
+              <button
+                onClick={() => { setBatchMode(true); setSelectedIds(new Set()); }}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Layers size={14} /> Batch Actions
+              </button>
+            ) : (
+              <button
+                onClick={clearSelection}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <X size={14} /> Exit Batch Mode
+              </button>
+            )}
+            <button
+              onClick={() => loadData(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {!isLegalOfficer && (
@@ -640,9 +857,35 @@ export default function DocumentApprovalContent() {
       {/* Body — full-width list */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className="flex flex-col w-full bg-white min-h-0">
+          {/* Batch mode hint */}
+          {batchMode && (
+            <div className="mx-4 mt-3 mb-1 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 flex items-center gap-3 shrink-0">
+              <Layers size={15} className="text-blue-600 shrink-0" />
+              <p className="text-sm text-blue-700 font-medium">
+                Batch mode active — check boxes next to documents, then use the action bar below to approve, reject, or mark all as under review at once.
+              </p>
+            </div>
+          )}
           {/* Search */}
           <div className="px-4 py-3 border-b border-gray-100 shrink-0">
             <div className="flex items-center gap-2">
+              {/* Select-all checkbox */}
+              {batchMode && (
+                <button
+                  onClick={toggleSelectAll}
+                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 shrink-0 px-1"
+                  title={allSelected ? 'Deselect all' : 'Select all'}
+                >
+                  {allSelected ? (
+                    <CheckSquare size={16} className="text-blue-600" />
+                  ) : someSelected ? (
+                    <CheckSquare size={16} className="text-blue-400" />
+                  ) : (
+                    <Square size={16} />
+                  )}
+                  <span className="text-xs">{allSelected ? 'Deselect all' : 'Select all'}</span>
+                </button>
+              )}
               <div className="relative flex-1">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -677,72 +920,103 @@ export default function DocumentApprovalContent() {
             ) : (
               filteredDocs.map((doc) => {
                 const statusCfg = STATUS_CONFIG[doc.approvalStatus] ?? STATUS_CONFIG['pending'];
-                const isSelected = selectedDoc?.id === doc.id && drawerOpen;
+                const isBatchSelected = selectedIds.has(doc.id);
+                const isDrawerSelected = selectedDoc?.id === doc.id && drawerOpen;
                 const isActive = doc.approvalStatus === 'pending' || doc.approvalStatus === 'under_review';
 
                 return (
                   <div
                     key={doc.id}
-                    onClick={() => handleSelectDoc(doc)}
+                    onClick={() => batchMode ? toggleSelectOne(doc.id, { stopPropagation: () => {} } as React.MouseEvent) : handleSelectDoc(doc)}
                     className={`px-4 py-4 border-b border-gray-100 cursor-pointer transition-colors ${
-                      isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'
+                      batchMode && isBatchSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : !batchMode && isDrawerSelected ?'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="shrink-0 w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                          <FileText size={13} className="text-blue-600" />
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox (batch mode) */}
+                      {batchMode && (
+                        <button
+                          onClick={(e) => toggleSelectOne(doc.id, e)}
+                          className="mt-1 shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          {isBatchSelected ? (
+                            <CheckSquare size={18} className="text-blue-600" />
+                          ) : (
+                            <Square size={18} />
+                          )}
+                        </button>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="shrink-0 w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                              <FileText size={13} className="text-blue-600" />
+                            </div>
+                            <p className="text-sm font-semibold text-gray-900 truncate">{doc.fileName}</p>
+                          </div>
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${statusCfg.bgColor} ${statusCfg.textColor} ${statusCfg.borderColor}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                            {statusCfg.label}
+                          </span>
                         </div>
-                        <p className="text-sm font-semibold text-gray-900 truncate">{doc.fileName}</p>
-                      </div>
-                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${statusCfg.bgColor} ${statusCfg.textColor} ${statusCfg.borderColor}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-                        {statusCfg.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500 mb-2">
-                      <span>{doc.documentType}</span>
-                      {doc.collateralId && <><span className="text-gray-300">·</span><span>{doc.collateralId}</span></>}
-                      <span className="text-gray-300">·</span>
-                      <span>{formatFileSize(doc.fileSize)}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>{doc.uploadedByName || '—'}</span>
-                      <span className="ml-auto">{formatDate(doc.uploadedAt)}</span>
-                    </div>
-                    {isActive && isLegalOfficer && (
-                      <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                        {doc.approvalStatus !== 'approved' && (
-                          <button
-                            onClick={() => { setSelectedDoc(doc); setActionModal({ open: true, doc, action: 'approve' }); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
-                          >
-                            <CheckCircle size={11} /> Approve
-                          </button>
-                        )}
-                        {doc.approvalStatus !== 'rejected' && (
-                          <button
-                            onClick={() => { setSelectedDoc(doc); setRejectConfirm({ open: true, doc }); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-                          >
-                            <XCircle size={11} /> Reject
-                          </button>
-                        )}
-                        {doc.approvalStatus === 'pending' && (
-                          <button
-                            onClick={() => { setSelectedDoc(doc); setActionModal({ open: true, doc, action: 'under_review' }); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                          >
-                            <Eye size={11} /> Review
-                          </button>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-1.5 flex-wrap">
+                          <span className="font-medium">{doc.documentType}</span>
+                          <span className="text-gray-300">·</span>
+                          <span>{doc.collateralId}</span>
+                          <span className="text-gray-300">·</span>
+                          <span>v{doc.version}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-400">
+                          <span>By {doc.uploadedByName}</span>
+                          <span>{formatDate(doc.uploadedAt)}</span>
+                          <span className="ml-auto">{formatFileSize(doc.fileSize)}</span>
+                        </div>
+                        {/* Quick action buttons (only in non-batch mode) */}
+                        {isActive && isLegalOfficer && !batchMode && (
+                          <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => setActionModal({ open: true, doc, action: 'approve' })}
+                              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                            >
+                              <CheckCircle size={11} /> Approve
+                            </button>
+                            <button
+                              onClick={() => setRejectConfirm({ open: true, doc })}
+                              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                            >
+                              <XCircle size={11} /> Reject
+                            </button>
+                            {doc.approvalStatus === 'pending' && (
+                              <button
+                                onClick={() => setActionModal({ open: true, doc, action: 'under_review' })}
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                              >
+                                <Eye size={11} /> Review
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })
             )}
           </div>
+
+          {/* Batch Action Panel */}
+          {batchMode && selectedIds.size > 0 && (
+            <BatchDocPanel
+              selectedIds={selectedIds}
+              selectedDocs={selectedBatchDocs}
+              userId={user?.id ?? ''}
+              userName={userProfile?.full_name || user?.email || 'Legal Officer'}
+              userRole={userProfile?.role?.replace(/_/g, ' ') || 'Legal Officer'}
+              canAct={isLegalOfficer}
+              onClearSelection={clearSelection}
+              onBatchComplete={() => loadData(true)}
+            />
+          )}
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, Eye, Search, Loader2, Calendar, User, RefreshCw, ShieldCheck, X, ChevronRight, AlertTriangle, Scale, CreditCard, FileCheck, ArrowRight, Send, Lock, Unlock, CornerDownRight, RotateCcw, TrendingUp, LayoutGrid } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Eye, Search, Loader2, Calendar, User, RefreshCw, ShieldCheck, X, ChevronRight, AlertTriangle, Scale, CreditCard, FileCheck, ArrowRight, Send, Lock, Unlock, CornerDownRight, RotateCcw, TrendingUp, LayoutGrid, CheckSquare, Square, Layers } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import Link from 'next/link';
 import { collateralApprovalService, CollateralApprovalRequest, ApprovalComment, ApprovalPipelineLog, ApprovalRequestStatus, ApproverRole } from '@/lib/supabase/collateralApprovalService';
@@ -72,6 +72,176 @@ function timeAgo(iso: string | null | undefined): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+// ── Batch Action Panel ─────────────────────────────────────────────────────────
+
+type BatchApprovalAction = 'approve' | 'reject' | 'return';
+
+interface BatchApprovalPanelProps {
+  selectedIds: Set<string>;
+  selectedItems: CollateralApprovalRequest[];
+  userId: string;
+  userName: string;
+  userRole: string;
+  onClearSelection: () => void;
+  onBatchComplete: () => void;
+}
+
+function BatchApprovalPanel({ selectedIds, selectedItems, userId, userName, userRole, onClearSelection, onBatchComplete }: BatchApprovalPanelProps) {
+  const [batchAction, setBatchAction] = useState<BatchApprovalAction | ''>('');
+  const [batchNote, setBatchNote] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [results, setResults] = useState<{ id: string; success: boolean; error?: string }[]>([]);
+  const [showResults, setShowResults] = useState(false);
+
+  const activeItems = selectedItems.filter(i => i.requestStatus === 'Pending' || i.requestStatus === 'Under Review');
+
+  const availableActions: { value: BatchApprovalAction; label: string; color: string; icon: React.ReactNode; requiresNote: boolean }[] = [
+    { value: 'approve', label: 'Approve All', color: 'bg-green-600 hover:bg-green-700', icon: <CheckCircle size={14} />, requiresNote: false },
+    { value: 'reject',  label: 'Reject All',  color: 'bg-red-600 hover:bg-red-700',   icon: <XCircle size={14} />,    requiresNote: true },
+    { value: 'return',  label: 'Return All',  color: 'bg-gray-700 hover:bg-gray-800', icon: <RotateCcw size={14} />,  requiresNote: true },
+  ];
+
+  const selectedActionConfig = availableActions.find(a => a.value === batchAction);
+
+  async function handleBatchProcess() {
+    if (!batchAction) return;
+    if (selectedActionConfig?.requiresNote && !batchNote.trim()) return;
+    if (activeItems.length === 0) return;
+
+    setProcessing(true);
+    setResults([]);
+
+    const statusMap: Record<BatchApprovalAction, ApprovalRequestStatus> = {
+      approve: 'Approved',
+      reject: 'Rejected',
+      return: 'Returned',
+    };
+
+    const settled = await Promise.allSettled(
+      activeItems.map(async (item) => {
+        try {
+          const newStatus = statusMap[batchAction];
+          await collateralApprovalService.updateStatus(
+            item.id, newStatus, userId, userName, batchNote, batchAction === 'approve', userId
+          );
+          await collateralApprovalService.logPipelineChange(
+            item.id,
+            item.pipelineStage,
+            newStatus === 'Approved' ? 5 : newStatus === 'Rejected' ? 4 : item.pipelineStage,
+            item.requestStatus,
+            newStatus,
+            userId,
+            userName,
+            userRole,
+            batchNote
+          );
+          return { id: item.id, success: true };
+        } catch (err: any) {
+          return { id: item.id, success: false, error: err.message || 'Failed' };
+        }
+      })
+    );
+
+    const resultList = settled.map((s, i) =>
+      s.status === 'fulfilled' ? s.value : { id: activeItems[i].id, success: false, error: 'Unexpected error' }
+    );
+
+    setResults(resultList);
+    setShowResults(true);
+    setProcessing(false);
+
+    const successCount = resultList.filter(r => r.success).length;
+    const failCount = resultList.filter(r => !r.success).length;
+
+    onBatchComplete();
+
+    if (failCount === 0) {
+      setTimeout(() => {
+        onClearSelection();
+        setBatchAction('');
+        setBatchNote('');
+        setShowResults(false);
+        setResults([]);
+      }, 1500);
+    }
+  }
+
+  return (
+    <div className="border-t-2 border-indigo-500 bg-indigo-50 px-4 py-3 shrink-0">
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg">
+            <Layers size={13} />
+            {selectedIds.size} selected
+          </div>
+          <span className="text-xs text-gray-500">({activeItems.length} active)</span>
+          <button
+            onClick={onClearSelection}
+            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-md hover:bg-white transition-colors bg-white"
+          >
+            <X size={11} /> Clear
+          </button>
+        </div>
+
+        {activeItems.length > 0 ? (
+          <div className="flex items-start gap-2 flex-1 flex-wrap">
+            <select
+              value={batchAction}
+              onChange={(e) => { setBatchAction(e.target.value as BatchApprovalAction | ''); setShowResults(false); }}
+              className="text-sm border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white min-w-[180px]"
+            >
+              <option value="">— Choose batch action —</option>
+              {availableActions.map(a => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </select>
+
+            {batchAction && (
+              <div className="flex items-start gap-2 flex-1 flex-wrap">
+                <textarea
+                  value={batchNote}
+                  onChange={(e) => setBatchNote(e.target.value)}
+                  placeholder={
+                    selectedActionConfig?.requiresNote
+                      ? 'Shared note/reason (required for all selected records)...'
+                      : 'Shared note (optional)...'
+                  }
+                  rows={1}
+                  className="flex-1 min-w-[200px] text-sm border border-gray-200 rounded-md px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                />
+                <button
+                  onClick={handleBatchProcess}
+                  disabled={processing || (selectedActionConfig?.requiresNote && !batchNote.trim()) || activeItems.length === 0}
+                  className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-md text-white disabled:opacity-50 transition-colors shrink-0 ${selectedActionConfig?.color ?? 'bg-indigo-600 hover:bg-indigo-700'}`}
+                >
+                  {processing ? (
+                    <><Loader2 size={13} className="animate-spin" /> Processing {activeItems.length}...</>
+                  ) : (
+                    <>{selectedActionConfig?.icon} Apply to {activeItems.length} record{activeItems.length !== 1 ? 's' : ''}</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 py-1.5">No active records selected (only Pending/Under Review can be batch-actioned).</p>
+        )}
+
+        {showResults && results.length > 0 && (
+          <div className="w-full mt-2 space-y-1">
+            {results.map(r => (
+              <div key={r.id} className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${r.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {r.success ? <CheckCircle size={11} /> : <XCircle size={11} />}
+                {r.id}: {r.success ? 'Updated' : r.error}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -217,6 +387,10 @@ export default function ApprovalsContent() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [detailTab, setDetailTab] = useState<'comments' | 'pipeline'>('comments');
 
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchMode, setBatchMode] = useState(false);
+
   // Action modal
   const [actionModal, setActionModal] = useState<{
     open: boolean;
@@ -269,6 +443,7 @@ export default function ApprovalsContent() {
   }, []);
 
   const selectItem = (item: CollateralApprovalRequest) => {
+    if (batchMode) return;
     setSelectedItem(item);
     setDetailTab('comments');
     setDrawerOpen(true);
@@ -384,6 +559,33 @@ export default function ApprovalsContent() {
     setComments((prev) => [...prev, newComment]);
   };
 
+  // Batch helpers
+  const allFilteredIds = filtered.map(i => i.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.has(id));
+  const someSelected = allFilteredIds.some(id => selectedIds.has(id));
+
+  function toggleSelectAll() {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(allFilteredIds));
+  }
+
+  function toggleSelectOne(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  }
+
+  const selectedBatchItems = filtered.filter(i => selectedIds.has(i.id));
+
   const TABS: { key: TabKey; label: string; count?: number }[] = [
     { key: 'queue', label: 'Approval Queue', count: activeItems.length },
     { key: 'pipeline', label: 'Pipeline View' },
@@ -411,14 +613,33 @@ export default function ApprovalsContent() {
               <p className="text-sm text-gray-500">Legal Officers &amp; Credit Managers — review routed collaterals, leave comments, and approve with compliance attestation</p>
             </div>
           </div>
-          <button
-            onClick={() => loadData(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {activeTab === 'queue' && (
+              !batchMode ? (
+                <button
+                  onClick={() => { setBatchMode(true); setSelectedIds(new Set()); }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Layers size={14} /> Batch Actions
+                </button>
+              ) : (
+                <button
+                  onClick={clearSelection}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <X size={14} /> Exit Batch Mode
+                </button>
+              )
+            )}
+            <button
+              onClick={() => loadData(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* KPI Strip */}
@@ -475,9 +696,35 @@ export default function ApprovalsContent() {
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Full-width List Panel */}
           <div className="flex flex-col w-full border-r border-gray-200 bg-white min-h-0">
+            {/* Batch mode hint */}
+            {batchMode && (
+              <div className="mx-4 mt-3 mb-1 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 flex items-center gap-3 shrink-0">
+                <Layers size={15} className="text-indigo-600 shrink-0" />
+                <p className="text-sm text-indigo-700 font-medium">
+                  Batch mode active — check boxes next to records, then use the action bar below to approve, reject, or return all at once.
+                </p>
+              </div>
+            )}
             {/* Filters */}
             <div className="px-4 py-3 border-b border-gray-100 shrink-0 space-y-2">
               <div className="flex items-center gap-2">
+                {/* Select-all checkbox */}
+                {batchMode && (
+                  <button
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 shrink-0 px-1"
+                    title={allSelected ? 'Deselect all' : 'Select all'}
+                  >
+                    {allSelected ? (
+                      <CheckSquare size={16} className="text-indigo-600" />
+                    ) : someSelected ? (
+                      <CheckSquare size={16} className="text-indigo-400" />
+                    ) : (
+                      <Square size={16} />
+                    )}
+                    <span className="text-xs">{allSelected ? 'Deselect all' : 'Select all'}</span>
+                  </button>
+                )}
                 <div className="relative flex-1">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
@@ -519,76 +766,106 @@ export default function ApprovalsContent() {
                 filtered.map((item) => {
                   const typeCfg = REQUEST_TYPE_CONFIG[item.requestType] ?? REQUEST_TYPE_CONFIG['Legal Review'];
                   const statusCfg = STATUS_CONFIG[item.requestStatus];
-                  const isSelected = selectedItem?.id === item.id && drawerOpen;
+                  const isSelected = batchMode ? selectedIds.has(item.id) : (selectedItem?.id === item.id && drawerOpen);
                   const isActive = item.requestStatus === 'Pending' || item.requestStatus === 'Under Review';
 
                   return (
                     <div
                       key={item.id}
-                      onClick={() => selectItem(item)}
+                      onClick={() => batchMode ? toggleSelectOne(item.id, { stopPropagation: () => {} } as React.MouseEvent) : selectItem(item)}
                       className={`px-4 py-4 border-b border-gray-100 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-indigo-50 border-l-2 border-l-indigo-500' : 'hover:bg-gray-50'
+                        batchMode && selectedIds.has(item.id) ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : !batchMode && isSelected ?'bg-indigo-50 border-l-2 border-l-indigo-500' : 'hover:bg-gray-50'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                          <span className="text-sm font-semibold text-gray-900">{item.collateralRef}</span>
-                          <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${typeCfg.color} ${typeCfg.bg} ${typeCfg.border}`}>
-                            {typeCfg.icon}
-                            {item.requestType}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-gray-500">
-                            <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[item.priority]}`} />
-                            {item.priority}
-                          </span>
-                        </div>
-                        <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 border ${statusCfg.bg} ${statusCfg.color} ${statusCfg.border}`}>
-                          {statusCfg.icon}
-                          {statusCfg.label}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-1.5 font-medium">{item.collateralType} — {item.obligor}</p>
-                      <div className="flex items-center gap-3 text-xs text-gray-400 mb-2">
-                        <span className="flex items-center gap-1"><User size={10} />{item.assignedToRole}</span>
-                        <span className="flex items-center gap-1"><Calendar size={10} />{fmtDate(item.routedAt)}</span>
-                        {item.dueDate && (
-                          <span className={`flex items-center gap-1 ${new Date(item.dueDate) < new Date() ? 'text-red-500' : ''}`}>
-                            <Clock size={10} />Due {fmtDate(item.dueDate)}
-                          </span>
+                      <div className="flex items-start gap-3">
+                        {/* Checkbox (batch mode) */}
+                        {batchMode && (
+                          <button
+                            onClick={(e) => toggleSelectOne(item.id, e)}
+                            className="mt-1 shrink-0 text-gray-400 hover:text-indigo-600 transition-colors"
+                          >
+                            {selectedIds.has(item.id) ? (
+                              <CheckSquare size={18} className="text-indigo-600" />
+                            ) : (
+                              <Square size={18} />
+                            )}
+                          </button>
                         )}
-                      </div>
-                      {/* Mini pipeline */}
-                      <div className="mb-2">
-                        <PipelineTracker stage={item.pipelineStage} status={item.requestStatus} />
-                      </div>
-                      {/* Quick actions */}
-                      {isActive && (
-                        <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => openAction(item, 'approve')}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
-                          >
-                            <CheckCircle size={11} /> Approve
-                          </button>
-                          <button
-                            onClick={() => openAction(item, 'reject')}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-                          >
-                            <XCircle size={11} /> Reject
-                          </button>
-                          <button
-                            onClick={() => openAction(item, 'return')}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <RotateCcw size={11} /> Return
-                          </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                              <span className="text-sm font-semibold text-gray-900">{item.collateralRef}</span>
+                              <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${typeCfg.color} ${typeCfg.bg} ${typeCfg.border}`}>
+                                {typeCfg.icon}
+                                {item.requestType}
+                              </span>
+                              <span className="flex items-center gap-1 text-xs text-gray-500">
+                                <span className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[item.priority]}`} />
+                                {item.priority}
+                              </span>
+                            </div>
+                            <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 border ${statusCfg.bg} ${statusCfg.color} ${statusCfg.border}`}>
+                              {statusCfg.icon}
+                              {statusCfg.label}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 mb-1.5 font-medium">{item.collateralType} — {item.obligor}</p>
+                          <div className="flex items-center gap-3 text-xs text-gray-400 mb-2">
+                            <span className="flex items-center gap-1"><User size={10} />{item.assignedToRole}</span>
+                            <span className="flex items-center gap-1"><Calendar size={10} />{fmtDate(item.routedAt)}</span>
+                            {item.dueDate && (
+                              <span className={`flex items-center gap-1 ${new Date(item.dueDate) < new Date() ? 'text-red-500' : ''}`}>
+                                <Clock size={10} />Due {fmtDate(item.dueDate)}
+                              </span>
+                            )}
+                          </div>
+                          {/* Mini pipeline */}
+                          <div className="mb-2">
+                            <PipelineTracker stage={item.pipelineStage} status={item.requestStatus} />
+                          </div>
+                          {/* Quick actions (only in non-batch mode) */}
+                          {isActive && !batchMode && (
+                            <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => openAction(item, 'approve')}
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                              >
+                                <CheckCircle size={11} /> Approve
+                              </button>
+                              <button
+                                onClick={() => openAction(item, 'reject')}
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                              >
+                                <XCircle size={11} /> Reject
+                              </button>
+                              <button
+                                onClick={() => openAction(item, 'return')}
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                              >
+                                <RotateCcw size={11} /> Return
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
+
+            {/* Batch Action Panel */}
+            {batchMode && selectedIds.size > 0 && (
+              <BatchApprovalPanel
+                selectedIds={selectedIds}
+                selectedItems={selectedBatchItems}
+                userId={userProfile?.id ?? ''}
+                userName={userProfile?.full_name ?? 'Reviewer'}
+                userRole={userProfile?.role ?? 'Officer'}
+                onClearSelection={clearSelection}
+                onBatchComplete={() => loadData(true)}
+              />
+            )}
           </div>
         </div>
       )}

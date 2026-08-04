@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { CalendarClock, CheckCircle2, Clock, AlertTriangle, Plus, RefreshCw, Eye, X, Loader2, ChevronRight, LayoutGrid, XCircle } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Clock, AlertTriangle, Plus, RefreshCw, Eye, X, Loader2, ChevronRight, LayoutGrid, XCircle, CheckSquare, Square, Layers } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import {
   listValuations,
@@ -241,6 +241,158 @@ function ValuationActionDialog({ open, valuation, action, onClose, onRecord, onA
   );
 }
 
+// ─── Batch Action Panel ────────────────────────────────────────────────────────
+
+type BatchValuationAction = 'approve' | 'reject';
+
+interface BatchValuationPanelProps {
+  selectedIds: Set<string>;
+  selectedItems: CollateralValuation[];
+  userId: string;
+  userName: string;
+  userRole: string;
+  onClearSelection: () => void;
+  onBatchComplete: () => void;
+}
+
+function BatchValuationPanel({ selectedIds, selectedItems, userId, userName, userRole, onClearSelection, onBatchComplete }: BatchValuationPanelProps) {
+  const [batchAction, setBatchAction] = useState<BatchValuationAction | ''>('');
+  const [batchNote, setBatchNote] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [results, setResults] = useState<{ id: string; success: boolean; error?: string }[]>([]);
+  const [showResults, setShowResults] = useState(false);
+
+  // Only Completed valuations can be batch approved/rejected
+  const eligibleItems = selectedItems.filter(v => v.valuationStatus === 'Completed');
+
+  const availableActions: { value: BatchValuationAction; label: string; color: string; icon: React.ReactNode; requiresNote: boolean }[] = [
+    { value: 'approve', label: 'Approve All', color: 'bg-green-600 hover:bg-green-700', icon: <CheckCircle2 size={14} />, requiresNote: false },
+    { value: 'reject',  label: 'Reject All',  color: 'bg-red-600 hover:bg-red-700',    icon: <XCircle size={14} />,     requiresNote: true },
+  ];
+
+  const selectedActionConfig = availableActions.find(a => a.value === batchAction);
+
+  async function handleBatchProcess() {
+    if (!batchAction) return;
+    if (selectedActionConfig?.requiresNote && !batchNote.trim()) return;
+    if (eligibleItems.length === 0) return;
+
+    setProcessing(true);
+    setResults([]);
+
+    const settled = await Promise.allSettled(
+      eligibleItems.map(async (v) => {
+        try {
+          if (batchAction === 'approve') {
+            await approveValuation(v.id, userId, userName, userRole);
+          } else {
+            await rejectValuation(v.id, batchNote, userId, userName, userRole);
+          }
+          return { id: v.id, success: true };
+        } catch (err: any) {
+          return { id: v.id, success: false, error: err.message || 'Failed' };
+        }
+      })
+    );
+
+    const resultList = settled.map((s, i) =>
+      s.status === 'fulfilled' ? s.value : { id: eligibleItems[i].id, success: false, error: 'Unexpected error' }
+    );
+
+    setResults(resultList);
+    setShowResults(true);
+    setProcessing(false);
+
+    onBatchComplete();
+
+    const failCount = resultList.filter(r => !r.success).length;
+    if (failCount === 0) {
+      setTimeout(() => {
+        onClearSelection();
+        setBatchAction('');
+        setBatchNote('');
+        setShowResults(false);
+        setResults([]);
+      }, 1500);
+    }
+  }
+
+  return (
+    <div className="border-t-2 border-blue-500 bg-blue-50 px-4 py-3 shrink-0">
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg">
+            <Layers size={13} />
+            {selectedIds.size} selected
+          </div>
+          <span className="text-xs text-gray-500">({eligibleItems.length} eligible for approval)</span>
+          <button
+            onClick={onClearSelection}
+            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-md hover:bg-white transition-colors bg-white"
+          >
+            <X size={11} /> Clear
+          </button>
+        </div>
+
+        {eligibleItems.length > 0 ? (
+          <div className="flex items-start gap-2 flex-1 flex-wrap">
+            <select
+              value={batchAction}
+              onChange={(e) => { setBatchAction(e.target.value as BatchValuationAction | ''); setShowResults(false); }}
+              className="text-sm border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[180px]"
+            >
+              <option value="">— Choose batch action —</option>
+              {availableActions.map(a => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </select>
+
+            {batchAction && (
+              <div className="flex items-start gap-2 flex-1 flex-wrap">
+                <textarea
+                  value={batchNote}
+                  onChange={(e) => setBatchNote(e.target.value)}
+                  placeholder={
+                    selectedActionConfig?.requiresNote
+                      ? 'Shared rejection reason (required for all selected records)...'
+                      : 'Shared note (optional)...'
+                  }
+                  rows={1}
+                  className="flex-1 min-w-[200px] text-sm border border-gray-200 rounded-md px-3 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <button
+                  onClick={handleBatchProcess}
+                  disabled={processing || (selectedActionConfig?.requiresNote && !batchNote.trim()) || eligibleItems.length === 0}
+                  className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-md text-white disabled:opacity-50 transition-colors shrink-0 ${selectedActionConfig?.color ?? 'bg-blue-600 hover:bg-blue-700'}`}
+                >
+                  {processing ? (
+                    <><Loader2 size={13} className="animate-spin" /> Processing {eligibleItems.length}...</>
+                  ) : (
+                    <>{selectedActionConfig?.icon} Apply to {eligibleItems.length} record{eligibleItems.length !== 1 ? 's' : ''}</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 py-1.5">No eligible records selected (only &apos;Completed&apos; valuations can be batch approved/rejected).</p>
+        )}
+
+        {showResults && results.length > 0 && (
+          <div className="w-full mt-2 space-y-1">
+            {results.map(r => (
+              <div key={r.id} className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${r.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {r.success ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
+                {r.id}: {r.success ? 'Updated' : r.error}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
 function ValuationDetailPanel({
@@ -372,6 +524,10 @@ export default function ValuationWorkflowContent() {
   const [search, setSearch] = useState('');
   const [selectedValuation, setSelectedValuation] = useState<CollateralValuation | null>(null);
   const [valuationDrawerOpen, setValuationDrawerOpen] = useState(false);
+
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchMode, setBatchMode] = useState(false);
 
   // Lookup data
   const [collateralOptions, setCollateralOptions] = useState<CollateralOption[]>([]);
@@ -540,6 +696,33 @@ export default function ValuationWorkflowContent() {
       );
     });
 
+  // Batch helpers
+  const allFilteredIds = filtered.map(v => v.id);
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedIds.has(id));
+  const someSelected = allFilteredIds.some(id => selectedIds.has(id));
+
+  function toggleSelectAll() {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(allFilteredIds));
+  }
+
+  function toggleSelectOne(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setBatchMode(false);
+  }
+
+  const selectedBatchItems = filtered.filter(v => selectedIds.has(v.id));
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-gray-50">
       {/* Header */}
@@ -562,6 +745,21 @@ export default function ValuationWorkflowContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!batchMode ? (
+              <button
+                onClick={() => { setBatchMode(true); setSelectedIds(new Set()); }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Layers size={14} /> Batch Actions
+              </button>
+            ) : (
+              <button
+                onClick={clearSelection}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <X size={14} /> Exit Batch Mode
+              </button>
+            )}
             <button onClick={load} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500">
               <RefreshCw size={16} />
             </button>
@@ -607,17 +805,45 @@ export default function ValuationWorkflowContent() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* List Panel */}
         <div className="flex flex-col w-full bg-white min-h-0">
+          {/* Batch mode hint */}
+          {batchMode && (
+            <div className="mx-4 mt-3 mb-1 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 flex items-center gap-3 shrink-0">
+              <Layers size={15} className="text-blue-600 shrink-0" />
+              <p className="text-sm text-blue-700 font-medium">
+                Batch mode active — check boxes next to &apos;Completed&apos; valuations, then use the action bar below to approve or reject all at once.
+              </p>
+            </div>
+          )}
           {/* Search + filter */}
           <div className="px-4 py-3 border-b border-gray-100 shrink-0 space-y-2">
-            <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by collateral, type, valuer…"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
-              />
+            <div className="flex items-center gap-2">
+              {/* Select-all checkbox */}
+              {batchMode && (
+                <button
+                  onClick={toggleSelectAll}
+                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 shrink-0 px-1"
+                  title={allSelected ? 'Deselect all' : 'Select all'}
+                >
+                  {allSelected ? (
+                    <CheckSquare size={16} className="text-blue-600" />
+                  ) : someSelected ? (
+                    <CheckSquare size={16} className="text-blue-400" />
+                  ) : (
+                    <Square size={16} />
+                  )}
+                  <span className="text-xs">{allSelected ? 'Deselect all' : 'Select all'}</span>
+                </button>
+              )}
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by collateral, type, valuer…"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+                />
+              </div>
             </div>
             <div className="flex gap-1.5 flex-wrap">
               {(['All', 'Scheduled', 'Overdue', 'In Progress', 'Completed', 'Approved', 'Rejected'] as const).map((s) => (
@@ -650,7 +876,8 @@ export default function ValuationWorkflowContent() {
             ) : (
               filtered.map((v) => {
                 const sc = STATUS_COLORS[v.valuationStatus] ?? STATUS_COLORS['Scheduled'];
-                const isSelected = selectedValuation?.id === v.id && valuationDrawerOpen;
+                const isDrawerSelected = selectedValuation?.id === v.id && valuationDrawerOpen;
+                const isBatchSelected = selectedIds.has(v.id);
                 const isOverdue = v.valuationStatus === 'Overdue';
                 const canRecord = ['Scheduled', 'Overdue', 'In Progress'].includes(v.valuationStatus);
                 const canApproveReject = v.valuationStatus === 'Completed';
@@ -658,62 +885,102 @@ export default function ValuationWorkflowContent() {
                 return (
                   <div
                     key={v.id}
-                    onClick={() => { setSelectedValuation(v); setValuationDrawerOpen(true); }}
+                    onClick={() => {
+                      if (batchMode) {
+                        toggleSelectOne(v.id, { stopPropagation: () => {} } as React.MouseEvent);
+                      } else {
+                        setSelectedValuation(v);
+                        setValuationDrawerOpen(true);
+                      }
+                    }}
                     className={`px-4 py-4 border-b border-gray-100 cursor-pointer transition-colors ${
-                      isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : isOverdue ? 'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50'
+                      batchMode && isBatchSelected ? 'bg-blue-50 border-l-4 border-l-blue-500' : !batchMode && isDrawerSelected ?'bg-blue-50 border-l-2 border-l-blue-500': isOverdue ?'bg-red-50/40 hover:bg-red-50/60' : 'hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{v.collateralDescription ?? '—'}</p>
-                      <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${sc.bg} ${sc.text} ${sc.border}`}>
-                        {v.valuationStatus}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500 mb-2">
-                      <span>{v.valuationType}</span>
-                      <span className="text-gray-300">·</span>
-                      <span>{v.collateralType}</span>
-                      {v.valuerName && <><span className="text-gray-300">·</span><span>{v.valuerName}</span></>}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>Scheduled: {formatDate(v.scheduledDate)}</span>
-                      {v.valuationAmount != null && <span className="ml-auto font-medium text-gray-700">{formatCurrency(v.valuationAmount)}</span>}
-                      {isOverdue && <span className="flex items-center gap-1 text-red-600 font-medium"><AlertTriangle size={11} />{agingDays(v.scheduledDate)}d overdue</span>}
-                    </div>
-                    {/* Quick action buttons */}
-                    {(canRecord || canApproveReject) && (
-                      <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                        {canRecord && (
-                          <button
-                            onClick={() => { setSelectedValuation(v); setActionDialog({ open: true, valuation: v, action: 'record' }); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
-                          >
-                            Record
-                          </button>
-                        )}
-                        {canApproveReject && (
-                          <>
-                            <button
-                              onClick={() => { setSelectedValuation(v); setActionDialog({ open: true, valuation: v, action: 'approve' }); }}
-                              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => { setSelectedValuation(v); setRejectConfirm({ open: true, valuation: v }); }}
-                              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-                            >
-                              Reject
-                            </button>
-                          </>
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox (batch mode) */}
+                      {batchMode && (
+                        <button
+                          onClick={(e) => toggleSelectOne(v.id, e)}
+                          className="mt-1 shrink-0 text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          {isBatchSelected ? (
+                            <CheckSquare size={18} className="text-blue-600" />
+                          ) : (
+                            <Square size={18} />
+                          )}
+                        </button>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{v.collateralDescription ?? '—'}</p>
+                          <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${sc.bg} ${sc.text} ${sc.border}`}>
+                            {v.valuationStatus}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500 mb-2">
+                          <span>{v.valuationType}</span>
+                          <span className="text-gray-300">·</span>
+                          <span>{v.collateralType}</span>
+                          {v.valuerName && <><span className="text-gray-300">·</span><span>{v.valuerName}</span></>}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-400">
+                          <span>Scheduled: {formatDate(v.scheduledDate)}</span>
+                          {v.valuationAmount != null && <span className="ml-auto font-medium text-gray-700">{formatCurrency(v.valuationAmount)}</span>}
+                          {isOverdue && <span className="flex items-center gap-1 text-red-600 font-medium"><AlertTriangle size={11} />{agingDays(v.scheduledDate)}d overdue</span>}
+                        </div>
+                        {/* Quick action buttons (only in non-batch mode) */}
+                        {!batchMode && (canRecord || canApproveReject) && (
+                          <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                            {canRecord && (
+                              <button
+                                onClick={() => { setSelectedValuation(v); setActionDialog({ open: true, valuation: v, action: 'record' }); }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
+                              >
+                                Record
+                              </button>
+                            )}
+                            {canApproveReject && (
+                              <>
+                                <button
+                                  onClick={() => { setSelectedValuation(v); setActionDialog({ open: true, valuation: v, action: 'approve' }); }}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedValuation(v);
+                                    setRejectConfirm({ open: true, valuation: v });
+                                  }}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })
             )}
           </div>
+
+          {/* Batch Action Panel */}
+          {batchMode && selectedIds.size > 0 && (
+            <BatchValuationPanel
+              selectedIds={selectedIds}
+              selectedItems={selectedBatchItems}
+              userId={userProfile?.id ?? ''}
+              userName={userProfile?.full_name ?? 'Reviewer'}
+              userRole={userProfile?.role ?? 'Officer'}
+              onClearSelection={clearSelection}
+              onBatchComplete={load}
+            />
+          )}
         </div>
       </div>
 
