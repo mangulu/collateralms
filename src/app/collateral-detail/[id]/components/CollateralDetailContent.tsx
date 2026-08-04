@@ -1,14 +1,12 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Pencil, ExternalLink, Shield, FileText, Calendar, User, Building2, AlertTriangle, CheckCircle2, Clock, Files, History, ShieldAlert, RefreshCw, Activity, PieChart, BookOpen, TrendingUp, Layers, MapPin, ChevronRight, Banknote, Star,  } from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowLeft, ExternalLink, Shield, FileText, Calendar, User, Building2, AlertTriangle, CheckCircle2, Clock, Files, History, ShieldAlert, RefreshCw, Activity, PieChart, BookOpen, TrendingUp, Layers, MapPin, ChevronRight, Banknote, Star } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
-import { CollateralRecord, CollateralStatus, auditService, collateralService } from '@/lib/supabase/collateralService';
+import { CollateralRecord, CollateralStatus } from '@/lib/supabase/collateralService';
 import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
 import { loanService, Loan } from '@/lib/supabase/loanService';
-import AddEditCollateralModal from '@/app/collateral-management/components/AddEditCollateralModal';
 import { useAuth } from '@/contexts/AuthContext';
 import CollateralUtilizationTab from './CollateralUtilizationTab';
 import GeoSection from './GeoSection';
@@ -17,7 +15,8 @@ import LegalSignOffSection from './LegalSignOffSection';
 import RiskComplianceSidebarCard from './RiskComplianceSidebarCard';
 import HistoryAuditTab from './HistoryAuditTab';
 import MandatoryDocumentsCard from './MandatoryDocumentsCard';
-import ProcessLaunchersPanel from './ProcessLaunchersPanel';
+import CollateralActionToolbar from './CollateralActionToolbar';
+import CollateralActivityTimeline from './CollateralActivityTimeline';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,8 +128,6 @@ export default function CollateralDetailContent({
   onRefresh,
 }: CollateralDetailContentProps) {
   const { user } = useAuth();
-  const [editOpen, setEditOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history-audit'>('profile');
   const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
   const [obligorData, setObligorData] = useState<Obligor | null>(null);
@@ -185,32 +182,6 @@ export default function CollateralDetailContent({
       }
     })();
   }, [collateral?.facilityId]);
-
-  const handleSave = async (data: Partial<CollateralRecord>) => {
-    if (!collateral) return;
-    setSaving(true);
-    try {
-      const updated = await collateralService.update(collateral.id, data);
-      if (updated) {
-        await auditService.log({
-          collateralRecordId: collateral.id,
-          collateralId: collateral.collateralId,
-          action: 'updated',
-          message: `Collateral ${collateral.collateralId} updated`,
-          detail: `${collateral.obligor} · ${collateral.type}`,
-          performedBy: user?.id,
-          performedByName: user?.email ?? '',
-        });
-        toast.success('Collateral record updated');
-        setEditOpen(false);
-        onRefresh();
-      }
-    } catch {
-      toast.error('Failed to save changes');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // ── Loading ──
   if (isLoading) {
@@ -279,10 +250,7 @@ export default function CollateralDetailContent({
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors">
             <RefreshCw size={13} /> Refresh
           </button>
-          <button onClick={() => setEditOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-md text-sm font-600 hover:bg-primary/90 transition-all active:scale-95">
-            <Pencil size={13} /> Edit Record
-          </button>
+          <CollateralActionToolbar collateral={collateral} onRefresh={onRefresh} />
         </div>
       </div>
 
@@ -412,7 +380,7 @@ export default function CollateralDetailContent({
           </div>
 
           <div className="space-y-6">
-            <ProcessLaunchersPanel collateral={collateral} onProcessStarted={onRefresh} />
+            <CollateralActivityTimeline collateral={collateral} />
             <RiskComplianceSidebarCard collateral={collateral} />
 
             {/* Obligor Context Card */}
@@ -578,14 +546,6 @@ export default function CollateralDetailContent({
 
       {/* Tab: History & Audit */}
       {activeTab === 'history-audit' && <HistoryAuditTab collateral={collateral} />}
-
-      {/* Edit Modal */}
-      <AddEditCollateralModal
-        open={editOpen}
-        editItem={collateral}
-        onClose={() => setEditOpen(false)}
-        onSave={handleSave}
-      />
     </div>
   );
 }
