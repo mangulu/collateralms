@@ -585,7 +585,7 @@ export default function ModuleHubPage() {
           {/* Welcome row */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              {/* <div className="flex items-center gap-2 mb-1">
                 <span
                   className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"
                   style={{ backgroundColor: 'rgba(0,124,179,0.1)', color: '#007CB3', border: '1px solid rgba(0,124,179,0.2)' }}
@@ -593,8 +593,8 @@ export default function ModuleHubPage() {
                   <Layers size={10} />
                   Command Centre
                 </span>
-              </div>
-              <h1 className="text-2xl font-bold leading-tight" style={{ color: '#111827' }}>
+              </div> */}
+              <h1 className="text-2xl font-bold leading-tight" style={{ color: '#007CB3' }}>
                 Good {greeting || '—'}, {firstName}
               </h1>
               <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: '#6B7280' }}>
@@ -680,14 +680,14 @@ export default function ModuleHubPage() {
       <div className="flex-1 px-6 py-8 relative" style={{ zIndex: 1 }}>
         <div className="max-w-6xl mx-auto">
 
-          <div className="flex items-center justify-between mb-5">
+          {/* <div className="flex items-center justify-between mb-5">
             <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#9CA3AF' }}>
               Modules
             </h2>
             <span className="text-xs" style={{ color: '#9CA3AF' }}>
               {visibleModules.length} available
             </span>
-          </div>
+          </div> */}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleModules.map((mod) => {
