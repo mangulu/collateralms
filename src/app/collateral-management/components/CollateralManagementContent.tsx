@@ -1,6 +1,27 @@
 'use client';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play } from 'lucide-react';
+import { 
+  Plus, 
+  Download, 
+  Filter, 
+  Search, 
+  X, 
+  FileText, 
+  FileDown, 
+  ChevronDown, 
+  Play,
+  FolderOpen,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  Eye,
+  Edit,
+  Columns,
+  Sliders,
+  AlertCircle,
+  ChevronRight
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
@@ -14,6 +35,8 @@ import CollateralFilters from './CollateralFilters';
 import AddEditCollateralModal from './AddEditCollateralModal';
 import NextStepsBanner from './NextStepsBanner';
 import InitiateWorkflowModal from './InitiateWorkflowModal';
+import QuickViewModal from './QuickViewModal';
+import AdvancedFiltersModal from './AdvancedFiltersModal';
 
 export interface FilterState {
   search: string;
@@ -21,10 +44,29 @@ export interface FilterState {
   status: string;
   registry: string;
   officer: string;
+  dateFrom?: string;
+  dateTo?: string;
+  minValue?: string;
+  maxValue?: string;
 }
 
-// Re-export Collateral type alias for backward compatibility
-// Remove this block or line ...
+// ─── Custom Hooks ─────────────────────────────────────────────────────────────
+
+function useDebounce(value: string, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  
+  return debouncedValue;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CollateralManagementContent() {
   const { user } = useAuth();
@@ -36,9 +78,11 @@ export default function CollateralManagementContent() {
     officer: '',
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<CollateralRecord | null>(null);
+  const [quickViewItem, setQuickViewItem] = useState<CollateralRecord | null>(null);
   const [collateralData, setCollateralData] = useState<CollateralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -46,22 +90,69 @@ export default function CollateralManagementContent() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const columnMenuRef = useRef<HTMLDivElement>(null);
   const [newlyCreated, setNewlyCreated] = useState<CollateralRecord | null>(null);
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
   const [workflowTarget, setWorkflowTarget] = useState<CollateralRecord | null>(null);
 
-  // Live lookup data for filter dropdowns
+  // ─── Column Visibility ──────────────────────────────────────────────────────
+
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    'select',
+    'collateralId',
+    'obligor',
+    'type',
+    'value',
+    'status',
+    'registry',
+    'documents',
+    'actions'
+  ]);
+
+  const allColumns = [
+    { id: 'select', label: 'Select' },
+    { id: 'collateralId', label: 'Collateral ID' },
+    { id: 'obligor', label: 'Obligor' },
+    { id: 'type', label: 'Type' },
+    { id: 'value', label: 'Value (TSh)' },
+    { id: 'facilityId', label: 'Facility ID' },
+    { id: 'status', label: 'Status' },
+    { id: 'registry', label: 'Registry' },
+    { id: 'registrationDate', label: 'Registration Date' },
+    { id: 'perfectionDeadline', label: 'Perfection Deadline' },
+    { id: 'assignedOfficer', label: 'Assigned Officer' },
+    { id: 'documents', label: 'Documents' },
+    { id: 'actions', label: 'Actions' },
+  ];
+
+  const toggleColumn = (columnId: string) => {
+    if (columnId === 'select' || columnId === 'actions') return;
+    setVisibleColumns(prev =>
+      prev.includes(columnId)
+        ? prev.filter(id => id !== columnId)
+        : [...prev, columnId]
+    );
+  };
+
+  // ─── Live lookup data ──────────────────────────────────────────────────────
+
   const [filterCollateralTypes, setFilterCollateralTypes] = useState<string[]>([]);
   const [filterRegistries, setFilterRegistries] = useState<string[]>([]);
   const [filterOfficers, setFilterOfficers] = useState<string[]>([]);
 
-  // Doc compliance state: uploaded count per collateral record id
+  // ─── Doc compliance state ──────────────────────────────────────────────────
+
   const [docUploadedCounts, setDocUploadedCounts] = useState<Record<string, number>>({});
-  // Required doc counts per collateral type name
   const [docRequiredCounts, setDocRequiredCounts] = useState<Record<string, number>>({});
 
-  // Load lookup data once on mount
+  // ─── Debounced search ──────────────────────────────────────────────────────
+
+  const debouncedSearch = useDebounce(filters.search, 300);
+
+  // ─── Load lookup data ──────────────────────────────────────────────────────
+
   useEffect(() => {
     Promise.all([
       collateralLookupsService.getCollateralTypeNames(),
@@ -76,6 +167,8 @@ export default function CollateralManagementContent() {
     });
   }, []);
 
+  // ─── Fetch data ────────────────────────────────────────────────────────────
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
@@ -83,7 +176,6 @@ export default function CollateralManagementContent() {
       const data = await collateralService.getAll();
       setCollateralData(data);
 
-      // Fetch doc compliance data in parallel
       const ids = data.map((c) => c.id);
       const [uploadedCounts, requiredGrouped] = await Promise.all([
         documentService.getUploadedDocCountsByCollateralIds(ids),
@@ -107,39 +199,87 @@ export default function CollateralManagementContent() {
     fetchData();
   }, [fetchData]);
 
-  // Real-time subscription: silently refresh when any collateral row changes
+  // ─── Real-time subscription ──────────────────────────────────────────────
+
   useCollateralRealtime({
     onCollateralChange: () => {
       fetchData();
     },
   });
 
-  // Close export menu on outside click
+  // ─── Close menus on outside click ────────────────────────────────────────
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
         setExportMenuOpen(false);
+      }
+      if (columnMenuRef.current && !columnMenuRef.current.contains(e.target as Node)) {
+        setShowColumnMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // ─── Keyboard shortcuts ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + N - New collateral
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        setAddModalOpen(true);
+      }
+      // Ctrl/Cmd + F - Focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        document.querySelector('input[type="text"]')?.focus();
+      }
+      // Escape - Close modals
+      if (e.key === 'Escape') {
+        setAddModalOpen(false);
+        setEditItem(null);
+        setWorkflowModalOpen(false);
+        setQuickViewItem(null);
+      }
+      // Delete/Backspace - Bulk delete when items selected
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0 && !(e.target as HTMLElement)?.closest('input')) {
+        if (window.confirm(`Delete ${selectedIds.length} selected item(s)?`)) {
+          handleBulkDelete();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds]);
+
+  // ─── Filtered data ────────────────────────────────────────────────────────
+
   const filtered = useMemo(() => {
     return collateralData.filter((c) => {
       const matchSearch =
-        !filters.search ||
-        c.obligor.toLowerCase().includes(filters.search.toLowerCase()) ||
-        c.collateralId.toLowerCase().includes(filters.search.toLowerCase()) ||
-        c.facilityId.toLowerCase().includes(filters.search.toLowerCase()) ||
-        c.description.toLowerCase().includes(filters.search.toLowerCase());
+        !debouncedSearch ||
+        c.obligor.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        c.collateralId.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        c.facilityId.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        c.description.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchType = !filters.type || c.type === filters.type;
       const matchStatus = !filters.status || c.status === filters.status;
       const matchRegistry = !filters.registry || c.registry === filters.registry;
       const matchOfficer = !filters.officer || c.assignedOfficer === filters.officer;
-      return matchSearch && matchType && matchStatus && matchRegistry && matchOfficer;
+      
+      // Advanced filters
+      const matchDateFrom = !filters.dateFrom || new Date(c.registrationDate) >= new Date(filters.dateFrom);
+      const matchDateTo = !filters.dateTo || new Date(c.registrationDate) <= new Date(filters.dateTo);
+      const matchMinValue = !filters.minValue || c.valueTSh >= parseFloat(filters.minValue);
+      const matchMaxValue = !filters.maxValue || c.valueTSh <= parseFloat(filters.maxValue);
+      
+      return matchSearch && matchType && matchStatus && matchRegistry && matchOfficer &&
+        matchDateFrom && matchDateTo && matchMinValue && matchMaxValue;
     });
-  }, [collateralData, filters]);
+  }, [collateralData, debouncedSearch, filters]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice(
@@ -147,16 +287,40 @@ export default function CollateralManagementContent() {
     currentPage * itemsPerPage
   );
 
+  // ─── Status config ────────────────────────────────────────────────────────
+
+  const statusConfig = {
+    Perfected: { color: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
+    'Under Review': { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock },
+    Overdue: { color: 'bg-red-100 text-red-700 border-red-200', icon: AlertTriangle },
+    Submitted: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: FileText },
+    Released: { color: 'bg-gray-100 text-gray-700 border-gray-200', icon: CheckCircle },
+  };
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+
   const handleBulkDelete = async () => {
     const count = selectedIds.length;
-    try {
-      await collateralService.deleteMany(selectedIds);
-      toast.success(`${count} collateral item(s) removed`);
-      setSelectedIds([]);
-      fetchData();
-    } catch {
-      toast.error('Failed to remove selected items');
-    }
+    const ids = [...selectedIds];
+    
+    // Optimistic update
+    setCollateralData(prev => prev.filter(c => !ids.includes(c.id)));
+    setSelectedIds([]);
+    
+    toast.promise(
+      collateralService.deleteMany(ids),
+      {
+        loading: `Deleting ${count} item(s)...`,
+        success: () => {
+          fetchData();
+          return `${count} collateral item(s) removed`;
+        },
+        error: (err) => {
+          setCollateralData(prev => [...prev, ...collateralData.filter(c => ids.includes(c.id))]);
+          return err.message || 'Failed to remove selected items';
+        }
+      }
+    );
   };
 
   const handleStatusChange = async (id: string, status: CollateralStatus) => {
@@ -227,7 +391,6 @@ export default function CollateralManagementContent() {
         throw err;
       }
 
-      // Upload any pending files now that we have the record ID
       if (pendingFiles && pendingFiles.length > 0 && user) {
         const userName = user.email || 'Unknown';
         try {
@@ -245,7 +408,6 @@ export default function CollateralManagementContent() {
             )
           );
         } catch {
-          // document upload failure is non-blocking — record was created
           toast.error('Collateral created, but some documents failed to upload. Please retry uploading from the edit view.');
         }
       }
@@ -264,7 +426,6 @@ export default function CollateralManagementContent() {
         // audit log failure is non-blocking
       }
 
-      // Create next-step tasks for the assigned officer / current user
       if (user?.id) {
         try {
           const assignedUserId = user.id;
@@ -402,6 +563,8 @@ export default function CollateralManagementContent() {
     }
   }
 
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 max-w-screen-2xl mx-auto">
       {/* Page Header */}
@@ -497,7 +660,7 @@ export default function CollateralManagementContent() {
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-1.5 px-3 py-2 border rounded-md text-sm font-500 transition-colors ${
             showFilters || activeFilterCount > 0
-              ? 'bg-primary/10 border-primary/30 text-primary' :'bg-white border-border text-muted-foreground hover:bg-muted'
+              ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white border-border text-muted-foreground hover:bg-muted'
           }`}
         >
           <Filter size={14} />
@@ -593,7 +756,8 @@ export default function CollateralManagementContent() {
             <p className="text-base font-600 text-foreground">No records found</p>
             <p className="text-sm text-muted-foreground mt-1">
               {collateralData.length === 0
-                ? 'No collateral records have been registered yet.' :'No records match your current filters. Try adjusting your search or filters.'}
+                ? 'No collateral records have been registered yet.'
+                : 'No records match your current filters. Try adjusting your search or filters.'}
             </p>
           </div>
           {collateralData.length > 0 && (
@@ -609,14 +773,14 @@ export default function CollateralManagementContent() {
           )}
         </div>
       ) : (
-        /* Table */
+        /* ─── TABLE ─── */
         <CollateralTable
           data={paginated}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
-          allIds={paginated.map((c) => c.id)}
+          allIds={paginated.map((c) => c.id)} // ← FIX: Added allIds prop
           onEdit={(item) => setEditItem(item)}
-          onView={(item) => {}}
+          onView={(item) => setQuickViewItem(item)}
           onStatusChange={handleStatusChange}
           currentPage={currentPage}
           totalPages={totalPages}
@@ -626,6 +790,7 @@ export default function CollateralManagementContent() {
           onItemsPerPageChange={(n) => { setItemsPerPage(n); setCurrentPage(1); }}
           docUploadedCounts={docUploadedCounts}
           docRequiredCounts={docRequiredCounts}
+          visibleColumns={visibleColumns}
         />
       )}
 
@@ -661,6 +826,54 @@ export default function CollateralManagementContent() {
           onDismiss={() => setNewlyCreated(null)}
         />
       )}
+
+      {/* Quick View Modal */}
+      <QuickViewModal
+        open={!!quickViewItem}
+        item={quickViewItem}
+        onClose={() => setQuickViewItem(null)}
+        onEdit={() => {
+          setEditItem(quickViewItem);
+          setQuickViewItem(null);
+        }}
+        docUploadedCounts={docUploadedCounts}
+        docRequiredCounts={docRequiredCounts}
+      />
+
+      {/* Floating Quick Actions */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
+        <button
+          onClick={() => setAddModalOpen(true)}
+          className="p-3 bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+          aria-label="Add Collateral (⌘N)"
+        >
+          <Plus size={20} />
+        </button>
+        {selectedIds.length === 1 && (
+          <button
+            onClick={() => {
+              const item = collateralData.find(c => c.id === selectedIds[0]);
+              if (item) setEditItem(item);
+            }}
+            className="p-3 bg-blue-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+            aria-label="Edit Selected"
+          >
+            <Edit size={18} />
+          </button>
+        )}
+        {selectedIds.length === 1 && (
+          <button
+            onClick={() => {
+              const item = collateralData.find(c => c.id === selectedIds[0]);
+              if (item) setQuickViewItem(item);
+            }}
+            className="p-3 bg-purple-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+            aria-label="Quick View Selected"
+          >
+            <Eye size={18} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
