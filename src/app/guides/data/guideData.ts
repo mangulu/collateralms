@@ -1,4 +1,4 @@
-import { FolderOpen, Upload, CalendarClock, GitMerge, BarChart2, Unlock, Scale, BadgeCheck, GitBranch, FileText, ShieldCheck, TrendingUp, LineChart, Target, BarChart, Users, KeyRound, Settings, SlidersHorizontal, GitPullRequest, Zap, AlertTriangle, DatabaseZap, ScrollText, Archive, Building2, Library, ClipboardCheck, Eye, LayoutDashboard, Activity, Files, MailCheck, Radio, ShieldAlert, Flame, Map, Settings2, Layers, AlarmClock, SendHorizonal, CheckSquare, RefreshCw, Inbox,  } from 'lucide-react';
+import { FolderOpen, Upload, CalendarClock, GitMerge, BarChart2, Unlock, Scale, BadgeCheck, GitBranch, FileText, ShieldCheck, TrendingUp, LineChart, Target, BarChart, Users, KeyRound, Settings, SlidersHorizontal, GitPullRequest, Zap, AlertTriangle, DatabaseZap, ScrollText, Archive, Building2, Library, ClipboardCheck, Eye, LayoutDashboard, Activity, Files, MailCheck, Radio, ShieldAlert, Map, Settings2, Layers, AlarmClock, SendHorizonal, CheckSquare, RefreshCw, Inbox, BookText, TrendingDown } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,20 +43,22 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
   bg: 'linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 60%, #2563EB 100%)',
   icon: BarChart2,
   summary:
-    'As a Credit Officer you are the first point of contact for every collateral asset. You register new collateral, upload supporting documents, schedule valuations, initiate substitution requests when assets change, and monitor LTV thresholds to ensure the portfolio stays within risk limits. Your work feeds directly into the legal review and approval pipeline.',
+    'As a Credit Officer you are the first point of contact for every collateral asset. You register new collateral, upload supporting documents, schedule valuations, initiate substitution requests when assets change, submit registry filings, and monitor LTV thresholds to ensure the portfolio stays within risk limits. Your work feeds directly into the legal review and approval pipeline.',
   modules: [
     { label: 'Collateral Registry', href: '/collateral-management', icon: FolderOpen, why: 'Primary screen for registering and editing all collateral records.' },
-    { label: 'Collateral Dashboard', href: '/collateral-dashboard', icon: LayoutDashboard, why: 'Daily KPI overview — overdue alerts, portfolio health, and recent activity.' },
+    { label: 'Collateral Dashboard', href: '/collateral-dashboard', icon: LayoutDashboard, why: 'Daily KPI overview — overdue alerts, portfolio health, and recent activity. Includes Portfolio Monitoring tab for live portfolio trends.' },
     { label: 'Collateral Documents', href: '/collateral-documents', icon: Files, why: 'Upload and manage documents attached to each collateral record.' },
     { label: 'Bulk Upload', href: '/bulk-upload', icon: Upload, why: 'Import multiple collateral records at once via CSV template.' },
     { label: 'Valuation Workflow', href: '/valuation-workflow', icon: CalendarClock, why: 'Schedule and track valuation appointments for collateral assets.' },
     { label: 'Collateral Substitution', href: '/collateral-substitution', icon: RefreshCw, why: 'Initiate requests to swap one collateral asset for another.' },
-    { label: 'LTV Breach Alerts', href: '/ltv-breach-alerts', icon: AlertTriangle, why: 'Monitor assets where the loan-to-value ratio has exceeded thresholds.' },
+    { label: 'Registry Submissions', href: '/workflows/registry-submissions', icon: BookText, why: 'Track and manage collateral registry filing submissions (e.g. BRELA, land registry).' },
+    { label: 'LTV Monitoring', href: '/ltv-breach-alerts', icon: TrendingDown, why: 'Monitor assets where the loan-to-value ratio has exceeded thresholds.' },
     { label: 'Loan–Collateral Map', href: '/collateral-loan-visualization', icon: GitMerge, why: 'Visual network showing which loans are secured by which assets.' },
     { label: 'Approval Inbox', href: '/approval-inbox', icon: MailCheck, why: 'Track submissions you have sent for legal review and approval.' },
     { label: 'Alerts Inbox', href: '/alerts-inbox', icon: Inbox, why: 'Operational alerts for expiry, LTV breaches, and overdue items.' },
     { label: 'Deadline Reminders', href: '/deadline-reminders', icon: AlarmClock, why: 'Upcoming collateral expiry and perfection deadlines.' },
     { label: 'My Tasks', href: '/my-tasks', icon: CheckSquare, why: 'Tasks assigned to you across all workflows.' },
+    { label: 'Fast Track', href: '/fast-track', icon: Zap, why: 'Assign fast-track priority tiers to collateral items that need expedited processing.' },
   ],
   tasks: [
     {
@@ -82,6 +84,17 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
       ],
     },
     {
+      title: 'Submit a registry filing',
+      description: 'Create and track a registry submission for a perfected collateral asset (e.g. BRELA, land registry).',
+      steps: [
+        { action: 'Open Registry Submissions and click "New Submission"', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+        { action: 'Select the collateral record and the target registry', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+        { action: 'Upload the required filing documents and set the submission date', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+        { action: 'Submit — the record enters "Pending" status and is tracked in the submissions list', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+        { action: 'Update the status when the registry confirms receipt or issues a certificate', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+      ],
+    },
+    {
       title: 'Initiate a collateral substitution',
       description: 'Request to replace an existing collateral asset with a new one when the borrower provides a substitute.',
       steps: [
@@ -96,11 +109,11 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
       title: 'Handle an LTV breach alert',
       description: 'Respond to an alert where a collateral asset\'s loan-to-value ratio has exceeded the configured threshold.',
       steps: [
-        { action: 'Open LTV Breach Alerts and identify the flagged asset', where: 'LTV Breach Alerts', href: '/ltv-breach-alerts' },
+        { action: 'Open LTV Monitoring and identify the flagged asset', where: 'LTV Monitoring', href: '/ltv-breach-alerts' },
         { action: 'Review the current valuation and outstanding loan balance', where: 'Collateral Registry', href: '/collateral-management' },
         { action: 'Schedule a fresh valuation or request a top-up collateral', where: 'Valuation Workflow', href: '/valuation-workflow' },
         { action: 'Document the remediation action in the collateral record notes', where: 'Collateral Registry', href: '/collateral-management' },
-        { action: 'Confirm the alert clears once the LTV is back within limits', where: 'LTV Breach Alerts', href: '/ltv-breach-alerts' },
+        { action: 'Confirm the alert clears once the LTV is back within limits', where: 'LTV Monitoring', href: '/ltv-breach-alerts' },
       ],
     },
     {
@@ -121,6 +134,8 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
     { type: 'tip', text: 'Use the Loan–Collateral Map to quickly verify which loans are secured by an asset before initiating a substitution.' },
     { type: 'info', text: 'Valuation reports must be dated within 6 months for the system to accept them as current. Older reports trigger a revaluation flag.' },
     { type: 'warning', text: 'Bulk uploads do not auto-submit for review. You must manually submit each imported record from the registry.' },
+    { type: 'tip', text: 'The Collateral Dashboard\'s Portfolio Monitoring tab shows live concentration breakdowns by collateral type — useful for spotting over-concentration before your manager does.' },
+    { type: 'tip', text: 'Use Fast Track to flag high-priority collateral items for expedited processing — this moves them to the top of the Legal Officer\'s queue.' },
   ],
 };
 
@@ -134,18 +149,19 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
   bg: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 60%, #7C3AED 100%)',
   icon: Scale,
   summary:
-    'As a Legal Officer you own the legal lifecycle of every collateral asset. You review and approve perfection submissions, sign off on documents, track covenant compliance, authorise collateral releases, and manage the physical archive. Your approvals are the legal gate that protects the institution\'s security interest in every asset.',
+    'As a Legal Officer you own the legal lifecycle of every collateral asset. You review and approve perfection submissions, sign off on documents, track covenant compliance, authorise collateral releases, verify registry submissions, and manage the physical archive. Your approvals are the legal gate that protects the institution\'s security interest in every asset.',
   modules: [
     { label: 'Perfection Workflow', href: '/perfection-workflow', icon: GitBranch, why: 'Review and approve or return perfection submissions from Credit Officers.' },
     { label: 'Document Approval', href: '/document-approval', icon: BadgeCheck, why: 'Sign off on documents attached to collateral records.' },
-    { label: 'Release Approval', href: '/release-approval', icon: Unlock, why: 'Authorise the release of perfected collateral back to the borrower.' },
+    { label: 'Release Approvals', href: '/release-approval', icon: Unlock, why: 'Authorise the release of perfected collateral back to the borrower.' },
+    { label: 'Registry Submissions', href: '/workflows/registry-submissions', icon: BookText, why: 'Review and verify registry filing submissions before they are sent to external registries.' },
     { label: 'Covenant Tracking', href: '/covenant-tracking', icon: FileText, why: 'Monitor and record covenant compliance for all active facilities.' },
     { label: 'Approval Inbox', href: '/approval-inbox', icon: MailCheck, why: 'Unified inbox for all items awaiting your legal sign-off.' },
     { label: 'Collateral Documents', href: '/collateral-documents', icon: Files, why: 'Review documents and manage the Security Pocket for each asset.' },
     { label: 'Archive — Vault Management', href: '/archive/vault-management', icon: Building2, why: 'Manage physical vault locations and document placements.' },
-    { label: 'Archive — Custody Tracker', href: '/archive/custody-tracker', icon: Eye, why: 'Track the physical custody status of every original document.' },
-    { label: 'Archive — Request Workflow', href: '/archive/request-workflow', icon: ClipboardCheck, why: 'Handle requests to retrieve or loan out archived documents.' },
-    { label: 'AI Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert, why: 'Review AI fraud flags on collateral submissions before approving.' },
+    { label: 'Archive — Custody', href: '/archive/custody', icon: Eye, why: 'Track the physical custody status of every original document.' },
+    { label: 'Archive — Access Requests', href: '/archive/access-requests', icon: ClipboardCheck, why: 'Handle requests to retrieve or loan out archived documents.' },
+    { label: 'AI Risk & Fraud', href: '/ai-risk-fraud', icon: ShieldAlert, why: 'Review AI fraud and risk flags on collateral submissions before approving. Both fraud prevention and risk assessment are available as tabs on this page.' },
     { label: 'Obligors', href: '/obligors', icon: Users, why: 'Review borrower risk profiles when assessing perfection submissions.' },
     { label: 'My Tasks', href: '/my-tasks', icon: CheckSquare, why: 'Tasks assigned to you across all workflows.' },
   ],
@@ -156,7 +172,7 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
       steps: [
         { action: 'Open the Approval Inbox and locate the pending perfection item', where: 'Approval Inbox', href: '/approval-inbox' },
         { action: 'Open the submission in the Perfection Workflow drawer', where: 'Perfection Workflow', href: '/perfection-workflow' },
-        { action: 'Review all attached documents and check AI fraud flags', where: 'AI Fraud Prevention', href: '/fraud-prevention' },
+        { action: 'Review all attached documents and check AI fraud and risk flags', where: 'AI Risk & Fraud', href: '/ai-risk-fraud' },
         { action: 'Check the obligor risk profile for any red flags', where: 'Obligors', href: '/obligors' },
         { action: 'Approve, return with notes, or escalate to your manager', where: 'Perfection Workflow', href: '/perfection-workflow' },
       ],
@@ -172,14 +188,25 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
       ],
     },
     {
+      title: 'Verify a registry submission',
+      description: 'Review a registry filing submission and update its status after external registry confirmation.',
+      steps: [
+        { action: 'Open Registry Submissions and filter by "Pending" status', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+        { action: 'Open the submission and review the attached filing documents', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+        { action: 'Verify the collateral details match the filing documents', where: 'Collateral Registry', href: '/collateral-management' },
+        { action: 'Update the submission status to "Submitted" or "Registered" as appropriate', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+        { action: 'Upload the registry certificate or acknowledgement document', where: 'Registry Submissions', href: '/workflows/registry-submissions' },
+      ],
+    },
+    {
       title: 'Authorise a collateral release',
       description: 'Review and approve a request to release perfected collateral back to the borrower.',
       steps: [
-        { action: 'Open Release Approval and locate the pending release request', where: 'Release Approval', href: '/release-approval' },
-        { action: 'Verify the loan has been fully repaid or the release is justified', where: 'Release Approval', href: '/release-approval' },
+        { action: 'Open Release Approvals and locate the pending release request', where: 'Release Approvals', href: '/release-approval' },
+        { action: 'Verify the loan has been fully repaid or the release is justified', where: 'Release Approvals', href: '/release-approval' },
         { action: 'Check the collateral record and confirm no outstanding obligations', where: 'Collateral Registry', href: '/collateral-management' },
-        { action: 'Approve the release — the system updates the collateral status automatically', where: 'Release Approval', href: '/release-approval' },
-        { action: 'Arrange physical document return via the Archive Request Workflow', where: 'Archive — Request Workflow', href: '/archive/request-workflow' },
+        { action: 'Approve the release — the system updates the collateral status automatically', where: 'Release Approvals', href: '/release-approval' },
+        { action: 'Arrange physical document return via the Archive Access Requests', where: 'Archive — Access Requests', href: '/archive/access-requests' },
       ],
     },
     {
@@ -198,17 +225,18 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
       steps: [
         { action: 'Open Vault Management and select the target vault location', where: 'Archive — Vault Management', href: '/archive/vault-management' },
         { action: 'Record the document placement with shelf and slot details', where: 'Archive — Vault Management', href: '/archive/vault-management' },
-        { action: 'Update the custody status in the Custody Tracker', where: 'Archive — Custody Tracker', href: '/archive/custody-tracker' },
+        { action: 'Update the custody status in the Archive Custody screen', where: 'Archive — Custody', href: '/archive/custody' },
         { action: 'Verify the document appears in the Documents Library', where: 'Archive — Documents Library', href: '/archive/documents-library' },
       ],
     },
   ],
   tips: [
-    { type: 'tip', text: 'Always check the AI Fraud Prevention flags before approving a perfection submission — flagged items require documented justification.' },
+    { type: 'tip', text: 'The AI Risk & Fraud page combines both fraud prevention and risk assessment in two tabs — check both before approving any perfection submission.' },
     { type: 'warning', text: 'Perfection submissions older than 5 business days without action are automatically escalated to your manager.' },
     { type: 'tip', text: 'Use the countdown badge in the workflow drawer to prioritise items closest to their SLA deadline.' },
     { type: 'info', text: 'Covenant breaches must be escalated within 24 hours per regulatory requirements. The system logs the timestamp of your action.' },
     { type: 'warning', text: 'Never approve a release without verifying the loan closure in the Loans module — partial repayments do not qualify.' },
+    { type: 'tip', text: 'Registry Submissions track external filings separately from internal workflow steps — always update the submission status after receiving registry confirmation.' },
   ],
 };
 
@@ -225,20 +253,21 @@ export const MANAGER_GUIDE: RoleGuide = {
     'As a Legal/Credit Manager you oversee the full approval pipeline across both legal and credit functions. You handle escalations from officers, reassign tasks, monitor workflow SLAs, run portfolio-level analytics, and generate regulatory reports. You are the final decision-maker on escalated items and the primary point of accountability for portfolio governance.',
   modules: [
     { label: 'Executive Dashboard', href: '/executive-dashboard', icon: TrendingUp, why: 'C-suite KPIs, trend charts, and portfolio performance at a glance.' },
-    { label: 'Portfolio Monitoring', href: '/portfolio-monitoring', icon: Activity, why: 'Live portfolio health trends and concentration breakdown by collateral type.' },
+    { label: 'Collateral Dashboard', href: '/collateral-dashboard', icon: LayoutDashboard, why: 'Operational dashboard with KPIs and a Portfolio Monitoring tab for live concentration and volume trends.' },
     { label: 'Workflows Dashboard', href: '/workflows', icon: GitPullRequest, why: 'Overview of all active workflow instances and their current status.' },
     { label: 'Workflow Instances', href: '/workflows/instances', icon: Layers, why: 'Drill into individual workflow instances, reassign tasks, and track SLAs.' },
     { label: 'Approval Inbox', href: '/approval-inbox', icon: MailCheck, why: 'Escalated items and approvals that require manager-level sign-off.' },
-    { label: 'Release Approval', href: '/release-approval', icon: Unlock, why: 'Final authorisation for collateral releases escalated from Legal Officers.' },
-    { label: 'Cohort Analytics', href: '/cohort-analytics', icon: LineChart, why: 'Segment and compare collateral cohorts for portfolio analysis.' },
-    { label: 'Portfolio Heatmap', href: '/portfolio-heatmap', icon: Flame, why: 'Visual heatmap of portfolio concentration and geographic risk density.' },
+    { label: 'Release Approvals', href: '/release-approval', icon: Unlock, why: 'Final authorisation for collateral releases escalated from Legal Officers.' },
+    { label: 'Registry Submissions', href: '/workflows/registry-submissions', icon: BookText, why: 'Monitor all registry filing submissions and their current status.' },
+    { label: 'Cohort Analytics', href: '/cohort-analytics', icon: LineChart, why: 'Segment and compare collateral cohorts for portfolio analysis. Includes Portfolio Heatmap as a second tab.' },
+    { label: 'Analytics & Intelligence', href: '/ai-risk-fraud', icon: ShieldAlert, why: 'AI-powered risk and fraud analysis — both dimensions combined in a single tabbed view.' },
     { label: 'Reports Hub', href: '/reports', icon: BarChart, why: 'Regulatory, utilisation, and collateral reports for board and regulator submissions.' },
     { label: 'Custom Reports', href: '/custom-reports', icon: ScrollText, why: 'Build and save custom report templates with your own filters.' },
     { label: 'Compliance Audit', href: '/compliance-audit', icon: ShieldCheck, why: 'Run compliance audits against active rules and review findings.' },
     { label: 'Audit Center', href: '/audit-center', icon: DatabaseZap, why: 'Searchable audit database for regulatory reviews and internal investigations.' },
     { label: 'Deadline Predictions', href: '/deadline-predictions', icon: Target, why: 'AI-predicted expiry and perfection deadlines based on historical patterns.' },
     { label: 'Covenant Tracking', href: '/covenant-tracking', icon: FileText, why: 'Monitor covenant compliance across all active facilities.' },
-    { label: 'Workflows Admin', href: '/workflows-admin', icon: Settings2, why: 'Manage workflow templates, escalation rules, and KPI thresholds.' },
+    { label: 'Workflows Admin', href: '/workflows-admin', icon: Settings2, why: 'Manage workflow templates, escalation rules, KPI dashboards, and process analytics.' },
   ],
   tasks: [
     {
@@ -268,8 +297,8 @@ export const MANAGER_GUIDE: RoleGuide = {
       description: 'Conduct the monthly portfolio health review using analytics and reporting tools.',
       steps: [
         { action: 'Open the Executive Dashboard for top-level KPIs and trends', where: 'Executive Dashboard', href: '/executive-dashboard' },
-        { action: 'Review the Portfolio Heatmap for concentration and geographic risk', where: 'Portfolio Heatmap', href: '/portfolio-heatmap' },
-        { action: 'Run Cohort Analytics to compare segment performance', where: 'Cohort Analytics', href: '/cohort-analytics' },
+        { action: 'Switch to the Collateral Dashboard and open the Portfolio Monitoring tab for concentration data', where: 'Collateral Dashboard', href: '/collateral-dashboard' },
+        { action: 'Run Cohort Analytics — switch to the Portfolio Heatmap tab for geographic risk density', where: 'Cohort Analytics', href: '/cohort-analytics' },
         { action: 'Check Deadline Predictions for upcoming high-risk expirations', where: 'Deadline Predictions', href: '/deadline-predictions' },
         { action: 'Generate and export the monthly report for board submission', where: 'Reports Hub', href: '/reports' },
       ],
@@ -295,13 +324,25 @@ export const MANAGER_GUIDE: RoleGuide = {
         { action: 'Save and test the rule using the Trigger Processor', where: 'Workflows Admin', href: '/workflows-admin/trigger-processor' },
       ],
     },
+    {
+      title: 'Review workflow process analytics',
+      description: 'Analyse workflow performance metrics to identify bottlenecks and SLA compliance issues.',
+      steps: [
+        { action: 'Open Workflows Admin and navigate to Process Analytics & KPIs', where: 'Workflows Admin', href: '/workflows-admin/process-analytics' },
+        { action: 'Review cycle times, SLA compliance rates, and bottleneck stages', where: 'Workflows Admin', href: '/workflows-admin/process-analytics' },
+        { action: 'Open the Workflow KPIs page for detailed performance metrics', where: 'Workflows Admin', href: '/workflows-admin/kpis' },
+        { action: 'Identify officers or stages with consistently high overdue rates', where: 'Workflows Admin', href: '/workflows-admin/process-analytics' },
+        { action: 'Adjust SLA thresholds or escalation rules based on findings', where: 'Workflows Admin', href: '/workflows-admin/escalation' },
+      ],
+    },
   ],
   tips: [
     { type: 'tip', text: 'The Workflow Instances screen shows a live countdown for every open item — sort by "Time Remaining" to prioritise your day.' },
     { type: 'warning', text: 'Escalated items that remain unresolved for 48 hours are flagged in the Executive Dashboard as SLA breaches.' },
-    { type: 'tip', text: 'Use Cohort Analytics to identify which collateral types are generating the most workflow delays — a leading indicator of process risk.' },
+    { type: 'tip', text: 'The Cohort Analytics page now includes a Portfolio Heatmap tab — switch between cohort analysis and geographic concentration in one place.' },
     { type: 'info', text: 'Regulatory reports must be generated from the Reports Hub, not exported from individual screens — only the hub applies the correct regulatory formatting.' },
     { type: 'tip', text: 'The Deadline Predictions screen uses AI to surface assets likely to breach their perfection deadline in the next 30 days — review it weekly.' },
+    { type: 'info', text: 'The Analytics & Intelligence module (formerly "Intelligence") now combines AI Risk Assessment and AI Fraud Prevention in a single tabbed page at /ai-risk-fraud.' },
   ],
 };
 
@@ -319,20 +360,21 @@ export const SYSTEM_ADMIN_GUIDE: RoleGuide = {
   modules: [
     { label: 'User Management', href: '/user-management', icon: Users, why: 'Create, edit, and deactivate user accounts. Manage screen access per user.' },
     { label: 'Officer Permissions', href: '/officer-permissions', icon: KeyRound, why: 'Fine-grained permission matrix — control exactly what each officer can do.' },
-    { label: 'Workflows Admin', href: '/workflows-admin', icon: Settings2, why: 'Central hub for all workflow engine configuration.' },
+    { label: 'Workflows Admin', href: '/workflows-admin', icon: Settings2, why: 'Central hub for all workflow engine configuration and monitoring.' },
     { label: 'Workflow Templates', href: '/workflows-admin/templates', icon: GitPullRequest, why: 'Create and edit workflow templates that define approval stages.' },
-    { label: 'Trigger Rules', href: '/workflows-admin/trigger-rules', icon: Zap, why: 'Configure the rules that automatically launch workflows on events.' },
-    { label: 'Trigger Processor', href: '/workflows-admin/trigger-processor', icon: Radio, why: 'Manually run the trigger processor to test and debug rule execution.' },
+    { label: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules', icon: Zap, why: 'Configure the rules that automatically launch workflows on events.' },
+    { label: 'Trigger Processor', href: '/workflows-admin/trigger-processor', icon: Activity, why: 'Manually run the trigger processor to test and debug rule execution.' },
     { label: 'Escalation Config', href: '/workflows-admin/escalation', icon: AlertTriangle, why: 'Set the conditions and SLA thresholds that trigger automatic escalations.' },
+    { label: 'Process Analytics & KPIs', href: '/workflows-admin/process-analytics', icon: TrendingUp, why: 'Monitor workflow performance metrics, cycle times, and SLA compliance rates.' },
+    { label: 'Workflow KPIs', href: '/workflows-admin/kpis', icon: BarChart, why: 'Detailed KPI dashboard for workflow engine performance.' },
     { label: 'Migration Tool', href: '/workflows-admin/migration', icon: DatabaseZap, why: 'Run data migration operations and manage the migration queue.' },
-    { label: 'Workflow KPIs', href: '/workflows-admin/kpis', icon: BarChart, why: 'Monitor workflow performance metrics and SLA compliance rates.' },
     { label: 'System Settings', href: '/settings', icon: Settings, why: 'Configure email providers, document types, notification preferences, and registries.' },
     { label: 'Alert Thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, why: 'Set numeric thresholds that trigger automated alerts (e.g. LTV > 80%).' },
     { label: 'System Config', href: '/system-config', icon: Settings2, why: 'Advanced configuration — brand kit, feature flags, and integrations.' },
     { label: 'SMS Notification Rules', href: '/sms-notification-rules', icon: SendHorizonal, why: 'Configure which events trigger SMS alerts and to which roles.' },
     { label: 'Scheduled Jobs', href: '/scheduled-jobs', icon: CalendarClock, why: 'Monitor automated background tasks and their execution status.' },
     { label: 'Audit Center', href: '/audit-center', icon: DatabaseZap, why: 'Full audit database — review any user action across the entire system.' },
-    { label: 'Live Activity', href: '/live-activity', icon: Activity, why: 'Real-time feed of all user actions — auto-refreshes every 30 seconds.' },
+    { label: 'Live Activity', href: '/live-activity', icon: Radio, why: 'Real-time feed of all user actions — auto-refreshes every 30 seconds.' },
   ],
   tasks: [
     {
@@ -361,11 +403,22 @@ export const SYSTEM_ADMIN_GUIDE: RoleGuide = {
       title: 'Configure a workflow trigger rule',
       description: 'Set up a rule that automatically launches a workflow when a specific event occurs.',
       steps: [
-        { action: 'Open Trigger Rules and click "New Rule"', where: 'Trigger Rules', href: '/workflows-admin/trigger-rules' },
-        { action: 'Select the trigger event (e.g. "Collateral Registered", "LTV Breached")', where: 'Trigger Rules', href: '/workflows-admin/trigger-rules' },
-        { action: 'Select the workflow template to launch on this event', where: 'Trigger Rules', href: '/workflows-admin/trigger-rules' },
-        { action: 'Set any conditions (e.g. only for collateral type = "Land")', where: 'Trigger Rules', href: '/workflows-admin/trigger-rules' },
+        { action: 'Open Auto-Trigger Rules and click "New Rule"', where: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules' },
+        { action: 'Select the trigger event (e.g. "Collateral Registered", "LTV Breached")', where: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules' },
+        { action: 'Select the workflow template to launch on this event', where: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules' },
+        { action: 'Set any conditions (e.g. only for collateral type = "Land")', where: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules' },
         { action: 'Test the rule using the Trigger Processor before activating', where: 'Trigger Processor', href: '/workflows-admin/trigger-processor' },
+      ],
+    },
+    {
+      title: 'Monitor workflow performance',
+      description: 'Review workflow KPIs and process analytics to identify bottlenecks and SLA issues.',
+      steps: [
+        { action: 'Open Workflows Admin and navigate to Process Analytics & KPIs', where: 'Process Analytics & KPIs', href: '/workflows-admin/process-analytics' },
+        { action: 'Review average cycle times and SLA compliance rates per workflow type', where: 'Process Analytics & KPIs', href: '/workflows-admin/process-analytics' },
+        { action: 'Open Workflow KPIs for a detailed breakdown by stage and officer', where: 'Workflow KPIs', href: '/workflows-admin/kpis' },
+        { action: 'Check Active Instances for any workflows currently overdue', where: 'Workflows Admin', href: '/workflows-admin/instances' },
+        { action: 'Adjust escalation thresholds if SLA breach rates are high', where: 'Escalation Config', href: '/workflows-admin/escalation' },
       ],
     },
     {
@@ -398,6 +451,7 @@ export const SYSTEM_ADMIN_GUIDE: RoleGuide = {
     { type: 'info', text: 'All admin actions are logged in the Audit Center with your user ID and timestamp — there is no "undo" for configuration changes.' },
     { type: 'tip', text: 'Use the Live Activity stream to monitor the system in real time after deploying configuration changes — watch for unexpected errors.' },
     { type: 'warning', text: 'Changing alert thresholds takes effect immediately for all future evaluations. Notify affected officers before lowering thresholds significantly.' },
+    { type: 'info', text: 'The Workflows Admin module now includes Process Analytics & KPIs and Active Instances sub-pages — use these to monitor workflow health without leaving the admin area.' },
   ],
 };
 
