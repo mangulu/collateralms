@@ -136,7 +136,7 @@ export default function ObligorProfileContent({ id }: Props) {
     );
   }
 
-  const risk = riskConfig[obligor.riskRating ?? 'MEDIUM'];
+  const risk = riskConfig[obligor.riskRating ?? 'MEDIUM'] ?? riskConfig['MEDIUM'];
   const RiskIcon = risk.icon;
 
   const totalCollateralValue = collaterals.reduce((sum, c) => {
@@ -164,7 +164,7 @@ export default function ObligorProfileContent({ id }: Props) {
   ].filter((s) => s.count > 0);
 
   // ── Credit Risk Score ──────────────────────────────────────────────────────
-  const baseScore = riskConfig[obligor.riskRating ?? 'MEDIUM'].score;
+  const baseScore = (riskConfig[obligor.riskRating ?? 'MEDIUM'] ?? riskConfig['MEDIUM']).score;
   const overdueDeduction = Math.min(overdueCount * 8, 30);
   const perfectionBonus = Math.min(perfectedCount * 3, 15);
   const creditRiskScore = Math.max(5, Math.min(100, baseScore - overdueDeduction + perfectionBonus));
