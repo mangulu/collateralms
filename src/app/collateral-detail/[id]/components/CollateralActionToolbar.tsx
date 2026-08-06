@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
+import { archivePlacementService, archiveLocationService, archiveAuditService, ArchiveLocation } from '@/lib/supabase/archiveService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -704,6 +705,134 @@ function ReleaseModal({ collateral, onClose, onSaved }: { collateral: Collateral
   );
 }
 
+// ─── Action: Archive (Physical Location) ─────────────────────────────────────
+
+function ArchiveModal({ collateral, onClose, onSaved }: { collateral: CollateralRecord; onClose: () => void; onSaved: () => void }) {
+  const { user } = useAuth();
+  const [locations, setLocations] = useState<ArchiveLocation[]>([]);
+  const [locationId, setLocationId] = useState('');
+  const [physicalRef, setPhysicalRef] = useState(() => {
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `PHY-${date}-${rand}`;
+  });
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+
+  useEffect(() => {
+    archiveLocationService.getAll()
+      .then((all) => setLocations(all.filter((l) => l.isActive)))
+      .catch(() => setLocations([]))
+      .finally(() => setLoadingLocations(false));
+  }, []);
+
+  const handleSave = async () => {
+    if (!locationId) { toast.error('Please select an archive location'); return; }
+    setSaving(true);
+    try {
+      await archivePlacementService.upsert({
+        collateralId: collateral.id,
+        locationId,
+        physicalRef: physicalRef.trim() || undefined,
+        notes: notes.trim() || undefined,
+        placedBy: user?.id,
+      });
+      await Promise.all([
+        archiveAuditService.log({
+          eventType: 'placement_assigned',
+          collateralId: collateral.id,
+          locationId,
+          performedBy: user?.id ?? null,
+          description: `Archived from collateral detail — physical ref ${physicalRef}`,
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'archived',
+          fieldChanged: 'archive_location',
+          newValue: locationId,
+          notes: notes.trim() || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
+      toast.success('Collateral archived successfully');
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to archive collateral');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Group locations by type for a readable select
+  const grouped: Record<string, ArchiveLocation[]> = {};
+  locations.forEach((l) => {
+    const key = l.locationType.charAt(0).toUpperCase() + l.locationType.slice(1);
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(l);
+  });
+
+  return (
+    <ModalShell title="Archive Collateral" icon={<Archive size={16} className="text-slate-600" />} iconBg="bg-slate-100" onClose={onClose}>
+      <CollateralSummaryBlock collateral={collateral} />
+      <div className="mt-4 space-y-3">
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">
+            Physical Archive Location <span className="text-red-500">*</span>
+          </label>
+          {loadingLocations ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 size={14} className="animate-spin" /> Loading locations…
+            </div>
+          ) : (
+            <select
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">— Select location —</option>
+              {Object.entries(grouped).map(([type, locs]) => (
+                <optgroup key={type} label={type}>
+                  {locs.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} ({l.code})
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Physical Reference</label>
+          <input
+            value={physicalRef}
+            onChange={(e) => setPhysicalRef(e.target.value)}
+            placeholder="e.g. PHY-20260806-1234"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Auto-generated — you may edit if needed.</p>
+        </div>
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Any additional instructions or context…"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
+        </div>
+      </div>
+      <ModalFooter onClose={onClose} onConfirm={handleSave} saving={saving} confirmLabel="Confirm Archive" confirmClass="bg-slate-700 hover:bg-slate-800" />
+    </ModalShell>
+  );
+}
+
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 function CollateralSummaryBlock({ collateral }: { collateral: CollateralRecord }) {
@@ -951,10 +1080,7 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
     {
       label: 'Archive',
       icon: Archive,
-      onClick: () => {
-        toast.info('Redirecting to Archive module…');
-        window.location.href = '/archive/collateral-placement';
-      },
+      onClick: () => setActiveModal({ action: 'archive' }),
     },
     {
       label: 'Flag for Review',
@@ -1016,6 +1142,11 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       )}
       {activeModal.workflow === 'release' && (
         <ReleaseModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
+      )}
+
+      {/* Action Modals */}
+      {activeModal.action === 'archive' && (
+        <ArchiveModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
       )}
     </>
   );
