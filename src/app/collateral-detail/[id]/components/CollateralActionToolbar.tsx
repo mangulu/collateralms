@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox } from 'lucide-react';
+import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox, BookOpen } from 'lucide-react';
 import { CollateralRecord, collateralService, auditService } from '@/lib/supabase/collateralService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { createValuation } from '@/lib/supabase/valuationService';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
 import { archivePlacementService, archiveLocationService, archiveAuditService, ArchiveLocation, ArchivePlacement } from '@/lib/supabase/archiveService';
+import { registrySubmissionTrackerService, PerfectionRegistryName, REGISTRY_NAMES,  } from '@/lib/supabase/registrySubmissionTrackerService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -20,7 +21,7 @@ interface CollateralActionToolbarProps {
 }
 
 type QuickEditType = 'assignee' | 'geolocation' | 'status' | null;
-type WorkflowType = 'perfection' | 'valuation' | 'document-review' | 'substitution' | 'release' | null;
+type WorkflowType = 'perfection' | 'valuation' | 'document-review' | 'substitution' | 'release' | 'registry-submission' | null;
 type ActionType = 'archive' | 'flag' | 'report' | 'request-file' | null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -123,6 +124,25 @@ function getWorkflowGates(collateral: CollateralRecord): Record<string, Workflow
     },
   };
 }
+
+// ─── Registry Type Mapping ────────────────────────────────────────────────────
+const REGISTRY_TYPE_MAP: Record<string, PerfectionRegistryName | null> = {
+  'BRELA':          'BRELA',
+  'Lands Registry': 'Lands Registry',
+  'TRA':            'TRA',
+  'DSE':            'DSE/CSDR',
+  'TASAC':          'Tanzania Shipping',
+  'N/A':            null,
+};
+
+const REGISTRY_DESCRIPTIONS: Record<PerfectionRegistryName, string> = {
+  'BRELA':             'Business assets, debentures & charges',
+  'Lands Registry':    'Mortgages & title deeds',
+  'TRA':               'Motor vehicle registration',
+  'DSE/CSDR':          'Shares & securities',
+  'Tanzania Shipping': 'Ship & vessel collateral',
+  'Other':             'Other registry',
+};
 
 // ─── Tooltip wrapper ──────────────────────────────────────────────────────────
 
@@ -701,6 +721,112 @@ function ReleaseModal({ collateral, onClose, onSaved }: { collateral: Collateral
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Reason for release / discharge…" className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
       </div>
       <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Initiate Release" confirmClass="bg-amber-600 hover:bg-amber-700" />
+    </ModalShell>
+  );
+}
+
+// ─── Initiate Workflow: Registry Submission ───────────────────────────────────
+
+function RegistrySubmissionModal({
+  collateral,
+  onClose,
+  onSaved,
+}: {
+  collateral: CollateralRecord;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const preselectedRegistry: PerfectionRegistryName | null =
+    collateral.registry ? (REGISTRY_TYPE_MAP[collateral.registry] ?? null) : null;
+
+  const [registry, setRegistry] = useState<PerfectionRegistryName>(preselectedRegistry ?? 'BRELA');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const userName = (user as any)?.user_metadata?.full_name ?? user?.email ?? 'Unknown';
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      await registrySubmissionTrackerService.create({
+        collateralRecordId: collateral.id,
+        registryName: registry,
+        notes: notes || undefined,
+        createdBy: user?.id,
+        createdByName: userName,
+      });
+      await logCollateralUpdate({
+        collateralRecordId: collateral.id,
+        collateralId: collateral.collateralId,
+        updateType: 'workflow_initiated',
+        fieldChanged: 'workflow_registry_submission',
+        newValue: registry,
+        notes: notes || undefined,
+        performedBy: user?.id,
+        performedByName: user?.email ?? '',
+      });
+      toast.success('Registry submission created');
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to create submission');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalShell title="New Registry Submission" icon={<BookOpen size={16} className="text-teal-600" />} iconBg="bg-teal-100" onClose={onClose}>
+      <CollateralSummaryBlock collateral={collateral} />
+      <div className="mt-4 space-y-3">
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">
+            Registry <span className="text-red-500">*</span>
+          </label>
+          {preselectedRegistry ? (
+            <div className="space-y-2">
+              <div className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-muted/30 text-foreground flex items-center justify-between">
+                <span className="font-600">{preselectedRegistry}</span>
+                <span className="text-[10px] font-500 text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-2 shrink-0">From profile</span>
+              </div>
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">Adding a secondary registry? Select below:</label>
+                <select
+                  value={registry}
+                  onChange={(e) => setRegistry(e.target.value as PerfectionRegistryName)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                >
+                  {REGISTRY_NAMES.map((r) => (
+                    <option key={r} value={r}>{r} — {REGISTRY_DESCRIPTIONS[r]}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <select
+              value={registry}
+              onChange={(e) => setRegistry(e.target.value as PerfectionRegistryName)}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+            >
+              {REGISTRY_NAMES.map((r) => (
+                <option key={r} value={r}>{r} — {REGISTRY_DESCRIPTIONS[r]}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Add context or instructions…"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
+        </div>
+      </div>
+      <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Create Submission" confirmClass="bg-teal-600 hover:bg-teal-700" />
     </ModalShell>
   );
 }
@@ -1409,6 +1535,9 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
   const [archivePlacement, setArchivePlacement] = useState<ArchivePlacement | null | undefined>(undefined);
   const [showReArchiveConfirm, setShowReArchiveConfirm] = useState(false);
 
+  // Registry submission gate — check if any active submission exists
+  const [registrySubmissionGate, setRegistrySubmissionGate] = useState<{ disabled: boolean; reason: string }>({ disabled: false, reason: '' });
+
   useEffect(() => {
     const supabase = createClient();
     supabase
@@ -1451,6 +1580,25 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
         }
       })
       .catch(() => setArchivePlacement(null));
+  }, [collateral.id]);
+
+  // Load registry submission gate
+  useEffect(() => {
+    registrySubmissionTrackerService.listByCollateral(collateral.id)
+      .then((submissions) => {
+        const active = submissions.find(
+          (s) => s.submissionStatus === 'Pending' || s.submissionStatus === 'Submitted' || s.submissionStatus === 'Acknowledged'
+        );
+        const registered = submissions.find((s) => s.submissionStatus === 'Registered');
+        if (registered) {
+          setRegistrySubmissionGate({ disabled: true, reason: 'Already registered at this registry' });
+        } else if (active) {
+          setRegistrySubmissionGate({ disabled: true, reason: `Submission already ${active.submissionStatus.toLowerCase()} — complete or reject it first` });
+        } else {
+          setRegistrySubmissionGate({ disabled: false, reason: '' });
+        }
+      })
+      .catch(() => setRegistrySubmissionGate({ disabled: false, reason: '' }));
   }, [collateral.id]);
 
   const isArchived = archivePlacement != null;
@@ -1543,6 +1691,14 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       disabledReason: gates.release.reason,
       color: 'text-amber-700',
     },
+    {
+      label: 'New Submission',
+      icon: BookOpen,
+      onClick: () => setActiveModal({ workflow: 'registry-submission' }),
+      disabled: registrySubmissionGate.disabled,
+      disabledReason: registrySubmissionGate.reason,
+      color: 'text-teal-700',
+    },
   ];
 
   // Actions items — Request File only shown when archived
@@ -1620,6 +1776,9 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       )}
       {activeModal.workflow === 'release' && (
         <ReleaseModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
+      )}
+      {activeModal.workflow === 'registry-submission' && (
+        <RegistrySubmissionModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
       )}
 
       {/* Action Modals */}

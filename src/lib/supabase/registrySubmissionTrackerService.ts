@@ -132,6 +132,95 @@ export const registrySubmissionTrackerService = {
     return (data ?? []).map(rowToSubmission);
   },
 
+  async listAll(filters?: {
+    registryName?: PerfectionRegistryName;
+    status?: RegistrySubmissionStatus;
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<RegistrySubmission[]> {
+    const supabase = createClient();
+    let query = supabase
+      .from('registry_submission_tracker')
+      .select(`
+        *,
+        submitted_by_profile:user_profiles!submitted_by(full_name),
+        acknowledged_by_profile:user_profiles!acknowledged_by(full_name),
+        registered_by_profile:user_profiles!registered_by(full_name),
+        rejected_by_profile:user_profiles!rejected_by(full_name),
+        created_by_profile:user_profiles!created_by(full_name)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (filters?.registryName) {
+      query = query.eq('registry_name', filters.registryName);
+    }
+    if (filters?.status) {
+      query = query.eq('submission_status', filters.status);
+    }
+    if (filters?.fromDate) {
+      query = query.gte('created_at', filters.fromDate);
+    }
+    if (filters?.toDate) {
+      query = query.lte('created_at', filters.toDate);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []).map(rowToSubmission);
+  },
+
+  async bulkUpdateStatus(payload: {
+    ids: string[];
+    newStatus: RegistrySubmissionStatus;
+    userId?: string;
+    userName?: string;
+    notes?: string;
+  }): Promise<void> {
+    const supabase = createClient();
+    const now = new Date().toISOString();
+
+    // Fetch current statuses for audit
+    const { data: currents } = await supabase
+      .from('registry_submission_tracker')
+      .select('id, submission_status')
+      .in('id', payload.ids);
+
+    const updatePayload: Record<string, any> = {
+      submission_status: payload.newStatus,
+      updated_at: now,
+    };
+    if (payload.newStatus === 'Submitted') {
+      updatePayload.submitted_at = now;
+      updatePayload.submitted_by = payload.userId ?? null;
+    } else if (payload.newStatus === 'Acknowledged') {
+      updatePayload.acknowledged_at = now;
+      updatePayload.acknowledged_by = payload.userId ?? null;
+    } else if (payload.newStatus === 'Registered') {
+      updatePayload.registered_at = now;
+      updatePayload.registered_by = payload.userId ?? null;
+    }
+
+    const { error } = await supabase
+      .from('registry_submission_tracker')
+      .update(updatePayload)
+      .in('id', payload.ids);
+    if (error) throw error;
+
+    // Audit trail for each
+    const auditRows = payload.ids.map((id) => {
+      const current = (currents ?? []).find((c: any) => c.id === id);
+      return {
+        submission_id: id,
+        from_status: current?.submission_status ?? null,
+        to_status: payload.newStatus,
+        changed_by: payload.userId ?? null,
+        changed_by_name: payload.userName ?? null,
+        notes: payload.notes ?? 'Bulk status update',
+      };
+    });
+    await supabase.from('registry_submission_audit').insert(auditRows);
+  },
+
   async create(payload: {
     collateralRecordId: string;
     registryName: PerfectionRegistryName;

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, CheckSquare, GitBranch, TrendingUp, ArrowLeftRight, FolderArchive, Clock, AlertTriangle, ChevronRight, RefreshCw, Loader2, CheckCircle2, XCircle, BarChart3, Zap, Activity, Layers } from 'lucide-react';
+import { ShieldCheck, CheckSquare, GitBranch, TrendingUp, ArrowLeftRight, FolderArchive, Clock, AlertTriangle, ChevronRight, RefreshCw, Loader2, CheckCircle2, XCircle, BarChart3, Zap, Activity, Layers, BookText } from 'lucide-react';
 import { collateralApprovalService } from '@/lib/supabase/collateralApprovalService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { userTaskService } from '@/lib/supabase/userTaskService';
@@ -9,6 +9,7 @@ import { getValuationStats } from '@/lib/supabase/valuationService';
 import { getSubstitutionStats } from '@/lib/supabase/substitutionService';
 import { workflowInstanceService } from '@/lib/supabase/workflowEngineService';
 import { archiveRequestService } from '@/lib/supabase/archiveService';
+import { registrySubmissionTrackerService } from '@/lib/supabase/registrySubmissionTrackerService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface WorkflowCard {
@@ -93,14 +94,16 @@ export default function WorkflowsDashboardContent() {
   const [archiveCount, setArchiveCount] = useState<number | null>(null);
   const [archiveUrgent, setArchiveUrgent] = useState(0);
   const [engineStats, setEngineStats] = useState<{ active: number; escalated: number } | null>(null);
+  const [registryCount, setRegistryCount] = useState<number | null>(null);
+  const [registryUrgent, setRegistryUrgent] = useState(0);
   const [loadingStates, setLoadingStates] = useState({
-    approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true, archive: true,
+    approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true, archive: true, registry: true,
   });
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [refreshing, setRefreshing] = useState(false);
 
   const loadAll = useCallback(async (silent = false) => {
-    if (!silent) setLoadingStates({ approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true, archive: true });
+    if (!silent) setLoadingStates({ approvals: true, tasks: true, perfection: true, valuation: true, substitution: true, engine: true, archive: true, registry: true });
     else setRefreshing(true);
 
     await Promise.allSettled([
@@ -154,6 +157,19 @@ export default function WorkflowsDashboardContent() {
         setEngineStats({ active: stats.active, escalated: stats.escalated });
         setLoadingStates((p) => ({ ...p, engine: false }));
       }).catch(() => { setEngineStats(null); setLoadingStates((p) => ({ ...p, engine: false })); }),
+
+      // Registry Submissions
+      registrySubmissionTrackerService.listAll().then((submissions) => {
+        const active = submissions.filter((s) => s.submissionStatus !== 'Registered' && s.submissionStatus !== 'Rejected');
+        setRegistryCount(active.length);
+        // Overdue = Submitted for > 7 days
+        const overdue = submissions.filter((s) => {
+          if (s.submissionStatus !== 'Submitted' || !s.submittedAt) return false;
+          return (Date.now() - new Date(s.submittedAt).getTime()) / (1000 * 60 * 60 * 24) > 7;
+        });
+        setRegistryUrgent(overdue.length);
+        setLoadingStates((p) => ({ ...p, registry: false }));
+      }).catch(() => { setRegistryCount(0); setLoadingStates((p) => ({ ...p, registry: false })); }),
     ]);
 
     setLastRefreshed(new Date());
@@ -230,6 +246,19 @@ export default function WorkflowsDashboardContent() {
       borderColor: 'border-rose-100 hover:border-rose-300',
       count: substitutionCount,
       loading: loadingStates.substitution,
+    },
+    {
+      id: 'registry',
+      title: 'Registry Submissions',
+      description: 'Cross-collateral perfection submissions across BRELA, Lands Registry, TRA and more',
+      href: '/workflows/registry-submissions',
+      icon: <BookText size={20} className="text-cyan-600" />,
+      accentColor: 'bg-cyan-50',
+      bgColor: 'bg-white',
+      borderColor: 'border-cyan-100 hover:border-cyan-300',
+      count: registryCount,
+      urgentCount: registryUrgent,
+      loading: loadingStates.registry,
     },
     {
       id: 'archive',
