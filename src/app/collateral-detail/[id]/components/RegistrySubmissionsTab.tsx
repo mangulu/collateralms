@@ -471,6 +471,17 @@ function SubmissionCard({ submission, collateralId, onRefresh, userId, userName 
   );
 }
 
+// ─── Registry Type Mapping ────────────────────────────────────────────────────
+// Maps CollateralRecord.registry (RegistryType) → PerfectionRegistryName
+const REGISTRY_TYPE_MAP: Record<string, PerfectionRegistryName | null> = {
+  'BRELA':          'BRELA',
+  'Lands Registry': 'Lands Registry',
+  'TRA':            'TRA',
+  'DSE':            'DSE/CSDR',
+  'TASAC':          'Tanzania Shipping',
+  'N/A':            null,
+};
+
 // ─── New Submission Form ──────────────────────────────────────────────────────
 
 interface NewSubmissionFormProps {
@@ -480,10 +491,15 @@ interface NewSubmissionFormProps {
   onCancel: () => void;
   userId?: string;
   userName?: string;
+  preselectedRegistry?: PerfectionRegistryName | null;
 }
 
-function NewSubmissionForm({ collateralRecordId, existingRegistries, onCreated, onCancel, userId, userName }: NewSubmissionFormProps) {
-  const [registry, setRegistry] = useState<PerfectionRegistryName>('BRELA');
+function NewSubmissionForm({ collateralRecordId, existingRegistries, onCreated, onCancel, userId, userName, preselectedRegistry }: NewSubmissionFormProps) {
+  // If collateral has a registry set, pre-select it; otherwise default to first option
+  const defaultRegistry: PerfectionRegistryName = preselectedRegistry ?? 'BRELA';
+  const isPreselected = !!preselectedRegistry;
+
+  const [registry, setRegistry] = useState<PerfectionRegistryName>(defaultRegistry);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -513,16 +529,47 @@ function NewSubmissionForm({ collateralRecordId, existingRegistries, onCreated, 
       <h3 className="text-sm font-700 text-foreground mb-4">New Registry Submission</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-xs font-600 text-foreground mb-1">Registry <span className="text-red-500">*</span></label>
-          <select
-            value={registry}
-            onChange={(e) => setRegistry(e.target.value as PerfectionRegistryName)}
-            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-          >
-            {REGISTRY_NAMES.map((r) => (
-              <option key={r} value={r}>{r} — {REGISTRY_DESCRIPTIONS[r]}</option>
-            ))}
-          </select>
+          <label className="block text-xs font-600 text-foreground mb-1">
+            Registry <span className="text-red-500">*</span>
+          </label>
+          {isPreselected ? (
+            <div className="flex flex-col gap-1">
+              <div className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-muted/30 text-foreground font-600 flex items-center justify-between">
+                <span>{registry} — {REGISTRY_DESCRIPTIONS[registry]}</span>
+                <span className="text-[10px] font-500 text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-2 shrink-0">From profile</span>
+              </div>
+              {/* Allow override for secondary registries */}
+              <button
+                type="button"
+                onClick={() => {/* allow manual change */}}
+                className="hidden"
+              />
+              <div className="mt-1">
+                <label className="block text-[10px] text-muted-foreground mb-1">
+                  Adding a secondary registry? Select below:
+                </label>
+                <select
+                  value={registry}
+                  onChange={(e) => setRegistry(e.target.value as PerfectionRegistryName)}
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                >
+                  {REGISTRY_NAMES.map((r) => (
+                    <option key={r} value={r}>{r} — {REGISTRY_DESCRIPTIONS[r]}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <select
+              value={registry}
+              onChange={(e) => setRegistry(e.target.value as PerfectionRegistryName)}
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+            >
+              {REGISTRY_NAMES.map((r) => (
+                <option key={r} value={r}>{r} — {REGISTRY_DESCRIPTIONS[r]}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div>
           <label className="block text-xs font-600 text-foreground mb-1">Notes</label>
@@ -559,6 +606,10 @@ export default function RegistrySubmissionsTab({ collateral }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+
+  // Derive pre-selected registry from collateral profile
+  const preselectedRegistry: PerfectionRegistryName | null =
+    collateral.registry ? (REGISTRY_TYPE_MAP[collateral.registry] ?? null) : null;
 
   const load = async () => {
     if (!collateral.id) return;
@@ -636,6 +687,7 @@ export default function RegistrySubmissionsTab({ collateral }: Props) {
           onCancel={() => setShowForm(false)}
           userId={user?.id}
           userName={userName}
+          preselectedRegistry={preselectedRegistry}
         />
       )}
 
@@ -666,7 +718,9 @@ export default function RegistrySubmissionsTab({ collateral }: Props) {
           <div className="text-center">
             <p className="text-sm font-600 text-foreground">No registry submissions yet</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Create a submission to start tracking perfection across BRELA, Lands Registry, TRA, DSE/CSDR, or Tanzania Shipping.
+              {preselectedRegistry
+                ? `Create a submission for ${preselectedRegistry} (from collateral profile) or any other applicable registry.`
+                : 'Create a submission to start tracking perfection across BRELA, Lands Registry, TRA, DSE/CSDR, or Tanzania Shipping.'}
             </p>
           </div>
           <button
@@ -703,7 +757,7 @@ export default function RegistrySubmissionsTab({ collateral }: Props) {
               {counts.registered} of {counts.total} submission{counts.total !== 1 ? 's' : ''} reached Registered status
             </p>
             <p className="text-xs text-green-700 mt-0.5">
-              Verify the Perfection Workflow is updated to reflect completed registrations.
+              Perfection Workflow can now be initiated for this collateral.
             </p>
           </div>
         </div>

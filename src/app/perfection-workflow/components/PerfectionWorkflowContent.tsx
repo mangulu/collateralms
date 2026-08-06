@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
+import { registrySubmissionTrackerService } from '@/lib/supabase/registrySubmissionTrackerService';
 import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -1507,6 +1508,10 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
   const [collateralTypes, setCollateralTypes] = useState<string[]>([]);
   const [registries, setRegistries] = useState<string[]>([]);
 
+  // Registry submission dependency check
+  const [registryCheckLoading, setRegistryCheckLoading] = useState(false);
+  const [hasRegisteredSubmission, setHasRegisteredSubmission] = useState<boolean | null>(null);
+
   useEffect(() => {
     // Load collateral records that require perfection
     setCollateralLoading(true);
@@ -1531,6 +1536,7 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
   // Auto-populate form when a collateral record is selected
   function handleRecordSelect(recordId: string) {
     setSelectedRecordId(recordId);
+    setHasRegisteredSubmission(null);
     if (!recordId) {
       setForm(f => ({ ...f, collateralId: '', obligor: '', collateralType: '', registry: '', perfectionDeadline: '' }));
       return;
@@ -1545,6 +1551,15 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
         registry: record.registry,
         perfectionDeadline: record.perfectionDeadline || '',
       }));
+      // Check registry submission dependency
+      setRegistryCheckLoading(true);
+      registrySubmissionTrackerService.listByCollateral(recordId)
+        .then((submissions) => {
+          const hasRegistered = submissions.some(s => s.submissionStatus === 'Registered');
+          setHasRegisteredSubmission(hasRegistered);
+        })
+        .catch(() => setHasRegisteredSubmission(null))
+        .finally(() => setRegistryCheckLoading(false));
     }
   }
 
@@ -1554,10 +1569,17 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
     r.obligor.toLowerCase().includes(collateralSearch.toLowerCase())
   );
 
+  // Block submission if a record is selected but no registered submission exists
+  const isBlockedByDependency = !!selectedRecordId && hasRegisteredSubmission === false;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.collateralId.trim() || !form.obligor.trim()) {
       toast.error('Collateral ID and Obligor are required');
+      return;
+    }
+    if (isBlockedByDependency) {
+      toast.error('Registry Submission must reach Registered status before initiating Perfection Workflow');
       return;
     }
     setLoading(true);
@@ -1661,6 +1683,34 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
             )}
           </div>
 
+          {/* Registry Submission Dependency Check */}
+          {selectedRecordId && (
+            <div>
+              {registryCheckLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 border border-border rounded-md px-3 py-2.5">
+                  <Loader2 size={12} className="animate-spin shrink-0" />
+                  Checking registry submission status…
+                </div>
+              ) : hasRegisteredSubmission === false ? (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-300 rounded-md px-3 py-2.5">
+                  <AlertCircle size={14} className="text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-amber-800">Registry Submission Required</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Perfection Workflow can only be initiated after at least one Registry Submission has reached <strong>Registered</strong> status.
+                      Go to the collateral's <strong>Registry Submissions</strong> tab to complete the submission first.
+                    </p>
+                  </div>
+                </div>
+              ) : hasRegisteredSubmission === true ? (
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2.5">
+                  <CheckCircle2 size={13} className="text-green-600 shrink-0" />
+                  <p className="text-xs text-green-700 font-medium">Registry submission confirmed as Registered — Perfection Workflow can proceed.</p>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           {/* Collateral ID + Priority */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1738,7 +1788,11 @@ function NewRequestModal({ onClose, onCreated, userId, userName }: NewRequestMod
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">Cancel</button>
-            <button type="submit" disabled={loading} className="flex-1 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors">
+            <button
+              type="submit"
+              disabled={loading || isBlockedByDependency || registryCheckLoading}
+              className="flex-1 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
               {loading ? 'Creating...' : 'Create Request'}
             </button>
           </div>
