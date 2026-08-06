@@ -37,7 +37,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Overview',
         items: [
           { label: 'Dashboard', icon: LayoutDashboard, href: '/collateral-dashboard', permission: PERMISSIONS.DASHBOARD_VIEW },
-          { label: 'Portfolio Monitoring', icon: Activity, href: '/portfolio-monitoring', permission: PERMISSIONS.DASHBOARD_VIEW },
         ],
       },
       {
