@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, Shield, FileText, Calendar, User, Building2, AlertTriangle, CheckCircle2, Clock, Files, History, ShieldAlert, RefreshCw, Activity, PieChart, BookOpen, TrendingUp, Layers, MapPin, ChevronRight, Banknote, Star } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Shield, FileText, Calendar, User, Building2, AlertTriangle, CheckCircle2, Clock, Files, History, ShieldAlert, RefreshCw, Activity, PieChart, TrendingUp, Layers, MapPin, ChevronRight, Banknote, Star } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { CollateralRecord, CollateralStatus } from '@/lib/supabase/collateralService';
 import { collateralLinkService, CollateralUtilization } from '@/lib/supabase/collateralLinkService';
@@ -239,10 +239,6 @@ export default function CollateralDetailContent({
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <ArchiveStatusBadge collateral={collateral} />
-          <Link href={`/collateral-library/${collateral.id}`}
-            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors">
-            <BookOpen size={13} /> View in Library
-          </Link>
           <button onClick={onRefresh}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors">
             <RefreshCw size={13} /> Refresh

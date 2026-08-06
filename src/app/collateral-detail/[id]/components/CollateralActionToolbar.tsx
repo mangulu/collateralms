@@ -1218,15 +1218,15 @@ export function ArchiveStatusBadge({
 
   return (
     <>
-      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 border border-slate-300 rounded-full text-xs font-600 text-slate-700">
-        <Package size={12} className="text-slate-500 shrink-0" />
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300 rounded-full text-xs font-600 text-amber-800">
+        <Package size={12} className="text-amber-600 shrink-0" />
         <span>Archived</span>
         {placement.location && (
-          <span className="text-slate-500 font-400">— {placement.location.name}</span>
+          <span className="text-amber-600 font-400">— {placement.location.name}</span>
         )}
         <button
           onClick={() => setShowPopup(true)}
-          className="ml-1 text-primary hover:underline font-600 text-xs"
+          className="ml-1 text-amber-700 hover:underline font-600 text-xs"
         >
           View Location
         </button>
