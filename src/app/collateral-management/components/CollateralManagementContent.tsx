@@ -735,8 +735,7 @@ export default function CollateralManagementContent() {
             <p className="text-base font-600 text-foreground">No records found</p>
             <p className="text-sm text-muted-foreground mt-1">
               {collateralData.length === 0
-                ? 'No collateral records have been registered yet.'
-                : 'No records match your current filters. Try adjusting your search or filters.'}
+                ? 'No collateral records have been registered yet.' :'No records match your current filters. Try adjusting your search or filters.'}
             </p>
           </div>
           {collateralData.length > 0 && (
@@ -770,6 +769,7 @@ export default function CollateralManagementContent() {
           docUploadedCounts={docUploadedCounts}
           docRequiredCounts={docRequiredCounts}
           visibleColumns={visibleColumns}
+          onVisibleColumnsChange={setVisibleColumns}
         />
       )}
 
