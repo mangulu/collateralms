@@ -5,35 +5,7 @@ import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
-import {
-  FolderOpen,
-  Brain,
-  Bell,
-  BarChart2,
-  ShieldCheck,
-  Settings,
-  LogOut,
-  ChevronRight,
-  Layers,
-  Archive,
-  Users,
-  CheckSquare,
-  BookOpen,
-  HelpCircle,
-  Settings2,
-  AlertTriangle,
-  Clock,
-  TrendingUp,
-  ArrowRight,
-  Calendar,
-  Activity,
-  Zap,
-  FileText,
-  Plus,
-  Eye,
-  Search,
-  ChevronDown,
-} from 'lucide-react';
+import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, TrendingUp, ArrowRight, Calendar, Activity, Zap, FileText, Plus, Eye, Search, ChevronDown, FlaskConical,  } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -47,14 +19,7 @@ interface ModuleCard {
   borderColor: string;
   iconBg: string;
   category:
-    | 'collateral'
-    | 'workflow'
-    | 'archive'
-    | 'intelligence'
-    | 'alerts'
-    | 'reports'
-    | 'audit'
-    | 'admin';
+    | 'collateral' |'workflow' |'archive' |'intelligence' |'alerts' |'reports' |'audit' |'admin';
   quickActions: { label: string; href: string; icon: React.ElementType }[];
   requiredPermission?: string;
   adminOnly?: boolean;
@@ -138,7 +103,7 @@ const modules: ModuleCard[] = [
     id: 'approvals',
     title: 'Workflows',
     description:
-      'Centralised approval inbox for perfection, document, release, and archive request workflows.',
+      'Centralised approval inbox for perfection, document, release, and archive request workflows. Design templates, configure auto-triggers, manage escalations, and monitor workflow KPIs.',
     icon: CheckSquare,
     href: '/approval-inbox',
     borderColor: CATEGORY_BORDER.workflow,
@@ -150,24 +115,6 @@ const modules: ModuleCard[] = [
       { label: 'All Instances', href: '/workflows/instances', icon: Activity },
     ],
     requiredPermission: PERMISSIONS.PERFECTION_VIEW,
-  },
-  {
-    id: 'workflows-admin',
-    title: 'Workflows Admin',
-    description:
-      'Design templates, configure auto-triggers, manage escalations, and monitor workflow KPIs.',
-    icon: Settings2,
-    href: '/workflows-admin',
-    borderColor: CATEGORY_BORDER.admin,
-    iconBg: '#475569',
-    category: 'admin',
-    quickActions: [
-      { label: 'Templates', href: '/workflows-admin/templates', icon: FileText },
-      { label: 'Trigger Rules', href: '/workflows-admin/trigger-rules', icon: Zap },
-      { label: 'KPIs', href: '/workflows-admin/kpis', icon: TrendingUp },
-    ],
-    adminOnly: true,
-    requiredPermission: PERMISSIONS.SETTINGS_VIEW,
   },
   {
     id: 'intelligence',
@@ -330,6 +277,15 @@ export default function ModuleHubPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDismissed, setShowDismissed] = useState(false);
 
+  // ─── Additional sub-label stats ───────────────────────────────────────────
+  const [subStats, setSubStats] = useState({
+    perfectedCount: 0,
+    collateralOverdueCount: 0,
+    escalatedCount: 0,
+    dueTodayCount: 0,
+    highPriorityCount: 0,
+  });
+
   const displayName = userProfile?.full_name || userProfile?.email || 'User';
   const firstName = displayName.split(' ')[0];
   const displayRole = userProfile?.role
@@ -344,15 +300,31 @@ export default function ModuleHubPage() {
         .slice(0, 2)
     : 'U';
 
-  // ─── Compute visible modules ──────────────────────────────────────────────
+  // ─── Compute visible modules (merged Workflows Admin into Workflows for admins) ──
   const visibleModules = useMemo(() => {
     if (loading) return modules;
-    return modules.filter((m) => {
-      if (m.adminOnly && !isSystemAdmin) return false;
-      if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission))
-        return false;
-      return true;
-    });
+    return modules
+      .filter((m) => {
+        if (m.adminOnly && !isSystemAdmin) return false;
+        if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission))
+          return false;
+        return true;
+      })
+      .map((m) => {
+        // Merge Workflows Admin quick actions into Workflows card for admins
+        if (m.id === 'approvals' && isSystemAdmin) {
+          return {
+            ...m,
+            quickActions: [
+              ...m.quickActions,
+              { label: 'Templates', href: '/workflows-admin/templates', icon: FileText },
+              { label: 'Trigger Rules', href: '/workflows-admin/trigger-rules', icon: Zap },
+              { label: 'KPIs', href: '/workflows-admin/kpis', icon: TrendingUp },
+            ],
+          };
+        }
+        return m;
+      });
   }, [loading, isSystemAdmin, hasPermission]);
 
   // Filter modules based on search
@@ -484,6 +456,17 @@ export default function ModuleHubPage() {
         const pendingReviewCount = collateralData.filter(
           (c) => c.status === 'Submitted' || c.status === 'Under Review'
         ).length;
+
+        const escalatedCount = escalatedRes.data?.length ?? 0;
+        const highPriorityCount = tasks.filter((t) => t.priority === 'high').length;
+
+        setSubStats({
+          perfectedCount,
+          collateralOverdueCount: overdueCount,
+          escalatedCount,
+          dueTodayCount: dueTodayTasks.length,
+          highPriorityCount,
+        });
 
         const kpis: Record<string, ModuleKPI> = {
           collaterals: {
@@ -792,7 +775,26 @@ export default function ModuleHubPage() {
             }}
           >
             <HelpCircle size={14} />
-            <span className="hidden sm:inline">Guide</span>
+            <span className="hidden sm:inline">Onboarding</span>
+          </button>
+
+          <button
+            onClick={() => router.push('/guides/testing')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{
+              color: '#374151',
+              border: '1px solid rgba(0,0,0,0.12)',
+              backgroundColor: 'rgba(0,0,0,0.04)',
+            }}
+            onMouseOver={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)';
+            }}
+            onMouseOut={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)';
+            }}
+          >
+            <FlaskConical size={14} />
+            <span className="hidden sm:inline">Testing</span>
           </button>
 
           {/* Profile */}
@@ -908,6 +910,15 @@ export default function ModuleHubPage() {
                   <p className="text-2xl font-bold" style={{ color: '#111827' }}>
                     {summaryStats.totalCollateral}
                   </p>
+                  {!statsLoading && (
+                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                      <span style={{ color: '#10B981' }}>{subStats.perfectedCount} Perfected</span>
+                      {' · '}
+                      <span style={{ color: subStats.collateralOverdueCount > 0 ? '#DC2626' : '#9CA3AF' }}>
+                        {subStats.collateralOverdueCount} Overdue
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,124,179,0.08)' }}>
                   <FolderOpen size={16} style={{ color: '#007CB3' }} />
@@ -926,6 +937,13 @@ export default function ModuleHubPage() {
                   <p className="text-2xl font-bold" style={{ color: '#111827' }}>
                     {summaryStats.activeWorkflows}
                   </p>
+                  {!statsLoading && (
+                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                      <span style={{ color: subStats.escalatedCount > 0 ? '#D97706' : '#9CA3AF' }}>
+                        {subStats.escalatedCount} Escalated
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(217,119,6,0.08)' }}>
                   <Activity size={16} style={{ color: '#D97706' }} />
@@ -944,6 +962,13 @@ export default function ModuleHubPage() {
                   <p className="text-2xl font-bold" style={{ color: '#111827' }}>
                     {summaryStats.pendingActions}
                   </p>
+                  {!statsLoading && (
+                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                      <span style={{ color: subStats.dueTodayCount > 0 ? '#007CB3' : '#9CA3AF' }}>
+                        {subStats.dueTodayCount} Due Today
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(124,58,237,0.08)' }}>
                   <CheckSquare size={16} style={{ color: '#7C3AED' }} />
@@ -951,8 +976,9 @@ export default function ModuleHubPage() {
               </div>
             </div>
             <div
-              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
+              className="bg-white rounded-xl p-4 transition-all hover:shadow-md cursor-pointer"
               style={{ border: '1px solid rgba(0,0,0,0.05)' }}
+              onClick={() => router.push('/my-tasks?filter=overdue')}
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -965,6 +991,13 @@ export default function ModuleHubPage() {
                   >
                     {summaryStats.overdueItems}
                   </p>
+                  {!statsLoading && (
+                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                      <span style={{ color: subStats.highPriorityCount > 0 ? '#DC2626' : '#9CA3AF' }}>
+                        {subStats.highPriorityCount} High Priority
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.08)' }}>
                   <AlertTriangle size={16} style={{ color: '#DC2626' }} />
@@ -1198,11 +1231,8 @@ export default function ModuleHubPage() {
                                   className="text-[10px] whitespace-nowrap"
                                   style={{ color: '#9CA3AF' }}
                                 >
-                                  {kpi.status === 'ok'
-                                    ? 'All clear'
-                                    : kpi.status === 'warn'
-                                      ? 'Attention'
-                                      : 'Critical'}
+                                  {kpi.status === 'ok' ?'All clear'
+                                    : kpi.status === 'warn' ?'Attention' :'Critical'}
                                 </span>
                               </div>
                             )}
