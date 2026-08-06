@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw, ShieldCheck, BadgeCheck, Globe, Mail, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw, ShieldCheck, BadgeCheck, Mail, ArrowLeft } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
@@ -234,12 +234,12 @@ export default function LoginForm() {
   if (twoFARequired) {
     return (
       <div
-        className="min-h-screen grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]"
+        className="min-h-screen flex flex-col lg:grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]"
         style={{ backgroundColor: 'var(--izou-bg)' }}
       >
-        {/* Left panel - gradient */}
+        {/* Left panel - gradient (hidden on mobile, shown on lg+) */}
         <div
-          className="relative flex min-h-screen flex-col overflow-hidden"
+          className="hidden lg:relative lg:flex lg:min-h-screen lg:flex-col lg:overflow-hidden"
           style={{
             background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
           }}
@@ -271,10 +271,22 @@ export default function LoginForm() {
           </div>
         </div>
 
+        {/* Mobile header (shown only on mobile) */}
+        <div
+          className="lg:hidden flex flex-col items-center justify-center py-8 px-6"
+          style={{
+            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+          }}
+        >
+          <AppLogo size={64} />
+          <h2 className="mt-3 text-xl font-bold text-white">CollateralMS</h2>
+          <p className="mt-1 text-white/70 text-xs">EXIM Bank Tanzania</p>
+        </div>
+
         {/* Right panel */}
-        <div className="flex items-center justify-center px-8 py-12" style={{ backgroundColor: '#f8fafc' }}>
+        <div className="flex items-center justify-center px-4 py-8 sm:px-8 sm:py-12" style={{ backgroundColor: '#f8fafc' }}>
           <div className="w-full max-w-sm">
-            <div className="bg-white rounded-2xl shadow-xl p-8" style={{ border: '1px solid var(--izou-border)' }}>
+            <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8" style={{ border: '1px solid var(--izou-border)' }}>
               <div className="text-center mb-6">
                 <div
                   className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
@@ -347,10 +359,10 @@ export default function LoginForm() {
 
   return (
     <>
-      <div className="min-h-screen grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
-        {/* Left panel — IZOU-style gradient */}
+      <div className="min-h-screen flex flex-col lg:grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
+        {/* Left panel — IZOU-style gradient (hidden on mobile) */}
         <div
-          className="relative flex min-h-screen flex-col overflow-hidden"
+          className="hidden lg:relative lg:flex lg:min-h-screen lg:flex-col lg:overflow-hidden"
           style={{
             background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
           }}
@@ -397,7 +409,6 @@ export default function LoginForm() {
                 {[
                   { icon: ShieldCheck, label: 'Secure' },
                   { icon: BadgeCheck, label: 'Reliable' },
-                  { icon: Globe, label: 'Built for Africa' },
                 ].map(({ icon: Icon, label }) => (
                   <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium text-white/90">
                     <span
@@ -414,14 +425,37 @@ export default function LoginForm() {
           </main>
         </div>
 
+        {/* Mobile header (shown only on mobile) */}
+        <div
+          className="lg:hidden flex flex-col items-center justify-center py-8 px-6"
+          style={{
+            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+          }}
+        >
+          <div
+            className="relative flex items-center justify-center rounded-full mb-3"
+            style={{
+              width: 80,
+              height: 80,
+              background: 'rgba(255,255,255,0.08)',
+              boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 20px 4px rgba(53,200,243,0.55)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <AppLogo size={64} />
+          </div>
+          <h1 className="text-xl font-bold text-white">CollateralMS</h1>
+          <p className="mt-1 text-white/70 text-xs">EXIM Bank Tanzania</p>
+        </div>
+
         {/* Right panel — login form */}
         <aside
-          className="relative flex min-h-screen items-center justify-center px-6 py-10 lg:px-10"
+          className="relative flex min-h-0 lg:min-h-screen items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
           style={{ backgroundColor: '#f8fafc' }}
         >
           <div className="w-full max-w-[30rem]">
             <div
-              className="bg-white rounded-2xl shadow-xl p-8 sm:p-9"
+              className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-9"
               style={{ border: '1px solid var(--izou-border)' }}
             >
               <div className="mb-6">
@@ -550,7 +584,6 @@ export default function LoginForm() {
                 {[
                   { icon: ShieldCheck, label: 'Secure' },
                   { icon: BadgeCheck, label: 'Reliable' },
-                  { icon: Globe, label: 'Built for Africa' },
                 ].map(({ icon: Icon, label }) => (
                   <span key={label} className="inline-flex items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--izou-text)' }}>
                     <span
@@ -594,7 +627,7 @@ export default function LoginForm() {
       {/* Password Reset Modal */}
       {showResetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8" style={{ border: '1px solid var(--izou-border)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8" style={{ border: '1px solid var(--izou-border)' }}>
             {!resetSent ? (
               <>
                 <div className="flex items-center gap-3 mb-6">

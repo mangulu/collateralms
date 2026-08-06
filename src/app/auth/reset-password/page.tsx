@@ -46,11 +46,11 @@ export default function ResetPasswordPage() {
 
   return (
     <div
-      className="min-h-screen grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]"
+      className="min-h-screen flex flex-col lg:grid lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]"
     >
-      {/* Left panel */}
+      {/* Left panel (hidden on mobile) */}
       <div
-        className="relative flex min-h-screen flex-col overflow-hidden"
+        className="hidden lg:relative lg:flex lg:min-h-screen lg:flex-col lg:overflow-hidden"
         style={{
           background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
         }}
@@ -92,14 +92,37 @@ export default function ResetPasswordPage() {
         </div>
       </div>
 
+      {/* Mobile header (shown only on mobile) */}
+      <div
+        className="lg:hidden flex flex-col items-center justify-center py-8 px-6"
+        style={{
+          background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+        }}
+      >
+        <div
+          className="relative flex items-center justify-center rounded-full mb-3"
+          style={{
+            width: 80,
+            height: 80,
+            background: 'rgba(255,255,255,0.08)',
+            boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 20px 4px rgba(53,200,243,0.55)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <AppLogo size={64} />
+        </div>
+        <h1 className="text-xl font-bold text-white">Account Recovery</h1>
+        <p className="mt-1 text-white/70 text-xs">CollateralMS · EXIM Bank Tanzania</p>
+      </div>
+
       {/* Right panel */}
       <aside
-        className="relative flex min-h-screen items-center justify-center px-6 py-10 lg:px-10"
+        className="relative flex min-h-0 lg:min-h-screen items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
         style={{ backgroundColor: '#f8fafc' }}
       >
         <div className="w-full max-w-[30rem]">
           <div
-            className="bg-white rounded-2xl shadow-xl p-8 sm:p-9"
+            className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-9"
             style={{ border: '1px solid var(--izou-border)' }}
           >
             {success ? (
