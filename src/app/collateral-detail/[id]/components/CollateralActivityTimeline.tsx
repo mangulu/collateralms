@@ -8,6 +8,8 @@ import {
   ArrowRight,
   RefreshCw,
   User,
+  Package,
+  MapPin,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
@@ -20,6 +22,12 @@ interface StatusEvent {
   message: string;
   performedByName: string;
   createdAt: string;
+  isArchiveEvent?: boolean;
+  archiveMeta?: {
+    locationName?: string;
+    locationCode?: string;
+    physicalRef?: string;
+  };
 }
 
 interface CollateralActivityTimelineProps {
@@ -28,9 +36,12 @@ interface CollateralActivityTimelineProps {
 
 // ─── Status icon/color helpers ────────────────────────────────────────────────
 
-function getEventStyle(action: string): { icon: React.ElementType; dotColor: string; iconColor: string } {
+function getEventStyle(action: string, isArchiveEvent?: boolean): { icon: React.ElementType; dotColor: string; iconColor: string; bgColor?: string } {
+  if (isArchiveEvent) {
+    return { icon: Package, dotColor: 'bg-slate-600', iconColor: 'text-slate-600', bgColor: 'bg-slate-50 border border-slate-200 rounded-lg' };
+  }
   switch (action) {
-    case 'perfected': case'status_changed':
+    case 'perfected': case 'status_changed':
       return { icon: CheckCircle2, dotColor: 'bg-emerald-500', iconColor: 'text-emerald-600' };
     case 'submitted':
       return { icon: ArrowRight, dotColor: 'bg-blue-500', iconColor: 'text-blue-600' };
@@ -70,25 +81,82 @@ export default function CollateralActivityTimeline({ collateral }: CollateralAct
     setLoading(true);
     try {
       const supabase = createClient();
-      const { data } = await supabase
+
+      // Load standard audit events
+      const { data: auditData } = await supabase
         .from('audit_logs')
         .select('id, action, message, performed_by_name, created_at')
         .eq('collateral_record_id', collateral.id)
         .in('action', ['created', 'status_changed', 'perfected', 'submitted', 'released', 'overdue', 'updated'])
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(4);
 
-      if (data) {
-        setEvents(
-          data.map((r: any) => ({
-            id: r.id,
-            action: r.action,
-            message: r.message,
-            performedByName: r.performed_by_name ?? 'System',
-            createdAt: r.created_at,
-          }))
-        );
-      }
+      // Load archive audit events for this collateral
+      const { data: archiveData } = await supabase
+        .from('archive_audit_log')
+        .select(`
+          id, event_type, description, performed_by, created_at,
+          archive_locations(name, code),
+          user_profiles:performed_by(full_name)
+        `)
+        .eq('collateral_id', collateral.id)
+        .in('event_type', ['placement_assigned', 'placement_updated', 'collateral_moved'])
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      // Load placement info for archive events to get location details
+      const { data: placementData } = await supabase
+        .from('archive_placements')
+        .select(`
+          *,
+          archive_locations(name, code)
+        `)
+        .eq('collateral_id', collateral.id)
+        .maybeSingle();
+
+      const standardEvents: StatusEvent[] = (auditData || []).map((r: any) => ({
+        id: r.id,
+        action: r.action,
+        message: r.message,
+        performedByName: r.performed_by_name ?? 'System',
+        createdAt: r.created_at,
+        isArchiveEvent: false,
+      }));
+
+      const archiveEvents: StatusEvent[] = (archiveData || []).map((r: any) => {
+        const locationName = r.archive_locations?.name ?? placementData?.archive_locations?.name ?? null;
+        const locationCode = r.archive_locations?.code ?? placementData?.archive_locations?.code ?? null;
+        const physicalRef = placementData?.physical_ref ?? null;
+        const actorName = r.user_profiles?.full_name ?? 'System';
+
+        let message = r.description || 'Archived to vault';
+        if (locationName) {
+          const eventTypeLabel = r.event_type === 'collateral_moved' ? 'Moved to' : 'Archived to';
+          message = `${eventTypeLabel} ${locationName}${locationCode ? ` · ${locationCode}` : ''}`;
+          if (physicalRef) message += ` · Ref: ${physicalRef}`;
+        }
+
+        return {
+          id: r.id,
+          action: r.event_type,
+          message,
+          performedByName: actorName,
+          createdAt: r.created_at,
+          isArchiveEvent: true,
+          archiveMeta: {
+            locationName: locationName ?? undefined,
+            locationCode: locationCode ?? undefined,
+            physicalRef: physicalRef ?? undefined,
+          },
+        };
+      });
+
+      // Merge and sort by date descending, limit to 5
+      const allEvents = [...standardEvents, ...archiveEvents]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5);
+
+      setEvents(allEvents);
     } catch {
       // silent
     } finally {
@@ -143,17 +211,33 @@ export default function CollateralActivityTimeline({ collateral }: CollateralAct
           <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border" />
 
           <div className="space-y-4">
-            {events.map((event, idx) => {
-              const style = getEventStyle(event.action);
-              const EventIcon = style.icon;
+            {events.map((event) => {
+              const style = getEventStyle(event.action, event.isArchiveEvent);
               return (
                 <div key={event.id} className="flex items-start gap-3 relative">
                   {/* Dot */}
                   <div className={`w-2.5 h-2.5 rounded-full ${style.dotColor} shrink-0 mt-1 z-10 ring-2 ring-white`} />
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0 pb-1">
+                  <div className={`flex-1 min-w-0 pb-1 ${event.isArchiveEvent ? 'px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg -ml-1' : ''}`}>
+                    {event.isArchiveEvent && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Package size={11} className="text-slate-500 shrink-0" />
+                        <span className="text-[10px] font-700 text-slate-600 uppercase tracking-wide">
+                          {event.action === 'collateral_moved' ? 'Vault Transfer' : 'Archived to Vault'}
+                        </span>
+                      </div>
+                    )}
                     <p className="text-xs font-500 text-foreground leading-snug line-clamp-2">{event.message}</p>
+                    {event.isArchiveEvent && event.archiveMeta?.locationName && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <MapPin size={9} className="text-slate-400 shrink-0" />
+                        <span className="text-[10px] text-slate-500 font-mono truncate">
+                          {event.archiveMeta.locationName}
+                          {event.archiveMeta.locationCode && ` (${event.archiveMeta.locationCode})`}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                         <User size={9} />

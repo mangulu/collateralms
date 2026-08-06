@@ -17,6 +17,7 @@ import HistoryAuditTab from './HistoryAuditTab';
 import MandatoryDocumentsCard from './MandatoryDocumentsCard';
 import CollateralActionToolbar from './CollateralActionToolbar';
 import CollateralActivityTimeline from './CollateralActivityTimeline';
+import { ArchiveStatusBadge } from './CollateralActionToolbar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -237,6 +238,7 @@ export default function CollateralDetailContent({
           </button>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <ArchiveStatusBadge collateral={collateral} />
           <Link href={`/collateral-library/${collateral.id}`}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors">
             <BookOpen size={13} /> View in Library

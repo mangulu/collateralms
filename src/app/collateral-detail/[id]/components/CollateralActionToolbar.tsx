@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info,  } from 'lucide-react';
+import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox } from 'lucide-react';
 import { CollateralRecord, collateralService, auditService } from '@/lib/supabase/collateralService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { createValuation } from '@/lib/supabase/valuationService';
@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
-import { archivePlacementService, archiveLocationService, archiveAuditService, ArchiveLocation } from '@/lib/supabase/archiveService';
+import { archivePlacementService, archiveLocationService, archiveAuditService, ArchiveLocation, ArchivePlacement } from '@/lib/supabase/archiveService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ interface CollateralActionToolbarProps {
 
 type QuickEditType = 'assignee' | 'geolocation' | 'status' | null;
 type WorkflowType = 'perfection' | 'valuation' | 'document-review' | 'substitution' | 'release' | null;
-type ActionType = 'archive' | 'flag' | 'report' | null;
+type ActionType = 'archive' | 'flag' | 'report' | 'request-file' | null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -833,6 +833,415 @@ function ArchiveModal({ collateral, onClose, onSaved }: { collateral: Collateral
   );
 }
 
+// ─── Action: Re-Archive Confirmation Dialog ───────────────────────────────────
+
+function ReArchiveConfirmDialog({
+  collateral,
+  placement,
+  onClose,
+  onChangeLocation,
+}: {
+  collateral: CollateralRecord;
+  placement: ArchivePlacement;
+  onClose: () => void;
+  onChangeLocation: () => void;
+}) {
+  const locationName = placement.location?.name ?? 'Unknown Location';
+  const locationCode = placement.location?.code ?? '';
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Archive size={16} className="text-amber-600" />
+            </div>
+            <h2 className="text-base font-700 text-foreground">Already Archived</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-600 text-amber-800">This collateral is currently archived</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Currently stored at <span className="font-700">{locationName}</span>
+                {locationCode && <span className="font-mono ml-1">({locationCode})</span>}
+                {placement.physicalRef && (
+                  <span className="block mt-0.5">Ref: <span className="font-mono">{placement.physicalRef}</span></span>
+                )}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Do you want to change the archive location for <span className="font-600 text-foreground">{collateral.collateralId}</span>?
+          </p>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-500 text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onChangeLocation}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+          >
+            <MapPin size={14} />
+            Change Location
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Action: View Archive Location Popup ─────────────────────────────────────
+
+function ViewArchiveLocationPopup({
+  placement,
+  onClose,
+}: {
+  placement: ArchivePlacement;
+  onClose: () => void;
+}) {
+  const locationName = placement.location?.name ?? '—';
+  const locationCode = placement.location?.code ?? '—';
+  const locationType = placement.location?.locationType ?? '—';
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <Package size={15} className="text-slate-600" />
+            </div>
+            <h2 className="text-sm font-700 text-foreground">Archive Location</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={15} className="text-muted-foreground" />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          {/* Location badge */}
+          <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
+              <Building2 size={14} className="text-slate-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-700 text-foreground truncate">{locationName}</p>
+              <p className="text-xs text-muted-foreground font-mono">{locationCode} · <span className="capitalize">{locationType}</span></p>
+            </div>
+          </div>
+
+          {/* Details grid */}
+          <div className="space-y-2">
+            {placement.physicalRef && (
+              <div className="flex items-center justify-between py-2 border-b border-border/60">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Hash size={11} />
+                  Physical Reference
+                </div>
+                <span className="text-xs font-600 font-mono text-foreground">{placement.physicalRef}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between py-2 border-b border-border/60">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock size={11} />
+                Archived On
+              </div>
+              <span className="text-xs font-600 text-foreground">
+                {new Date(placement.placedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+            {placement.notes && (
+              <div className="py-2">
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <FileText size={11} />
+                  Notes
+                </p>
+                <p className="text-xs text-foreground bg-muted/30 rounded-md px-2.5 py-2 leading-relaxed">{placement.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="px-5 py-3 border-t border-border flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-500 text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Action: Request File ─────────────────────────────────────────────────────
+
+const URGENCY_LEVELS = [
+  { value: 'routine', label: 'Routine', description: 'Standard retrieval, 2–3 business days' },
+  { value: 'urgent', label: 'Urgent', description: 'Required within 24 hours' },
+  { value: 'critical', label: 'Critical', description: 'Immediate retrieval required' },
+];
+
+const RETRIEVAL_REASONS = [
+  'Loan Review / Credit Assessment',
+  'Legal Proceedings',
+  'Audit / Compliance Check',
+  'Client Request',
+  'Valuation / Inspection',
+  'Regulatory Submission',
+  'Internal Review',
+  'Other',
+];
+
+function RequestFileModal({
+  collateral,
+  placement,
+  onClose,
+  onSaved,
+}: {
+  collateral: CollateralRecord;
+  placement: ArchivePlacement;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const [reason, setReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  const [urgency, setUrgency] = useState('routine');
+  const [expectedReturn, setExpectedReturn] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const finalReason = reason === 'Other' ? customReason : reason;
+
+  const handleSubmit = async () => {
+    if (!finalReason.trim()) { toast.error('Please specify a retrieval reason'); return; }
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      // Insert archive request to initiate Record Request Workflow
+      await supabase.from('archive_requests').insert({
+        collateral_id: collateral.id,
+        requested_by: user?.id ?? null,
+        request_status: 'pending',
+        purpose: finalReason,
+        expected_return_date: expectedReturn || null,
+        checkout_notes: notes.trim() || null,
+      });
+
+      // Log archive audit event
+      await archiveAuditService.log({
+        eventType: 'request_raised',
+        collateralId: collateral.id,
+        locationId: placement.locationId ?? undefined,
+        performedBy: user?.id ?? null,
+        description: `File retrieval requested — Reason: ${finalReason} · Urgency: ${urgency}`,
+      });
+
+      // Log collateral update
+      await logCollateralUpdate({
+        collateralRecordId: collateral.id,
+        collateralId: collateral.collateralId,
+        updateType: 'file_request',
+        fieldChanged: 'archive_request',
+        newValue: urgency,
+        notes: finalReason,
+        performedBy: user?.id,
+        performedByName: user?.email ?? '',
+      });
+
+      toast.success('File retrieval request submitted — Record Request Workflow initiated');
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to submit request');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedUrgency = URGENCY_LEVELS.find((u) => u.value === urgency);
+
+  return (
+    <ModalShell title="Request File Retrieval" icon={<Inbox size={16} className="text-violet-600" />} iconBg="bg-violet-100" onClose={onClose}>
+      {/* Current location summary */}
+      <div className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-lg mb-4">
+        <Package size={14} className="text-slate-500 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs font-600 text-foreground truncate">{placement.location?.name ?? 'Unknown Location'}</p>
+          <p className="text-[11px] text-muted-foreground font-mono">{placement.location?.code ?? ''}{placement.physicalRef ? ` · ${placement.physicalRef}` : ''}</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {/* Retrieval reason */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Retrieval Reason <span className="text-red-500">*</span></label>
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="">— Select reason —</option>
+            {RETRIEVAL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        {reason === 'Other' && (
+          <div>
+            <label className="block text-xs font-600 text-foreground mb-1.5">Specify Reason <span className="text-red-500">*</span></label>
+            <input
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              placeholder="Describe the retrieval reason…"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        )}
+
+        {/* Urgency */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Urgency Level</label>
+          <div className="grid grid-cols-3 gap-2">
+            {URGENCY_LEVELS.map((u) => (
+              <button
+                key={u.value}
+                type="button"
+                onClick={() => setUrgency(u.value)}
+                className={`flex flex-col items-center gap-1 p-2.5 rounded-lg border text-center transition-colors ${
+                  urgency === u.value
+                    ? u.value === 'critical' ?'border-red-500 bg-red-50 text-red-700'
+                      : u.value === 'urgent' ?'border-amber-500 bg-amber-50 text-amber-700' :'border-primary bg-primary/5 text-primary' :'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/30'
+                }`}
+              >
+                <span className="text-xs font-700">{u.label}</span>
+              </button>
+            ))}
+          </div>
+          {selectedUrgency && (
+            <p className="text-[11px] text-muted-foreground mt-1.5">{selectedUrgency.description}</p>
+          )}
+        </div>
+
+        {/* Expected return date */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Expected Return Date (optional)</label>
+          <input
+            type="date"
+            value={expectedReturn}
+            onChange={(e) => setExpectedReturn(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Additional Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Any specific instructions for the archive officer…"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
+        </div>
+      </div>
+      <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Submit Request" confirmClass="bg-violet-600 hover:bg-violet-700" />
+    </ModalShell>
+  );
+}
+
+// ─── Archive Status Badge (exported for use in header) ────────────────────────
+
+export function ArchiveStatusBadge({
+  collateral,
+}: {
+  collateral: CollateralRecord;
+}) {
+  const [placement, setPlacement] = useState<ArchivePlacement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showPopup, setShowPopup] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('archive_placements')
+      .select(`
+        *,
+        archive_locations(id, name, code, location_type, parent_id, description, capacity, current_occupancy, is_active, created_by, created_at, updated_at)
+      `)
+      .eq('collateral_id', collateral.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setPlacement({
+            id: data.id,
+            collateralId: data.collateral_id,
+            locationId: data.location_id,
+            physicalRef: data.physical_ref,
+            electronicRecordUrl: data.electronic_record_url,
+            notes: data.notes,
+            placedBy: data.placed_by,
+            placedAt: data.placed_at,
+            updatedAt: data.updated_at,
+            location: data.archive_locations ? {
+              id: data.archive_locations.id,
+              name: data.archive_locations.name,
+              code: data.archive_locations.code,
+              locationType: data.archive_locations.location_type,
+              parentId: data.archive_locations.parent_id,
+              description: data.archive_locations.description,
+              capacity: data.archive_locations.capacity,
+              currentOccupancy: data.archive_locations.current_occupancy,
+              isActive: data.archive_locations.is_active,
+              createdBy: data.archive_locations.created_by,
+              createdAt: data.archive_locations.created_at,
+              updatedAt: data.archive_locations.updated_at,
+            } : undefined,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [collateral.id]);
+
+  if (loading || !placement) return null;
+
+  return (
+    <>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 border border-slate-300 rounded-full text-xs font-600 text-slate-700">
+        <Package size={12} className="text-slate-500 shrink-0" />
+        <span>Archived</span>
+        {placement.location && (
+          <span className="text-slate-500 font-400">— {placement.location.name}</span>
+        )}
+        <button
+          onClick={() => setShowPopup(true)}
+          className="ml-1 text-primary hover:underline font-600 text-xs"
+        >
+          View Location
+        </button>
+      </div>
+
+      {showPopup && (
+        <ViewArchiveLocationPopup
+          placement={placement}
+          onClose={() => setShowPopup(false)}
+        />
+      )}
+    </>
+  );
+}
+
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 function CollateralSummaryBlock({ collateral }: { collateral: CollateralRecord }) {
@@ -996,10 +1405,71 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
   }>({});
   const [generatingReport, setGeneratingReport] = useState(false);
 
+  // Archive placement state — loaded once to check if already archived
+  const [archivePlacement, setArchivePlacement] = useState<ArchivePlacement | null | undefined>(undefined);
+  const [showReArchiveConfirm, setShowReArchiveConfirm] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('archive_placements')
+      .select(`
+        *,
+        archive_locations(id, name, code, location_type, parent_id, description, capacity, current_occupancy, is_active, created_by, created_at, updated_at)
+      `)
+      .eq('collateral_id', collateral.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setArchivePlacement({
+            id: data.id,
+            collateralId: data.collateral_id,
+            locationId: data.location_id,
+            physicalRef: data.physical_ref,
+            electronicRecordUrl: data.electronic_record_url,
+            notes: data.notes,
+            placedBy: data.placed_by,
+            placedAt: data.placed_at,
+            updatedAt: data.updated_at,
+            location: data.archive_locations ? {
+              id: data.archive_locations.id,
+              name: data.archive_locations.name,
+              code: data.archive_locations.code,
+              locationType: data.archive_locations.location_type,
+              parentId: data.archive_locations.parent_id,
+              description: data.archive_locations.description,
+              capacity: data.archive_locations.capacity,
+              currentOccupancy: data.archive_locations.current_occupancy,
+              isActive: data.archive_locations.is_active,
+              createdBy: data.archive_locations.created_by,
+              createdAt: data.archive_locations.created_at,
+              updatedAt: data.archive_locations.updated_at,
+            } : undefined,
+          });
+        } else {
+          setArchivePlacement(null);
+        }
+      })
+      .catch(() => setArchivePlacement(null));
+  }, [collateral.id]);
+
+  const isArchived = archivePlacement != null;
+
   const gates = getWorkflowGates(collateral);
   const isAdmin = userRole === 'admin' || userRole === 'system_admin';
 
-  const closeAll = () => setActiveModal({});
+  const closeAll = () => {
+    setActiveModal({});
+    setShowReArchiveConfirm(false);
+  };
+
+  const handleArchiveClick = () => {
+    if (isArchived) {
+      setShowReArchiveConfirm(true);
+    } else {
+      setActiveModal({ action: 'archive' });
+    }
+  };
 
   const handleGenerateReport = async () => {
     setGeneratingReport(true);
@@ -1075,13 +1545,21 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
     },
   ];
 
-  // Actions items
+  // Actions items — Request File only shown when archived
   const actionItems: DropdownItem[] = [
     {
       label: 'Archive',
       icon: Archive,
-      onClick: () => setActiveModal({ action: 'archive' }),
+      onClick: handleArchiveClick,
     },
+    ...(isArchived && archivePlacement
+      ? [{
+          label: 'Request File',
+          icon: Inbox,
+          onClick: () => setActiveModal({ action: 'request-file' }),
+          color: 'text-violet-700',
+        }]
+      : []),
     {
       label: 'Flag for Review',
       icon: Flag,
@@ -1146,7 +1624,28 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
 
       {/* Action Modals */}
       {activeModal.action === 'archive' && (
-        <ArchiveModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
+        <ArchiveModal collateral={collateral} onClose={closeAll} onSaved={() => { onRefresh(); setArchivePlacement(undefined); }} />
+      )}
+      {activeModal.action === 'request-file' && archivePlacement && (
+        <RequestFileModal
+          collateral={collateral}
+          placement={archivePlacement}
+          onClose={closeAll}
+          onSaved={onRefresh}
+        />
+      )}
+
+      {/* Re-archive confirmation */}
+      {showReArchiveConfirm && archivePlacement && (
+        <ReArchiveConfirmDialog
+          collateral={collateral}
+          placement={archivePlacement}
+          onClose={() => setShowReArchiveConfirm(false)}
+          onChangeLocation={() => {
+            setShowReArchiveConfirm(false);
+            setActiveModal({ action: 'archive' });
+          }}
+        />
       )}
     </>
   );
