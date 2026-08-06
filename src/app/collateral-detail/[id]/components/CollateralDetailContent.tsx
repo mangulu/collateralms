@@ -18,6 +18,7 @@ import MandatoryDocumentsCard from './MandatoryDocumentsCard';
 import CollateralActionToolbar from './CollateralActionToolbar';
 import CollateralActivityTimeline from './CollateralActivityTimeline';
 import { ArchiveStatusBadge } from './CollateralActionToolbar';
+import RegistrySubmissionsTab from './RegistrySubmissionsTab';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export default function CollateralDetailContent({
   onRefresh,
 }: CollateralDetailContentProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history-audit'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history-audit' | 'registry-submissions'>('profile');
   const [utilization, setUtilization] = useState<CollateralUtilization | null>(null);
   const [obligorData, setObligorData] = useState<Obligor | null>(null);
   const [loanData, setLoanData] = useState<Loan | null>(null);
@@ -274,9 +275,10 @@ export default function CollateralDetailContent({
           { key: 'profile', label: 'Profile', icon: Shield },
           { key: 'charges', label: 'Charges & Loans', icon: PieChart },
           { key: 'documents', label: 'Documents', icon: Files },
+          { key: 'registry-submissions', label: 'Registry Submissions', icon: CheckCircle2 },
           { key: 'history-audit', label: 'History & Audit', icon: History },
         ].map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history-audit')}
+          <button key={tab.key} onClick={() => setActiveTab(tab.key as 'profile' | 'charges' | 'documents' | 'history-audit' | 'registry-submissions')}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-500 border-b-2 transition-colors -mb-px ${activeTab === tab.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             <tab.icon size={13} /> {tab.label}
           </button>
@@ -539,6 +541,9 @@ export default function CollateralDetailContent({
 
       {/* Tab: History & Audit */}
       {activeTab === 'history-audit' && <HistoryAuditTab collateral={collateral} />}
+
+      {/* Tab: Registry Submissions */}
+      {activeTab === 'registry-submissions' && <RegistrySubmissionsTab collateral={collateral} />}
     </div>
   );
 }
