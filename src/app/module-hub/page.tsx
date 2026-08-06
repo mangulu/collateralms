@@ -118,7 +118,7 @@ const modules: ModuleCard[] = [
   },
   {
     id: 'intelligence',
-    title: 'Intelligence',
+    title: 'Analytics & Intelligence',
     description:
       'AI-powered risk assessment, fraud prevention, deadline predictions, and analytics.',
     icon: Brain,
@@ -128,8 +128,8 @@ const modules: ModuleCard[] = [
     category: 'intelligence',
     quickActions: [
       { label: 'Executive Dashboard', href: '/executive-dashboard', icon: TrendingUp },
-      { label: 'Fraud Prevention', href: '/fraud-prevention', icon: ShieldCheck },
-      { label: 'Risk Assessment', href: '/risk-assessment', icon: AlertTriangle },
+      { label: 'AI Risk & Fraud', href: '/ai-risk-fraud', icon: ShieldCheck },
+      { label: 'Cohort Analytics', href: '/cohort-analytics', icon: AlertTriangle },
     ],
     requiredPermission: PERMISSIONS.COMPLIANCE_VIEW,
   },

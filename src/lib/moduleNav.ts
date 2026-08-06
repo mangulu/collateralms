@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, CheckSquare, KeyRound, BookMarked, BookText } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, FolderArchive, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, CheckSquare, KeyRound, BookMarked, BookText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -104,6 +104,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Registry Submissions', icon: BookText, href: '/workflows/registry-submissions', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Archive Requests', icon: FolderArchive, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -139,7 +140,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
   },
   {
     id: 'intelligence',
-    label: 'Intelligence',
+    label: 'Analytics & Intelligence',
     groups: [
       {
         label: 'Analytics',
@@ -152,11 +153,8 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'AI Tools',
         items: [
-          { label: 'AI Fraud Prevention', icon: ShieldAlert, href: '/fraud-prevention', badge: '3', badgeVariant: 'danger', permission: PERMISSIONS.COMPLIANCE_VIEW },
-          { label: 'AI Risk Assessment', icon: ScanSearch, href: '/risk-assessment', permission: PERMISSIONS.COMPLIANCE_VIEW },
-          { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'AI Risk & Fraud', icon: ShieldAlert, href: '/ai-risk-fraud', badge: '3', badgeVariant: 'danger', permission: PERMISSIONS.COMPLIANCE_VIEW },
           { label: 'Geomapping', icon: Map, href: '/geomapping', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Portfolio Heatmap', icon: Flame, href: '/portfolio-heatmap', permission: PERMISSIONS.DASHBOARD_VIEW },
         ],
       },
     ],
@@ -327,6 +325,10 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/audit-log': 'audit',
   '/glossary': 'administration',
   '/my-tasks': 'approvals',
+  '/fast-track': 'approvals',
+  '/fraud-prevention': 'intelligence',
+  '/risk-assessment': 'intelligence',
+  '/portfolio-heatmap': 'intelligence',
 };
 
 /**

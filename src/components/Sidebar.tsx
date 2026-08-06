@@ -58,7 +58,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
   }, []);
 
   const getBadgeOverride = (href: string): string | null | undefined => {
-    if (href === '/fraud-prevention') {
+    if (href === '/ai-risk-fraud') {
       if (fraudPendingCount === null) return undefined; // not yet loaded — keep static
       return fraudPendingCount > 0 ? String(fraudPendingCount) : null;
     }
