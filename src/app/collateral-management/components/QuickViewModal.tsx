@@ -1,22 +1,6 @@
 'use client';
 import React from 'react';
-import { 
-  X, 
-  Edit, 
-  Calendar, 
-  User, 
-  FolderOpen, 
-  FileText, 
-  CheckCircle, 
-  AlertTriangle, 
-  Clock, 
-  MapPin, 
-  Building, 
-  CalendarDays, 
-  DollarSign,
-  Hash,
-  Tag
-} from 'lucide-react';
+import { X, Edit, Calendar, User, FileText, CheckCircle, AlertTriangle, Clock, MapPin, Building, CalendarDays, DollarSign, Hash, Tag } from 'lucide-react';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 
 interface QuickViewModalProps {

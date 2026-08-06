@@ -24,31 +24,59 @@ type ActionType = 'archive' | 'flag' | 'report' | null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+async function logCollateralUpdate(params: {
+  collateralRecordId: string;
+  collateralId: string;
+  updateType: string;
+  fieldChanged: string;
+  oldValue?: string;
+  newValue?: string;
+  notes?: string;
+  performedBy?: string;
+  performedByName: string;
+}): Promise<void> {
+  try {
+    const supabase = createClient();
+    await supabase.from('collateral_updates').insert({
+      collateral_record_id: params.collateralRecordId,
+      collateral_id: params.collateralId,
+      update_type: params.updateType,
+      field_changed: params.fieldChanged,
+      old_value: params.oldValue ?? null,
+      new_value: params.newValue ?? null,
+      notes: params.notes ?? null,
+      performed_by: params.performedBy ?? null,
+      performed_by_name: params.performedByName,
+    });
+  } catch {
+    // non-blocking — audit failure should not break the main action
+  }
+}
+
 async function startWorkflowEngineInstance(
   workflowType: 'valuation' | 'substitution' | 'perfection' | 'release',
   collateral: CollateralRecord,
   userId: string,
   referenceLabel: string
 ): Promise<void> {
-  try {
-    const templates = await workflowTemplateService.getAll();
-    const template = templates.find((t) => t.workflowType === workflowType && t.isActive);
-    if (!template) return;
-    await workflowInstanceService.start({
-      templateId: template.id,
-      referenceType: workflowType,
-      referenceId: collateral.id,
-      referenceLabel,
-      startedBy: userId,
-      metadata: {
-        collateralId: collateral.collateralId,
-        obligor: collateral.obligor,
-        collateralType: collateral.type,
-      },
-    });
-  } catch {
-    // non-blocking
+  const templates = await workflowTemplateService.getAll();
+  const template = templates.find((t) => t.workflowType === workflowType && t.isActive);
+  if (!template) {
+    // No active template for this type — skip silently
+    return;
   }
+  await workflowInstanceService.start({
+    templateId: template.id,
+    referenceType: workflowType,
+    referenceId: collateral.id,
+    referenceLabel,
+    startedBy: userId,
+    metadata: {
+      collateralId: collateral.collateralId,
+      obligor: collateral.obligor,
+      collateralType: collateral.type,
+    },
+  });
 }
 
 // ─── Workflow gate rules ──────────────────────────────────────────────────────
@@ -151,15 +179,27 @@ function AssigneeEditModal({
     setSaving(true);
     try {
       await collateralService.update(collateral.id, { assignedOfficer: selected });
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'updated',
-        message: `Assigned officer updated to ${selected}`,
-        detail: `Previous: ${collateral.assignedOfficer ?? 'unassigned'}`,
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'updated',
+          message: `Assigned officer updated to ${selected}`,
+          detail: `Previous: ${collateral.assignedOfficer ?? 'unassigned'}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'assignee_change',
+          fieldChanged: 'assigned_officer',
+          oldValue: collateral.assignedOfficer ?? '',
+          newValue: selected,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Assignee updated');
       onSaved();
       onClose();
@@ -226,15 +266,27 @@ function GeolocationEditModal({
       if (lat && !isNaN(parseFloat(lat))) updates.latitude = parseFloat(lat);
       if (lng && !isNaN(parseFloat(lng))) updates.longitude = parseFloat(lng);
       await collateralService.update(collateral.id, updates);
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'updated',
-        message: `Geolocation updated`,
-        detail: `Lat: ${lat}, Lng: ${lng}, Address: ${address}`,
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'updated',
+          message: `Geolocation updated`,
+          detail: `Lat: ${lat}, Lng: ${lng}, Address: ${address}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'geolocation_change',
+          fieldChanged: 'geolocation',
+          oldValue: `${collateral.latitude ?? ''},${collateral.longitude ?? ''},${collateral.physicalAddress ?? ''}`,
+          newValue: `${lat},${lng},${address}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Geolocation updated');
       onSaved();
       onClose();
@@ -292,15 +344,28 @@ function StatusEditModal({
     setSaving(true);
     try {
       await collateralService.update(collateral.id, { status: status as any });
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'status_changed',
-        message: `Status overridden: ${collateral.status} → ${status}`,
-        detail: `Reason: ${reason}`,
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'status_changed',
+          message: `Status overridden: ${collateral.status} → ${status}`,
+          detail: `Reason: ${reason}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'status_override',
+          fieldChanged: 'status',
+          oldValue: collateral.status,
+          newValue: status,
+          notes: reason,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success(`Status updated to ${status}`);
       onSaved();
       onClose();
@@ -354,7 +419,19 @@ function PerfectionModal({ collateral, onClose, onSaved }: { collateral: Collate
         submittedByName: user?.email ?? '',
         notes: notes || undefined,
       });
-      await startWorkflowEngineInstance('perfection', collateral, user?.id ?? '', `Perfection — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('perfection', collateral, user?.id ?? '', `Perfection — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_perfection',
+          newValue: 'initiated',
+          notes: notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Perfection workflow initiated');
       onSaved();
       onClose();
@@ -400,7 +477,19 @@ function ValuationModal({ collateral, onClose, onSaved }: { collateral: Collater
         notes: form.notes || undefined,
         createdBy: user?.id ?? '',
       });
-      await startWorkflowEngineInstance('valuation', collateral, user?.id ?? '', `${form.valuationType} — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('valuation', collateral, user?.id ?? '', `${form.valuationType} — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_valuation',
+          newValue: form.valuationType,
+          notes: form.notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Valuation scheduled');
       onSaved();
       onClose();
@@ -464,15 +553,27 @@ function DocumentReviewModal({ collateral, onClose, onSaved }: { collateral: Col
         submitted_by_name: user?.email ?? '',
         notes: notes || null,
       });
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'updated',
-        message: `Document review workflow initiated`,
-        detail: notes || 'No notes',
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'updated',
+          message: `Document review workflow initiated`,
+          detail: notes || 'No notes',
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_document_review',
+          newValue: 'initiated',
+          notes: notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Document review initiated');
       onSaved();
       onClose();
@@ -514,7 +615,19 @@ function SubstitutionModal({ collateral, onClose, onSaved }: { collateral: Colla
         requested_by_name: user?.email ?? '',
         reason,
       });
-      await startWorkflowEngineInstance('substitution', collateral, user?.id ?? '', `Substitution — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('substitution', collateral, user?.id ?? '', `Substitution — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_substitution',
+          newValue: 'initiated',
+          notes: reason,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Substitution request submitted');
       onSaved();
       onClose();
@@ -556,7 +669,19 @@ function ReleaseModal({ collateral, onClose, onSaved }: { collateral: Collateral
         requested_by_name: user?.email ?? '',
         notes: notes || null,
       });
-      await startWorkflowEngineInstance('release', collateral, user?.id ?? '', `Release — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('release', collateral, user?.id ?? '', `Release — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_release',
+          newValue: 'initiated',
+          notes: notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Release request submitted');
       onSaved();
       onClose();

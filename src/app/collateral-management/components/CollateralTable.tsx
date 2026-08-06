@@ -1,29 +1,14 @@
 'use client';
 import React, { useState } from 'react';
-import {
-  ChevronUp,
-  ChevronDown,
-  Eye,
-  Pencil,
-  ChevronLeft,
-  ChevronRight,
-  AlertTriangle,
-  Clock,
-  TrendingUp,
-  FileCheck,
-  FileX,
-  FileClock,
-  ExternalLink,
-  Columns,
-  CheckCircle,
-  FileText,
-} from 'lucide-react';
+import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock, FileCheck, FileX, FileClock, ExternalLink, Columns, CheckCircle, FileText,  } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { FolderOpen } from 'lucide-react';
+import Icon from '@/components/ui/AppIcon';
+
 
 // Helper to format TSh values compactly
 function fmtTShCompact(n: number | null | undefined): string {

@@ -1,27 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { 
-  Plus, 
-  Download, 
-  Filter, 
-  Search, 
-  X, 
-  FileText, 
-  FileDown, 
-  ChevronDown, 
-  Play,
-  FolderOpen,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  RefreshCw,
-  Eye,
-  Edit,
-  Columns,
-  Sliders,
-  AlertCircle,
-  ChevronRight
-} from 'lucide-react';
+import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play, CheckCircle, Clock, AlertTriangle, Eye, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
@@ -36,7 +15,7 @@ import AddEditCollateralModal from './AddEditCollateralModal';
 import NextStepsBanner from './NextStepsBanner';
 import InitiateWorkflowModal from './InitiateWorkflowModal';
 import QuickViewModal from './QuickViewModal';
-import AdvancedFiltersModal from './AdvancedFiltersModal';
+
 
 export interface FilterState {
   search: string;
