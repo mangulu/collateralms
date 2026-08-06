@@ -1,27 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { 
-  Plus, 
-  Download, 
-  Filter, 
-  Search, 
-  X, 
-  FileText, 
-  FileDown, 
-  ChevronDown, 
-  Play,
-  FolderOpen,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  RefreshCw,
-  Eye,
-  Edit,
-  Columns,
-  Sliders,
-  AlertCircle,
-  ChevronRight
-} from 'lucide-react';
+import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play, CheckCircle, Clock, AlertTriangle, Eye, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { documentService } from '@/lib/supabase/documentService';
@@ -36,7 +15,7 @@ import AddEditCollateralModal from './AddEditCollateralModal';
 import NextStepsBanner from './NextStepsBanner';
 import InitiateWorkflowModal from './InitiateWorkflowModal';
 import QuickViewModal from './QuickViewModal';
-import AdvancedFiltersModal from './AdvancedFiltersModal';
+
 
 export interface FilterState {
   search: string;
@@ -756,8 +735,7 @@ export default function CollateralManagementContent() {
             <p className="text-base font-600 text-foreground">No records found</p>
             <p className="text-sm text-muted-foreground mt-1">
               {collateralData.length === 0
-                ? 'No collateral records have been registered yet.'
-                : 'No records match your current filters. Try adjusting your search or filters.'}
+                ? 'No collateral records have been registered yet.' :'No records match your current filters. Try adjusting your search or filters.'}
             </p>
           </div>
           {collateralData.length > 0 && (
@@ -791,6 +769,7 @@ export default function CollateralManagementContent() {
           docUploadedCounts={docUploadedCounts}
           docRequiredCounts={docRequiredCounts}
           visibleColumns={visibleColumns}
+          onVisibleColumnsChange={setVisibleColumns}
         />
       )}
 

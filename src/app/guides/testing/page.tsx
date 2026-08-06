@@ -90,6 +90,7 @@ const TEST_PHASES: TestPhase[] = [
       { step: 4, action: 'Fill in asset type, description, estimated value, and link to the obligor', where: 'Collateral Registry', href: '/collateral-management', expect: 'Form validates without errors. All required fields accept input.' },
       { step: 5, action: 'Upload a title deed document and save the record', where: 'Collateral Documents', href: '/collateral-documents', expect: 'Record saved with status "Pending Review". Document appears in the Security Pocket.' },
       { step: 6, action: 'Verify the new record appears in the Collateral Dashboard KPIs', where: 'Collateral Dashboard', href: '/collateral-dashboard', expect: 'Total Collateral count increments by 1. Recent Activity feed shows the new record.' },
+      { step: 7, action: 'Switch to the Portfolio Monitoring tab on the Collateral Dashboard', where: 'Collateral Dashboard', href: '/collateral-dashboard', expect: 'Portfolio Monitoring tab loads with daily volume chart and concentration breakdown by collateral type.' },
     ],
   },
   {
@@ -111,14 +112,26 @@ const TEST_PHASES: TestPhase[] = [
       { step: 1, action: 'As Credit Officer, open the collateral record and click "Initiate Perfection"', where: 'Collateral Registry', href: '/collateral-management', expect: 'Workflow instance created. Status changes to "Perfection In Progress".' },
       { step: 2, action: 'Switch to Legal Officer account. Open Approval Inbox', where: 'Approval Inbox', href: '/approval-inbox', expect: 'Perfection submission appears in the inbox with correct collateral details.' },
       { step: 3, action: 'Open the submission in the Perfection Workflow drawer', where: 'Perfection Workflow', href: '/perfection-workflow', expect: 'Drawer shows all documents, obligor details, and AI fraud flag status.' },
-      { step: 4, action: 'Check AI Fraud Prevention for any flags on this collateral', where: 'AI Fraud Prevention', href: '/fraud-prevention', expect: 'Fraud scan runs. Either "No flags" or specific alerts are shown — not a blank screen.' },
+      { step: 4, action: 'Open AI Risk & Fraud and check both the Fraud Prevention and Risk Assessment tabs', where: 'AI Risk & Fraud', href: '/ai-risk-fraud', expect: 'Both tabs load. Fraud scan and risk scores are displayed for the test collateral — not a blank screen.' },
       { step: 5, action: 'Approve the perfection submission', where: 'Perfection Workflow', href: '/perfection-workflow', expect: 'Status updates to "Perfected". Credit Officer receives a notification. Audit log entry created.' },
       { step: 6, action: 'Verify the collateral status in the registry', where: 'Collateral Registry', href: '/collateral-management', expect: 'Collateral status shows "Perfected". Perfection date is recorded.' },
     ],
   },
   {
     id: 'phase-4',
-    title: 'Phase 4 — Valuation Workflow',
+    title: 'Phase 4 — Registry Submission',
+    description: 'Submit a registry filing for the perfected collateral and track its status.',
+    steps: [
+      { step: 1, action: 'As Credit Officer, open Registry Submissions and click "New Submission"', where: 'Registry Submissions', href: '/workflows/registry-submissions', expect: 'New submission form opens. Collateral picker shows the perfected collateral.' },
+      { step: 2, action: 'Select the collateral, choose the target registry, and upload the filing document', where: 'Registry Submissions', href: '/workflows/registry-submissions', expect: 'Document uploads successfully. Submission is saved with status "Pending".' },
+      { step: 3, action: 'As Legal Officer, open Registry Submissions and review the pending submission', where: 'Registry Submissions', href: '/workflows/registry-submissions', expect: 'Submission appears in the list. Filing documents are accessible.' },
+      { step: 4, action: 'Update the submission status to "Submitted" and add a reference number', where: 'Registry Submissions', href: '/workflows/registry-submissions', expect: 'Status updates to "Submitted". Reference number is saved and visible in the list.' },
+      { step: 5, action: 'Mark the submission as "Registered" once the registry confirms', where: 'Registry Submissions', href: '/workflows/registry-submissions', expect: 'Status updates to "Registered". The collateral record reflects the registry confirmation.' },
+    ],
+  },
+  {
+    id: 'phase-5',
+    title: 'Phase 5 — Valuation Workflow',
     description: 'Schedule a valuation, upload the report, and get it signed off.',
     steps: [
       { step: 1, action: 'As Credit Officer, open Valuation Workflow and schedule a valuation', where: 'Valuation Workflow', href: '/valuation-workflow', expect: 'Valuation appointment created. Status shows "Scheduled".' },
@@ -129,53 +142,54 @@ const TEST_PHASES: TestPhase[] = [
     ],
   },
   {
-    id: 'phase-5',
-    title: 'Phase 5 — Archive Vault',
+    id: 'phase-6',
+    title: 'Phase 6 — Archive Vault',
     description: 'File the original collateral documents in the physical archive vault.',
     steps: [
       { step: 1, action: 'As Legal Officer, open Vault Management and select a vault location', where: 'Archive — Vault Management', href: '/archive/vault-management', expect: 'Vault slots are displayed. Available slots are shown in green.' },
       { step: 2, action: 'Record the placement of the title deed in a vault slot', where: 'Archive — Vault Management', href: '/archive/vault-management', expect: 'Slot status changes to "Occupied". Document is linked to the slot.' },
-      { step: 3, action: 'Update the custody status in the Custody Tracker', where: 'Archive — Custody Tracker', href: '/archive/custody-tracker', expect: 'Custody record shows "In Vault" with the correct slot reference.' },
+      { step: 3, action: 'Update the custody status in the Archive Custody screen', where: 'Archive — Custody', href: '/archive/custody', expect: 'Custody record shows "In Vault" with the correct slot reference.' },
       { step: 4, action: 'Raise an access request to retrieve the document', where: 'Archive — Access Requests', href: '/archive/access-requests', expect: 'Access request created with status "Pending Approval".' },
       { step: 5, action: 'As Manager, approve the access request', where: 'Archive — Access Requests', href: '/archive/access-requests', expect: 'Request status changes to "Approved". Requestor is notified.' },
     ],
   },
   {
-    id: 'phase-6',
-    title: 'Phase 6 — Release Approval',
+    id: 'phase-7',
+    title: 'Phase 7 — Release Approval',
     description: 'Trigger the collateral release workflow after loan repayment.',
     steps: [
       { step: 1, action: 'As Credit Officer, open the collateral record and initiate a release request', where: 'Collateral Registry', href: '/collateral-management', expect: 'Release request created. Status changes to "Release Pending".' },
-      { step: 2, action: 'As Legal Officer, open Release Approval and find the request', where: 'Release Approval', href: '/release-approval', expect: 'Release request appears with loan details and collateral summary.' },
+      { step: 2, action: 'As Legal Officer, open Release Approvals and find the request', where: 'Release Approvals', href: '/release-approval', expect: 'Release request appears with loan details and collateral summary.' },
       { step: 3, action: 'Verify the loan is fully repaid in the Loan Registry', where: 'Loan Registry', href: '/loan-registry', expect: 'Loan status shows "Closed" or outstanding balance is zero.' },
-      { step: 4, action: 'Approve the release', where: 'Release Approval', href: '/release-approval', expect: 'Collateral status updates to "Released". Audit log entry created.' },
+      { step: 4, action: 'Approve the release', where: 'Release Approvals', href: '/release-approval', expect: 'Collateral status updates to "Released". Audit log entry created.' },
       { step: 5, action: 'Trigger the Post-Settlement Workflow', where: 'Post-Settlement Workflow', href: '/post-settlement-workflow', expect: 'Post-settlement tasks are created and assigned to the relevant officers.' },
     ],
   },
   {
-    id: 'phase-7',
-    title: 'Phase 7 — Intelligence Module',
+    id: 'phase-8',
+    title: 'Phase 8 — Analytics & Intelligence Module',
     description: 'Verify the AI and analytics features are working correctly.',
     steps: [
-      { step: 1, action: 'Open Executive Dashboard and verify KPI cards load live data', where: 'Executive Dashboard', href: '/executive-dashboard', expect: 'All 8 KPI cards show non-zero values. Trend chart renders with real data points.' },
+      { step: 1, action: 'Open Executive Dashboard and verify KPI cards load live data', where: 'Executive Dashboard', href: '/executive-dashboard', expect: 'All KPI cards show non-zero values. Trend chart renders with real data points.' },
       { step: 2, action: 'Open Deadline Predictions and verify AI risk scores', where: 'Deadline Predictions', href: '/deadline-predictions', expect: 'Collateral records are scored and sorted by risk. No "undefined" values.' },
-      { step: 3, action: 'Open AI Risk Assessment and run a risk scan on the test collateral', where: 'AI Risk Assessment', href: '/risk-assessment', expect: 'OpenAI returns a 3-dimension risk score. Results display in the UI within 10 seconds.' },
-      { step: 4, action: 'Open AI Fraud Prevention and trigger a fraud scan', where: 'AI Fraud Prevention', href: '/fraud-prevention', expect: 'Scan completes. Alerts (or "No flags") are displayed and persisted to Supabase.' },
-      { step: 5, action: 'Open Cohort Analytics and verify charts render', where: 'Cohort Analytics', href: '/cohort-analytics', expect: 'Perfection trend chart and officer leaderboard load. No blank charts.' },
-      { step: 6, action: 'Open Portfolio Heatmap — check if "Sample Data" badge is visible', where: 'Portfolio Heatmap', href: '/portfolio-heatmap', expect: 'If badge is visible, fewer than 3 geo-tagged regions exist — this is expected on a fresh environment.' },
+      { step: 3, action: 'Open AI Risk & Fraud — test the Risk Assessment tab', where: 'AI Risk & Fraud', href: '/ai-risk-fraud', expect: 'OpenAI returns a risk score. Results display in the UI within 10 seconds.' },
+      { step: 4, action: 'Switch to the Fraud Prevention tab and trigger a fraud scan', where: 'AI Risk & Fraud', href: '/ai-risk-fraud', expect: 'Scan completes. Alerts (or "No flags") are displayed and persisted to Supabase.' },
+      { step: 5, action: 'Open Cohort Analytics — verify charts render on the main tab', where: 'Cohort Analytics', href: '/cohort-analytics', expect: 'Perfection trend chart and officer leaderboard load. No blank charts.' },
+      { step: 6, action: 'Switch to the Portfolio Heatmap tab inside Cohort Analytics', where: 'Cohort Analytics', href: '/cohort-analytics', expect: 'Heatmap tab renders. If "Sample Data" badge is visible, fewer than 3 geo-tagged regions exist — expected on a fresh environment.' },
     ],
   },
   {
-    id: 'phase-8',
-    title: 'Phase 8 — Admin Tasks',
+    id: 'phase-9',
+    title: 'Phase 9 — Admin Tasks',
     description: 'Verify system administration features as System Admin.',
     steps: [
       { step: 1, action: 'Log in as System Admin. Open User Management', where: 'User Management', href: '/user-management', expect: 'All users are listed. Role badges are correct.' },
       { step: 2, action: 'Create a new test user and assign the Credit Officer role', where: 'User Management', href: '/user-management', expect: 'User created. Invite email sent (if email provider is configured).' },
       { step: 3, action: 'Open Workflows Admin → Templates and verify templates exist', where: 'Workflow Templates', href: '/workflows-admin/templates', expect: 'At least one active workflow template is listed.' },
-      { step: 4, action: 'Open Trigger Rules and verify at least one rule is active', where: 'Trigger Rules', href: '/workflows-admin/trigger-rules', expect: 'Active trigger rules are listed with their event types and target templates.' },
-      { step: 5, action: 'Open Audit Center and search for actions from today', where: 'Audit Center', href: '/audit-center', expect: 'All actions performed during this test session appear in the audit log.' },
-      { step: 6, action: 'Open Live Activity and verify the real-time feed is updating', where: 'Live Activity', href: '/live-activity', expect: 'Activity feed shows recent events. Auto-refresh is working.' },
+      { step: 4, action: 'Open Auto-Trigger Rules and verify at least one rule is active', where: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules', expect: 'Active trigger rules are listed with their event types and target templates.' },
+      { step: 5, action: 'Open Process Analytics & KPIs and verify metrics load', where: 'Process Analytics & KPIs', href: '/workflows-admin/process-analytics', expect: 'Cycle time charts and SLA compliance metrics render with data.' },
+      { step: 6, action: 'Open Audit Center and search for actions from today', where: 'Audit Center', href: '/audit-center', expect: 'All actions performed during this test session appear in the audit log.' },
+      { step: 7, action: 'Open Live Activity and verify the real-time feed is updating', where: 'Live Activity', href: '/live-activity', expect: 'Activity feed shows recent events. Auto-refresh is working.' },
     ],
   },
 ];
@@ -192,6 +206,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
       { label: 'View collateral detail page', href: '/collateral-management' },
       { label: 'Initiate perfection workflow', href: '/collateral-management' },
       { label: 'Initiate substitution request', href: '/collateral-substitution' },
+      { label: 'Collateral Dashboard — Portfolio Monitoring tab loads', href: '/collateral-dashboard' },
     ],
   },
   {
@@ -202,6 +217,8 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
       { label: 'Valuation workflow — schedule and sign off', href: '/valuation-workflow' },
       { label: 'Document approval — submit and approve', href: '/document-approval' },
       { label: 'Release approval — submit and approve', href: '/release-approval' },
+      { label: 'Registry Submissions — create and update status', href: '/workflows/registry-submissions' },
+      { label: 'Fast Track — assign priority tier to collateral', href: '/fast-track' },
       { label: 'Workflow instances list loads correctly', href: '/workflows/instances' },
       { label: 'Task list shows assigned tasks', href: '/workflows/tasks' },
       { label: 'Escalation triggers after SLA breach', href: '/workflows-admin/escalation' },
@@ -212,7 +229,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
     color: '#065F46',
     items: [
       { label: 'Place document in vault slot', href: '/archive/vault-management' },
-      { label: 'Custody tracker shows correct status', href: '/archive/custody-tracker' },
+      { label: 'Custody screen shows correct status', href: '/archive/custody' },
       { label: 'Raise and approve access request', href: '/archive/access-requests' },
       { label: 'Documents library lists all archived docs', href: '/archive/documents-library' },
       { label: 'Chain of custody log is accurate', href: '/archive/chain-of-custody' },
@@ -220,16 +237,15 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
     ],
   },
   {
-    module: 'Intelligence',
+    module: 'Analytics & Intelligence',
     color: '#B45309',
     items: [
       { label: 'Executive Dashboard KPIs load live data', href: '/executive-dashboard' },
-      { label: 'AI Risk Assessment returns scores', href: '/risk-assessment' },
-      { label: 'AI Fraud Prevention scan completes', href: '/fraud-prevention' },
+      { label: 'AI Risk & Fraud — Risk Assessment tab returns scores', href: '/ai-risk-fraud' },
+      { label: 'AI Risk & Fraud — Fraud Prevention scan completes', href: '/ai-risk-fraud' },
       { label: 'Deadline Predictions list loads', href: '/deadline-predictions' },
       { label: 'Cohort Analytics charts render', href: '/cohort-analytics' },
-      { label: 'Portfolio Heatmap renders (with or without live data)', href: '/portfolio-heatmap' },
-      { label: 'Fast Track tier assignment saves', href: '/fast-track' },
+      { label: 'Cohort Analytics — Portfolio Heatmap tab renders', href: '/cohort-analytics' },
     ],
   },
   {
@@ -252,7 +268,9 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
       { label: 'Assign and change user role', href: '/user-management' },
       { label: 'Configure screen access per user', href: '/user-management' },
       { label: 'Create workflow template', href: '/workflows-admin/templates' },
-      { label: 'Configure trigger rule', href: '/workflows-admin/trigger-rules' },
+      { label: 'Configure auto-trigger rule', href: '/workflows-admin/trigger-rules' },
+      { label: 'Process Analytics & KPIs load', href: '/workflows-admin/process-analytics' },
+      { label: 'Workflow KPIs page renders', href: '/workflows-admin/kpis' },
       { label: 'Set alert threshold', href: '/alert-thresholds' },
       { label: 'Audit Center shows all test actions', href: '/audit-center' },
     ],
@@ -280,7 +298,7 @@ function PrerequisiteCard({ category, icon: IconComp, color, items }: typeof PRE
     >
       <div className="flex items-center gap-2.5 mb-4">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + '15' }}>
-          <IconComp size={16} style={{ color }} />
+          {React.createElement(IconComp, { size: 16, style: { color } })}
         </div>
         <h3 className="text-sm font-bold" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>{category}</h3>
       </div>
@@ -504,18 +522,18 @@ export default function TestingGuidePage() {
               style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}
             >
               <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                This guide walks testers and trainers through the full collateral lifecycle — from obligor creation to release approval — with step-by-step instructions, expected outcomes, per-module feature checklists, and known test data references. Work through the phases in order for a complete end-to-end test run.
+                This guide walks testers and trainers through the full collateral lifecycle — from obligor creation to registry submissions and release approval — with step-by-step instructions, expected outcomes, per-module feature checklists, and known test data references. Work through the phases in order for a complete end-to-end test run.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-5 mt-5">
               {[
-                { label: '8 test phases', icon: FlaskConical },
+                { label: '9 test phases', icon: FlaskConical },
                 { label: '6 module checklists', icon: CheckSquare },
                 { label: '8 test data references', icon: Database },
               ].map(({ label, icon: IconComponent }) => (
                 <div key={label} className="flex items-center gap-1.5">
-                  <IconComponent size={13} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                  {React.createElement(IconComponent, { size: 13, style: { color: 'rgba(255,255,255,0.6)' } })}
                   <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>{label}</span>
                 </div>
               ))}

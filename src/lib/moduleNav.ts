@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, Flame, FolderArchive, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, CheckSquare, KeyRound, BookMarked } from 'lucide-react';
+import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, FolderArchive, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, CheckSquare, KeyRound, BookMarked, BookText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -37,7 +37,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Overview',
         items: [
           { label: 'Dashboard', icon: LayoutDashboard, href: '/collateral-dashboard', permission: PERMISSIONS.DASHBOARD_VIEW },
-          { label: 'Portfolio Monitoring', icon: Activity, href: '/portfolio-monitoring', permission: PERMISSIONS.DASHBOARD_VIEW },
         ],
       },
       {
@@ -51,20 +50,20 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'Operations',
         items: [
-          { label: 'Batch Release', icon: Unlock, href: '/batch-release', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Bulk Release', icon: Unlock, href: '/batch-release', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Bulk Upload', icon: Upload, href: '/bulk-upload', permission: PERMISSIONS.COLLATERAL_EDIT },
-          { label: 'Scheduled Jobs', icon: CalendarClock, href: '/scheduled-jobs', permission: PERMISSIONS.COLLATERAL_EDIT },
         ],
       },
       {
-        label: 'Loan Operations',
+        label: 'Lifecycle Management',
         items: [
           { label: 'Valuation Workflow', icon: RefreshCw, href: '/valuation-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Collateral Substitution', icon: ArrowLeftRight, href: '/collateral-substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Covenant Tracking', icon: Scale, href: '/covenant-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Insurance Tracking', icon: Shield, href: '/insurance-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Settlement Status', icon: HandCoins, href: '/collateral-settlement', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Post-Settlement Workflow', icon: ClipboardCheck, href: '/post-settlement-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Settlement & Post-Settlement', icon: HandCoins, href: '/collateral-settlement', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'LTV Monitoring', icon: TrendingDown, href: '/ltv-breach-alerts', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Collateral History', icon: ScrollText, href: '/collateral-history', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -101,9 +100,11 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Perfection', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Document Approvals', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
           { label: 'Release Approvals', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Valuation Reviews', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Valuation Workflow', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Registry Submissions', icon: BookText, href: '/workflows/registry-submissions', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Archive Requests', icon: FolderArchive, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -139,7 +140,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
   },
   {
     id: 'intelligence',
-    label: 'Intelligence',
+    label: 'Analytics & Intelligence',
     groups: [
       {
         label: 'Analytics',
@@ -152,11 +153,8 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'AI Tools',
         items: [
-          { label: 'AI Fraud Prevention', icon: ShieldAlert, href: '/fraud-prevention', badge: '3', badgeVariant: 'danger', permission: PERMISSIONS.COMPLIANCE_VIEW },
-          { label: 'AI Risk Assessment', icon: ScanSearch, href: '/risk-assessment', permission: PERMISSIONS.COMPLIANCE_VIEW },
-          { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'AI Risk & Fraud', icon: ShieldAlert, href: '/ai-risk-fraud', badge: '3', badgeVariant: 'danger', permission: PERMISSIONS.COMPLIANCE_VIEW },
           { label: 'Geomapping', icon: Map, href: '/geomapping', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Portfolio Heatmap', icon: Flame, href: '/portfolio-heatmap', permission: PERMISSIONS.DASHBOARD_VIEW },
         ],
       },
     ],
@@ -238,6 +236,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Officer Management', icon: UserCog, href: '/officer-management', permission: PERMISSIONS.USER_MANAGEMENT_MANAGE },
           { label: 'Officer Permissions', icon: KeyRound, href: '/officer-permissions', permission: PERMISSIONS.USER_MANAGEMENT_MANAGE },
           { label: 'Client Bank Accounts', icon: Landmark, href: '/client-bank-accounts', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Scheduled Jobs', icon: CalendarClock, href: '/scheduled-jobs', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Settings', icon: Settings, href: '/settings', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
@@ -299,6 +298,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/collateral-substitution': 'collaterals',
   '/covenant-tracking': 'collaterals',
   '/insurance-tracking': 'collaterals',
+  '/scheduled-jobs': 'administration',
   '/workflows': 'approvals',
   '/document-management': 'archive',
   '/document-approval': 'approvals',
@@ -325,6 +325,10 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/audit-log': 'audit',
   '/glossary': 'administration',
   '/my-tasks': 'approvals',
+  '/fast-track': 'approvals',
+  '/fraud-prevention': 'intelligence',
+  '/risk-assessment': 'intelligence',
+  '/portfolio-heatmap': 'intelligence',
 };
 
 /**

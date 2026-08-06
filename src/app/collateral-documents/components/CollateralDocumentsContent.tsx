@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2, Package, MapPin, ShieldCheck, ArrowUpDown } from 'lucide-react';
+import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2, Package, MapPin, ShieldCheck, ArrowUpDown, Eye, ExternalLink, Info, Calendar, User, Tag, HardDrive, Hash } from 'lucide-react';
 import { documentService, CollateralDocument, DocumentType, DocumentVersionAudit } from '@/lib/supabase/documentService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -518,6 +518,234 @@ function DeleteConfirmModal({ doc, onConfirm, onCancel, deleting }: DeleteConfir
   );
 }
 
+// ─── Document Viewer Drawer ───────────────────────────────────────────────────
+
+interface DocumentViewerDrawerProps {
+  doc: DocumentWithRecord;
+  versionCount: number;
+  onClose: () => void;
+  onDownload: () => void;
+  onUploadVersion: () => void;
+  onViewVersions: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
+}
+
+function DocumentViewerDrawer({
+  doc,
+  versionCount,
+  onClose,
+  onDownload,
+  onUploadVersion,
+  onViewVersions,
+  onDelete,
+  canDelete,
+}: DocumentViewerDrawerProps) {
+  const meta = DOC_TYPE_META[doc.documentType] ?? DOC_TYPE_META['Other'];
+  const isPdf = doc.mimeType?.includes('pdf');
+  const isImage = doc.mimeType?.includes('image');
+  const isViewable = isPdf || isImage;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+
+      {/* Drawer */}
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-5xl shadow-2xl">
+        {/* ── Left: Document Viewer (larger) ── */}
+        <div className="flex flex-col flex-1 bg-slate-900 min-w-0">
+          {/* Viewer header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {getFileIcon(doc.mimeType)}
+              <p className="text-sm font-medium text-white truncate">{doc.fileName}</p>
+              <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/20 text-primary border border-primary/30">
+                v{doc.version}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0 ml-3">
+              {doc.signedUrl && (
+                <a
+                  href={doc.signedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                  title="Open in new tab"
+                >
+                  <ExternalLink size={13} />
+                  Open
+                </a>
+              )}
+              <button
+                onClick={onDownload}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <Download size={13} />
+                Download
+              </button>
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Viewer body */}
+          <div className="flex-1 overflow-hidden flex items-center justify-center">
+            {!doc.signedUrl ? (
+              <div className="flex flex-col items-center gap-3 text-slate-400">
+                <FileText size={40} className="opacity-40" />
+                <p className="text-sm">Preview not available — no signed URL</p>
+                <button
+                  onClick={onDownload}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Download size={14} /> Download to view
+                </button>
+              </div>
+            ) : isPdf ? (
+              <iframe
+                src={`${doc.signedUrl}#toolbar=1&navpanes=0`}
+                className="w-full h-full border-0"
+                title={doc.fileName}
+              />
+            ) : isImage ? (
+              <div className="w-full h-full flex items-center justify-center p-6 overflow-auto">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={doc.signedUrl}
+                  alt={doc.fileName}
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-xl"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-slate-400">
+                <File size={40} className="opacity-40" />
+                <p className="text-sm font-medium text-slate-300">Preview not available for this file type</p>
+                <p className="text-xs text-slate-500">{doc.mimeType}</p>
+                <button
+                  onClick={onDownload}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Download size={14} /> Download to view
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right: Metadata & Actions (smaller) ── */}
+        <div className="w-72 shrink-0 bg-white border-l border-border flex flex-col overflow-y-auto">
+          {/* Panel header */}
+          <div className="px-4 py-3 border-b border-border bg-muted/40 shrink-0">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Document Details</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {/* Document type badge */}
+            <div className="px-4 pt-4 pb-3 border-b border-border">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${meta.bg} ${meta.color} ${meta.border}`}>
+                <Tag size={11} />
+                {doc.documentType}
+              </span>
+            </div>
+
+            {/* Metadata fields */}
+            <div className="px-4 py-3 space-y-3 border-b border-border">
+              <MetaRow icon={<Hash size={13} className="text-muted-foreground" />} label="Collateral ID" value={doc.collateralId} />
+              {doc.collateralRecord?.obligor && (
+                <MetaRow icon={<User size={13} className="text-muted-foreground" />} label="Obligor" value={doc.collateralRecord.obligor} />
+              )}
+              <MetaRow icon={<HardDrive size={13} className="text-muted-foreground" />} label="File Size" value={documentService.formatFileSize(doc.fileSize)} />
+              <MetaRow icon={<FileType2 size={13} className="text-muted-foreground" />} label="MIME Type" value={doc.mimeType || '—'} />
+              <MetaRow icon={<GitBranch size={13} className="text-muted-foreground" />} label="Version" value={`v${doc.version} of ${versionCount}`} />
+              <MetaRow icon={<User size={13} className="text-muted-foreground" />} label="Uploaded By" value={doc.uploadedByName || 'Unknown'} />
+              <MetaRow icon={<Calendar size={13} className="text-muted-foreground" />} label="Upload Date" value={formatDateTime(doc.createdAt)} />
+              {doc.workflowStage && (
+                <MetaRow icon={<Info size={13} className="text-muted-foreground" />} label="Workflow Stage" value={doc.workflowStage} />
+              )}
+            </div>
+
+            {/* Notes */}
+            {doc.notes && (
+              <div className="px-4 py-3 border-b border-border">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Notes</p>
+                <p className="text-xs text-foreground leading-relaxed">{doc.notes}</p>
+              </div>
+            )}
+
+            {/* Rollback info */}
+            {doc.isRollback && (
+              <div className="mx-4 my-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                <RefreshCw size={13} className="text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-amber-700">Rollback Version</p>
+                  {doc.rolledBackFromVersion != null && (
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      Rolled back from v{doc.rolledBackFromVersion}
+                      {doc.rolledBackByName ? ` by ${doc.rolledBackByName}` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="px-4 py-4 border-t border-border space-y-2 shrink-0">
+            <button
+              onClick={onDownload}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Download size={14} /> Download
+            </button>
+            <button
+              onClick={onViewVersions}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium border border-border text-foreground rounded-lg hover:bg-muted transition-colors"
+            >
+              <Clock size={14} /> Version History {versionCount > 1 && `(${versionCount})`}
+            </button>
+            <button
+              onClick={onUploadVersion}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium border border-primary/30 text-primary rounded-lg hover:bg-primary/5 transition-colors"
+            >
+              <Upload size={14} /> Upload New Version
+            </button>
+            {canDelete && (
+              <button
+                onClick={onDelete}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Meta Row Helper ──────────────────────────────────────────────────────────
+
+function MetaRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide leading-none mb-0.5">{label}</p>
+        <p className="text-xs text-foreground break-words">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Document Row ─────────────────────────────────────────────────────────────
 
 interface DocumentRowProps {
@@ -528,11 +756,12 @@ interface DocumentRowProps {
   onViewVersions: () => void;
   onDownload: () => void;
   onDelete: () => void;
+  onView: () => void;
   canDelete: boolean;
 }
 
 function DocumentRow({
-  doc, collateralRecord, versionCount, onUploadVersion, onViewVersions, onDownload, onDelete, canDelete,
+  doc, collateralRecord, versionCount, onUploadVersion, onViewVersions, onDownload, onDelete, onView, canDelete,
 }: DocumentRowProps) {
   const meta = DOC_TYPE_META[doc.documentType] ?? DOC_TYPE_META['Other'];
   return (
@@ -541,7 +770,12 @@ function DocumentRow({
         <div className="flex items-center gap-2.5">
           {getFileIcon(doc.mimeType)}
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{doc.fileName}</p>
+            <button
+              onClick={onView}
+              className="text-sm font-medium text-foreground truncate max-w-[200px] hover:text-primary hover:underline text-left transition-colors"
+            >
+              {doc.fileName}
+            </button>
             <p className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</p>
           </div>
         </div>
@@ -593,6 +827,13 @@ function DocumentRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
+          <button
+            onClick={onView}
+            className="p-1.5 rounded-md hover:bg-primary/10 transition-colors"
+            title="View document"
+          >
+            <Eye size={14} className="text-primary" />
+          </button>
           <button
             onClick={onDownload}
             className="p-1.5 rounded-md hover:bg-muted transition-colors"
@@ -877,6 +1118,7 @@ export default function CollateralDocumentsContent() {
   const [deleting, setDeleting] = useState(false);
   const [activeView, setActiveView] = useState<'documents' | 'pockets' | 'audit'>('documents');
   const [selectedPocketCollateral, setSelectedPocketCollateral] = useState<CollateralRecord | null>(null);
+  const [viewerDoc, setViewerDoc] = useState<DocumentWithRecord | null>(null);
 
   const userId = user?.id ?? '';
   const userName = userProfile?.full_name ?? user?.email ?? 'Unknown';
@@ -1230,6 +1472,7 @@ export default function CollateralDocumentsContent() {
                     doc={doc}
                     collateralRecord={doc.collateralRecord}
                     versionCount={versions.length}
+                    onView={() => setViewerDoc(doc)}
                     onUploadVersion={() => {
                       const rec = collateralRecords.find((r) => r.id === doc.collateralRecordId);
                       if (rec) setUploadVersionModal({ record: rec, doc });
@@ -1393,6 +1636,26 @@ export default function CollateralDocumentsContent() {
           onConfirm={handleDelete}
           onCancel={() => setDeleteModal(null)}
           deleting={deleting}
+        />
+      )}
+
+      {/* Document Viewer Drawer */}
+      {viewerDoc && (
+        <DocumentViewerDrawer
+          doc={viewerDoc}
+          versionCount={(() => {
+            const key = `${viewerDoc.collateralRecordId}::${viewerDoc.fileName}`;
+            return versionMap[key]?.length ?? 1;
+          })()}
+          onClose={() => setViewerDoc(null)}
+          onDownload={() => handleDownload(viewerDoc)}
+          onUploadVersion={() => {
+            const rec = collateralRecords.find((r) => r.id === viewerDoc.collateralRecordId);
+            if (rec) { setUploadVersionModal({ record: rec, doc: viewerDoc }); setViewerDoc(null); }
+          }}
+          onViewVersions={() => { handleViewVersions(viewerDoc); setViewerDoc(null); }}
+          onDelete={() => { setDeleteModal(viewerDoc); setViewerDoc(null); }}
+          canDelete={canDelete}
         />
       )}
     </div>

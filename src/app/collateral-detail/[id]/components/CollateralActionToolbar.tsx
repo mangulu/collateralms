@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info,  } from 'lucide-react';
+import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox, BookOpen } from 'lucide-react';
 import { CollateralRecord, collateralService, auditService } from '@/lib/supabase/collateralService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { createValuation } from '@/lib/supabase/valuationService';
@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
+import { archivePlacementService, archiveLocationService, archiveAuditService, ArchiveLocation, ArchivePlacement } from '@/lib/supabase/archiveService';
+import { registrySubmissionTrackerService, PerfectionRegistryName, REGISTRY_NAMES,  } from '@/lib/supabase/registrySubmissionTrackerService';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -19,10 +21,39 @@ interface CollateralActionToolbarProps {
 }
 
 type QuickEditType = 'assignee' | 'geolocation' | 'status' | null;
-type WorkflowType = 'perfection' | 'valuation' | 'document-review' | 'substitution' | 'release' | null;
-type ActionType = 'archive' | 'flag' | 'report' | null;
+type WorkflowType = 'perfection' | 'valuation' | 'document-review' | 'substitution' | 'release' | 'registry-submission' | null;
+type ActionType = 'archive' | 'flag' | 'report' | 'request-file' | null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function logCollateralUpdate(params: {
+  collateralRecordId: string;
+  collateralId: string;
+  updateType: string;
+  fieldChanged: string;
+  oldValue?: string;
+  newValue?: string;
+  notes?: string;
+  performedBy?: string;
+  performedByName: string;
+}): Promise<void> {
+  try {
+    const supabase = createClient();
+    await supabase.from('collateral_updates').insert({
+      collateral_record_id: params.collateralRecordId,
+      collateral_id: params.collateralId,
+      update_type: params.updateType,
+      field_changed: params.fieldChanged,
+      old_value: params.oldValue ?? null,
+      new_value: params.newValue ?? null,
+      notes: params.notes ?? null,
+      performed_by: params.performedBy ?? null,
+      performed_by_name: params.performedByName,
+    });
+  } catch {
+    // non-blocking — audit failure should not break the main action
+  }
+}
 
 async function startWorkflowEngineInstance(
   workflowType: 'valuation' | 'substitution' | 'perfection' | 'release',
@@ -30,25 +61,24 @@ async function startWorkflowEngineInstance(
   userId: string,
   referenceLabel: string
 ): Promise<void> {
-  try {
-    const templates = await workflowTemplateService.getAll();
-    const template = templates.find((t) => t.workflowType === workflowType && t.isActive);
-    if (!template) return;
-    await workflowInstanceService.start({
-      templateId: template.id,
-      referenceType: workflowType,
-      referenceId: collateral.id,
-      referenceLabel,
-      startedBy: userId,
-      metadata: {
-        collateralId: collateral.collateralId,
-        obligor: collateral.obligor,
-        collateralType: collateral.type,
-      },
-    });
-  } catch {
-    // non-blocking
+  const templates = await workflowTemplateService.getAll();
+  const template = templates.find((t) => t.workflowType === workflowType && t.isActive);
+  if (!template) {
+    // No active template for this type — skip silently
+    return;
   }
+  await workflowInstanceService.start({
+    templateId: template.id,
+    referenceType: workflowType,
+    referenceId: collateral.id,
+    referenceLabel,
+    startedBy: userId,
+    metadata: {
+      collateralId: collateral.collateralId,
+      obligor: collateral.obligor,
+      collateralType: collateral.type,
+    },
+  });
 }
 
 // ─── Workflow gate rules ──────────────────────────────────────────────────────
@@ -94,6 +124,25 @@ function getWorkflowGates(collateral: CollateralRecord): Record<string, Workflow
     },
   };
 }
+
+// ─── Registry Type Mapping ────────────────────────────────────────────────────
+const REGISTRY_TYPE_MAP: Record<string, PerfectionRegistryName | null> = {
+  'BRELA':          'BRELA',
+  'Lands Registry': 'Lands Registry',
+  'TRA':            'TRA',
+  'DSE':            'DSE/CSDR',
+  'TASAC':          'Tanzania Shipping',
+  'N/A':            null,
+};
+
+const REGISTRY_DESCRIPTIONS: Record<PerfectionRegistryName, string> = {
+  'BRELA':             'Business assets, debentures & charges',
+  'Lands Registry':    'Mortgages & title deeds',
+  'TRA':               'Motor vehicle registration',
+  'DSE/CSDR':          'Shares & securities',
+  'Tanzania Shipping': 'Ship & vessel collateral',
+  'Other':             'Other registry',
+};
 
 // ─── Tooltip wrapper ──────────────────────────────────────────────────────────
 
@@ -151,15 +200,27 @@ function AssigneeEditModal({
     setSaving(true);
     try {
       await collateralService.update(collateral.id, { assignedOfficer: selected });
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'updated',
-        message: `Assigned officer updated to ${selected}`,
-        detail: `Previous: ${collateral.assignedOfficer ?? 'unassigned'}`,
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'updated',
+          message: `Assigned officer updated to ${selected}`,
+          detail: `Previous: ${collateral.assignedOfficer ?? 'unassigned'}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'assignee_change',
+          fieldChanged: 'assigned_officer',
+          oldValue: collateral.assignedOfficer ?? '',
+          newValue: selected,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Assignee updated');
       onSaved();
       onClose();
@@ -226,15 +287,27 @@ function GeolocationEditModal({
       if (lat && !isNaN(parseFloat(lat))) updates.latitude = parseFloat(lat);
       if (lng && !isNaN(parseFloat(lng))) updates.longitude = parseFloat(lng);
       await collateralService.update(collateral.id, updates);
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'updated',
-        message: `Geolocation updated`,
-        detail: `Lat: ${lat}, Lng: ${lng}, Address: ${address}`,
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'updated',
+          message: `Geolocation updated`,
+          detail: `Lat: ${lat}, Lng: ${lng}, Address: ${address}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'geolocation_change',
+          fieldChanged: 'geolocation',
+          oldValue: `${collateral.latitude ?? ''},${collateral.longitude ?? ''},${collateral.physicalAddress ?? ''}`,
+          newValue: `${lat},${lng},${address}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Geolocation updated');
       onSaved();
       onClose();
@@ -292,15 +365,28 @@ function StatusEditModal({
     setSaving(true);
     try {
       await collateralService.update(collateral.id, { status: status as any });
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'status_changed',
-        message: `Status overridden: ${collateral.status} → ${status}`,
-        detail: `Reason: ${reason}`,
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'status_changed',
+          message: `Status overridden: ${collateral.status} → ${status}`,
+          detail: `Reason: ${reason}`,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'status_override',
+          fieldChanged: 'status',
+          oldValue: collateral.status,
+          newValue: status,
+          notes: reason,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success(`Status updated to ${status}`);
       onSaved();
       onClose();
@@ -354,7 +440,19 @@ function PerfectionModal({ collateral, onClose, onSaved }: { collateral: Collate
         submittedByName: user?.email ?? '',
         notes: notes || undefined,
       });
-      await startWorkflowEngineInstance('perfection', collateral, user?.id ?? '', `Perfection — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('perfection', collateral, user?.id ?? '', `Perfection — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_perfection',
+          newValue: 'initiated',
+          notes: notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Perfection workflow initiated');
       onSaved();
       onClose();
@@ -400,7 +498,19 @@ function ValuationModal({ collateral, onClose, onSaved }: { collateral: Collater
         notes: form.notes || undefined,
         createdBy: user?.id ?? '',
       });
-      await startWorkflowEngineInstance('valuation', collateral, user?.id ?? '', `${form.valuationType} — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('valuation', collateral, user?.id ?? '', `${form.valuationType} — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_valuation',
+          newValue: form.valuationType,
+          notes: form.notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Valuation scheduled');
       onSaved();
       onClose();
@@ -464,15 +574,27 @@ function DocumentReviewModal({ collateral, onClose, onSaved }: { collateral: Col
         submitted_by_name: user?.email ?? '',
         notes: notes || null,
       });
-      await auditService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'updated',
-        message: `Document review workflow initiated`,
-        detail: notes || 'No notes',
-        performedBy: user?.id,
-        performedByName: user?.email ?? '',
-      });
+      await Promise.all([
+        auditService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'updated',
+          message: `Document review workflow initiated`,
+          detail: notes || 'No notes',
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_document_review',
+          newValue: 'initiated',
+          notes: notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Document review initiated');
       onSaved();
       onClose();
@@ -514,7 +636,19 @@ function SubstitutionModal({ collateral, onClose, onSaved }: { collateral: Colla
         requested_by_name: user?.email ?? '',
         reason,
       });
-      await startWorkflowEngineInstance('substitution', collateral, user?.id ?? '', `Substitution — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('substitution', collateral, user?.id ?? '', `Substitution — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_substitution',
+          newValue: 'initiated',
+          notes: reason,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Substitution request submitted');
       onSaved();
       onClose();
@@ -556,7 +690,19 @@ function ReleaseModal({ collateral, onClose, onSaved }: { collateral: Collateral
         requested_by_name: user?.email ?? '',
         notes: notes || null,
       });
-      await startWorkflowEngineInstance('release', collateral, user?.id ?? '', `Release — ${collateral.collateralId}`);
+      await Promise.all([
+        startWorkflowEngineInstance('release', collateral, user?.id ?? '', `Release — ${collateral.collateralId}`).catch(() => {}),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'workflow_initiated',
+          fieldChanged: 'workflow_release',
+          newValue: 'initiated',
+          notes: notes || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
       toast.success('Release request submitted');
       onSaved();
       onClose();
@@ -576,6 +722,649 @@ function ReleaseModal({ collateral, onClose, onSaved }: { collateral: Collateral
       </div>
       <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Initiate Release" confirmClass="bg-amber-600 hover:bg-amber-700" />
     </ModalShell>
+  );
+}
+
+// ─── Initiate Workflow: Registry Submission ───────────────────────────────────
+
+function RegistrySubmissionModal({
+  collateral,
+  onClose,
+  onSaved,
+}: {
+  collateral: CollateralRecord;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const preselectedRegistry: PerfectionRegistryName | null =
+    collateral.registry ? (REGISTRY_TYPE_MAP[collateral.registry] ?? null) : null;
+
+  const [registry, setRegistry] = useState<PerfectionRegistryName>(preselectedRegistry ?? 'BRELA');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const userName = (user as any)?.user_metadata?.full_name ?? user?.email ?? 'Unknown';
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      await registrySubmissionTrackerService.create({
+        collateralRecordId: collateral.id,
+        registryName: registry,
+        notes: notes || undefined,
+        createdBy: user?.id,
+        createdByName: userName,
+      });
+      await logCollateralUpdate({
+        collateralRecordId: collateral.id,
+        collateralId: collateral.collateralId,
+        updateType: 'workflow_initiated',
+        fieldChanged: 'workflow_registry_submission',
+        newValue: registry,
+        notes: notes || undefined,
+        performedBy: user?.id,
+        performedByName: user?.email ?? '',
+      });
+      toast.success('Registry submission created');
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to create submission');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalShell title="New Registry Submission" icon={<BookOpen size={16} className="text-teal-600" />} iconBg="bg-teal-100" onClose={onClose}>
+      <CollateralSummaryBlock collateral={collateral} />
+      <div className="mt-4 space-y-3">
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">
+            Registry <span className="text-red-500">*</span>
+          </label>
+          {preselectedRegistry ? (
+            <div className="space-y-2">
+              <div className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-muted/30 text-foreground flex items-center justify-between">
+                <span className="font-600">{preselectedRegistry}</span>
+                <span className="text-[10px] font-500 text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-2 shrink-0">From profile</span>
+              </div>
+              <div>
+                <label className="block text-[10px] text-muted-foreground mb-1">Adding a secondary registry? Select below:</label>
+                <select
+                  value={registry}
+                  onChange={(e) => setRegistry(e.target.value as PerfectionRegistryName)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+                >
+                  {REGISTRY_NAMES.map((r) => (
+                    <option key={r} value={r}>{r} — {REGISTRY_DESCRIPTIONS[r]}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <select
+              value={registry}
+              onChange={(e) => setRegistry(e.target.value as PerfectionRegistryName)}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+            >
+              {REGISTRY_NAMES.map((r) => (
+                <option key={r} value={r}>{r} — {REGISTRY_DESCRIPTIONS[r]}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Add context or instructions…"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
+        </div>
+      </div>
+      <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Create Submission" confirmClass="bg-teal-600 hover:bg-teal-700" />
+    </ModalShell>
+  );
+}
+
+// ─── Action: Archive (Physical Location) ─────────────────────────────────────
+
+function ArchiveModal({ collateral, onClose, onSaved }: { collateral: CollateralRecord; onClose: () => void; onSaved: () => void }) {
+  const { user } = useAuth();
+  const [locations, setLocations] = useState<ArchiveLocation[]>([]);
+  const [locationId, setLocationId] = useState('');
+  const [physicalRef, setPhysicalRef] = useState(() => {
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `PHY-${date}-${rand}`;
+  });
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+
+  useEffect(() => {
+    archiveLocationService.getAll()
+      .then((all) => setLocations(all.filter((l) => l.isActive)))
+      .catch(() => setLocations([]))
+      .finally(() => setLoadingLocations(false));
+  }, []);
+
+  const handleSave = async () => {
+    if (!locationId) { toast.error('Please select an archive location'); return; }
+    setSaving(true);
+    try {
+      await archivePlacementService.upsert({
+        collateralId: collateral.id,
+        locationId,
+        physicalRef: physicalRef.trim() || undefined,
+        notes: notes.trim() || undefined,
+        placedBy: user?.id,
+      });
+      await Promise.all([
+        archiveAuditService.log({
+          eventType: 'placement_assigned',
+          collateralId: collateral.id,
+          locationId,
+          performedBy: user?.id ?? null,
+          description: `Archived from collateral detail — physical ref ${physicalRef}`,
+        }),
+        logCollateralUpdate({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          updateType: 'archived',
+          fieldChanged: 'archive_location',
+          newValue: locationId,
+          notes: notes.trim() || undefined,
+          performedBy: user?.id,
+          performedByName: user?.email ?? '',
+        }),
+      ]);
+      toast.success('Collateral archived successfully');
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to archive collateral');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Group locations by type for a readable select
+  const grouped: Record<string, ArchiveLocation[]> = {};
+  locations.forEach((l) => {
+    const key = l.locationType.charAt(0).toUpperCase() + l.locationType.slice(1);
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(l);
+  });
+
+  return (
+    <ModalShell title="Archive Collateral" icon={<Archive size={16} className="text-slate-600" />} iconBg="bg-slate-100" onClose={onClose}>
+      <CollateralSummaryBlock collateral={collateral} />
+      <div className="mt-4 space-y-3">
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">
+            Physical Archive Location <span className="text-red-500">*</span>
+          </label>
+          {loadingLocations ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 size={14} className="animate-spin" /> Loading locations…
+            </div>
+          ) : (
+            <select
+              value={locationId}
+              onChange={(e) => setLocationId(e.target.value)}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">— Select location —</option>
+              {Object.entries(grouped).map(([type, locs]) => (
+                <optgroup key={type} label={type}>
+                  {locs.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} ({l.code})
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Physical Reference</label>
+          <input
+            value={physicalRef}
+            onChange={(e) => setPhysicalRef(e.target.value)}
+            placeholder="e.g. PHY-20260806-1234"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Auto-generated — you may edit if needed.</p>
+        </div>
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Any additional instructions or context…"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
+        </div>
+      </div>
+      <ModalFooter onClose={onClose} onConfirm={handleSave} saving={saving} confirmLabel="Confirm Archive" confirmClass="bg-slate-700 hover:bg-slate-800" />
+    </ModalShell>
+  );
+}
+
+// ─── Action: Re-Archive Confirmation Dialog ───────────────────────────────────
+
+function ReArchiveConfirmDialog({
+  collateral,
+  placement,
+  onClose,
+  onChangeLocation,
+}: {
+  collateral: CollateralRecord;
+  placement: ArchivePlacement;
+  onClose: () => void;
+  onChangeLocation: () => void;
+}) {
+  const locationName = placement.location?.name ?? 'Unknown Location';
+  const locationCode = placement.location?.code ?? '';
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Archive size={16} className="text-amber-600" />
+            </div>
+            <h2 className="text-base font-700 text-foreground">Already Archived</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={16} className="text-muted-foreground" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-600 text-amber-800">This collateral is currently archived</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Currently stored at <span className="font-700">{locationName}</span>
+                {locationCode && <span className="font-mono ml-1">({locationCode})</span>}
+                {placement.physicalRef && (
+                  <span className="block mt-0.5">Ref: <span className="font-mono">{placement.physicalRef}</span></span>
+                )}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Do you want to change the archive location for <span className="font-600 text-foreground">{collateral.collateralId}</span>?
+          </p>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-500 text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onChangeLocation}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-600 text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+          >
+            <MapPin size={14} />
+            Change Location
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Action: View Archive Location Popup ─────────────────────────────────────
+
+function ViewArchiveLocationPopup({
+  placement,
+  onClose,
+}: {
+  placement: ArchivePlacement;
+  onClose: () => void;
+}) {
+  const locationName = placement.location?.name ?? '—';
+  const locationCode = placement.location?.code ?? '—';
+  const locationType = placement.location?.locationType ?? '—';
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <Package size={15} className="text-slate-600" />
+            </div>
+            <h2 className="text-sm font-700 text-foreground">Archive Location</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors">
+            <X size={15} className="text-muted-foreground" />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          {/* Location badge */}
+          <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
+              <Building2 size={14} className="text-slate-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-700 text-foreground truncate">{locationName}</p>
+              <p className="text-xs text-muted-foreground font-mono">{locationCode} · <span className="capitalize">{locationType}</span></p>
+            </div>
+          </div>
+
+          {/* Details grid */}
+          <div className="space-y-2">
+            {placement.physicalRef && (
+              <div className="flex items-center justify-between py-2 border-b border-border/60">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Hash size={11} />
+                  Physical Reference
+                </div>
+                <span className="text-xs font-600 font-mono text-foreground">{placement.physicalRef}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between py-2 border-b border-border/60">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock size={11} />
+                Archived On
+              </div>
+              <span className="text-xs font-600 text-foreground">
+                {new Date(placement.placedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+            {placement.notes && (
+              <div className="py-2">
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <FileText size={11} />
+                  Notes
+                </p>
+                <p className="text-xs text-foreground bg-muted/30 rounded-md px-2.5 py-2 leading-relaxed">{placement.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="px-5 py-3 border-t border-border flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-500 text-foreground hover:bg-muted rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Action: Request File ─────────────────────────────────────────────────────
+
+const URGENCY_LEVELS = [
+  { value: 'routine', label: 'Routine', description: 'Standard retrieval, 2–3 business days' },
+  { value: 'urgent', label: 'Urgent', description: 'Required within 24 hours' },
+  { value: 'critical', label: 'Critical', description: 'Immediate retrieval required' },
+];
+
+const RETRIEVAL_REASONS = [
+  'Loan Review / Credit Assessment',
+  'Legal Proceedings',
+  'Audit / Compliance Check',
+  'Client Request',
+  'Valuation / Inspection',
+  'Regulatory Submission',
+  'Internal Review',
+  'Other',
+];
+
+function RequestFileModal({
+  collateral,
+  placement,
+  onClose,
+  onSaved,
+}: {
+  collateral: CollateralRecord;
+  placement: ArchivePlacement;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const [reason, setReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
+  const [urgency, setUrgency] = useState('routine');
+  const [expectedReturn, setExpectedReturn] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const finalReason = reason === 'Other' ? customReason : reason;
+
+  const handleSubmit = async () => {
+    if (!finalReason.trim()) { toast.error('Please specify a retrieval reason'); return; }
+    setSaving(true);
+    try {
+      const supabase = createClient();
+      // Insert archive request to initiate Record Request Workflow
+      await supabase.from('archive_requests').insert({
+        collateral_id: collateral.id,
+        requested_by: user?.id ?? null,
+        request_status: 'pending',
+        purpose: finalReason,
+        expected_return_date: expectedReturn || null,
+        checkout_notes: notes.trim() || null,
+      });
+
+      // Log archive audit event
+      await archiveAuditService.log({
+        eventType: 'request_raised',
+        collateralId: collateral.id,
+        locationId: placement.locationId ?? undefined,
+        performedBy: user?.id ?? null,
+        description: `File retrieval requested — Reason: ${finalReason} · Urgency: ${urgency}`,
+      });
+
+      // Log collateral update
+      await logCollateralUpdate({
+        collateralRecordId: collateral.id,
+        collateralId: collateral.collateralId,
+        updateType: 'file_request',
+        fieldChanged: 'archive_request',
+        newValue: urgency,
+        notes: finalReason,
+        performedBy: user?.id,
+        performedByName: user?.email ?? '',
+      });
+
+      toast.success('File retrieval request submitted — Record Request Workflow initiated');
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to submit request');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedUrgency = URGENCY_LEVELS.find((u) => u.value === urgency);
+
+  return (
+    <ModalShell title="Request File Retrieval" icon={<Inbox size={16} className="text-violet-600" />} iconBg="bg-violet-100" onClose={onClose}>
+      {/* Current location summary */}
+      <div className="flex items-center gap-2.5 p-3 bg-slate-50 border border-slate-200 rounded-lg mb-4">
+        <Package size={14} className="text-slate-500 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-xs font-600 text-foreground truncate">{placement.location?.name ?? 'Unknown Location'}</p>
+          <p className="text-[11px] text-muted-foreground font-mono">{placement.location?.code ?? ''}{placement.physicalRef ? ` · ${placement.physicalRef}` : ''}</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {/* Retrieval reason */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Retrieval Reason <span className="text-red-500">*</span></label>
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="">— Select reason —</option>
+            {RETRIEVAL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+        {reason === 'Other' && (
+          <div>
+            <label className="block text-xs font-600 text-foreground mb-1.5">Specify Reason <span className="text-red-500">*</span></label>
+            <input
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              placeholder="Describe the retrieval reason…"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+        )}
+
+        {/* Urgency */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Urgency Level</label>
+          <div className="grid grid-cols-3 gap-2">
+            {URGENCY_LEVELS.map((u) => (
+              <button
+                key={u.value}
+                type="button"
+                onClick={() => setUrgency(u.value)}
+                className={`flex flex-col items-center gap-1 p-2.5 rounded-lg border text-center transition-colors ${
+                  urgency === u.value
+                    ? u.value === 'critical' ?'border-red-500 bg-red-50 text-red-700'
+                      : u.value === 'urgent' ?'border-amber-500 bg-amber-50 text-amber-700' :'border-primary bg-primary/5 text-primary' :'border-border text-muted-foreground hover:border-border/80 hover:bg-muted/30'
+                }`}
+              >
+                <span className="text-xs font-700">{u.label}</span>
+              </button>
+            ))}
+          </div>
+          {selectedUrgency && (
+            <p className="text-[11px] text-muted-foreground mt-1.5">{selectedUrgency.description}</p>
+          )}
+        </div>
+
+        {/* Expected return date */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Expected Return Date (optional)</label>
+          <input
+            type="date"
+            value={expectedReturn}
+            onChange={(e) => setExpectedReturn(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-xs font-600 text-foreground mb-1.5">Additional Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Any specific instructions for the archive officer…"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+          />
+        </div>
+      </div>
+      <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Submit Request" confirmClass="bg-violet-600 hover:bg-violet-700" />
+    </ModalShell>
+  );
+}
+
+// ─── Archive Status Badge (exported for use in header) ────────────────────────
+
+export function ArchiveStatusBadge({
+  collateral,
+}: {
+  collateral: CollateralRecord;
+}) {
+  const [placement, setPlacement] = useState<ArchivePlacement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showPopup, setShowPopup] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('archive_placements')
+      .select(`
+        *,
+        archive_locations(id, name, code, location_type, parent_id, description, capacity, current_occupancy, is_active, created_by, created_at, updated_at)
+      `)
+      .eq('collateral_id', collateral.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setPlacement({
+            id: data.id,
+            collateralId: data.collateral_id,
+            locationId: data.location_id,
+            physicalRef: data.physical_ref,
+            electronicRecordUrl: data.electronic_record_url,
+            notes: data.notes,
+            placedBy: data.placed_by,
+            placedAt: data.placed_at,
+            updatedAt: data.updated_at,
+            location: data.archive_locations ? {
+              id: data.archive_locations.id,
+              name: data.archive_locations.name,
+              code: data.archive_locations.code,
+              locationType: data.archive_locations.location_type,
+              parentId: data.archive_locations.parent_id,
+              description: data.archive_locations.description,
+              capacity: data.archive_locations.capacity,
+              currentOccupancy: data.archive_locations.current_occupancy,
+              isActive: data.archive_locations.is_active,
+              createdBy: data.archive_locations.created_by,
+              createdAt: data.archive_locations.created_at,
+              updatedAt: data.archive_locations.updated_at,
+            } : undefined,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [collateral.id]);
+
+  if (loading || !placement) return null;
+
+  return (
+    <>
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300 rounded-full text-xs font-600 text-amber-800">
+        <Package size={12} className="text-amber-600 shrink-0" />
+        <span>Archived</span>
+        {placement.location && (
+          <span className="text-amber-600 font-400">— {placement.location.name}</span>
+        )}
+        <button
+          onClick={() => setShowPopup(true)}
+          className="ml-1 text-amber-700 hover:underline font-600 text-xs"
+        >
+          View Location
+        </button>
+      </div>
+
+      {showPopup && (
+        <ViewArchiveLocationPopup
+          placement={placement}
+          onClose={() => setShowPopup(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -742,10 +1531,93 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
   }>({});
   const [generatingReport, setGeneratingReport] = useState(false);
 
+  // Archive placement state — loaded once to check if already archived
+  const [archivePlacement, setArchivePlacement] = useState<ArchivePlacement | null | undefined>(undefined);
+  const [showReArchiveConfirm, setShowReArchiveConfirm] = useState(false);
+
+  // Registry submission gate — check if any active submission exists
+  const [registrySubmissionGate, setRegistrySubmissionGate] = useState<{ disabled: boolean; reason: string }>({ disabled: false, reason: '' });
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('archive_placements')
+      .select(`
+        *,
+        archive_locations(id, name, code, location_type, parent_id, description, capacity, current_occupancy, is_active, created_by, created_at, updated_at)
+      `)
+      .eq('collateral_id', collateral.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setArchivePlacement({
+            id: data.id,
+            collateralId: data.collateral_id,
+            locationId: data.location_id,
+            physicalRef: data.physical_ref,
+            electronicRecordUrl: data.electronic_record_url,
+            notes: data.notes,
+            placedBy: data.placed_by,
+            placedAt: data.placed_at,
+            updatedAt: data.updated_at,
+            location: data.archive_locations ? {
+              id: data.archive_locations.id,
+              name: data.archive_locations.name,
+              code: data.archive_locations.code,
+              locationType: data.archive_locations.location_type,
+              parentId: data.archive_locations.parent_id,
+              description: data.archive_locations.description,
+              capacity: data.archive_locations.capacity,
+              currentOccupancy: data.archive_locations.current_occupancy,
+              isActive: data.archive_locations.is_active,
+              createdBy: data.archive_locations.created_by,
+              createdAt: data.archive_locations.created_at,
+              updatedAt: data.archive_locations.updated_at,
+            } : undefined,
+          });
+        } else {
+          setArchivePlacement(null);
+        }
+      })
+      .catch(() => setArchivePlacement(null));
+  }, [collateral.id]);
+
+  // Load registry submission gate
+  useEffect(() => {
+    registrySubmissionTrackerService.listByCollateral(collateral.id)
+      .then((submissions) => {
+        const active = submissions.find(
+          (s) => s.submissionStatus === 'Pending' || s.submissionStatus === 'Submitted' || s.submissionStatus === 'Acknowledged'
+        );
+        const registered = submissions.find((s) => s.submissionStatus === 'Registered');
+        if (registered) {
+          setRegistrySubmissionGate({ disabled: true, reason: 'Already registered at this registry' });
+        } else if (active) {
+          setRegistrySubmissionGate({ disabled: true, reason: `Submission already ${active.submissionStatus.toLowerCase()} — complete or reject it first` });
+        } else {
+          setRegistrySubmissionGate({ disabled: false, reason: '' });
+        }
+      })
+      .catch(() => setRegistrySubmissionGate({ disabled: false, reason: '' }));
+  }, [collateral.id]);
+
+  const isArchived = archivePlacement != null;
+
   const gates = getWorkflowGates(collateral);
   const isAdmin = userRole === 'admin' || userRole === 'system_admin';
 
-  const closeAll = () => setActiveModal({});
+  const closeAll = () => {
+    setActiveModal({});
+    setShowReArchiveConfirm(false);
+  };
+
+  const handleArchiveClick = () => {
+    if (isArchived) {
+      setShowReArchiveConfirm(true);
+    } else {
+      setActiveModal({ action: 'archive' });
+    }
+  };
 
   const handleGenerateReport = async () => {
     setGeneratingReport(true);
@@ -819,18 +1691,31 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       disabledReason: gates.release.reason,
       color: 'text-amber-700',
     },
+    {
+      label: 'New Submission',
+      icon: BookOpen,
+      onClick: () => setActiveModal({ workflow: 'registry-submission' }),
+      disabled: registrySubmissionGate.disabled,
+      disabledReason: registrySubmissionGate.reason,
+      color: 'text-teal-700',
+    },
   ];
 
-  // Actions items
+  // Actions items — Request File only shown when archived
   const actionItems: DropdownItem[] = [
     {
       label: 'Archive',
       icon: Archive,
-      onClick: () => {
-        toast.info('Redirecting to Archive module…');
-        window.location.href = '/archive/collateral-placement';
-      },
+      onClick: handleArchiveClick,
     },
+    ...(isArchived && archivePlacement
+      ? [{
+          label: 'Request File',
+          icon: Inbox,
+          onClick: () => setActiveModal({ action: 'request-file' }),
+          color: 'text-violet-700',
+        }]
+      : []),
     {
       label: 'Flag for Review',
       icon: Flag,
@@ -891,6 +1776,35 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       )}
       {activeModal.workflow === 'release' && (
         <ReleaseModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
+      )}
+      {activeModal.workflow === 'registry-submission' && (
+        <RegistrySubmissionModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
+      )}
+
+      {/* Action Modals */}
+      {activeModal.action === 'archive' && (
+        <ArchiveModal collateral={collateral} onClose={closeAll} onSaved={() => { onRefresh(); setArchivePlacement(undefined); }} />
+      )}
+      {activeModal.action === 'request-file' && archivePlacement && (
+        <RequestFileModal
+          collateral={collateral}
+          placement={archivePlacement}
+          onClose={closeAll}
+          onSaved={onRefresh}
+        />
+      )}
+
+      {/* Re-archive confirmation */}
+      {showReArchiveConfirm && archivePlacement && (
+        <ReArchiveConfirmDialog
+          collateral={collateral}
+          placement={archivePlacement}
+          onClose={() => setShowReArchiveConfirm(false)}
+          onChangeLocation={() => {
+            setShowReArchiveConfirm(false);
+            setActiveModal({ action: 'archive' });
+          }}
+        />
       )}
     </>
   );

@@ -1,10 +1,10 @@
 import AppLayout from '@/components/AppLayout';
-import CohortAnalyticsContent from './components/CohortAnalyticsContent';
+import CohortAnalyticsWithHeatmap from './components/CohortAnalyticsWithHeatmap';
 
 export default function CohortAnalyticsPage() {
   return (
     <AppLayout currentPath="/cohort-analytics">
-      <CohortAnalyticsContent />
+      <CohortAnalyticsWithHeatmap />
     </AppLayout>
   );
 }
