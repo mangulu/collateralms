@@ -254,6 +254,179 @@ const ModuleSkeleton = () => (
   </div>
 );
 
+// ─── System Overview Left Panel ───────────────────────────────────────────────
+
+const SYSTEM_FEATURES = [
+  { icon: FolderOpen,   color: '#007CB3', label: 'Collateral registration, valuation & LTV monitoring' },
+  { icon: CheckSquare,  color: '#D97706', label: 'Perfection, release & substitution workflows' },
+  { icon: FileText,     color: '#059669', label: 'Document library with version control & approvals' },
+  { icon: ShieldCheck,  color: '#9D174D', label: 'Compliance rules engine & deadline tracking' },
+  { icon: Brain,        color: '#7C3AED', label: 'AI risk scoring & fraud detection' },
+  { icon: Activity,     color: '#065F46', label: 'Full audit trail with field-level change history' },
+  { icon: Users,        color: '#374151', label: 'Role-based access with 2FA security' },
+  { icon: Archive,      color: '#059669', label: 'Physical vault & archive custody management' },
+];
+
+const MODULE_CATEGORIES = [
+  { label: 'Collaterals',            color: CATEGORY_BORDER.collateral,   count: 2 },
+  { label: 'Workflows',              color: CATEGORY_BORDER.workflow,      count: 1 },
+  { label: 'Analytics & Intelligence', color: CATEGORY_BORDER.intelligence, count: 1 },
+  { label: 'Alerts & Reports',       color: CATEGORY_BORDER.alerts,        count: 2 },
+  { label: 'Audit & Compliance',     color: CATEGORY_BORDER.audit,         count: 1 },
+  { label: 'Archive',                color: CATEGORY_BORDER.archive,       count: 1 },
+  { label: 'Administration',         color: CATEGORY_BORDER.admin,         count: 1 },
+];
+
+interface SystemOverviewPanelProps {
+  displayName: string;
+  displayRole: string;
+  initials: string;
+  greeting: string;
+  todayStr: string;
+  onSignOut: () => void;
+}
+
+function SystemOverviewPanel({ displayName, displayRole, initials, greeting, todayStr, onSignOut }: SystemOverviewPanelProps) {
+  return (
+    <div
+      className="flex flex-col h-full overflow-y-auto"
+      style={{
+        background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)',
+      }}
+    >
+      {/* Decorative blobs */}
+      <div className="pointer-events-none absolute -left-10 top-0 h-56 w-56 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} aria-hidden="true" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.18)' }} aria-hidden="true" />
+      {/* Decorative lines */}
+      <svg className="pointer-events-none absolute bottom-0 left-0 h-[40%] w-[80%] text-white/20" viewBox="0 0 300 200" fill="none" preserveAspectRatio="xMinYMax slice" aria-hidden="true">
+        <path d="M-20 180 C 60 140, 120 160, 180 130 C 240 100, 260 120, 320 90" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M-30 200 C 50 165, 110 180, 170 150 C 230 120, 250 140, 310 110" stroke="currentColor" strokeWidth="1" opacity="0.5" />
+      </svg>
+
+      <div className="relative z-10 flex flex-col flex-1 px-6 py-8">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <div
+            className="relative flex items-center justify-center rounded-full"
+            style={{
+              width: 100,
+              height: 100,
+              background: 'rgba(255,255,255,0.08)',
+              boxShadow: '0 0 0 3px rgba(255,255,255,0.3), 0 0 24px 6px rgba(53,200,243,0.45)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <AppLogo size={88} />
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-bold text-white leading-tight">CollateralMS</h2>
+          <p className="text-[12px] mt-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            Full-cycle collateral management
+          </p>
+        </div>
+
+        {/* System summary */}
+        <div
+          className="rounded-xl p-4 mb-5"
+          style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(6px)' }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            About this system
+          </p>
+          <p className="text-[12.5px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            A full-cycle collateral management platform built for banks — covering registration, valuation, perfection workflows, document management, compliance tracking, AI-powered risk assessment, and real-time audit trails.
+          </p>
+        </div>
+
+        {/* Feature list */}
+        <div className="mb-5">
+          <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            What's included
+          </p>
+          <ul className="space-y-2">
+            {SYSTEM_FEATURES.map((f) => {
+              const FIcon = f.icon;
+              return (
+                <li key={f.label} className="flex items-start gap-2.5">
+                  <span
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+                  >
+                    <FIcon size={10} color="white" aria-hidden="true" />
+                  </span>
+                  <span className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    {f.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* Module categories */}
+        <div className="mb-6">
+          <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            Modules
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {MODULE_CATEGORIES.map((cat) => (
+              <span
+                key={cat.label}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }} />
+                {cat.label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* User card at bottom */}
+        <div
+          className="rounded-xl p-3 flex items-center gap-3"
+          style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(6px)' }}
+        >
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-bold"
+            style={{ backgroundColor: 'rgba(255,255,255,0.25)' }}
+          >
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-white leading-tight truncate">{displayName}</p>
+            <p className="text-[11px] leading-tight truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>{displayRole}</p>
+          </div>
+          <button
+            onClick={onSignOut}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: 'rgba(255,255,255,0.6)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLElement).style.color = 'white'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; }}
+            aria-label="Sign out"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
+
+        {/* Footer credit */}
+        <p className="text-center text-[11px] mt-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          A product by{' '}
+          <a href="https://www.contentpro.co.tz" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            Contentpro
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ModuleHubPage() {
@@ -300,7 +473,7 @@ export default function ModuleHubPage() {
         .slice(0, 2)
     : 'U';
 
-  // ─── Compute visible modules (merged Workflows Admin into Workflows for admins) ──
+  // ─── Compute visible modules ──────────────────────────────────────────────
   const visibleModules = useMemo(() => {
     if (loading) return modules;
     return modules
@@ -311,7 +484,6 @@ export default function ModuleHubPage() {
         return true;
       })
       .map((m) => {
-        // Merge Workflows Admin quick actions into Workflows card for admins
         if (m.id === 'approvals' && isSystemAdmin) {
           return {
             ...m,
@@ -587,9 +759,7 @@ export default function ModuleHubPage() {
   return (
     <div
       className="min-h-screen flex flex-col relative overflow-x-hidden"
-      style={{
-        background: 'linear-gradient(145deg, #F8F7F5 0%, #F0EFEC 100%)',
-      }}
+      style={{ background: 'linear-gradient(145deg, #F8F7F5 0%, #F0EFEC 100%)' }}
     >
       {/* ── Geometric mesh / grid background pattern ─────────────────────── */}
       <div
@@ -597,37 +767,12 @@ export default function ModuleHubPage() {
         aria-hidden="true"
         style={{ zIndex: 0 }}
       >
-        <svg
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-          style={{ position: 'absolute', inset: 0 }}
-        >
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', inset: 0 }}>
           <defs>
-            <pattern
-              id="mesh-grid"
-              x="0"
-              y="0"
-              width="48"
-              height="48"
-              patternUnits="userSpaceOnUse"
-            >
-              <path
-                d="M 48 0 L 0 0 0 48"
-                fill="none"
-                stroke="#007CB3"
-                strokeWidth="0.5"
-                opacity="0.12"
-              />
+            <pattern id="mesh-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#007CB3" strokeWidth="0.5" opacity="0.12" />
             </pattern>
-            <pattern
-              id="mesh-dots"
-              x="0"
-              y="0"
-              width="48"
-              height="48"
-              patternUnits="userSpaceOnUse"
-            >
+            <pattern id="mesh-dots" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
               <circle cx="0" cy="0" r="1.2" fill="#007CB3" opacity="0.1" />
               <circle cx="48" cy="0" r="1.2" fill="#007CB3" opacity="0.1" />
               <circle cx="0" cy="48" r="1.2" fill="#007CB3" opacity="0.1" />
@@ -648,14 +793,10 @@ export default function ModuleHubPage() {
       >
         <div
           style={{
-            width: 560,
-            height: 560,
-            borderRadius: '50%',
+            width: 560, height: 560, borderRadius: '50%',
             border: '2px solid rgba(0,124,179,0.08)',
             boxShadow: '0 0 0 12px rgba(0,124,179,0.03), 0 0 80px 20px rgba(0,169,224,0.04)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(0,124,179,0.01)',
           }}
         >
@@ -663,12 +804,8 @@ export default function ModuleHubPage() {
             src="/assets/app_logo_shield.svg"
             alt=""
             style={{
-              width: '340px',
-              height: '340px',
-              objectFit: 'contain',
-              opacity: 0.04,
-              filter:
-                'invert(27%) sepia(80%) saturate(600%) hue-rotate(175deg) brightness(85%) contrast(90%)',
+              width: '340px', height: '340px', objectFit: 'contain', opacity: 0.04,
+              filter: 'invert(27%) sepia(80%) saturate(600%) hue-rotate(175deg) brightness(85%) contrast(90%)',
               userSelect: 'none',
             }}
           />
@@ -690,12 +827,8 @@ export default function ModuleHubPage() {
         <div className="flex items-center gap-4">
           <AppLogo size={32} />
           <div>
-            <p className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>
-              CollateralMS
-            </p>
-            <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>
-              Module Hub
-            </p>
+            <p className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>CollateralMS</p>
+            <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>Module Hub</p>
           </div>
         </div>
 
@@ -708,33 +841,12 @@ export default function ModuleHubPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2 pl-10 rounded-lg text-sm transition-all"
-              style={{
-                backgroundColor: 'rgba(0,0,0,0.04)',
-                border: '1px solid rgba(0,0,0,0.06)',
-                color: '#111827',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.backgroundColor = '#fff';
-                e.currentTarget.style.borderColor = '#007CB3';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,124,179,0.1)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)';
-                e.currentTarget.style.borderColor = 'rgba(0,0,0,0.06)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
+              style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)', color: '#111827' }}
+              onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#007CB3'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,124,179,0.1)'; }}
+              onBlur={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.06)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
             <Search size={16} className="absolute left-3 top-2.5" style={{ color: '#9CA3AF' }} />
-            <kbd
-              className="absolute right-3 top-2.5 text-xs px-1.5 py-0.5 rounded"
-              style={{
-                color: '#9CA3AF',
-                backgroundColor: 'rgba(0,0,0,0.06)',
-                border: '1px solid rgba(0,0,0,0.08)',
-              }}
-            >
-              ⌘K
-            </kbd>
+            <kbd className="absolute right-3 top-2.5 text-xs px-1.5 py-0.5 rounded" style={{ color: '#9CA3AF', backgroundColor: 'rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.08)' }}>⌘K</kbd>
           </div>
         </div>
 
@@ -750,10 +862,7 @@ export default function ModuleHubPage() {
           >
             <Bell size={18} />
             {taskCount !== null && taskCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white text-[10px] font-bold leading-none min-w-[18px] h-[18px] px-1"
-                style={{ backgroundColor: '#EF4444' }}
-              >
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white text-[10px] font-bold leading-none min-w-[18px] h-[18px] px-1" style={{ backgroundColor: '#EF4444' }}>
                 {taskCount > 9 ? '9+' : taskCount}
               </span>
             )}
@@ -762,17 +871,9 @@ export default function ModuleHubPage() {
           <button
             onClick={() => router.push('/onboarding-guide')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{
-              color: '#374151',
-              border: '1px solid rgba(0,0,0,0.12)',
-              backgroundColor: 'rgba(0,0,0,0.04)',
-            }}
-            onMouseOver={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)';
-            }}
-            onMouseOut={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)';
-            }}
+            style={{ color: '#374151', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)'; }}
           >
             <HelpCircle size={14} />
             <span className="hidden sm:inline">Onboarding</span>
@@ -781,17 +882,9 @@ export default function ModuleHubPage() {
           <button
             onClick={() => router.push('/guides/testing')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{
-              color: '#374151',
-              border: '1px solid rgba(0,0,0,0.12)',
-              backgroundColor: 'rgba(0,0,0,0.04)',
-            }}
-            onMouseOver={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)';
-            }}
-            onMouseOut={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)';
-            }}
+            style={{ color: '#374151', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)'; }}
           >
             <FlaskConical size={14} />
             <span className="hidden sm:inline">Testing</span>
@@ -799,23 +892,13 @@ export default function ModuleHubPage() {
 
           {/* Profile */}
           <div className="relative group">
-            <button
-              className="flex items-center gap-2.5 pl-2 border-l border-r border-transparent hover:border-gray-200 transition-colors"
-              style={{ borderColor: 'rgba(0,0,0,0.1)' }}
-            >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: 'var(--izou-primary)' }}
-              >
+            <button className="flex items-center gap-2.5 pl-2 border-l border-r border-transparent hover:border-gray-200 transition-colors" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--izou-primary)' }}>
                 <span className="text-white text-xs font-bold">{initials}</span>
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>
-                  {displayName}
-                </p>
-                <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>
-                  {displayRole}
-                </p>
+                <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>{displayName}</p>
+                <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>{displayRole}</p>
               </div>
               <ChevronDown size={14} className="hidden sm:block" style={{ color: '#9CA3AF' }} />
             </button>
@@ -825,14 +908,8 @@ export default function ModuleHubPage() {
             onClick={() => signOut?.()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ml-1"
             style={{ color: '#6B7280' }}
-            onMouseOver={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = '#FEE2E2';
-              (e.currentTarget as HTMLElement).style.color = '#DC2626';
-            }}
-            onMouseOut={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-              (e.currentTarget as HTMLElement).style.color = '#6B7280';
-            }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FEE2E2'; (e.currentTarget as HTMLElement).style.color = '#DC2626'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#6B7280'; }}
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">Sign out</span>
@@ -840,567 +917,427 @@ export default function ModuleHubPage() {
         </div>
       </header>
 
-      {/* ── Hero Section ────────────────────────────────────────────────────── */}
-      <div
-        className="px-6 pt-8 pb-6 relative"
-        style={{
-          borderBottom: '1px solid rgba(0,0,0,0.07)',
-          zIndex: 1,
-        }}
-      >
-        <div className="max-w-6xl mx-auto relative">
-          {/* Welcome row */}
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-            <div>
-              <h1 className="text-2xl font-bold leading-tight" style={{ color: '#007CB3' }}>
-                Good {greeting || '—'}, {firstName}
-              </h1>
-              <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: '#6B7280' }}>
-                <Calendar size={13} />
-                {todayStr || '—'}
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/workflows/tasks')}
-              className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
-              style={{
-                backgroundColor: 'var(--izou-primary)',
-                color: '#fff',
-                boxShadow: '0 4px 14px rgba(0,124,179,0.3)',
-              }}
-              onMouseOver={(e) => {
-                (e.currentTarget as HTMLElement).style.opacity = '0.9';
-              }}
-              onMouseOut={(e) => {
-                (e.currentTarget as HTMLElement).style.opacity = '1';
-              }}
-            >
-              <Activity size={14} />
-              My Tasks
-              {taskCount !== null && taskCount > 0 && (
-                <span
-                  className="inline-flex items-center justify-center rounded-full text-xs font-bold leading-none"
-                  style={{
-                    minWidth: '18px',
-                    height: '18px',
-                    padding: '0 5px',
-                    backgroundColor: '#EF4444',
-                    color: '#fff',
-                    fontSize: '10px',
-                  }}
-                >
-                  {taskCount > 99 ? '99+' : taskCount}
-                </span>
-              )}
-              <ChevronRight size={14} />
-            </button>
-          </div>
+      {/* ── Two-Column Body ──────────────────────────────────────────────────── */}
+      <div className="flex flex-1 relative" style={{ zIndex: 1 }}>
 
-          {/* Quick Stats Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div
-              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
-              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs" style={{ color: '#6B7280' }}>
-                    Total Collateral
-                  </p>
-                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>
-                    {summaryStats.totalCollateral}
-                  </p>
-                  {!statsLoading && (
-                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                      <span style={{ color: '#10B981' }}>{subStats.perfectedCount} Perfected</span>
-                      {' · '}
-                      <span style={{ color: subStats.collateralOverdueCount > 0 ? '#DC2626' : '#9CA3AF' }}>
-                        {subStats.collateralOverdueCount} Overdue
-                      </span>
-                    </p>
-                  )}
-                </div>
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,124,179,0.08)' }}>
-                  <FolderOpen size={16} style={{ color: '#007CB3' }} />
-                </div>
-              </div>
-            </div>
-            <div
-              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
-              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs" style={{ color: '#6B7280' }}>
-                    Active Workflows
-                  </p>
-                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>
-                    {summaryStats.activeWorkflows}
-                  </p>
-                  {!statsLoading && (
-                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                      <span style={{ color: subStats.escalatedCount > 0 ? '#D97706' : '#9CA3AF' }}>
-                        {subStats.escalatedCount} Escalated
-                      </span>
-                    </p>
-                  )}
-                </div>
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(217,119,6,0.08)' }}>
-                  <Activity size={16} style={{ color: '#D97706' }} />
-                </div>
-              </div>
-            </div>
-            <div
-              className="bg-white rounded-xl p-4 transition-all hover:shadow-md"
-              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs" style={{ color: '#6B7280' }}>
-                    Pending Actions
-                  </p>
-                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>
-                    {summaryStats.pendingActions}
-                  </p>
-                  {!statsLoading && (
-                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                      <span style={{ color: subStats.dueTodayCount > 0 ? '#007CB3' : '#9CA3AF' }}>
-                        {subStats.dueTodayCount} Due Today
-                      </span>
-                    </p>
-                  )}
-                </div>
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(124,58,237,0.08)' }}>
-                  <CheckSquare size={16} style={{ color: '#7C3AED' }} />
-                </div>
-              </div>
-            </div>
-            <div
-              className="bg-white rounded-xl p-4 transition-all hover:shadow-md cursor-pointer"
-              style={{ border: '1px solid rgba(0,0,0,0.05)' }}
-              onClick={() => router.push('/my-tasks?filter=overdue')}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs" style={{ color: '#6B7280' }}>
-                    Overdue
-                  </p>
-                  <p
-                    className="text-2xl font-bold"
-                    style={{ color: summaryStats.overdueItems > 0 ? '#DC2626' : '#111827' }}
-                  >
-                    {summaryStats.overdueItems}
-                  </p>
-                  {!statsLoading && (
-                    <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                      <span style={{ color: subStats.highPriorityCount > 0 ? '#DC2626' : '#9CA3AF' }}>
-                        {subStats.highPriorityCount} High Priority
-                      </span>
-                    </p>
-                  )}
-                </div>
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.08)' }}>
-                  <AlertTriangle size={16} style={{ color: '#DC2626' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Priority Tray ────────────────────────────────────────────────────── */}
-      {!statsLoading && priorityItems.length > 0 && !showDismissed && (
-        <div
-          className="px-6 py-4 relative"
+        {/* ── LEFT PANEL: System Overview (hidden on mobile) ─────────────────── */}
+        <aside
+          className="hidden lg:flex flex-col relative shrink-0 overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, #FEF2F2 0%, #FEF9F9 100%)',
-            borderBottom: '2px solid rgba(220,38,38,0.1)',
-            zIndex: 1,
+            width: '300px',
+            minHeight: 'calc(100vh - 57px)',
+            position: 'sticky',
+            top: '57px',
+            height: 'calc(100vh - 57px)',
           }}
         >
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-full bg-red-100 animate-pulse">
-                  <AlertTriangle size={14} style={{ color: '#DC2626' }} />
+          <SystemOverviewPanel
+            displayName={displayName}
+            displayRole={displayRole}
+            initials={initials}
+            greeting={greeting}
+            todayStr={todayStr}
+            onSignOut={() => signOut?.()}
+          />
+        </aside>
+
+        {/* ── RIGHT PANEL: Main Content ──────────────────────────────────────── */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+
+          {/* ── Hero / Welcome Section ─────────────────────────────────────── */}
+          <div
+            className="px-6 pt-8 pb-6 relative"
+            style={{ borderBottom: '1px solid rgba(0,0,0,0.07)' }}
+          >
+            <div className="max-w-4xl">
+              {/* Welcome row */}
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold leading-tight" style={{ color: '#007CB3' }}>
+                    Good {greeting || '—'}, {firstName}
+                  </h1>
+                  <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: '#6B7280' }}>
+                    <Calendar size={13} />
+                    {todayStr || '—'}
+                  </p>
                 </div>
-                <span className="text-sm font-semibold" style={{ color: '#DC2626' }}>
-                  {priorityItems.length} {priorityItems.length === 1 ? 'item' : 'items'} need your
-                  attention
-                </span>
-              </div>
-              <button
-                onClick={handleDismissAll}
-                className="text-xs hover:underline transition-colors"
-                style={{ color: '#9CA3AF' }}
-              >
-                Dismiss all
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2.5">
-              {priorityItems.slice(0, 4).map((item) => {
-                const cfg = priorityTypeConfig[item.type];
-                const ItemIcon = cfg.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => router.push(item.href)}
-                    className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all group"
-                    style={{
-                      backgroundColor: '#fff',
-                      color: cfg.color,
-                      border: `1px solid ${cfg.color}25`,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                    }}
-                    onMouseOver={(e) => {
-                      (e.currentTarget as HTMLElement).style.backgroundColor = cfg.bg;
-                      (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)';
-                      (e.currentTarget as HTMLElement).style.borderColor = cfg.color;
-                    }}
-                    onMouseOut={(e) => {
-                      (e.currentTarget as HTMLElement).style.backgroundColor = '#fff';
-                      (e.currentTarget as HTMLElement).style.transform = 'none';
-                      (e.currentTarget as HTMLElement).style.borderColor = `${cfg.color}25`;
-                    }}
-                  >
-                    <ItemIcon size={12} />
-                    <span className="font-bold">{cfg.label}</span>
-                    <span className="opacity-30">·</span>
-                    <span className="max-w-[120px] truncate">{item.detail}</span>
-                    <ArrowRight
-                      size={10}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    />
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDismissPriority(item.id);
-                      }}
-                      className="ml-1 opacity-40 hover:opacity-100 transition-opacity"
-                    >
-                      ×
-                    </button>
-                  </button>
-                );
-              })}
-              {priorityItems.length > 4 && (
                 <button
-                  onClick={() => router.push('/priority-center')}
-                  className="px-3.5 py-2 rounded-xl text-xs font-medium transition-colors"
-                  style={{
-                    color: '#6B7280',
-                    backgroundColor: 'rgba(0,0,0,0.03)',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                  }}
-                  onMouseOver={(e) => {
-                    (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.06)';
-                  }}
-                  onMouseOut={(e) => {
-                    (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.03)';
-                  }}
+                  onClick={() => router.push('/workflows/tasks')}
+                  className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
+                  style={{ backgroundColor: 'var(--izou-primary)', color: '#fff', boxShadow: '0 4px 14px rgba(0,124,179,0.3)' }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.9'; }}
+                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
                 >
-                  +{priorityItems.length - 4} more
+                  <Activity size={14} />
+                  My Tasks
+                  {taskCount !== null && taskCount > 0 && (
+                    <span className="inline-flex items-center justify-center rounded-full text-xs font-bold leading-none" style={{ minWidth: '18px', height: '18px', padding: '0 5px', backgroundColor: '#EF4444', color: '#fff', fontSize: '10px' }}>
+                      {taskCount > 99 ? '99+' : taskCount}
+                    </span>
+                  )}
+                  <ChevronRight size={14} />
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Module Grid ──────────────────────────────────────────────────────── */}
-      <div className="flex-1 px-6 py-8 relative" style={{ zIndex: 1 }}>
-        <div className="max-w-6xl mx-auto">
-          {/* Recently Used Modules */}
-          {recentModules.length > 0 && !searchQuery && (
-            <div className="mb-6">
-              <h3
-                className="text-xs font-semibold uppercase tracking-wider mb-3"
-                style={{ color: '#9CA3AF' }}
-              >
-                Recently Used
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {recentModules.map((id) => {
-                  const mod = modules.find((m) => m.id === id);
-                  if (!mod) return null;
-                  const ModIcon = mod.icon;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => handleModuleClick(id, mod.href)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all"
-                      style={{
-                        backgroundColor: '#ffffff',
-                        border: '1px solid rgba(0,0,0,0.06)',
-                        color: '#111827',
-                      }}
-                      onMouseOver={(e) => {
-                        (e.currentTarget as HTMLElement).style.borderColor = mod.iconBg;
-                        (e.currentTarget as HTMLElement).style.backgroundColor =
-                          'rgba(255,255,255,0.9)';
-                      }}
-                      onMouseOut={(e) => {
-                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,0,0,0.06)';
-                        (e.currentTarget as HTMLElement).style.backgroundColor = '#ffffff';
-                      }}
-                    >
-                      <ModIcon size={14} style={{ color: mod.iconBg }} />
-                      {mod.title}
-                    </button>
-                  );
-                })}
               </div>
-            </div>
-          )}
 
-          {/* Search Results Info */}
-          {searchQuery && (
-            <div className="mb-4 text-sm" style={{ color: '#6B7280' }}>
-              Found {filteredModules.length} {filteredModules.length === 1 ? 'module' : 'modules'} for "
-              {searchQuery}"
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => <ModuleSkeleton key={i} />)
-            ) : (
-              filteredModules.map((mod) => {
-                const ModIcon = mod.icon;
-                const kpi = moduleKPIs[mod.id];
-                const borderColor = CATEGORY_BORDER[mod.category];
-
-                return (
-                  <div
-                    key={mod.id}
-                    className="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer"
-                    style={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid rgba(0,0,0,0.05)',
-                      boxShadow:
-                        '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
-                      minHeight: '160px',
-                    }}
-                    onClick={() => handleModuleClick(mod.id, mod.href)}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.boxShadow =
-                        `0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.04)`;
-                      e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)';
-                      e.currentTarget.style.borderColor = `${borderColor}40`;
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.boxShadow =
-                        '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)';
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.borderColor = 'rgba(0,0,0,0.05)';
-                    }}
-                  >
-                    {/* Gradient border top */}
-                    <div
-                      className="absolute top-0 left-0 right-0 h-0.5"
-                      style={{
-                        background: `linear-gradient(90deg, ${borderColor}80, ${borderColor}20)`,
-                        opacity: 0.6,
-                      }}
-                    />
-
-                    {/* Row 1: Icon + Title + Status */}
-                    <div className="p-4 pb-1">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
-                          style={{
-                            backgroundColor: mod.iconBg,
-                            boxShadow: `0 4px 12px ${mod.iconBg}40`,
-                          }}
-                        >
-                          <ModIcon size={16} color="#fff" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h2 className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>
-                              {mod.title}
-                            </h2>
-                            {kpi && (
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <span
-                                  className="w-1.5 h-1.5 rounded-full"
-                                  style={{ backgroundColor: statusDot(kpi.status) }}
-                                />
-                                <span
-                                  className="text-[10px] whitespace-nowrap"
-                                  style={{ color: '#9CA3AF' }}
-                                >
-                                  {kpi.status === 'ok' ?'All clear'
-                                    : kpi.status === 'warn' ?'Attention' :'Critical'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+              {/* Quick Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white rounded-xl p-4 transition-all hover:shadow-md" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs" style={{ color: '#6B7280' }}>Total Collateral</p>
+                      <p className="text-2xl font-bold" style={{ color: '#111827' }}>{summaryStats.totalCollateral}</p>
+                      {!statsLoading && (
+                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                          <span style={{ color: '#10B981' }}>{subStats.perfectedCount} Perfected</span>
+                          {' · '}
+                          <span style={{ color: subStats.collateralOverdueCount > 0 ? '#DC2626' : '#9CA3AF' }}>{subStats.collateralOverdueCount} Overdue</span>
+                        </p>
+                      )}
                     </div>
-
-                    {/* Row 2: Description + KPI + Actions */}
-                    <div className="px-4 py-1 flex-1 flex flex-col justify-between">
-                      <p className="text-xs leading-relaxed line-clamp-2" style={{ color: '#6B7280' }}>
-                        {mod.description}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t" style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
-                        {kpi && (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs font-semibold" style={{ color: borderColor }}>
-                              {kpi.primary}
-                            </span>
-                            <span className="text-[10px] truncate" style={{ color: '#9CA3AF' }}>
-                              {kpi.secondary}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          {mod.quickActions.slice(0, 2).map((action) => {
-                            const ActionIcon = action.icon;
-                            return (
-                              <button
-                                key={action.label}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  router.push(action.href);
-                                }}
-                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all"
-                                style={{
-                                  color: borderColor,
-                                  backgroundColor: `${borderColor}12`,
-                                  border: `1px solid ${borderColor}25`,
-                                }}
-                                onMouseOver={(e) => {
-                                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                                    `${borderColor}25`;
-                                }}
-                                onMouseOut={(e) => {
-                                  (e.currentTarget as HTMLElement).style.backgroundColor =
-                                    `${borderColor}12`;
-                                }}
-                              >
-                                <ActionIcon size={8} />
-                                <span className="hidden sm:inline">{action.label}</span>
-                              </button>
-                            );
-                          })}
-                          <span
-                            className="text-[9px] opacity-20 group-hover:opacity-50 transition-opacity ml-0.5"
-                            style={{ color: '#6B7280' }}
-                          >
-                            ⌘{filteredModules.indexOf(mod) + 1}
-                          </span>
-                        </div>
-                      </div>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,124,179,0.08)' }}>
+                      <FolderOpen size={16} style={{ color: '#007CB3' }} />
                     </div>
                   </div>
-                );
-              })
-            )}
+                </div>
+                <div className="bg-white rounded-xl p-4 transition-all hover:shadow-md" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs" style={{ color: '#6B7280' }}>Active Workflows</p>
+                      <p className="text-2xl font-bold" style={{ color: '#111827' }}>{summaryStats.activeWorkflows}</p>
+                      {!statsLoading && (
+                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                          <span style={{ color: subStats.escalatedCount > 0 ? '#D97706' : '#9CA3AF' }}>{subStats.escalatedCount} Escalated</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(217,119,6,0.08)' }}>
+                      <Activity size={16} style={{ color: '#D97706' }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-4 transition-all hover:shadow-md" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs" style={{ color: '#6B7280' }}>Pending Actions</p>
+                      <p className="text-2xl font-bold" style={{ color: '#111827' }}>{summaryStats.pendingActions}</p>
+                      {!statsLoading && (
+                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                          <span style={{ color: subStats.dueTodayCount > 0 ? '#007CB3' : '#9CA3AF' }}>{subStats.dueTodayCount} Due Today</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(124,58,237,0.08)' }}>
+                      <CheckSquare size={16} style={{ color: '#7C3AED' }} />
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className="bg-white rounded-xl p-4 transition-all hover:shadow-md cursor-pointer"
+                  style={{ border: '1px solid rgba(0,0,0,0.05)' }}
+                  onClick={() => router.push('/my-tasks?filter=overdue')}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs" style={{ color: '#6B7280' }}>Overdue</p>
+                      <p className="text-2xl font-bold" style={{ color: summaryStats.overdueItems > 0 ? '#DC2626' : '#111827' }}>{summaryStats.overdueItems}</p>
+                      {!statsLoading && (
+                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                          <span style={{ color: subStats.highPriorityCount > 0 ? '#DC2626' : '#9CA3AF' }}>{subStats.highPriorityCount} High Priority</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.08)' }}>
+                      <AlertTriangle size={16} style={{ color: '#DC2626' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Empty state */}
-          {!loading && filteredModules.length === 0 && (
-            <div className="text-center py-20">
-              <ShieldCheck
-                size={40}
-                className="mx-auto mb-3 opacity-20"
-                style={{ color: '#6B7280' }}
-              />
-              <p className="text-sm" style={{ color: '#9CA3AF' }}>
-                {searchQuery
-                  ? `No modules found for "${searchQuery}"`
-                  : 'No modules are available for your current role. Contact your administrator.'}
-              </p>
+          {/* ── Priority Tray ──────────────────────────────────────────────── */}
+          {!statsLoading && priorityItems.length > 0 && !showDismissed && (
+            <div
+              className="px-6 py-4"
+              style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEF9F9 100%)', borderBottom: '2px solid rgba(220,38,38,0.1)' }}
+            >
+              <div className="max-w-4xl">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded-full bg-red-100 animate-pulse">
+                      <AlertTriangle size={14} style={{ color: '#DC2626' }} />
+                    </div>
+                    <span className="text-sm font-semibold" style={{ color: '#DC2626' }}>
+                      {priorityItems.length} {priorityItems.length === 1 ? 'item' : 'items'} need your attention
+                    </span>
+                  </div>
+                  <button onClick={handleDismissAll} className="text-xs hover:underline transition-colors" style={{ color: '#9CA3AF' }}>
+                    Dismiss all
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {priorityItems.slice(0, 4).map((item) => {
+                    const cfg = priorityTypeConfig[item.type];
+                    const ItemIcon = cfg.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => router.push(item.href)}
+                        className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all group"
+                        style={{ backgroundColor: '#fff', color: cfg.color, border: `1px solid ${cfg.color}25`, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+                        onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = cfg.bg; (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'; (e.currentTarget as HTMLElement).style.borderColor = cfg.color; }}
+                        onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#fff'; (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.borderColor = `${cfg.color}25`; }}
+                      >
+                        <ItemIcon size={12} />
+                        <span className="font-bold">{cfg.label}</span>
+                        <span className="opacity-30">·</span>
+                        <span className="max-w-[120px] truncate">{item.detail}</span>
+                        <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDismissPriority(item.id); }}
+                          className="ml-1 opacity-40 hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </button>
+                    );
+                  })}
+                  {priorityItems.length > 4 && (
+                    <button
+                      onClick={() => router.push('/priority-center')}
+                      className="px-3.5 py-2 rounded-xl text-xs font-medium transition-colors"
+                      style={{ color: '#6B7280', backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}
+                      onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.06)'; }}
+                      onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
+                    >
+                      +{priorityItems.length - 4} more
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Onboarding Guide Section */}
-          <div
-            className="mt-8 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-lg"
-            style={{
-              background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-              border: '1px solid rgba(37,99,235,0.2)',
-              boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
-            }}
-          >
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-              style={{ backgroundColor: '#2563EB', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' }}
-            >
-              <BookOpen size={18} color="#fff" />
+          {/* ── Module Grid ────────────────────────────────────────────────── */}
+          <div className="flex-1 px-6 py-8">
+            <div className="max-w-4xl">
+              {/* Recently Used Modules */}
+              {recentModules.length > 0 && !searchQuery && (
+                <div className="mb-6">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#9CA3AF' }}>
+                    Recently Used
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {recentModules.map((id) => {
+                      const mod = modules.find((m) => m.id === id);
+                      if (!mod) return null;
+                      const ModIcon = mod.icon;
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => handleModuleClick(id, mod.href)}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all"
+                          style={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', color: '#111827' }}
+                          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = mod.iconBg; (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.9)'; }}
+                          onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,0,0,0.06)'; (e.currentTarget as HTMLElement).style.backgroundColor = '#ffffff'; }}
+                        >
+                          <ModIcon size={14} style={{ color: mod.iconBg }} />
+                          {mod.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Search Results Info */}
+              {searchQuery && (
+                <div className="mb-4 text-sm" style={{ color: '#6B7280' }}>
+                  Found {filteredModules.length} {filteredModules.length === 1 ? 'module' : 'modules'} for "{searchQuery}"
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {loading ? (
+                  Array.from({ length: 6 }).map((_, i) => <ModuleSkeleton key={i} />)
+                ) : (
+                  filteredModules.map((mod) => {
+                    const ModIcon = mod.icon;
+                    const kpi = moduleKPIs[mod.id];
+                    const borderColor = CATEGORY_BORDER[mod.category];
+
+                    return (
+                      <div
+                        key={mod.id}
+                        className="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer"
+                        style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid rgba(0,0,0,0.05)',
+                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+                          minHeight: '160px',
+                        }}
+                        onClick={() => handleModuleClick(mod.id, mod.href)}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.04)';
+                          e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)';
+                          e.currentTarget.style.borderColor = `${borderColor}40`;
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)';
+                          e.currentTarget.style.transform = 'none';
+                          e.currentTarget.style.borderColor = 'rgba(0,0,0,0.05)';
+                        }}
+                      >
+                        {/* Gradient border top */}
+                        <div
+                          className="absolute top-0 left-0 right-0 h-0.5"
+                          style={{ background: `linear-gradient(90deg, ${borderColor}80, ${borderColor}20)`, opacity: 0.6 }}
+                        />
+
+                        {/* Row 1: Icon + Title + Status */}
+                        <div className="p-4 pb-1">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
+                              style={{ backgroundColor: mod.iconBg, boxShadow: `0 4px 12px ${mod.iconBg}40` }}
+                            >
+                              <ModIcon size={16} color="#fff" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <h2 className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>{mod.title}</h2>
+                                {kpi && (
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusDot(kpi.status) }} />
+                                    <span className="text-[10px] whitespace-nowrap" style={{ color: '#9CA3AF' }}>
+                                      {kpi.status === 'ok' ? 'All clear' : kpi.status === 'warn' ? 'Attention' : 'Critical'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Row 2: Description + KPI + Actions */}
+                        <div className="px-4 py-1 flex-1 flex flex-col justify-between">
+                          <p className="text-xs leading-relaxed line-clamp-2" style={{ color: '#6B7280' }}>{mod.description}</p>
+                          <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t" style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
+                            {kpi && (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-xs font-semibold" style={{ color: borderColor }}>{kpi.primary}</span>
+                                <span className="text-[10px] truncate" style={{ color: '#9CA3AF' }}>{kpi.secondary}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1 shrink-0 ml-2">
+                              {mod.quickActions.slice(0, 2).map((action) => {
+                                const ActionIcon = action.icon;
+                                return (
+                                  <button
+                                    key={action.label}
+                                    onClick={(e) => { e.stopPropagation(); router.push(action.href); }}
+                                    className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all"
+                                    style={{ color: borderColor, backgroundColor: `${borderColor}12`, border: `1px solid ${borderColor}25` }}
+                                    onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}25`; }}
+                                    onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}12`; }}
+                                  >
+                                    <ActionIcon size={8} />
+                                    <span className="hidden sm:inline">{action.label}</span>
+                                  </button>
+                                );
+                              })}
+                              <span className="text-[9px] opacity-20 group-hover:opacity-50 transition-opacity ml-0.5" style={{ color: '#6B7280' }}>
+                                ⌘{filteredModules.indexOf(mod) + 1}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Empty state */}
+              {!loading && filteredModules.length === 0 && (
+                <div className="text-center py-20">
+                  <ShieldCheck size={40} className="mx-auto mb-3 opacity-20" style={{ color: '#6B7280' }} />
+                  <p className="text-sm" style={{ color: '#9CA3AF' }}>
+                    {searchQuery
+                      ? `No modules found for "${searchQuery}"`
+                      : 'No modules are available for your current role. Contact your administrator.'}
+                  </p>
+                </div>
+              )}
+
+              {/* Onboarding Guide Section */}
+              <div
+                className="mt-8 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', border: '1px solid rgba(37,99,235,0.2)', boxShadow: '0 2px 8px rgba(37,99,235,0.08)' }}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#2563EB', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' }}>
+                  <BookOpen size={18} color="#fff" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold mb-0.5" style={{ color: '#1E3A8A' }}>New to CollateralMS? Start with the Onboarding Guide</h3>
+                  <p className="text-xs leading-relaxed" style={{ color: '#3B82F6' }}>
+                    Step-by-step walkthroughs for all modules — from registering collateral to running compliance audits.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push('/onboarding-guide')}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all"
+                  style={{ backgroundColor: '#2563EB', color: '#fff', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
+                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+                >
+                  <BookOpen size={13} />
+                  Open Guide
+                  <ChevronRight size={12} />
+                </button>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold mb-0.5" style={{ color: '#1E3A8A' }}>
-                New to CollateralMS? Start with the Onboarding Guide
-              </h3>
-              <p className="text-xs leading-relaxed" style={{ color: '#3B82F6' }}>
-                Step-by-step walkthroughs for all modules — from registering collateral to running
-                compliance audits.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/onboarding-guide')}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all"
-              style={{
-                backgroundColor: '#2563EB',
-                color: '#fff',
-                boxShadow: '0 4px 12px rgba(37,99,235,0.3)',
-              }}
-              onMouseOver={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8';
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB';
-                (e.currentTarget as HTMLElement).style.transform = 'none';
-              }}
-            >
-              <BookOpen size={13} />
-              Open Guide
-              <ChevronRight size={12} />
-            </button>
           </div>
-        </div>
+
+          {/* ── Footer ──────────────────────────────────────────────────────── */}
+          <footer className="text-center py-4 text-xs" style={{ color: '#9CA3AF' }}>
+            Powered by{' '}
+            <a
+              href="https://contentpro.co.tz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold hover:underline transition-colors"
+              style={{ color: '#6B7280' }}
+              onMouseOver={(e) => (e.currentTarget.style.color = '#007CB3')}
+              onMouseOut={(e) => (e.currentTarget.style.color = '#6B7280')}
+            >
+              Contentpro
+            </a>
+            <span className="mx-2 opacity-30">·</span>
+            <span>v2.0</span>
+          </footer>
+        </main>
       </div>
 
       {/* ── Mobile Bottom Navigation ──────────────────────────────────────── */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50">
         <div className="flex justify-around">
-          <button
-            className="flex flex-col items-center gap-1 text-xs"
-            style={{ color: '#007CB3' }}
-            onClick={() => router.push('/module-hub')}
-          >
+          <button className="flex flex-col items-center gap-1 text-xs" style={{ color: '#007CB3' }} onClick={() => router.push('/module-hub')}>
             <Layers size={20} />
             <span>Modules</span>
           </button>
           <button
             className="flex flex-col items-center gap-1 text-xs"
             style={{ color: '#9CA3AF' }}
-            onClick={() => {
-              const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
-              if (searchInput) searchInput.focus();
-            }}
+            onClick={() => { const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement; if (searchInput) searchInput.focus(); }}
           >
             <Search size={20} />
             <span>Search</span>
           </button>
-          <button
-            className="flex flex-col items-center gap-1 text-xs relative"
-            style={{ color: '#9CA3AF' }}
-            onClick={() => router.push('/notifications')}
-          >
+          <button className="flex flex-col items-center gap-1 text-xs relative" style={{ color: '#9CA3AF' }} onClick={() => router.push('/notifications')}>
             <Bell size={20} />
             {taskCount !== null && taskCount > 0 && (
-              <span
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center"
-                style={{ backgroundColor: '#EF4444' }}
-              >
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center" style={{ backgroundColor: '#EF4444' }}>
                 {taskCount > 9 ? '9+' : taskCount}
               </span>
             )}
@@ -1408,24 +1345,6 @@ export default function ModuleHubPage() {
           </button>
         </div>
       </div>
-
-      {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="text-center py-4 text-xs relative" style={{ color: '#9CA3AF', zIndex: 1 }}>
-        Powered by{' '}
-        <a
-          href="https://contentpro.co.tz"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-semibold hover:underline transition-colors"
-          style={{ color: '#6B7280' }}
-          onMouseOver={(e) => (e.currentTarget.style.color = '#007CB3')}
-          onMouseOut={(e) => (e.currentTarget.style.color = '#6B7280')}
-        >
-          Contentpro
-        </a>
-        <span className="mx-2 opacity-30">·</span>
-        <span>v2.0</span>
-      </footer>
     </div>
   );
 }
