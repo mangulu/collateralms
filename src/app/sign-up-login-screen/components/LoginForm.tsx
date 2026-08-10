@@ -421,6 +421,39 @@ export default function LoginForm() {
                   </span>
                 ))}
               </div>
+
+              {/* Key features overview */}
+              <div className="mt-10 space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  What's inside
+                </p>
+                <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.82)' }}>
+                  CollateralMS is a full-cycle collateral management platform built for banks — covering registration, valuation, perfection workflows, document management, compliance tracking, AI-powered risk assessment, and real-time audit trails, all in one place.
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  {[
+                    'Collateral registration, valuation & LTV monitoring',
+                    'Perfection, release & substitution workflows',
+                    'Document library with version control & approvals',
+                    'Compliance rules engine & deadline tracking',
+                    'AI risk scoring & fraud detection',
+                    'Full audit trail with field-level change history',
+                    'Role-based access with 2FA security',
+                  ].map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5 text-[13px]" style={{ color: 'rgba(255,255,255,0.78)' }}>
+                      <span
+                        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.18)' }}
+                      >
+                        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+                          <path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </main>
         </div>
