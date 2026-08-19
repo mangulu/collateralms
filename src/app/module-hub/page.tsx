@@ -304,29 +304,6 @@ function SystemOverviewPanel({ displayName, displayRole, initials, greeting, tod
       </svg>
 
       <div className="relative z-10 flex flex-col flex-1 px-6 py-8">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <div
-            className="relative flex items-center justify-center rounded-full"
-            style={{
-              width: 100,
-              height: 100,
-              background: 'rgba(255,255,255,0.08)',
-              boxShadow: '0 0 0 3px rgba(255,255,255,0.3), 0 0 24px 6px rgba(53,200,243,0.45)',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <AppLogo size={88} />
-          </div>
-        </div>
-
-        {/* Title */}
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-white leading-tight">CollateralMS</h2>
-          <p className="text-[12px] mt-1" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            Full-cycle collateral management
-          </p>
-        </div>
 
         {/* System summary */}
         <div
@@ -383,36 +360,6 @@ function SystemOverviewPanel({ displayName, displayRole, initials, greeting, tod
               </span>
             ))}
           </div>
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* User card at bottom */}
-        <div
-          className="rounded-xl p-3 flex items-center gap-3"
-          style={{ backgroundColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(6px)' }}
-        >
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-bold"
-            style={{ backgroundColor: 'rgba(255,255,255,0.25)' }}
-          >
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-white leading-tight truncate">{displayName}</p>
-            <p className="text-[11px] leading-tight truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>{displayRole}</p>
-          </div>
-          <button
-            onClick={onSignOut}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: 'rgba(255,255,255,0.6)' }}
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLElement).style.color = 'white'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; }}
-            aria-label="Sign out"
-          >
-            <LogOut size={14} />
-          </button>
         </div>
 
         {/* Footer credit */}
