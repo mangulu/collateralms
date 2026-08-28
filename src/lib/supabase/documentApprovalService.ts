@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { auditLogService } from '@/lib/supabase/auditLogService';
+import { createDocumentApprovalTask } from '@/lib/supabase/workflowTaskBridge';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -201,6 +202,46 @@ async function _syncDocWorkflowInstance(
   }
 }
 
+// ─── Internal helper: notify approvers via user_tasks ─────────────────────────
+
+async function _notifyDocumentApprovalTask(
+  supabase: ReturnType<typeof createClient>,
+  documentId: string,
+  collateralId: string,
+  collateralRecordId: string | null,
+  documentType: string,
+  submittedBy?: string,
+  submittedByName?: string,
+): Promise<void> {
+  try {
+    // Find the legal_officer approver
+    const { data: approvers } = await supabase
+      .from('user_profiles')
+      .select('id, full_name, email, phone')
+      .eq('role', 'legal_officer')
+      .eq('is_active', true)
+      .limit(1);
+
+    const approver = approvers?.[0];
+    if (!approver) return;
+
+    await createDocumentApprovalTask({
+      assignedTo: approver.id,
+      collateralId,
+      collateralRecordId: collateralRecordId ?? undefined,
+      documentType,
+      instanceId: documentId,
+      assignedBy: submittedBy,
+      assignedByName: submittedByName,
+      notify: approver.email
+        ? { assigneeName: approver.full_name ?? 'Approver', assigneeEmail: approver.email, assigneePhone: approver.phone ?? undefined }
+        : undefined,
+    });
+  } catch (err) {
+    console.warn('[documentApprovalService] _notifyDocumentApprovalTask failed:', err);
+  }
+}
+
 // ─── documentApprovalService ──────────────────────────────────────────────────
 
 export const documentApprovalService = {
@@ -350,6 +391,15 @@ export const documentApprovalService = {
       // ── Sync workflow_instances ────────────────────────────────────────────
       await _syncDocWorkflowInstance(supabase, collateralRecordId, collateralId, 'approve', userId, userName, userRole, notes);
 
+      // ── Mark any pending document approval tasks as completed ──────────────
+      await supabase
+        .from('user_tasks')
+        .update({ task_status: 'completed', completed_at: now, date_attended: now })
+        .eq('instance_id', documentId)
+        .eq('workflow_name', 'Document Approval')
+        .in('task_status', ['pending', 'in_progress'])
+        .then(() => {}).catch((e) => console.warn('[docApproval] task complete failed:', e.message));
+
       return true;
     } catch (err: any) {
       console.error('documentApprovalService.approveDocument failed:', err.message);
@@ -418,6 +468,15 @@ export const documentApprovalService = {
       // ── Sync workflow_instances ────────────────────────────────────────────
       await _syncDocWorkflowInstance(supabase, collateralRecordId, collateralId, 'reject', userId, userName, userRole, reason);
 
+      // ── Mark any pending document approval tasks as completed ──────────────
+      await supabase
+        .from('user_tasks')
+        .update({ task_status: 'completed', completed_at: now, date_attended: now })
+        .eq('instance_id', documentId)
+        .eq('workflow_name', 'Document Approval')
+        .in('task_status', ['pending', 'in_progress'])
+        .then(() => {}).catch((e) => console.warn('[docApproval] task complete failed:', e.message));
+
       return true;
     } catch (err: any) {
       console.error('documentApprovalService.rejectDocument failed:', err.message);
@@ -464,6 +523,17 @@ export const documentApprovalService = {
         performed_by_name: userName,
         performed_by_role: userRole,
       });
+
+      // ── Notify approver via user_tasks ─────────────────────────────────────
+      _notifyDocumentApprovalTask(
+        supabase,
+        documentId,
+        collateralId,
+        collateralRecordId,
+        documentType,
+        userId,
+        userName,
+      ).catch(() => {/* non-blocking */});
 
       return true;
     } catch (err: any) {

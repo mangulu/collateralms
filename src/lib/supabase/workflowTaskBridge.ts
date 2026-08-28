@@ -174,6 +174,7 @@ export async function createReleaseApprovalTask(params: {
   assignedBy?: string;
   assignedByName?: string;
   deadline?: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
   notify?: WorkflowTaskInput['notify'];
 }): Promise<void> {
   return createWorkflowTask({
@@ -182,7 +183,7 @@ export async function createReleaseApprovalTask(params: {
     taskName: 'Release Review',
     title: `Release approval required for ${params.collateralId}`,
     deepLink: `/release-approval`,
-    priority: 'high',
+    priority: params.priority ?? 'high',
   });
 }
 

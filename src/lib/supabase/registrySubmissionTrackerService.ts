@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { createRegistrySubmissionTask } from '@/lib/supabase/workflowTaskBridge';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -251,6 +252,32 @@ export const registrySubmissionTrackerService = {
       changed_by_name: payload.createdByName ?? null,
       notes: 'Submission created',
     });
+
+    // ── Notify approver via user_tasks (non-blocking) ──────────────────────
+    try {
+      const { data: approvers } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email, phone')
+        .eq('role', 'legal_officer')
+        .eq('is_active', true)
+        .limit(1);
+
+      const approver = approvers?.[0];
+      if (approver) {
+        createRegistrySubmissionTask({
+          assignedTo: approver.id,
+          collateralId: payload.collateralRecordId,
+          instanceId: data.id,
+          assignedBy: payload.createdBy,
+          assignedByName: payload.createdByName,
+          notify: approver.email
+            ? { assigneeName: approver.full_name ?? 'Approver', assigneeEmail: approver.email, assigneePhone: approver.phone ?? undefined }
+            : undefined,
+        }).catch(() => {/* non-blocking */});
+      }
+    } catch {
+      // non-blocking
+    }
 
     return rowToSubmission(data);
   },
