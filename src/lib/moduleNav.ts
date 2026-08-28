@@ -221,6 +221,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Compliance Rules', icon: Scale, href: '/compliance-rules', permission: PERMISSIONS.COMPLIANCE_VIEW },
           { label: 'Compliance Audit', icon: ShieldCheck, href: '/compliance-audit', permission: PERMISSIONS.COMPLIANCE_VIEW },
+          { label: 'Breach Log', icon: ShieldAlert, href: '/compliance-breach-log', permission: PERMISSIONS.COMPLIANCE_VIEW },
         ],
       },
     ],
