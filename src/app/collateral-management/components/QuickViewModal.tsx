@@ -168,8 +168,7 @@ export default function QuickViewModal({
               {required > 0 && (
                 <div className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
                   isDocComplete 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-yellow-100 text-yellow-700'
+                    ? 'bg-green-100 text-green-700' :'bg-yellow-100 text-yellow-700'
                 }`}>
                   {isDocComplete ? (
                     <>

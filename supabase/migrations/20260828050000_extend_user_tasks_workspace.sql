@@ -41,7 +41,7 @@ USING (
   OR EXISTS (
     SELECT 1 FROM public.user_profiles up
     WHERE up.id = auth.uid()
-    AND up.role IN ('admin', 'manager', 'credit_officer', 'senior_officer')
+    AND up.role IN ('system_admin'::public.user_role, 'credit_officer'::public.user_role, 'legal_officer'::public.user_role)
   )
 );
 
@@ -55,7 +55,7 @@ USING (
   OR EXISTS (
     SELECT 1 FROM public.user_profiles up
     WHERE up.id = auth.uid()
-    AND up.role IN ('admin', 'manager')
+    AND up.role IN ('system_admin'::public.user_role, 'credit_officer'::public.user_role)
   )
 )
 WITH CHECK (
@@ -64,6 +64,6 @@ WITH CHECK (
   OR EXISTS (
     SELECT 1 FROM public.user_profiles up
     WHERE up.id = auth.uid()
-    AND up.role IN ('admin', 'manager')
+    AND up.role IN ('system_admin'::public.user_role, 'credit_officer'::public.user_role)
   )
 );

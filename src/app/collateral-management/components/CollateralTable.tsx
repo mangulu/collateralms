@@ -44,15 +44,7 @@ interface CollateralTableProps {
 
 const statusBadgeMap: Record<
   CollateralStatus,
-  | 'perfected'
-  | 'pending'
-  | 'overdue'
-  | 'draft'
-  | 'released'
-  | 'monitoring'
-  | 'rejected'
-  | 'under-review'
-  | 'submitted'
+  | 'perfected' |'pending' |'overdue' |'draft' |'released' |'monitoring' |'rejected' |'under-review' |'submitted'
 > = {
   Draft: 'draft',
   Submitted: 'submitted',
@@ -496,17 +488,13 @@ export default function CollateralTable({
                           <ChevronUp
                             size={10}
                             className={
-                              sortKey === col.id && sortDir === 'asc'
-                                ? 'text-primary'
-                                : 'text-muted-foreground/40'
+                              sortKey === col.id && sortDir === 'asc' ?'text-primary' :'text-muted-foreground/40'
                             }
                           />
                           <ChevronDown
                             size={10}
                             className={
-                              sortKey === col.id && sortDir === 'desc'
-                                ? 'text-primary'
-                                : 'text-muted-foreground/40'
+                              sortKey === col.id && sortDir === 'desc' ?'text-primary' :'text-muted-foreground/40'
                             }
                           />
                         </span>
@@ -793,8 +781,7 @@ export default function CollateralTable({
                 onClick={() => onPageChange(n)}
                 className={`w-7 h-7 flex items-center justify-center rounded border text-xs font-500 transition-colors ${
                   n === currentPage
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white border-border hover:bg-muted text-foreground'
+                    ? 'bg-primary text-white border-primary' :'bg-white border-border hover:bg-muted text-foreground'
                 }`}
               >
                 {n}
