@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Activity, CheckCircle2, XCircle, RotateCcw, ChevronRight, Loader2, Pause, X, Search, RefreshCw, SkipForward, Flag, Clock, ShieldCheck, AlertTriangle, Users, GitBranch, UserCog } from 'lucide-react';
+import { Activity, CheckCircle2, XCircle, RotateCcw, ChevronRight, Loader2, Pause, X, Search, RefreshCw, SkipForward, Flag, Clock, ShieldCheck, AlertTriangle, Users, GitBranch, UserCog, User, Calendar } from 'lucide-react';
 import {
   workflowInstanceService, workflowTemplateService,
   WorkflowInstance, WorkflowTemplate, WorkflowTransitionLog,
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { sendEscalationEmails } from '@/lib/supabase/escalationEmailService';
 import { useEscalationRealtime } from '@/lib/hooks/useEscalationRealtime';
 import { useWorkflowInstancesRealtime } from '@/lib/hooks/useWorkflowInstancesRealtime';
-import { createClient } from '@/lib/supabase/client';
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -307,14 +307,21 @@ interface InstanceDetailProps {
   onAction: (action: 'approve' | 'reject' | 'return' | 'skip' | 'escalate' | 'cancel' | 'hold', comment: string) => Promise<void>;
   onClose: () => void;
   acting: boolean;
+  onReassign: () => void;
+  userProfiles: Record<string, { fullName: string; role: string }>;
 }
 
-function InstanceDetail({ instance, template, log, onAction, onClose, acting }: InstanceDetailProps) {
+function InstanceDetail({ instance, template, log, onAction, onClose, acting, onReassign, userProfiles }: InstanceDetailProps) {
   const [comment, setComment] = useState('');
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
 
   const currentStep = template?.steps.find((s) => s.id === instance.currentStepId);
   const instanceSteps = instance.instanceSteps ?? [];
+
+  // Find the current active instance step
+  const currentInstanceStep = instanceSteps.find(
+    (is) => is.stepId === instance.currentStepId && (is.stepStatus === 'active' || is.stepStatus === 'escalated')
+  );
 
   async function handleAction(action: 'approve' | 'reject' | 'return' | 'skip' | 'escalate' | 'cancel' | 'hold') {
     await onAction(action, comment);
@@ -344,17 +351,55 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting }: 
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {/* Current Step Banner */}
+          {/* Current Step Banner — with assignee info */}
           {currentStep && instance.instanceStatus === 'active' && (
             <div className="mx-4 mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <div className="flex items-center gap-2 mb-1">
-                <Activity size={13} className="text-blue-600" />
-                <span className="text-xs font-700 text-blue-800">Current Step</span>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <Activity size={13} className="text-blue-600" />
+                  <span className="text-xs font-700 text-blue-800">Current Step</span>
+                </div>
+                <button
+                  onClick={onReassign}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-violet-100 hover:bg-violet-200 text-violet-700 text-[10px] font-600 rounded-lg border border-violet-200 transition-colors"
+                >
+                  <UserCog size={10} /> Reassign / Delegate
+                </button>
               </div>
               <p className="text-sm font-600 text-blue-900">{currentStep.name}</p>
               {currentStep.description && (
                 <p className="text-xs text-blue-700 mt-0.5">{currentStep.description}</p>
               )}
+
+              {/* Assignee info */}
+              <div className="mt-3 pt-3 border-t border-blue-200 space-y-1.5">
+                {/* Current assignee (role or specific user) */}
+                <div className="flex items-center gap-2">
+                  <User size={11} className="text-blue-500 shrink-0" />
+                  <span className="text-[11px] text-blue-700 font-500">
+                    <span className="font-600">Assigned to: </span>
+                    {currentInstanceStep?.assignedTo && userProfiles[currentInstanceStep.assignedTo]
+                      ? userProfiles[currentInstanceStep.assignedTo].fullName
+                      : currentInstanceStep?.assignedRole
+                        ? currentInstanceStep.assignedRole.replace(/_/g, ' ')
+                        : currentStep.actors.length > 0
+                          ? currentStep.actors.map((a) => a.actorLabel ?? a.actorRole).join(', ')
+                          : 'Unassigned'}
+                  </span>
+                </div>
+                {/* Assignment date/time */}
+                {(currentInstanceStep?.assignedAt ?? currentInstanceStep?.startedAt) && (
+                  <div className="flex items-center gap-2">
+                    <Calendar size={11} className="text-blue-500 shrink-0" />
+                    <span className="text-[11px] text-blue-700 font-500">
+                      <span className="font-600">Assigned: </span>
+                      {formatDateTime(currentInstanceStep?.assignedAt ?? currentInstanceStep?.startedAt ?? null)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actor role tags */}
               {currentStep.actors.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {currentStep.actors.map((a) => (
@@ -377,20 +422,49 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting }: 
                   const status = instStep?.stepStatus ?? 'pending';
                   const cfg = STEP_STATUS_CONFIG[status];
                   const isCurrent = step.id === instance.currentStepId;
+                  // Resolve assignee display
+                  const assigneeName = instStep?.assignedTo && userProfiles[instStep.assignedTo]
+                    ? userProfiles[instStep.assignedTo].fullName
+                    : instStep?.assignedRole
+                      ? instStep.assignedRole.replace(/_/g, ' ')
+                      : step.actors.length > 0
+                        ? step.actors.map((a) => a.actorLabel ?? a.actorRole).join(', ')
+                        : null;
+                  const assignedAt = instStep?.assignedAt ?? instStep?.startedAt ?? null;
+
                   return (
-                    <div key={step.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isCurrent ? 'border-blue-200 bg-blue-50' : 'border-border bg-white'}`}>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-700 shrink-0 ${status === 'completed' ? 'bg-emerald-500 text-white' : status === 'active' ? 'bg-blue-500 text-white' : status === 'rejected' ? 'bg-red-500 text-white' : status === 'skipped' ? 'bg-slate-300 text-slate-600' : 'bg-slate-100 text-slate-500'}`}>
-                        {status === 'completed' ? <CheckCircle2 size={12} /> : status === 'rejected' ? <XCircle size={12} /> : status === 'skipped' ? <SkipForward size={12} /> : i + 1}
+                    <div key={step.id} className={`flex flex-col gap-1.5 p-3 rounded-xl border transition-all ${isCurrent ? 'border-blue-200 bg-blue-50' : 'border-border bg-white'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-700 shrink-0 ${status === 'completed' ? 'bg-emerald-500 text-white' : status === 'active' ? 'bg-blue-500 text-white' : status === 'rejected' ? 'bg-red-500 text-white' : status === 'skipped' ? 'bg-slate-300 text-slate-600' : 'bg-slate-100 text-slate-500'}`}>
+                          {status === 'completed' ? <CheckCircle2 size={12} /> : status === 'rejected' ? <XCircle size={12} /> : status === 'skipped' ? <SkipForward size={12} /> : i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-600 ${isCurrent ? 'text-blue-800' : 'text-foreground'}`}>{step.name}</p>
+                          {step.slaHours && (
+                            <p className="text-[10px] text-muted-foreground">SLA: {step.slaHours}h</p>
+                          )}
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-600 ${cfg.bg} ${cfg.color}`}>
+                          {cfg.label}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-600 ${isCurrent ? 'text-blue-800' : 'text-foreground'}`}>{step.name}</p>
-                        {step.slaHours && (
-                          <p className="text-[10px] text-muted-foreground">SLA: {step.slaHours}h</p>
-                        )}
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-600 ${cfg.bg} ${cfg.color}`}>
-                        {cfg.label}
-                      </span>
+                      {/* Assignee + assigned datetime for active/pending steps */}
+                      {(status === 'active' || status === 'pending' || status === 'escalated') && (assigneeName || assignedAt) && (
+                        <div className="ml-9 flex flex-wrap gap-x-4 gap-y-1">
+                          {assigneeName && (
+                            <div className="flex items-center gap-1">
+                              <User size={10} className="text-muted-foreground shrink-0" />
+                              <span className="text-[10px] text-muted-foreground">{assigneeName}</span>
+                            </div>
+                          )}
+                          {assignedAt && (
+                            <div className="flex items-center gap-1">
+                              <Calendar size={10} className="text-muted-foreground shrink-0" />
+                              <span className="text-[10px] text-muted-foreground">{formatDateTime(assignedAt)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -510,14 +584,28 @@ interface InstanceRowProps {
   template: WorkflowTemplate | undefined;
   onOpen: () => void;
   onReassign?: (e: React.MouseEvent) => void;
+  userProfiles: Record<string, { fullName: string; role: string }>;
 }
 
-function InstanceRow({ instance, template, onOpen, onReassign }: InstanceRowProps) {
+function InstanceRow({ instance, template, onOpen, onReassign, userProfiles }: InstanceRowProps) {
   const cfg = INSTANCE_STATUS_CONFIG[instance.instanceStatus];
   const currentStep = template?.steps.find((s) => s.id === instance.currentStepId);
   const progress = template
     ? Math.round(((instance.instanceSteps?.filter((s) => s.stepStatus === 'completed').length ?? 0) / Math.max(template.steps.length, 1)) * 100)
     : 0;
+
+  // Current active instance step for assignee display
+  const currentInstanceStep = instance.instanceSteps?.find(
+    (is) => is.stepId === instance.currentStepId
+  );
+  const assigneeName = currentInstanceStep?.assignedTo && userProfiles[currentInstanceStep.assignedTo]
+    ? userProfiles[currentInstanceStep.assignedTo].fullName
+    : currentInstanceStep?.assignedRole
+      ? currentInstanceStep.assignedRole.replace(/_/g, ' ')
+      : currentStep?.actors.length
+        ? currentStep.actors.map((a) => a.actorLabel ?? a.actorRole).join(', ')
+        : null;
+  const assignedAt = currentInstanceStep?.assignedAt ?? currentInstanceStep?.startedAt ?? null;
 
   return (
     <div
@@ -535,9 +623,26 @@ function InstanceRow({ instance, template, onOpen, onReassign }: InstanceRowProp
         </span>
       </div>
       {currentStep && (
-        <div className="flex items-center gap-1.5 mb-3">
+        <div className="flex items-center gap-1.5 mb-2">
           <Activity size={11} className="text-blue-500 shrink-0" />
           <span className="text-xs text-muted-foreground">Current: <span className="font-600 text-foreground">{currentStep.name}</span></span>
+        </div>
+      )}
+      {/* Assignee info on card */}
+      {instance.instanceStatus === 'active' && (assigneeName || assignedAt) && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 px-0.5">
+          {assigneeName && (
+            <div className="flex items-center gap-1">
+              <User size={10} className="text-violet-500 shrink-0" />
+              <span className="text-[10px] text-muted-foreground font-500">{assigneeName}</span>
+            </div>
+          )}
+          {assignedAt && (
+            <div className="flex items-center gap-1">
+              <Calendar size={10} className="text-violet-500 shrink-0" />
+              <span className="text-[10px] text-muted-foreground">{formatDateTime(assignedAt)}</span>
+            </div>
+          )}
         </div>
       )}
       {template && template.steps.length > 0 && (
@@ -584,9 +689,10 @@ interface ReassignStepModalProps {
   currentUserId: string;
   currentUserName: string;
   currentUserRole: string;
+  userProfiles: Record<string, { fullName: string; role: string }>;
 }
 
-function ReassignStepModal({ instance, template, onClose, onReassigned, currentUserId, currentUserName, currentUserRole }: ReassignStepModalProps) {
+function ReassignStepModal({ instance, template, onClose, onReassigned, currentUserId, currentUserName, currentUserRole, userProfiles }: ReassignStepModalProps) {
   const [selectedStepId, setSelectedStepId] = useState<string>('');
   const [newRole, setNewRole] = useState('');
   const [reason, setReason] = useState('');
@@ -627,35 +733,19 @@ function ReassignStepModal({ instance, template, onClose, onReassigned, currentU
     }
     setSaving(true);
     try {
-      const supabase = createClient();
-      // Find the instance step record
       const instStep = reassignableSteps.find((is) => is.stepId === selectedStepId);
       if (!instStep) throw new Error('Step not found');
 
-      // Update assigned_role on the instance step
-      const { error: updateErr } = await supabase
-        .from('workflow_instance_steps')
-        .update({ assigned_role: newRole })
-        .eq('id', instStep.id);
-      if (updateErr) throw updateErr;
-
-      // Log the reassignment in transition log
-      const { error: logErr } = await supabase
-        .from('workflow_transition_log')
-        .insert({
-          instance_id: instance.id,
-          instance_step_id: instStep.id,
-          from_step_id: selectedStepId,
-          to_step_id: selectedStepId,
-          action: 'reassign',
-          performed_by: currentUserId,
-          performed_by_name: currentUserName,
-          performed_by_role: currentUserRole,
-          comment: reason
-            ? `Reassigned to ${AVAILABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole}: ${reason}`
-            : `Reassigned to ${AVAILABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole}`,
-        });
-      if (logErr) throw logErr;
+      await workflowInstanceService.reassignStep({
+        instanceId: instance.id,
+        instanceStepId: instStep.id,
+        stepId: selectedStepId,
+        newRole,
+        reason,
+        performedBy: currentUserId,
+        performedByName: currentUserName,
+        performedByRole: currentUserRole,
+      });
 
       toast.success(`Step reassigned to ${AVAILABLE_ROLES.find((r) => r.value === newRole)?.label ?? newRole}`);
       onReassigned();
@@ -666,6 +756,16 @@ function ReassignStepModal({ instance, template, onClose, onReassigned, currentU
       setSaving(false);
     }
   }
+
+  // Current assignee display
+  const currentAssigneeName = selectedInstanceStep?.assignedTo && userProfiles[selectedInstanceStep.assignedTo]
+    ? userProfiles[selectedInstanceStep.assignedTo].fullName
+    : selectedInstanceStep?.assignedRole
+      ? selectedInstanceStep.assignedRole.replace(/_/g, ' ')
+      : selectedTemplateStep?.actors.length
+        ? selectedTemplateStep.actors.map((a) => a.actorLabel ?? a.actorRole).join(', ')
+        : null;
+  const currentAssignedAt = selectedInstanceStep?.assignedAt ?? selectedInstanceStep?.startedAt ?? null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -678,7 +778,7 @@ function ReassignStepModal({ instance, template, onClose, onReassigned, currentU
               <UserCog size={15} className="text-violet-700" />
             </div>
             <div>
-              <h3 className="text-sm font-700 text-foreground">Reassign Step</h3>
+              <h3 className="text-sm font-700 text-foreground">Reassign / Delegate Step</h3>
               <p className="text-[11px] text-muted-foreground">{instance.referenceLabel ?? instance.referenceId}</p>
             </div>
           </div>
@@ -718,29 +818,28 @@ function ReassignStepModal({ instance, template, onClose, onReassigned, currentU
 
               {/* Current assignment info */}
               {selectedTemplateStep && (
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                  <p className="text-[11px] font-600 text-muted-foreground mb-1.5">Currently assigned to</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedTemplateStep.actors.length > 0 ? (
-                      selectedTemplateStep.actors.map((a) => (
-                        <span key={a.id} className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded-full text-[11px] font-600">
-                          {a.actorLabel ?? a.actorRole}
-                        </span>
-                      ))
-                    ) : selectedInstanceStep?.assignedRole ? (
-                      <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded-full text-[11px] font-600">
-                        {selectedInstanceStep.assignedRole.replace(/_/g, ' ')}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">No role assigned</span>
-                    )}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <p className="text-[11px] font-600 text-muted-foreground">Current Assignment</p>
+                  <div className="flex items-center gap-2">
+                    <User size={11} className="text-slate-500 shrink-0" />
+                    <span className="text-xs text-slate-700 font-500">
+                      {currentAssigneeName ?? 'Unassigned'}
+                    </span>
                   </div>
+                  {currentAssignedAt && (
+                    <div className="flex items-center gap-2">
+                      <Calendar size={11} className="text-slate-500 shrink-0" />
+                      <span className="text-[11px] text-slate-600">
+                        Assigned {formatDateTime(currentAssignedAt)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* New role selector */}
               <div>
-                <label className="block text-xs font-600 text-foreground mb-1.5">Reassign To Role</label>
+                <label className="block text-xs font-600 text-foreground mb-1.5">Reassign / Delegate To Role</label>
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value)}
@@ -775,7 +874,7 @@ function ReassignStepModal({ instance, template, onClose, onReassigned, currentU
                   className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-600 rounded-lg transition-colors disabled:opacity-60"
                 >
                   {saving ? <Loader2 size={13} className="animate-spin" /> : <UserCog size={13} />}
-                  Reassign Step
+                  Confirm Reassignment
                 </button>
                 <button
                   onClick={onClose}
@@ -809,6 +908,7 @@ export default function WorkflowInstancesContent() {
   const [newEscalationCount, setNewEscalationCount] = useState(0);
   const [reassignInstance, setReassignInstance] = useState<WorkflowInstance | null>(null);
   const [realtimeBadge, setRealtimeBadge] = useState(0);
+  const [userProfiles, setUserProfiles] = useState<Record<string, { fullName: string; role: string }>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -820,7 +920,19 @@ export default function WorkflowInstancesContent() {
       ]);
 
       if (instanceResult.status === 'fulfilled') {
-        setInstances(instanceResult.value);
+        const loadedInstances = instanceResult.value;
+        setInstances(loadedInstances);
+        // Collect all unique assigned_to user IDs and fetch their profiles
+        const userIds = [...new Set(
+          loadedInstances.flatMap((inst) =>
+            (inst.instanceSteps ?? [])
+              .map((s) => s.assignedTo)
+              .filter((id): id is string => !!id)
+          )
+        )];
+        if (userIds.length > 0) {
+          workflowInstanceService.getUserProfiles(userIds).then(setUserProfiles).catch(() => {});
+        }
       } else {
         console.error('[WorkflowInstances] Failed to load instances:', instanceResult.reason);
         toast.error('Failed to load workflow instances');
@@ -838,7 +950,6 @@ export default function WorkflowInstancesContent() {
         setStats(statsResult.value);
       } else {
         console.error('[WorkflowInstances] Failed to load stats:', statsResult.reason);
-        // Compute stats from instances if stats query failed
         if (instanceResult.status === 'fulfilled') {
           const data = instanceResult.value;
           setStats({
@@ -864,7 +975,6 @@ export default function WorkflowInstancesContent() {
   useWorkflowInstancesRealtime({
     onInstanceChange: (change) => {
       if (change.event === 'INSERT') {
-        // New instance created — reload full list to get joined data
         workflowInstanceService.getAll().then((data) => {
           setInstances(data);
           setRealtimeBadge((c) => c + 1);
@@ -872,13 +982,11 @@ export default function WorkflowInstancesContent() {
         workflowInstanceService.getStats().then((s) => setStats(s)).catch(() => {});
         toast.info('New workflow instance started', { duration: 4000 });
       } else if (change.event === 'UPDATE') {
-        // Instance status changed — refresh the specific instance
         const instanceId: string = change.record?.id;
         if (instanceId) {
           workflowInstanceService.getById(instanceId).then((updated) => {
             if (updated) {
               setInstances((prev) => prev.map((i) => i.id === updated.id ? updated : i));
-              // If this instance is currently open in the detail panel, refresh it
               setSelectedInstance((prev) => prev?.id === updated.id ? updated : prev);
             }
           }).catch(() => {});
@@ -887,7 +995,6 @@ export default function WorkflowInstancesContent() {
       }
     },
     onStepChange: (change) => {
-      // A step was updated (e.g. completed, reassigned) — refresh the parent instance
       const instanceId: string = change.record?.instance_id;
       if (instanceId) {
         workflowInstanceService.getById(instanceId).then((updated) => {
@@ -899,7 +1006,6 @@ export default function WorkflowInstancesContent() {
       }
     },
     onTaskAssigned: (change) => {
-      // A new task was assigned — show a toast notification
       const task = change.record;
       if (task) {
         const title: string = task.title ?? 'New task assigned';
@@ -935,7 +1041,6 @@ export default function WorkflowInstancesContent() {
         }
       );
       setNewEscalationCount((c) => c + 1);
-      // Refresh list and stats silently using bulk-load (no N+1)
       workflowInstanceService.getStats().then((s) => setStats(s)).catch(() => {});
       workflowInstanceService.getAll().then((data) => {
         setInstances(data);
@@ -989,7 +1094,6 @@ export default function WorkflowInstancesContent() {
       });
       toast.success(`Action recorded: ${action}`);
 
-      // Send escalation email notifications for notify_manager / notify_and_hold actions
       if (action === 'escalate' && selectedTemplate) {
         const currentStep = selectedTemplate.steps.find((s) => s.id === selectedInstance.currentStepId);
         if (currentStep && (currentStep.escalationAction === 'notify_manager' || currentStep.escalationAction === 'notify_and_hold')) {
@@ -1010,7 +1114,6 @@ export default function WorkflowInstancesContent() {
         }
       }
 
-      // Refresh the specific instance detail
       const updated = await workflowInstanceService.getById(selectedInstance.id);
       if (updated) {
         setSelectedInstance(updated);
@@ -1139,6 +1242,7 @@ export default function WorkflowInstancesContent() {
               template={templates.find((t) => t.id === instance.templateId)}
               onOpen={() => openInstance(instance)}
               onReassign={instance.instanceStatus === 'active' ? (e) => { e.stopPropagation(); setReassignInstance(instance); } : undefined}
+              userProfiles={userProfiles}
             />
           ))}
         </div>
@@ -1153,6 +1257,8 @@ export default function WorkflowInstancesContent() {
           onAction={handleAction}
           onClose={() => setSelectedInstance(null)}
           acting={acting}
+          onReassign={() => { setReassignInstance(selectedInstance); }}
+          userProfiles={userProfiles}
         />
       )}
 
@@ -1166,6 +1272,7 @@ export default function WorkflowInstancesContent() {
           currentUserId={userProfile?.id ?? ''}
           currentUserName={userProfile?.full_name ?? userProfile?.email ?? 'Manager'}
           currentUserRole={userProfile?.role ?? 'credit_manager'}
+          userProfiles={userProfiles}
         />
       )}
     </div>

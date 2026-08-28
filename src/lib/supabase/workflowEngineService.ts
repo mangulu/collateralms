@@ -84,6 +84,8 @@ export interface WorkflowInstanceStep {
   stepStatus: WorkflowStepStatus;
   assignedTo: string | null;
   assignedRole: string | null;
+  assignedToName: string | null;
+  assignedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
   completedBy: string | null;
@@ -224,6 +226,8 @@ function rowToInstanceStep(row: any): WorkflowInstanceStep {
     stepStatus: row.step_status,
     assignedTo: row.assigned_to,
     assignedRole: row.assigned_role,
+    assignedToName: row.assigned_to_name ?? null,
+    assignedAt: row.assigned_at ?? null,
     startedAt: row.started_at,
     completedAt: row.completed_at,
     completedBy: row.completed_by ?? null,
@@ -514,11 +518,13 @@ export const workflowInstanceService = {
 
     // Create instance step records
     if (steps && steps.length > 0) {
+      const now = new Date().toISOString();
       const instanceStepRows = steps.map((s: any, i: number) => ({
         instance_id: instance.id,
         step_id: s.id,
         step_status: i === 0 ? 'active' : 'pending',
-        started_at: i === 0 ? new Date().toISOString() : null,
+        started_at: i === 0 ? now : null,
+        assigned_at: i === 0 ? now : null,
         due_at: i === 0 && s.sla_hours
           ? new Date(Date.now() + s.sla_hours * 3600000).toISOString()
           : null,
@@ -548,6 +554,7 @@ export const workflowInstanceService = {
       performed_by: payload.startedBy,
       to_step_id: firstStep?.id ?? null,
     });
+
     return instance;
   },
 
@@ -588,9 +595,10 @@ export const workflowInstanceService = {
     if (payload.action === 'approve' || payload.action === 'skip') {
       if (nextStep) {
         newStepId = nextStep.id;
-        // Activate next instance step
+        const now = new Date().toISOString();
+        // Activate next instance step — set assigned_at when activating
         const { data: updatedNextStep } = await supabase.from('workflow_instance_steps')
-          .update({ step_status: 'active', started_at: new Date().toISOString() })
+          .update({ step_status: 'active', started_at: now, assigned_at: now })
           .eq('instance_id', payload.instanceId).eq('step_id', nextStep.id)
           .select().maybeSingle();
 
@@ -651,8 +659,9 @@ export const workflowInstanceService = {
       const prevStep = steps[currentIdx - 1] ?? null;
       if (prevStep) {
         newStepId = prevStep.id;
+        const now = new Date().toISOString();
         const { data: reactivatedStep } = await supabase.from('workflow_instance_steps')
-          .update({ step_status: 'active', started_at: new Date().toISOString(), completed_at: null })
+          .update({ step_status: 'active', started_at: now, assigned_at: now, completed_at: null })
           .eq('instance_id', payload.instanceId).eq('step_id', prevStep.id)
           .select().maybeSingle();
 
@@ -743,6 +752,67 @@ export const workflowInstanceService = {
       onHold: rows.filter((r: any) => r.instance_status === 'on_hold').length,
       cancelled: rows.filter((r: any) => r.instance_status === 'cancelled').length,
     };
+  },
+
+  /** Reassign/delegate a step to a new role, optionally a specific user */
+  async reassignStep(payload: {
+    instanceId: string;
+    instanceStepId: string;
+    stepId: string;
+    newRole: string;
+    newAssignedTo?: string | null;
+    reason?: string;
+    performedBy: string;
+    performedByName: string;
+    performedByRole: string;
+  }): Promise<void> {
+    const supabase = createClient();
+    const now = new Date().toISOString();
+
+    // Update the instance step with new role, user, and assignment timestamp
+    const { error: updateErr } = await supabase
+      .from('workflow_instance_steps')
+      .update({
+        assigned_role: payload.newRole,
+        assigned_to: payload.newAssignedTo ?? null,
+        assigned_at: now,
+      })
+      .eq('id', payload.instanceStepId);
+    if (updateErr) throw updateErr;
+
+    // Log the reassignment
+    const roleLabel = payload.newRole.replace(/_/g, ' ');
+    const { error: logErr } = await supabase
+      .from('workflow_transition_log')
+      .insert({
+        instance_id: payload.instanceId,
+        instance_step_id: payload.instanceStepId,
+        from_step_id: payload.stepId,
+        to_step_id: payload.stepId,
+        action: 'reassign',
+        performed_by: payload.performedBy,
+        performed_by_name: payload.performedByName,
+        performed_by_role: payload.performedByRole,
+        comment: payload.reason
+          ? `Reassigned to ${roleLabel}: ${payload.reason}`
+          : `Reassigned to ${roleLabel}`,
+      });
+    if (logErr) throw logErr;
+  },
+
+  /** Fetch user profiles for a list of user IDs (for displaying assignee names) */
+  async getUserProfiles(userIds: string[]): Promise<Record<string, { fullName: string; role: string }>> {
+    if (userIds.length === 0) return {};
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('id, full_name, role')
+      .in('id', userIds);
+    const map: Record<string, { fullName: string; role: string }> = {};
+    for (const row of data ?? []) {
+      map[row.id] = { fullName: row.full_name ?? row.email ?? 'Unknown', role: row.role ?? '' };
+    }
+    return map;
   },
 };
 
