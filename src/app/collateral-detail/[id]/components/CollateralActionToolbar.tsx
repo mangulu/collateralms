@@ -62,7 +62,7 @@ async function startWorkflowEngineInstance(
   referenceLabel: string
 ): Promise<void> {
   const templates = await workflowTemplateService.getAll();
-  const template = templates.find((t) => t.workflowType === workflowType && t.isActive);
+  const template = templates.find((t) => t.workflowType === workflowType && t.isActive && t.isVisible !== false);
   if (!template) {
     // No active template for this type — skip silently
     return;

@@ -40,7 +40,7 @@ async function startWorkflowEngineInstance(
   try {
     const templates = await workflowTemplateService.getAll();
     const template = templates.find(
-      (t) => t.workflowType === workflowType && t.isActive
+      (t) => t.workflowType === workflowType && t.isActive && t.isVisible !== false
     );
     if (!template) return; // No matching template — silently skip
     await workflowInstanceService.start({

@@ -162,8 +162,8 @@ export default function InitiateWorkflowModal({
     setLaunched(false);
     setLaunchedInstanceId('');
     workflowTemplateService
-      .getAll()
-      .then((all) => setTemplates(all.filter((t) => t.isActive)))
+      .getVisible()
+      .then((all) => setTemplates(all))
       .catch(() => toast.error('Failed to load workflow templates'))
       .finally(() => setLoadingTemplates(false));
   }, [open]);

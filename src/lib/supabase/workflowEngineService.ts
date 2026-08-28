@@ -67,6 +67,7 @@ export interface WorkflowTemplate {
   description: string;
   workflowType: WorkflowTemplateType;
   isActive: boolean;
+  isVisible: boolean;
   isBuiltin: boolean;
   version: number;
   createdBy: string | null;
@@ -136,6 +137,7 @@ function rowToTemplate(row: any, steps: WorkflowStep[] = []): WorkflowTemplate {
     description: row.description ?? '',
     workflowType: row.workflow_type,
     isActive: row.is_active,
+    isVisible: row.is_visible ?? true,
     isBuiltin: row.is_builtin,
     version: row.version,
     createdBy: row.created_by,
@@ -276,6 +278,33 @@ export const workflowTemplateService = {
     return templates.map((t) => ({ ...t, steps: steps.filter((s) => s.templateId === t.id) }));
   },
 
+  /** Returns only active + visible templates — for end-user workflow pickers */
+  async getVisible(): Promise<WorkflowTemplate[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('workflow_templates')
+      .select('*')
+      .eq('is_active', true)
+      .eq('is_visible', true)
+      .order('workflow_type')
+      .order('created_at');
+    if (error) throw error;
+    const templates = (data ?? []).map((r) => rowToTemplate(r));
+    const ids = templates.map((t) => t.id);
+    if (ids.length === 0) return templates;
+    const [stepsRes, actorsRes, conditionsRes] = await Promise.all([
+      supabase.from('workflow_steps').select('*').in('template_id', ids).order('step_order'),
+      supabase.from('workflow_step_actors').select('*'),
+      supabase.from('workflow_step_conditions').select('*'),
+    ]);
+    const actors = (actorsRes.data ?? []).map(rowToActor);
+    const conditions = (conditionsRes.data ?? []).map(rowToCondition);
+    const steps = (stepsRes.data ?? []).map((r) =>
+      rowToStep(r, actors.filter((a) => a.stepId === r.id), conditions.filter((c) => c.stepId === r.id))
+    );
+    return templates.map((t) => ({ ...t, steps: steps.filter((s) => s.templateId === t.id) }));
+  },
+
   async getById(id: string): Promise<WorkflowTemplate | null> {
     const supabase = createClient();
     const { data, error } = await supabase.from('workflow_templates').select('*').eq('id', id).single();
@@ -320,6 +349,7 @@ export const workflowTemplateService = {
     name?: string;
     description?: string;
     isActive?: boolean;
+    isVisible?: boolean;
     updatedBy?: string;
   }): Promise<void> {
     const supabase = createClient();
@@ -327,9 +357,19 @@ export const workflowTemplateService = {
       ...(payload.name !== undefined && { name: payload.name }),
       ...(payload.description !== undefined && { description: payload.description }),
       ...(payload.isActive !== undefined && { is_active: payload.isActive }),
+      ...(payload.isVisible !== undefined && { is_visible: payload.isVisible }),
       ...(payload.updatedBy && { updated_by: payload.updatedBy }),
     }).eq('id', id);
     if (error) throw error;
+
+    // When pausing (is_active → false): put all active instances on hold
+    if (payload.isActive === false) {
+      await supabase.rpc('pause_instances_for_template', { p_template_id: id });
+    }
+    // When resuming (is_active → true): restore instances that were paused by this template
+    if (payload.isActive === true) {
+      await supabase.rpc('resume_instances_for_template', { p_template_id: id });
+    }
   },
 
   async saveSteps(templateId: string, steps: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> {

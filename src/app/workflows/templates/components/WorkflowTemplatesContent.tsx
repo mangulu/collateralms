@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, ChevronUp, ChevronDown, Save, Settings2, Users, GitBranch, AlertTriangle, Loader2, X, Edit2, ToggleLeft, ToggleRight, Info, ChevronRight, Bell, Clock, UserCheck, CreditCard, ShieldAlert, Zap } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Save, Settings2, Users, GitBranch, AlertTriangle, Loader2, X, Edit2, ToggleLeft, ToggleRight, Info, ChevronRight, Bell, Clock, UserCheck, CreditCard, ShieldAlert, Zap, Eye, EyeOff } from 'lucide-react';
 import {
   workflowTemplateService,
   WorkflowTemplate, WorkflowStep, WorkflowStepActor, WorkflowStepCondition,
@@ -571,10 +571,11 @@ interface TemplateCardProps {
   template: WorkflowTemplate;
   onEdit: () => void;
   onToggle: () => void;
+  onToggleVisibility: () => void;
   onManageTriggers: () => void;
 }
 
-function TemplateCard({ template, onEdit, onToggle, onManageTriggers }: TemplateCardProps) {
+function TemplateCard({ template, onEdit, onToggle, onToggleVisibility, onManageTriggers }: TemplateCardProps) {
   const escalatedSteps = template.steps.filter((s) => s.escalationAction && s.slaHours);
   return (
     <div className={`bg-white border-2 rounded-2xl p-5 transition-all ${template.isActive ? 'border-border hover:border-indigo-200' : 'border-dashed border-border opacity-60'}`}>
@@ -589,19 +590,35 @@ function TemplateCard({ template, onEdit, onToggle, onManageTriggers }: Template
                 Built-in
               </span>
             )}
+            {!template.isVisible && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-600 bg-rose-100 text-rose-600 border border-rose-200 flex items-center gap-1">
+                <EyeOff size={9} /> Hidden
+              </span>
+            )}
           </div>
           <h3 className="text-sm font-700 text-foreground">{template.name}</h3>
           {template.description && (
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{template.description}</p>
           )}
         </div>
-        <button
-          onClick={onToggle}
-          className={`shrink-0 transition-colors ${template.isActive ? 'text-indigo-600 hover:text-indigo-700' : 'text-muted-foreground hover:text-foreground'}`}
-          title={template.isActive ? 'Deactivate' : 'Activate'}
-        >
-          {template.isActive ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Visibility toggle */}
+          <button
+            onClick={onToggleVisibility}
+            className={`p-1.5 rounded-lg transition-colors ${template.isVisible ? 'text-emerald-600 hover:bg-emerald-50' : 'text-muted-foreground hover:bg-muted'}`}
+            title={template.isVisible ? 'Hide from end users' : 'Show to end users'}
+          >
+            {template.isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
+          </button>
+          {/* Active/pause toggle */}
+          <button
+            onClick={onToggle}
+            className={`transition-colors ${template.isActive ? 'text-indigo-600 hover:text-indigo-700' : 'text-muted-foreground hover:text-foreground'}`}
+            title={template.isActive ? 'Pause template (puts running instances on hold)' : 'Resume template (restores paused instances)'}
+          >
+            {template.isActive ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+          </button>
+        </div>
       </div>
       <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
         <span className="flex items-center gap-1"><GitBranch size={11} /> {template.steps.length} steps</span>
@@ -755,12 +772,28 @@ export default function WorkflowTemplatesContent() {
   }
 
   async function toggleTemplate(template: WorkflowTemplate) {
+    const newActive = !template.isActive;
     try {
-      await workflowTemplateService.update(template.id, { isActive: !template.isActive, updatedBy: userProfile?.id });
-      setTemplates((prev) => prev.map((t) => t.id === template.id ? { ...t, isActive: !t.isActive } : t));
-      toast.success(`Template ${template.isActive ? 'deactivated' : 'activated'}`);
+      await workflowTemplateService.update(template.id, { isActive: newActive, updatedBy: userProfile?.id });
+      setTemplates((prev) => prev.map((t) => t.id === template.id ? { ...t, isActive: newActive } : t));
+      if (newActive) {
+        toast.success('Template resumed — paused instances restored to active');
+      } else {
+        toast.success('Template paused — running instances placed on hold');
+      }
     } catch {
       toast.error('Failed to update template');
+    }
+  }
+
+  async function toggleVisibility(template: WorkflowTemplate) {
+    const newVisible = !template.isVisible;
+    try {
+      await workflowTemplateService.update(template.id, { isVisible: newVisible, updatedBy: userProfile?.id });
+      setTemplates((prev) => prev.map((t) => t.id === template.id ? { ...t, isVisible: newVisible } : t));
+      toast.success(newVisible ? 'Template is now visible to end users' : 'Template hidden from end users');
+    } catch {
+      toast.error('Failed to update template visibility');
     }
   }
 
@@ -916,6 +949,7 @@ export default function WorkflowTemplatesContent() {
           The five built-in templates below power the Perfection, Release, Valuation, Substitution, and Document Approval workflows.
           You can modify their steps, actors, conditions, and escalation rules — changes take effect on new workflow instances.
           Steps marked with <strong>⚡</strong> have escalation conditions configured.
+          Use the <strong>eye icon</strong> to hide/show a template from end users, and the <strong>toggle</strong> to pause/resume it (pausing places all running instances on hold).
         </p>
       </div>
 
@@ -992,6 +1026,7 @@ export default function WorkflowTemplatesContent() {
               template={template}
               onEdit={() => openEdit(template)}
               onToggle={() => toggleTemplate(template)}
+              onToggleVisibility={() => toggleVisibility(template)}
               onManageTriggers={() => setTriggerRulesTemplate(template)}
             />
           ))}
