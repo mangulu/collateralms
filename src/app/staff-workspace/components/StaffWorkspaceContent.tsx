@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, AlertTriangle, Filter, RefreshCw, Loader2, CheckCh
 import { userTaskService, UserTask, TaskStatus, WorkspaceFilters } from '@/lib/supabase/userTaskService';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
+import { useStaffWorkspaceRealtime } from '@/lib/hooks/useStaffWorkspaceRealtime';
 
 const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
   pending:     { label: 'Pending',     cls: 'bg-amber-50 text-amber-700 border-amber-200',   dot: 'bg-amber-400' },
@@ -81,6 +82,14 @@ export default function StaffWorkspaceContent() {
       if (data) setUsers(data as UserProfile[]);
     });
   }, []);
+
+  // Real-time subscriptions — task assignments, completions, and cancellations
+  // appear instantly without a manual page refresh.
+  useStaffWorkspaceRealtime({
+    onTaskInsert: () => { fetchTasks(); },
+    onTaskUpdate: () => { fetchTasks(); },
+    onTaskDelete: () => { fetchTasks(); },
+  });
 
   const filtered = tasks.filter((t) => {
     if (!search) return true;
