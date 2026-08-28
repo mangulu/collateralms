@@ -421,6 +421,13 @@ export default function LoginForm() {
                   </span>
                 ))}
               </div>
+
+              {/* System overview */}
+              <div className="mt-10">
+                <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.82)' }}>
+                  CollateralMS is a full-cycle collateral management platform built for banks — covering registration, valuation, perfection workflows, document management, compliance tracking, AI-powered risk assessment, and real-time audit trails, all in one place.
+                </p>
+              </div>
             </div>
           </main>
         </div>
@@ -450,10 +457,10 @@ export default function LoginForm() {
 
         {/* Right panel — login form */}
         <aside
-          className="relative flex min-h-0 lg:min-h-screen items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10"
+          className="relative flex min-h-0 lg:min-h-screen items-center justify-center px-6 py-8 sm:px-10 sm:py-10"
           style={{ backgroundColor: '#f8fafc' }}
         >
-          <div className="w-full max-w-[30rem]">
+          <div className="w-full max-w-[28rem] mx-auto">
             <div
               className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-9"
               style={{ border: '1px solid var(--izou-border)' }}

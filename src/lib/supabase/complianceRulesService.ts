@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 export interface ComplianceRuleDB {
   id: string;
@@ -29,6 +29,7 @@ export interface UpdateComplianceRuleInput extends Partial<CreateComplianceRuleI
 
 export const complianceRulesService = {
   async fetchAll(): Promise<ComplianceRuleDB[]> {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('compliance_rules')
       .select('*')
@@ -38,6 +39,7 @@ export const complianceRulesService = {
   },
 
   async create(input: CreateComplianceRuleInput): Promise<ComplianceRuleDB> {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('compliance_rules')
       .insert([{ ...input, is_active: input.is_active ?? true }])
@@ -48,6 +50,7 @@ export const complianceRulesService = {
   },
 
   async update(id: string, input: UpdateComplianceRuleInput): Promise<ComplianceRuleDB> {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('compliance_rules')
       .update({ ...input, updated_at: new Date().toISOString() })
@@ -59,6 +62,7 @@ export const complianceRulesService = {
   },
 
   async toggleActive(id: string, isActive: boolean): Promise<void> {
+    const supabase = createClient();
     const { error } = await supabase
       .from('compliance_rules')
       .update({ is_active: isActive, updated_at: new Date().toISOString() })
@@ -67,6 +71,7 @@ export const complianceRulesService = {
   },
 
   async delete(id: string): Promise<void> {
+    const supabase = createClient();
     const { error } = await supabase
       .from('compliance_rules')
       .delete()

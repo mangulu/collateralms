@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { sendCollateralStatusEmail } from '@/lib/supabase/collateralStatusEmailService';
+import { createReleaseApprovalTask } from '@/lib/supabase/workflowTaskBridge';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -143,7 +144,39 @@ export const releaseRequestService = {
         console.log('releaseRequestService.create error:', error.message);
         return null;
       }
-      return rowToRequest(data);
+
+      const request = rowToRequest(data);
+
+      // ── Notify approver via user_tasks (non-blocking) ──────────────────────
+      if (request.status === 'Pending') {
+        try {
+          const { data: approvers } = await supabase
+            .from('user_profiles')
+            .select('id, full_name, email, phone')
+            .eq('role', 'credit_officer')
+            .eq('is_active', true)
+            .limit(1);
+
+          const approver = approvers?.[0];
+          if (approver) {
+            createReleaseApprovalTask({
+              assignedTo: approver.id,
+              collateralId: payload.collateralRef,
+              instanceId: request.id,
+              assignedBy: userId,
+              assignedByName: payload.requestedBy,
+              priority: payload.priority === 'High' ? 'high' : payload.priority === 'Low' ? 'low' : 'normal',
+              notify: approver.email
+                ? { assigneeName: approver.full_name ?? 'Approver', assigneeEmail: approver.email, assigneePhone: approver.phone ?? undefined }
+                : undefined,
+            }).catch(() => {/* non-blocking */});
+          }
+        } catch {
+          // non-blocking
+        }
+      }
+
+      return request;
     } catch (err: any) {
       console.log('releaseRequestService.create caught:', err.message);
       throw err;

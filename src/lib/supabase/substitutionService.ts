@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { createSubstitutionTask } from '@/lib/supabase/workflowTaskBridge';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -107,6 +108,7 @@ export async function createSubstitution(payload: {
   reason: string;
   notes?: string;
   requestedBy?: string;
+  requestedByName?: string;
 }): Promise<CollateralSubstitution> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -124,7 +126,36 @@ export async function createSubstitution(payload: {
     .select('*')
     .single();
   if (error) throw error;
-  return rowToSubstitution(data);
+
+  const substitution = rowToSubstitution(data);
+
+  // ── Notify approver via user_tasks (non-blocking) ─────────────────────────
+  try {
+    const { data: approvers } = await supabase
+      .from('user_profiles')
+      .select('id, full_name, email, phone')
+      .eq('role', 'credit_officer')
+      .eq('is_active', true)
+      .limit(1);
+
+    const approver = approvers?.[0];
+    if (approver) {
+      createSubstitutionTask({
+        assignedTo: approver.id,
+        collateralId: payload.facilityId,
+        instanceId: substitution.id,
+        assignedBy: payload.requestedBy,
+        assignedByName: payload.requestedByName,
+        notify: approver.email
+          ? { assigneeName: approver.full_name ?? 'Approver', assigneeEmail: approver.email, assigneePhone: approver.phone ?? undefined }
+          : undefined,
+      }).catch(() => {/* non-blocking */});
+    }
+  } catch {
+    // non-blocking
+  }
+
+  return substitution;
 }
 
 export async function updateSubstitutionStatus(
