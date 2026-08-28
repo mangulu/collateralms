@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, GitBranch, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, BadgeCheck, FolderArchive, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, CheckSquare, KeyRound, BookMarked, BookText } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -96,16 +96,19 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'My Actions',
         items: [
           { label: 'Staff Workspace', icon: LayoutGrid, href: '/staff-workspace', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'My Tasks', icon: CheckSquare, href: '/my-tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Approvals', icon: ShieldCheck, href: '/approvals', permission: PERMISSIONS.PERFECTION_REVIEW },
-          { label: 'Perfection', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Document Approvals', icon: BadgeCheck, href: '/document-approval', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Release Approvals', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.PERFECTION_VIEW },
-          { label: 'Valuation Workflow', icon: TrendingUp, href: '/workflows/valuation', permission: PERMISSIONS.COLLATERAL_EDIT },
-          { label: 'Substitution Requests', icon: ArrowLeftRight, href: '/workflows/substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Approval Inbox', icon: Inbox, href: '/approval-inbox', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'All Instances', icon: Activity, href: '/workflows/instances', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Registry Submissions', icon: BookText, href: '/workflows/registry-submissions', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Archive Requests', icon: FolderArchive, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'Administration',
+        items: [
+          { label: 'Templates', icon: Layers, href: '/workflows-admin/templates', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Trigger Rules', icon: Zap, href: '/workflows-admin/trigger-rules', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'KPIs', icon: Target, href: '/workflows-admin/kpis', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Process Analytics', icon: TrendingUp, href: '/workflows-admin/process-analytics', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
     ],
