@@ -95,6 +95,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'My Actions',
         items: [
+          { label: 'Staff Workspace', icon: LayoutGrid, href: '/staff-workspace', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'My Tasks', icon: CheckSquare, href: '/my-tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Approvals', icon: ShieldCheck, href: '/approvals', permission: PERMISSIONS.PERFECTION_REVIEW },
           { label: 'Perfection', icon: GitBranch, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
@@ -326,6 +327,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/audit-log': 'audit',
   '/glossary': 'administration',
   '/my-tasks': 'approvals',
+  '/staff-workspace': 'approvals',
   '/fast-track': 'approvals',
   '/fraud-prevention': 'intelligence',
   '/risk-assessment': 'intelligence',
