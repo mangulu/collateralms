@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -85,6 +85,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Loan Classification', icon: Layers2, href: '/loan-classification', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Provisioning Calculator', icon: Calculator, href: '/provisioning-calculator', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Haircut Schedule Engine', icon: Scissors, href: '/haircut-schedule', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -319,6 +320,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/loan-registry': 'obligors',
   '/loan-classification': 'obligors',
   '/provisioning-calculator': 'obligors',
+  '/haircut-schedule': 'obligors',
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'approvals',
