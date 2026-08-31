@@ -1,3 +1,5 @@
+// Internal deep-link page — accessible via direct URL only (/collateral-library/[id]).
+// Not listed in the sidebar navigation; used as a deep-link target from the document library.
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
