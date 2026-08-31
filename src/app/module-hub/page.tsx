@@ -343,24 +343,6 @@ function SystemOverviewPanel({ displayName, displayRole, initials, greeting, tod
           </ul>
         </div>
 
-        {/* Module categories */}
-        <div className="mb-6">
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            Modules
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {MODULE_CATEGORIES.map((cat) => (
-              <span
-                key={cat.label}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium"
-                style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }} />
-                {cat.label}
-              </span>
-            ))}
-          </div>
-        </div>
 
         {/* Footer credit */}
         <p className="text-center text-[11px] mt-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
