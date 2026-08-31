@@ -327,6 +327,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/archive/custody-tracker': 'archive',
   '/archive/chain-of-custody': 'archive',
   '/archive/occupancy-heatmap': 'archive',
+  '/archive/vault-slot': 'archive',
   '/audit-log': 'audit',
   '/glossary': 'administration',
   '/my-tasks': 'approvals',
