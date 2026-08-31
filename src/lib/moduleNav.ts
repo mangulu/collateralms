@@ -86,6 +86,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Loan Classification', icon: Layers2, href: '/loan-classification', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Provisioning Calculator', icon: Calculator, href: '/provisioning-calculator', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Haircut Schedule Engine', icon: Scissors, href: '/haircut-schedule', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Credit Policy Review', icon: BookMarked, href: '/credit-policy-review', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
