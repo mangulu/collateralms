@@ -80,6 +80,7 @@ const modules: ModuleCard[] = [
       { label: 'New Collateral', href: '/collateral-management', icon: Plus },
       { label: 'View Registry', href: '/collateral-management', icon: Eye },
       { label: 'Dashboard', href: '/collateral-dashboard', icon: Activity },
+      { label: 'Stress Simulator', href: '/stress-simulator', icon: FlaskConical },
     ],
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
@@ -160,6 +161,7 @@ const modules: ModuleCard[] = [
     category: 'reports',
     quickActions: [
       { label: 'Reports Hub', href: '/reports', icon: BarChart2 },
+      { label: 'Board Report Builder', href: '/board-report-builder', icon: FileText },
       { label: 'Custom Reports', href: '/custom-reports', icon: FileText },
       { label: 'Export', href: '/export', icon: ArrowRight },
     ],

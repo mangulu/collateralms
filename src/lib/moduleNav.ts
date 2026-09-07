@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors, Flag, FlaskConical, ClipboardSignature } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -58,11 +58,13 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Lifecycle Management',
         items: [
           { label: 'Valuation Workflow', icon: RefreshCw, href: '/valuation-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Valuation Pricing Flags', icon: Flag, href: '/valuation-pricing-flags', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Collateral Substitution', icon: ArrowLeftRight, href: '/collateral-substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Covenant Tracking', icon: Scale, href: '/covenant-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Insurance Tracking', icon: Shield, href: '/insurance-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Settlement & Post-Settlement', icon: HandCoins, href: '/collateral-settlement', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'LTV Monitoring', icon: TrendingDown, href: '/ltv-breach-alerts', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Stress Simulator', icon: FlaskConical, href: '/stress-simulator', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Collateral History', icon: ScrollText, href: '/collateral-history', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
@@ -78,6 +80,15 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Obligors', icon: Users, href: '/obligors', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Loan Facilities', icon: Landmark, href: '/loans', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Loan Registry', icon: ClipboardList, href: '/loan-registry', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'BOT Regulatory',
+        items: [
+          { label: 'Loan Classification', icon: Layers2, href: '/loan-classification', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Provisioning Calculator', icon: Calculator, href: '/provisioning-calculator', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Haircut Schedule Engine', icon: Scissors, href: '/haircut-schedule', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Credit Policy Review', icon: BookMarked, href: '/credit-policy-review', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
@@ -197,6 +208,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
       {
         label: 'Reporting & Compliance',
         items: [
+          { label: 'Board Report Builder', icon: ClipboardSignature, href: '/board-report-builder', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Scheduled Report Delivery', icon: Mail, href: '/scheduled-report-delivery', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'Regulatory Submission Tracking', icon: FileCheck, href: '/regulatory-submission-tracking', permission: PERMISSIONS.REPORTS_VIEW },
           { label: 'LTV Breach Alerts', icon: TrendingDown, href: '/ltv-breach-alerts', permission: PERMISSIONS.REPORTS_VIEW },
@@ -310,12 +322,16 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/obligors': 'obligors',
   '/loans': 'obligors',
   '/loan-registry': 'obligors',
+  '/loan-classification': 'obligors',
+  '/provisioning-calculator': 'obligors',
+  '/haircut-schedule': 'obligors',
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'approvals',
   '/perfection-workflow': 'approvals',
   '/release-approval': 'approvals',
   '/performance-export': 'reports',
+  '/board-report-builder': 'reports',
   '/reports-dashboard': 'reports',
   '/collateral-reports': 'reports',
   '/onboarding-guide': 'administration',
@@ -327,6 +343,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/archive/custody-tracker': 'archive',
   '/archive/chain-of-custody': 'archive',
   '/archive/occupancy-heatmap': 'archive',
+  '/archive/vault-slot': 'archive',
   '/audit-log': 'audit',
   '/glossary': 'administration',
   '/my-tasks': 'approvals',

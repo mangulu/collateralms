@@ -1,3 +1,5 @@
+// Internal deep-link page — accessible via direct URL only (/portfolio-heatmap).
+// Not listed in the sidebar navigation; intended for direct linking from dashboards or analytics.
 'use client';
 import React from 'react';
 import AppLayout from '@/components/AppLayout';

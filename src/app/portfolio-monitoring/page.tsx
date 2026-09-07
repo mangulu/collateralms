@@ -1,3 +1,5 @@
+// Internal deep-link page — accessible via direct URL only (/portfolio-monitoring).
+// Not listed in the sidebar navigation; intended for direct linking from dashboards or reports.
 'use client';
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
