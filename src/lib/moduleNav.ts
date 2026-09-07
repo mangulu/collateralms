@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors, Flag, FlaskConical, ClipboardSignature } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors, Flag, FlaskConical, ClipboardSignature } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -101,6 +101,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Overview',
         items: [
           { label: 'Workflows Dashboard', icon: LayoutGrid, href: '/workflows', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Command Center', icon: BarChart3, href: '/workflow-command-center', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
