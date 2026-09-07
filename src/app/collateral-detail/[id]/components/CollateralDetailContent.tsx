@@ -29,6 +29,7 @@ interface CollateralDetailContentProps {
   error: string | null;
   onBack: () => void;
   onRefresh: () => void;
+  breadcrumbs?: { label: string; href?: string }[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -256,6 +257,7 @@ export default function CollateralDetailContent({
   error,
   onBack,
   onRefresh,
+  breadcrumbs,
 }: CollateralDetailContentProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'charges' | 'documents' | 'history-audit' | 'registry-submissions'>('profile');
@@ -396,9 +398,45 @@ export default function CollateralDetailContent({
       {/* Breadcrumb + Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
         <div>
-          <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2 transition-colors">
-            <ArrowLeft size={14} /> Collateral Registry
-          </button>
+          {/* Multi-level breadcrumb trail */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1 flex-wrap mb-1">
+            {breadcrumbs && breadcrumbs.length > 1 ? (
+              breadcrumbs.map((crumb, idx) => {
+                const isLast = idx === breadcrumbs.length - 1;
+                return (
+                  <React.Fragment key={idx}>
+                    {idx === 0 && (
+                      <button
+                        onClick={onBack}
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ArrowLeft size={13} />
+                      </button>
+                    )}
+                    {crumb.href && !isLast ? (
+                      <Link
+                        href={crumb.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span className={`text-sm ${isLast ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                        {crumb.label}
+                      </span>
+                    )}
+                    {!isLast && (
+                      <ChevronRight size={13} className="text-muted-foreground/50 shrink-0" />
+                    )}
+                  </React.Fragment>
+                );
+              })
+            ) : (
+              <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <ArrowLeft size={14} /> Collateral Registry
+              </button>
+            )}
+          </nav>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           <ArchiveStatusBadge collateral={collateral} />
