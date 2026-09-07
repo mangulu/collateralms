@@ -1,29 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend, ReferenceLine,
 } from 'recharts';
 import {
   TrendingDown, AlertTriangle, ShieldAlert, CheckCircle2, RefreshCw,
-  ChevronDown, ChevronUp, Info, Zap, BarChart2, Activity,
+  ChevronDown, ChevronUp, Info, Zap, BarChart2, Activity, Loader2,
 } from 'lucide-react';
+import { stressSimulatorService, StressPortfolioPosition } from '@/lib/supabase/stressSimulatorService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface CollateralPosition {
-  id: string;
-  collateralRef: string;
-  obligorName: string;
-  collateralType: string;
-  currentValue: number;
-  loanExposure: number;
-  currentLTV: number;
-  ltvThreshold: number;
-  haircut: number;
-  assetClass: 'Real Estate' | 'Equities' | 'Motor Vehicle' | 'Fixed Deposit' | 'Debenture' | 'Guarantee';
-}
 
 interface ScenarioResult {
   decline: 10 | 20 | 30;
@@ -58,23 +46,7 @@ interface ScenarioResult {
   };
 }
 
-// ─── Mock portfolio data ──────────────────────────────────────────────────────
-
-const PORTFOLIO: CollateralPosition[] = [
-  { id: '1', collateralRef: 'COL-2024-0041', obligorName: 'Karibu Holdings Ltd', collateralType: 'Commercial Property', currentValue: 4_200_000_000, loanExposure: 2_800_000_000, currentLTV: 66.7, ltvThreshold: 75, haircut: 20, assetClass: 'Real Estate' },
-  { id: '2', collateralRef: 'COL-2024-0087', obligorName: 'Simba Cement Co.', collateralType: 'Industrial Land', currentValue: 6_500_000_000, loanExposure: 4_550_000_000, currentLTV: 70.0, ltvThreshold: 75, haircut: 20, assetClass: 'Real Estate' },
-  { id: '3', collateralRef: 'COL-2024-0112', obligorName: 'Mwanga Investments', collateralType: 'DSE Listed Shares', currentValue: 980_000_000, loanExposure: 588_000_000, currentLTV: 60.0, ltvThreshold: 65, haircut: 40, assetClass: 'Equities' },
-  { id: '4', collateralRef: 'COL-2024-0134', obligorName: 'Bahari Fisheries Ltd', collateralType: 'Motor Vessel', currentValue: 1_200_000_000, loanExposure: 840_000_000, currentLTV: 70.0, ltvThreshold: 80, haircut: 25, assetClass: 'Motor Vehicle' },
-  { id: '5', collateralRef: 'COL-2024-0156', obligorName: 'Kilimanjaro Traders', collateralType: 'Fixed Deposit Receipt', currentValue: 2_000_000_000, loanExposure: 1_600_000_000, currentLTV: 80.0, ltvThreshold: 90, haircut: 5, assetClass: 'Fixed Deposit' },
-  { id: '6', collateralRef: 'COL-2024-0178', obligorName: 'Serengeti Agro Ltd', collateralType: 'Agricultural Land', currentValue: 3_100_000_000, loanExposure: 2_170_000_000, currentLTV: 70.0, ltvThreshold: 75, haircut: 20, assetClass: 'Real Estate' },
-  { id: '7', collateralRef: 'COL-2024-0201', obligorName: 'Dar Tech Solutions', collateralType: 'DSE Listed Shares', currentValue: 450_000_000, loanExposure: 315_000_000, currentLTV: 70.0, ltvThreshold: 65, haircut: 40, assetClass: 'Equities' },
-  { id: '8', collateralRef: 'COL-2024-0223', obligorName: 'Tanga Port Services', collateralType: 'Debenture', currentValue: 1_800_000_000, loanExposure: 1_260_000_000, currentLTV: 70.0, ltvThreshold: 80, haircut: 15, assetClass: 'Debenture' },
-  { id: '9', collateralRef: 'COL-2024-0245', obligorName: 'Moshi Coffee Exports', collateralType: 'Residential Property', currentValue: 880_000_000, loanExposure: 704_000_000, currentLTV: 80.0, ltvThreshold: 80, haircut: 20, assetClass: 'Real Estate' },
-  { id: '10', collateralRef: 'COL-2024-0267', obligorName: 'Zanzibar Spice Co.', collateralType: 'Corporate Guarantee', currentValue: 500_000_000, loanExposure: 400_000_000, currentLTV: 80.0, ltvThreshold: 85, haircut: 10, assetClass: 'Guarantee' },
-];
-
 // ─── Asset-class specific stress multipliers ──────────────────────────────────
-// Equities are more volatile; FDR is stable; Real Estate moderate
 
 const ASSET_CLASS_MULTIPLIERS: Record<string, Record<number, number>> = {
   'Real Estate':    { 10: 0.10, 20: 0.20, 30: 0.30 },
@@ -97,14 +69,14 @@ function fmtPct(v: number): string {
   return `${v.toFixed(1)}%`;
 }
 
-function computeScenario(decline: 10 | 20 | 30): ScenarioResult {
+function computeScenario(portfolio: StressPortfolioPosition[], decline: 10 | 20 | 30): ScenarioResult {
   const colors = {
     10: { color: '#D97706', bgColor: 'rgba(217,119,6,0.06)', borderColor: '#D97706' },
     20: { color: '#EA580C', bgColor: 'rgba(234,88,12,0.06)', borderColor: '#EA580C' },
     30: { color: '#DC2626', bgColor: 'rgba(220,38,38,0.06)', borderColor: '#DC2626' },
   };
 
-  const positions = PORTFOLIO.map(p => {
+  const positions = portfolio.map(p => {
     const multiplier = ASSET_CLASS_MULTIPLIERS[p.assetClass]?.[decline] ?? decline / 100;
     const stressedValue = p.currentValue * (1 - multiplier);
     const stressedLTV = (p.loanExposure / stressedValue) * 100;
@@ -132,8 +104,8 @@ function computeScenario(decline: 10 | 20 | 30): ScenarioResult {
   const totalLoanExposure = positions.reduce((s, p) => s + p.loanExposure, 0);
   const breachCount = positions.filter(p => p.breached).length;
   const breachExposure = positions.filter(p => p.breached).reduce((s, p) => s + p.loanExposure, 0);
-  const portfolioLTV = (totalLoanExposure / totalOriginalValue) * 100;
-  const stressedPortfolioLTV = (totalLoanExposure / totalStressedValue) * 100;
+  const portfolioLTV = totalOriginalValue > 0 ? (totalLoanExposure / totalOriginalValue) * 100 : 0;
+  const stressedPortfolioLTV = totalStressedValue > 0 ? (totalLoanExposure / totalStressedValue) * 100 : 0;
   const valueAtRisk = totalOriginalValue - totalStressedValue;
 
   return {
@@ -154,7 +126,7 @@ function computeScenario(decline: 10 | 20 | 30): ScenarioResult {
   };
 }
 
-// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+// ─── Custom Tooltips ──────────────────────────────────────────────────────────
 
 const CustomBarTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -191,21 +163,44 @@ const CustomLTVTooltip = ({ active, payload, label }: any) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function StressSimulatorContent() {
+  const [portfolio, setPortfolio] = useState<StressPortfolioPosition[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeScenarios, setActiveScenarios] = useState<Set<10 | 20 | 30>>(new Set([10, 20, 30]));
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filterBreached, setFilterBreached] = useState(false);
   const [selectedAssetClass, setSelectedAssetClass] = useState<string>('All');
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
 
-  const scenarios = useMemo(() => {
-    const all: (10 | 20 | 30)[] = [10, 20, 30];
-    return all.map(d => computeScenario(d));
+  const loadPortfolio = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await stressSimulatorService.fetchPortfolio();
+      setPortfolio(data);
+      setLastRefreshed(new Date());
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to load portfolio data');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadPortfolio();
+  }, [loadPortfolio]);
+
+  const scenarios = useMemo(() => {
+    if (portfolio.length === 0) return [] as ScenarioResult[];
+    const all: (10 | 20 | 30)[] = [10, 20, 30];
+    return all.map(d => computeScenario(portfolio, d));
+  }, [portfolio]);
 
   const activeScenarioList = scenarios.filter(s => activeScenarios.has(s.decline));
 
   // Chart data: portfolio value comparison
   const valueChartData = useMemo(() => {
+    if (scenarios.length === 0) return [];
     return [
       { name: 'Current', value: scenarios[0].summary.totalOriginalValue, fill: '#007CB3' },
       ...scenarios.map(s => ({
@@ -218,11 +213,12 @@ export default function StressSimulatorContent() {
 
   // Chart data: LTV progression per position
   const ltvChartData = useMemo(() => {
-    return PORTFOLIO.map(p => {
+    if (scenarios.length === 0) return [];
+    return portfolio.map(p => {
       const row: Record<string, any> = {
         name: p.collateralRef,
-        'Current LTV': p.currentLTV,
-        Threshold: p.ltvThreshold,
+        'Current LTV': parseFloat(p.currentLTV.toFixed(1)),
+        Threshold: parseFloat(p.ltvThreshold.toFixed(1)),
       };
       scenarios.forEach(s => {
         const pos = s.positions.find(x => x.id === p.id);
@@ -230,7 +226,7 @@ export default function StressSimulatorContent() {
       });
       return row;
     });
-  }, [scenarios]);
+  }, [scenarios, portfolio]);
 
   // Breach count chart
   const breachChartData = useMemo(() => {
@@ -242,17 +238,21 @@ export default function StressSimulatorContent() {
     }));
   }, [scenarios]);
 
-  const assetClasses = ['All', ...Array.from(new Set(PORTFOLIO.map(p => p.assetClass)))];
+  const assetClasses = useMemo(() => {
+    return ['All', ...Array.from(new Set(portfolio.map(p => p.assetClass)))];
+  }, [portfolio]);
 
   // Filtered positions for the table (use worst-case scenario = 30%)
-  const worstScenario = scenarios[2]; // 30%
-  const filteredPositions = worstScenario.positions.filter(p => {
-    if (filterBreached && !p.breached) return false;
-    if (selectedAssetClass !== 'All' && p.assetClass !== selectedAssetClass) return false;
-    return true;
-  });
+  const worstScenario = scenarios[2];
+  const filteredPositions = worstScenario
+    ? worstScenario.positions.filter(p => {
+        if (filterBreached && !p.breached) return false;
+        if (selectedAssetClass !== 'All' && p.assetClass !== selectedAssetClass) return false;
+        return true;
+      })
+    : [];
 
-  const handleRefresh = () => setLastRefreshed(new Date());
+  const handleRefresh = () => loadPortfolio();
 
   const toggleScenario = (d: 10 | 20 | 30) => {
     setActiveScenarios(prev => {
@@ -265,6 +265,60 @@ export default function StressSimulatorContent() {
       return next;
     });
   };
+
+  // ── Loading state ──
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-gray-500">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <p className="text-sm font-medium">Loading live portfolio data…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error state ──
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-red-200 p-8 max-w-md text-center">
+          <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+          <h2 className="text-base font-semibold text-gray-800 mb-1">Failed to load portfolio</h2>
+          <p className="text-sm text-gray-500 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Empty state ──
+  if (portfolio.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-md text-center">
+          <BarChart2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <h2 className="text-base font-semibold text-gray-800 mb-1">No portfolio data available</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            No collateral records with valuation amounts and linked loans were found. Add collateral records with valuations and loan links to run stress simulations.
+          </p>
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -283,6 +337,10 @@ export default function StressSimulatorContent() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              Live — {portfolio.length} positions
+            </div>
             <span className="text-xs text-gray-400">
               Last refreshed: {lastRefreshed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
             </span>
@@ -308,7 +366,7 @@ export default function StressSimulatorContent() {
                 onClick={() => toggleScenario(d)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                   active
-                    ? 'text-white border-transparent' :'bg-white text-gray-400 border-gray-200'
+                    ? 'text-white border-transparent' : 'bg-white text-gray-400 border-gray-200'
                 }`}
                 style={active ? { background: s.color, borderColor: s.color } : {}}
               >
@@ -445,14 +503,14 @@ export default function StressSimulatorContent() {
             </div>
             <div className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-lg">
               <Info className="w-3 h-3" />
-              Dashed line = LTV threshold (75%)
+              Dashed line = LTV threshold
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={ltvChartData} margin={{ left: 0, right: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={40} />
-              <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} width={45} domain={[50, 110]} />
+              <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} width={45} domain={[0, 'auto']} />
               <Tooltip content={<CustomLTVTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <ReferenceLine y={75} stroke="#9CA3AF" strokeDasharray="5 5" label={{ value: 'Threshold 75%', position: 'insideTopRight', fontSize: 10, fill: '#9CA3AF' }} />
@@ -498,7 +556,7 @@ export default function StressSimulatorContent() {
                 onClick={() => setFilterBreached(f => !f)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   filterBreached
-                    ? 'bg-red-50 text-red-700 border-red-200' :'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
@@ -527,8 +585,8 @@ export default function StressSimulatorContent() {
               <tbody>
                 {filteredPositions.map(pos => {
                   const expanded = expandedRow === pos.id;
-                  const s10 = scenarios[0].positions.find(x => x.id === pos.id)!;
-                  const s20 = scenarios[1].positions.find(x => x.id === pos.id)!;
+                  const s10 = scenarios[0]?.positions.find(x => x.id === pos.id);
+                  const s20 = scenarios[1]?.positions.find(x => x.id === pos.id);
                   return (
                     <React.Fragment key={pos.id}>
                       <tr
@@ -571,7 +629,7 @@ export default function StressSimulatorContent() {
                       </tr>
 
                       {/* Expanded row: all 3 scenarios */}
-                      {expanded && (
+                      {expanded && s10 && s20 && (
                         <tr className="bg-gray-50 border-b border-gray-100">
                           <td colSpan={11} className="px-6 py-4">
                             <div className="grid grid-cols-3 gap-3">
@@ -631,14 +689,14 @@ export default function StressSimulatorContent() {
           {/* Table footer summary */}
           <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
             <span className="text-xs text-gray-500">
-              Showing {filteredPositions.length} of {PORTFOLIO.length} positions
+              Showing {filteredPositions.length} of {worstScenario?.positions.length ?? 0} positions
             </span>
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <span>
-                <span className="font-semibold text-red-600">{worstScenario.summary.breachCount}</span> positions breach LTV under 30% stress
+                <span className="font-semibold text-red-600">{worstScenario?.summary.breachCount ?? 0}</span> positions breach LTV under 30% stress
               </span>
               <span>
-                Breach exposure: <span className="font-semibold text-red-600">{fmt(worstScenario.summary.breachExposure)}</span>
+                Breach exposure: <span className="font-semibold text-red-600">{worstScenario ? fmt(worstScenario.summary.breachExposure) : '—'}</span>
               </span>
             </div>
           </div>
@@ -653,6 +711,7 @@ export default function StressSimulatorContent() {
               Asset-class specific stress multipliers are applied: Equities (1.5× base), Fixed Deposits (0.2× base), Real Estate (1.0× base), Motor Vehicles (1.1× base), Debentures (0.8× base), Guarantees (0.5× base).
               Stressed LTV = Loan Exposure ÷ Stressed Collateral Value. A breach occurs when Stressed LTV exceeds the BOT-prescribed threshold for that collateral type.
               Portfolio-level LTV is computed as aggregate loan exposure divided by aggregate stressed collateral value.
+              Data is sourced live from the Supabase collateral portfolio — haircut rates are pulled from the active Haircut Schedule Engine.
             </p>
           </div>
         </div>
