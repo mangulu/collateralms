@@ -1,6 +1,6 @@
 'use client';
-import React, { useState } from 'react';
-import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock, FileCheck, FileX, FileClock, ExternalLink, Columns, CheckCircle, FileText,  } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTriangle, Clock, FileCheck, FileX, FileClock, ExternalLink, Columns, CheckCircle, FileText, MoreVertical, Workflow, CalendarClock, Unlock, ArrowLeftRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
@@ -40,6 +40,101 @@ interface CollateralTableProps {
   docRequiredCounts?: Record<string, number>;
   visibleColumns?: string[];
   onVisibleColumnsChange?: (columns: string[]) => void;
+}
+
+// ─── Row Action Menu ──────────────────────────────────────────────────────────
+
+interface RowActionMenuProps {
+  item: Collateral;
+  onView: (item: Collateral) => void;
+  onEdit: (item: Collateral) => void;
+  onNavigate: (id: string) => void;
+  onStatusChange: (id: string, status: CollateralStatus) => void;
+}
+
+function RowActionMenu({ item, onView, onEdit, onNavigate, onStatusChange }: RowActionMenuProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const s = item.status;
+  const canPerfect = s !== 'Perfected' && s !== 'Submitted' && s !== 'Under Review';
+  const canRelease = s === 'Perfected' || s === 'Monitoring';
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+        aria-label="Row actions"
+        title="More actions"
+      >
+        <MoreVertical size={14} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-40 bg-white border border-border rounded-lg shadow-lg min-w-[180px] py-1 overflow-hidden">
+          <div className="px-3 py-1.5 border-b border-border">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide truncate">{item.collateralId}</p>
+          </div>
+          <button
+            onClick={() => { onView(item); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <Eye size={13} className="text-blue-500 shrink-0" /> Quick View
+          </button>
+          <button
+            onClick={() => { onNavigate(item.id); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <ExternalLink size={13} className="text-purple-500 shrink-0" /> Full Profile
+          </button>
+          <button
+            onClick={() => { onEdit(item); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <Pencil size={13} className="text-amber-500 shrink-0" /> Edit Record
+          </button>
+          <div className="border-t border-border my-1" />
+          <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Workflows</p>
+          {canPerfect && (
+            <button
+              onClick={() => { onNavigate(item.id); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 transition-colors text-left"
+            >
+              <Workflow size={13} className="text-blue-500 shrink-0" /> Start Perfection
+            </button>
+          )}
+          <button
+            onClick={() => { onNavigate(item.id); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50 transition-colors text-left"
+          >
+            <CalendarClock size={13} className="text-indigo-500 shrink-0" /> Schedule Valuation
+          </button>
+          <button
+            onClick={() => { onNavigate(item.id); setOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors text-left"
+          >
+            <ArrowLeftRight size={13} className="text-orange-500 shrink-0" /> New Substitution
+          </button>
+          {canRelease && (
+            <button
+              onClick={() => { onNavigate(item.id); setOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-amber-700 hover:bg-amber-50 transition-colors text-left"
+            >
+              <Unlock size={13} className="text-amber-500 shrink-0" /> Initiate Release
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const statusBadgeMap: Record<
@@ -522,6 +617,12 @@ export default function CollateralTable({
                   className={`border-b border-border last:border-0 transition-colors ${
                     isSelected ? 'bg-primary/5' : i % 2 === 0 ? 'bg-white' : 'bg-muted/20'
                   } hover:bg-primary/5`}
+                  style={{
+                    borderLeft: isOverdue
+                      ? '3px solid #ef4444'
+                      : isApproaching
+                      ? '3px solid #f59e0b' :'3px solid transparent',
+                  }}
                 >
                   {/* Select Checkbox */}
                   <td className="px-4 py-3">
@@ -732,6 +833,13 @@ export default function CollateralTable({
                         >
                           <Pencil size={14} />
                         </button>
+                        <RowActionMenu
+                          item={item}
+                          onView={onView}
+                          onEdit={onEdit}
+                          onNavigate={(id) => router.push(`/collateral-detail/${id}`)}
+                          onStatusChange={onStatusChange}
+                        />
                       </div>
                     </td>
                   )}

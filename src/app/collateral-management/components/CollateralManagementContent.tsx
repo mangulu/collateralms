@@ -29,6 +29,8 @@ export interface FilterState {
   maxValue?: string;
 }
 
+const SESSION_KEY = 'collateral_list_state';
+
 // ─── Custom Hooks ─────────────────────────────────────────────────────────────
 
 function useDebounce(value: string, delay: number) {
@@ -49,14 +51,26 @@ function useDebounce(value: string, delay: number) {
 
 export default function CollateralManagementContent() {
   const { user } = useAuth();
-  const [filters, setFilters] = useState<FilterState>({
+
+  // ─── Restore state from sessionStorage ────────────────────────────────────
+  const getInitialState = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = sessionStorage.getItem(SESSION_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  };
+
+  const savedState = typeof window !== 'undefined' ? getInitialState() : null;
+
+  const [filters, setFilters] = useState<FilterState>(savedState?.filters ?? {
     search: '',
     type: '',
     status: '',
     registry: '',
     officer: '',
   });
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(savedState?.showFilters ?? false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -65,8 +79,8 @@ export default function CollateralManagementContent() {
   const [collateralData, setCollateralData] = useState<CollateralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(savedState?.currentPage ?? 1);
+  const [itemsPerPage, setItemsPerPage] = useState(savedState?.itemsPerPage ?? 10);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
@@ -75,6 +89,14 @@ export default function CollateralManagementContent() {
   const [newlyCreated, setNewlyCreated] = useState<CollateralRecord | null>(null);
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
   const [workflowTarget, setWorkflowTarget] = useState<CollateralRecord | null>(null);
+
+  // ─── Persist state to sessionStorage ──────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ filters, showFilters, currentPage, itemsPerPage }));
+    } catch { /* silent */ }
+  }, [filters, showFilters, currentPage, itemsPerPage]);
 
   // ─── Column Visibility ──────────────────────────────────────────────────────
 
