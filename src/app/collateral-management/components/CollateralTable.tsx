@@ -529,7 +529,7 @@ export default function CollateralTable({
 
       {/* ── Desktop table layout ── */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm min-w-[1100px]">
+        <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="bg-muted/60 border-b border-border">
               {/* Column Visibility Button */}
