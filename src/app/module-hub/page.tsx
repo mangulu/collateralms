@@ -161,6 +161,7 @@ const modules: ModuleCard[] = [
     category: 'reports',
     quickActions: [
       { label: 'Reports Hub', href: '/reports', icon: BarChart2 },
+      { label: 'Board Report Builder', href: '/board-report-builder', icon: FileText },
       { label: 'Custom Reports', href: '/custom-reports', icon: FileText },
       { label: 'Export', href: '/export', icon: ArrowRight },
     ],
