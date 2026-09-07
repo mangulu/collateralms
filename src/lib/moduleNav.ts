@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors, Flag } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -58,6 +58,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Lifecycle Management',
         items: [
           { label: 'Valuation Workflow', icon: RefreshCw, href: '/valuation-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Valuation Pricing Flags', icon: Flag, href: '/valuation-pricing-flags', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Collateral Substitution', icon: ArrowLeftRight, href: '/collateral-substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Covenant Tracking', icon: Scale, href: '/covenant-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Insurance Tracking', icon: Shield, href: '/insurance-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
