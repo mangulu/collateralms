@@ -80,6 +80,7 @@ const modules: ModuleCard[] = [
       { label: 'New Collateral', href: '/collateral-management', icon: Plus },
       { label: 'View Registry', href: '/collateral-management', icon: Eye },
       { label: 'Dashboard', href: '/collateral-dashboard', icon: Activity },
+      { label: 'Stress Simulator', href: '/stress-simulator', icon: FlaskConical },
     ],
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
