@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, LayoutGrid, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors, Flag, FlaskConical, ClipboardSignature } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Calculator, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -94,24 +94,23 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
     ],
   },
   {
-    id: 'approvals',
+    id: 'workflows',
     label: 'Workflows',
     groups: [
       {
-        label: 'Overview',
+        label: 'My Work',
         items: [
-          { label: 'Workflows Dashboard', icon: LayoutGrid, href: '/workflows', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Command Center', icon: BarChart3, href: '/workflow-command-center', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'My Tasks', icon: CheckSquare, href: '/workflows/tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Pending Approvals', icon: Inbox, href: '/approval-inbox', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Registry Submissions', icon: BookText, href: '/workflows/registry-submissions', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
-        label: 'My Actions',
+        label: 'Portfolio View',
         items: [
-          { label: 'Staff Workspace', icon: LayoutGrid, href: '/staff-workspace', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Approval Inbox', icon: Inbox, href: '/approval-inbox', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'All Instances', icon: Activity, href: '/workflows/instances', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Registry Submissions', icon: BookText, href: '/workflows/registry-submissions', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Fast Track', icon: Zap, href: '/fast-track', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Command Center', icon: MonitorDot, href: '/workflow-command-center', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Workflow Instances', icon: Activity, href: '/workflows/instances', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Team Workload', icon: Users, href: '/staff-workspace', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
@@ -119,35 +118,9 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'Templates', icon: Layers, href: '/workflows-admin/templates', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Trigger Rules', icon: Zap, href: '/workflows-admin/trigger-rules', permission: PERMISSIONS.SETTINGS_VIEW },
-          { label: 'KPIs', icon: Target, href: '/workflows-admin/kpis', permission: PERMISSIONS.SETTINGS_VIEW },
-          { label: 'Process Analytics', icon: TrendingUp, href: '/workflows-admin/process-analytics', permission: PERMISSIONS.SETTINGS_VIEW },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'workflows-admin',
-    label: 'Workflows Administration',
-    groups: [
-      {
-        label: 'Overview',
-        items: [
-          { label: 'Admin Dashboard', icon: Settings2, href: '/workflows-admin', permission: PERMISSIONS.SETTINGS_VIEW },
-        ],
-      },
-      {
-        label: 'Monitoring',
-        items: [
-          { label: 'Active Instances', icon: Activity, href: '/workflows-admin/instances', permission: PERMISSIONS.SETTINGS_VIEW },
-          { label: 'Process Analytics & KPIs', icon: TrendingUp, href: '/workflows-admin/process-analytics', permission: PERMISSIONS.SETTINGS_VIEW },
-        ],
-      },
-      {
-        label: 'Configuration',
-        items: [
-          { label: 'Workflow Templates', icon: Layers, href: '/workflows-admin/templates', permission: PERMISSIONS.SETTINGS_VIEW },
-          { label: 'Auto-Trigger Rules', icon: Zap, href: '/workflows-admin/trigger-rules', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Escalation Config', icon: AlertTriangle, href: '/workflows-admin/escalation', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Analytics & KPIs', icon: BarChart3, href: '/workflows-admin/kpis', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'Fast Track Tiers', icon: Zap, href: '/fast-track', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Trigger Processor', icon: Play, href: '/workflows-admin/trigger-processor', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Migration Tool', icon: Settings2, href: '/workflows-admin/migration', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
@@ -317,9 +290,9 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/covenant-tracking': 'collaterals',
   '/insurance-tracking': 'collaterals',
   '/scheduled-jobs': 'administration',
-  '/workflows': 'approvals',
+  '/workflows': 'workflows',
   '/document-management': 'archive',
-  '/document-approval': 'approvals',
+  '/document-approval': 'workflows',
   '/obligors': 'obligors',
   '/loans': 'obligors',
   '/loan-registry': 'obligors',
@@ -328,9 +301,9 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/haircut-schedule': 'obligors',
   '/user-guide': 'administration',
   '/admin': 'administration',
-  '/approval-inbox': 'approvals',
-  '/perfection-workflow': 'approvals',
-  '/release-approval': 'approvals',
+  '/approval-inbox': 'workflows',
+  '/perfection-workflow': 'workflows',
+  '/release-approval': 'workflows',
   '/performance-export': 'reports',
   '/board-report-builder': 'reports',
   '/reports-dashboard': 'reports',
@@ -338,7 +311,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/onboarding-guide': 'administration',
   '/officer-management': 'administration',
   '/user-profile': 'administration',
-  '/workflows-admin': 'workflows-admin',
+  '/workflows-admin': 'workflows',
   '/archive/request-workflow': 'archive',
   '/archive/request-status': 'archive',
   '/archive/custody-tracker': 'archive',
@@ -347,9 +320,10 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/archive/vault-slot': 'archive',
   '/audit-log': 'audit',
   '/glossary': 'administration',
-  '/my-tasks': 'approvals',
-  '/staff-workspace': 'approvals',
-  '/fast-track': 'approvals',
+  '/my-tasks': 'workflows',
+  '/staff-workspace': 'workflows',
+  '/fast-track': 'workflows',
+  '/workflow-command-center': 'workflows',
   '/fraud-prevention': 'intelligence',
   '/risk-assessment': 'intelligence',
   '/portfolio-heatmap': 'intelligence',
