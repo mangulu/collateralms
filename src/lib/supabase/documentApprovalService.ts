@@ -118,7 +118,7 @@ async function _checkAndUpdateCollateralStatus(
         const target = collateralRecordId
           ? supabase.from('collateral_records').update({ status: 'Under Review' }).eq('id', collateralRecordId)
           : supabase.from('collateral_records').update({ status: 'Under Review' }).eq('collateral_id', collateralId);
-        await target.then(() => {}).catch((e) => console.warn('[docApproval] collateral status write-back failed:', e.message));
+        await target.then(() => {}, (e) => console.warn('[docApproval] collateral status write-back failed:', e.message));
       }
     } else if (triggerAction === 'approve') {
       // If all mandatory docs are approved → Perfected
@@ -126,7 +126,7 @@ async function _checkAndUpdateCollateralStatus(
         const target = collateralRecordId
           ? supabase.from('collateral_records').update({ status: 'Perfected' }).eq('id', collateralRecordId)
           : supabase.from('collateral_records').update({ status: 'Perfected' }).eq('collateral_id', collateralId);
-        await target.then(() => {}).catch((e) => console.warn('[docApproval] collateral status write-back failed:', e.message));
+        await target.then(() => {}, (e) => console.warn('[docApproval] collateral status write-back failed:', e.message));
       }
     }
   } catch (err) {
@@ -196,7 +196,7 @@ async function _syncDocWorkflowInstance(
       performed_by_name: performedByName,
       performed_by_role: performedByRole,
       comment: notes ?? null,
-    }).then(() => {}).catch((e) => console.warn('[docApproval] workflow transition log failed:', e.message));
+    }).then(() => {}, (e) => console.warn('[docApproval] workflow transition log failed:', e.message));
   } catch (err) {
     console.warn('[docApproval] workflow instance sync failed:', err);
   }
@@ -398,7 +398,7 @@ export const documentApprovalService = {
         .eq('instance_id', documentId)
         .eq('workflow_name', 'Document Approval')
         .in('task_status', ['pending', 'in_progress'])
-        .then(() => {}).catch((e) => console.warn('[docApproval] task complete failed:', e.message));
+        .then(() => {}, (e) => console.warn('[docApproval] task complete failed:', e.message));
 
       return true;
     } catch (err: any) {
@@ -475,7 +475,7 @@ export const documentApprovalService = {
         .eq('instance_id', documentId)
         .eq('workflow_name', 'Document Approval')
         .in('task_status', ['pending', 'in_progress'])
-        .then(() => {}).catch((e) => console.warn('[docApproval] task complete failed:', e.message));
+        .then(() => {}, (e) => console.warn('[docApproval] task complete failed:', e.message));
 
       return true;
     } catch (err: any) {

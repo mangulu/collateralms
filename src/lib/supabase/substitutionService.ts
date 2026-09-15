@@ -206,16 +206,14 @@ export async function updateSubstitutionStatus(
         .from('collateral_records')
         .update({ status: 'Released' })
         .eq('id', outgoingId)
-        .then(() => {})
-        .catch((e) => console.warn('[substitution] outgoing collateral status write-back failed:', e.message));
+        .then(() => {}, (e) => console.warn('[substitution] outgoing collateral status write-back failed:', e.message));
     }
     if (incomingId) {
       await supabase
         .from('collateral_records')
         .update({ status: 'Monitoring' })
         .eq('id', incomingId)
-        .then(() => {})
-        .catch((e) => console.warn('[substitution] incoming collateral status write-back failed:', e.message));
+        .then(() => {}, (e) => console.warn('[substitution] incoming collateral status write-back failed:', e.message));
     }
   }
 
@@ -244,7 +242,7 @@ export async function updateSubstitutionStatus(
     field_changes: [
       { field: 'substitution_status', label: 'Status', old_value: oldStatus, new_value: newStatus },
     ],
-  }).then(() => {}).catch((e) => console.warn('[substitution] audit log failed:', e.message));
+  }).then(() => {}, (e) => console.warn('[substitution] audit log failed:', e.message));
 
   // ── Sync workflow_instances if a linked instance exists ────────────────────
   if (newStatus === 'Approved' || newStatus === 'Rejected') {
@@ -295,7 +293,7 @@ export async function updateSubstitutionStatus(
           performed_by_name: userName,
           performed_by_role: userRole ?? null,
           comment: notes ?? rejectionReason ?? null,
-        }).then(() => {}).catch((e) => console.warn('[substitution] workflow transition log failed:', e.message));
+        }).then(() => {}, (e) => console.warn('[substitution] workflow transition log failed:', e.message));
       }
     } catch (err) {
       console.warn('[substitution] workflow instance sync failed:', err);

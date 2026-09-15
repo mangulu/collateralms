@@ -260,8 +260,7 @@ export const perfectionService = {
         .from('collateral_records')
         .update({ status: 'Monitoring' })
         .eq('id', collateralRecordId)
-        .then(() => {})
-        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+        .then(() => {}, (e) => console.warn('[perfection] collateral status write-back failed:', e.message));
     }
 
     const { error: commentError } = await supabase
@@ -290,7 +289,7 @@ export const perfectionService = {
       field_changes: [
         { field: 'request_status', label: 'Status', old_value: current?.request_status ?? 'Under Review', new_value: 'Approved' },
       ],
-    }).then(() => {}).catch((e) => console.warn('[perfection] audit log failed:', e.message));
+    }).then(() => {}, (e) => console.warn('[perfection] audit log failed:', e.message));
 
     // ── Sync workflow_instances ──────────────────────────────────────────────
     await _syncWorkflowInstance(supabase, id, 'perfection_request', 'approve', userId, userName, userRole, decisionNotes);
@@ -332,8 +331,7 @@ export const perfectionService = {
         .from('collateral_records')
         .update({ status: 'Rejected' })
         .eq('id', collateralRecordId)
-        .then(() => {})
-        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+        .then(() => {}, (e) => console.warn('[perfection] collateral status write-back failed:', e.message));
 
       // ── Send Rejected status email alert ──────────────────────────────────
       sendCollateralStatusEmail({
@@ -371,7 +369,7 @@ export const perfectionService = {
       field_changes: [
         { field: 'request_status', label: 'Status', old_value: current?.request_status ?? 'Under Review', new_value: 'Rejected' },
       ],
-    }).then(() => {}).catch((e) => console.warn('[perfection] audit log failed:', e.message));
+    }).then(() => {}, (e) => console.warn('[perfection] audit log failed:', e.message));
 
     // ── Sync workflow_instances ──────────────────────────────────────────────
     await _syncWorkflowInstance(supabase, id, 'perfection_request', 'reject', userId, userName, userRole, decisionNotes);
@@ -413,8 +411,7 @@ export const perfectionService = {
         .from('collateral_records')
         .update({ status: 'Under Review' })
         .eq('id', collateralRecordId)
-        .then(() => {})
-        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+        .then(() => {}, (e) => console.warn('[perfection] collateral status write-back failed:', e.message));
     }
 
     const { error: commentError } = await supabase
@@ -496,8 +493,7 @@ export const perfectionService = {
         .from('collateral_records')
         .update({ status: 'Perfected' })
         .eq('id', collateralRecordId)
-        .then(() => {})
-        .catch((e) => console.warn('[perfection] collateral status write-back failed:', e.message));
+        .then(() => {}, (e) => console.warn('[perfection] collateral status write-back failed:', e.message));
 
       // ── Send Perfected status email alert ─────────────────────────────────
       sendCollateralStatusEmail({
@@ -535,7 +531,7 @@ export const perfectionService = {
       field_changes: [
         { field: 'request_status', label: 'Status', old_value: current?.request_status ?? 'Under Review', new_value: 'Perfected' },
       ],
-    }).then(() => {}).catch((e) => console.warn('[perfection] audit log failed:', e.message));
+    }).then(() => {}, (e) => console.warn('[perfection] audit log failed:', e.message));
 
     // ── Sync workflow_instances ──────────────────────────────────────────────
     await _syncWorkflowInstance(supabase, id, 'perfection_request', 'approve', userId, userName, userRole, decisionNotes);

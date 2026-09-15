@@ -174,8 +174,7 @@ export async function approveValuation(
       .from('collateral_records')
       .update(updatePayload)
       .eq('id', collateralRecordDbId)
-      .then(() => {})
-      .catch((e) => console.warn('[valuation] collateral status write-back failed:', e.message));
+      .then(() => {}, (e) => console.warn('[valuation] collateral status write-back failed:', e.message));
   }
 
   // ── Write audit trail ──────────────────────────────────────────────────────
@@ -197,7 +196,7 @@ export async function approveValuation(
         new_value: 'Approved',
       },
     ],
-  }).then(() => {}).catch((e) => console.warn('[valuation] audit log failed:', e.message));
+  }).then(() => {}, (e) => console.warn('[valuation] audit log failed:', e.message));
 
   // ── Sync workflow_instances if a linked instance exists ────────────────────
   const { data: instances } = await supabase
@@ -245,7 +244,7 @@ export async function approveValuation(
       performed_by_name: approvedByName ?? null,
       performed_by_role: approvedByRole ?? null,
       comment: null,
-    }).then(() => {}).catch((e) => console.warn('[valuation] workflow transition log failed:', e.message));
+    }).then(() => {}, (e) => console.warn('[valuation] workflow transition log failed:', e.message));
   }
 
   return rowToValuation(data);
@@ -298,7 +297,7 @@ export async function rejectValuation(
         new_value: 'Rejected',
       },
     ],
-  }).then(() => {}).catch((e) => console.warn('[valuation] audit log failed:', e.message));
+  }).then(() => {}, (e) => console.warn('[valuation] audit log failed:', e.message));
 
   // ── Sync workflow_instances if a linked instance exists ────────────────────
   const { data: instances } = await supabase
@@ -346,7 +345,7 @@ export async function rejectValuation(
       performed_by_name: rejectedByName ?? null,
       performed_by_role: rejectedByRole ?? null,
       comment: rejectionReason,
-    }).then(() => {}).catch((e) => console.warn('[valuation] workflow transition log failed:', e.message));
+    }).then(() => {}, (e) => console.warn('[valuation] workflow transition log failed:', e.message));
   }
 
   return rowToValuation(data);

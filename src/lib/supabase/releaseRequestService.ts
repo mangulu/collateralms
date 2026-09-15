@@ -229,8 +229,7 @@ export const releaseRequestService = {
             .from('collateral_records')
             .update({ status: 'Released' })
             .eq('id', collateralRecordId)
-            .then(() => {})
-            .catch((e) => console.warn('[releaseRequest] collateral status write-back failed:', e.message));
+            .then(() => {}, (e) => console.warn('[releaseRequest] collateral status write-back failed:', e.message));
 
           // ── Send Released status email alert ──────────────────────────────
           sendCollateralStatusEmail({
@@ -252,8 +251,7 @@ export const releaseRequestService = {
             .from('collateral_records')
             .update({ status: 'Released' })
             .eq('collateral_id', current.collateral_ref)
-            .then(() => {})
-            .catch((e) => console.warn('[releaseRequest] collateral status write-back (by ref) failed:', e.message));
+            .then(() => {}, (e) => console.warn('[releaseRequest] collateral status write-back (by ref) failed:', e.message));
 
           // ── Send Released status email alert (fallback path) ──────────────
           if (crRow?.id) {
@@ -291,7 +289,7 @@ export const releaseRequestService = {
             new_value: status,
           },
         ],
-      }).then(() => {}).catch((e) => console.warn('[releaseRequest] audit log failed:', e.message));
+      }).then(() => {}, (e) => console.warn('[releaseRequest] audit log failed:', e.message));
 
       // ── Sync workflow_instances if a linked instance exists ────────────────
       if (reviewedBy && (status === 'Approved' || status === 'Rejected')) {
@@ -342,7 +340,7 @@ export const releaseRequestService = {
             performed_by_name: reviewedByName ?? null,
             performed_by_role: reviewedByRole ?? null,
             comment: notes ?? null,
-          }).then(() => {}).catch((e) => console.warn('[releaseRequest] workflow transition log failed:', e.message));
+          }).then(() => {}, (e) => console.warn('[releaseRequest] workflow transition log failed:', e.message));
         }
       }
 
