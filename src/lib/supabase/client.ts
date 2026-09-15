@@ -123,10 +123,3 @@ export function createClient() {
     }
   );
 }
-function supabase(...args: any[]): any {
-  // eslint-disable-next-line no-console
-  console.warn('Placeholder: supabase is not implemented yet.', args);
-  return null;
-}
-
-export { supabase };

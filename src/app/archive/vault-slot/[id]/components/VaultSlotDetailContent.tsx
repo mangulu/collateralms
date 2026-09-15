@@ -16,7 +16,7 @@ import {
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import SlotTimelineLog from './SlotTimelineLog';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
@@ -818,6 +818,7 @@ export default function VaultSlotDetailContent() {
     setBulkReceiving(true);
     setBulkActionResult(null);
     let updated = 0;
+    const supabase = createClient();
     for (const p of selectedPlacements) {
       try {
         await supabase

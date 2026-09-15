@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
 import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, TrendingUp, ArrowRight, Calendar, Activity, Zap, FileText, Plus, Eye, Search, ChevronDown, FlaskConical,  } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -481,6 +481,7 @@ export default function ModuleHubPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
+        const supabase = createClient();
         const [collateralCountRes, collateralDataRes, workflowRes, tasksRes] = await Promise.all([
           supabase.from('collateral_records').select('*', { count: 'exact', head: true }),
           supabase.from('collateral_records').select('id, status'),
