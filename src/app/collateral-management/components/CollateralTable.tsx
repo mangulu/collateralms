@@ -4,6 +4,7 @@ import { ChevronUp, ChevronDown, Eye, Pencil, ChevronLeft, ChevronRight, AlertTr
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CollateralRecord as Collateral, CollateralStatus } from '@/lib/supabase/collateralService';
+import type { WorkflowTemplateType } from '@/lib/supabase/workflowEngineService';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { FolderOpen } from 'lucide-react';
@@ -26,6 +27,7 @@ interface CollateralTableProps {
   onEdit: (item: Collateral) => void;
   onView: (item: Collateral) => void;
   onStatusChange: (id: string, status: CollateralStatus) => void;
+  onStartWorkflow: (item: Collateral, workflowType: WorkflowTemplateType) => void;
   currentPage: number;
   totalPages: number;
   totalCount: number;
@@ -42,13 +44,10 @@ interface CollateralTableProps {
 
 interface RowActionMenuProps {
   item: Collateral;
-  onView: (item: Collateral) => void;
-  onEdit: (item: Collateral) => void;
-  onNavigate: (id: string) => void;
-  onStatusChange: (id: string, status: CollateralStatus) => void;
+  onStartWorkflow: (item: Collateral, workflowType: WorkflowTemplateType) => void;
 }
 
-function RowActionMenu({ item, onView, onEdit, onNavigate, onStatusChange }: RowActionMenuProps) {
+function RowActionMenu({ item, onStartWorkflow }: RowActionMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -79,49 +78,30 @@ function RowActionMenu({ item, onView, onEdit, onNavigate, onStatusChange }: Row
           <div className="px-3 py-1.5 border-b border-border">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide truncate">{item.collateralId}</p>
           </div>
-          <button
-            onClick={() => { onView(item); setOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
-          >
-            <Eye size={13} className="text-blue-500 shrink-0" /> Quick View
-          </button>
-          <button
-            onClick={() => { onNavigate(item.id); setOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
-          >
-            <ExternalLink size={13} className="text-purple-500 shrink-0" /> Full Profile
-          </button>
-          <button
-            onClick={() => { onEdit(item); setOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
-          >
-            <Pencil size={13} className="text-amber-500 shrink-0" /> Edit Record
-          </button>
-          <div className="border-t border-border my-1" />
           <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Workflows</p>
           {canPerfect && (
             <button
-              onClick={() => { onNavigate(item.id); setOpen(false); }}
+              onClick={() => { onStartWorkflow(item, 'perfection'); setOpen(false); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 transition-colors text-left"
             >
               <Workflow size={13} className="text-blue-500 shrink-0" /> Start Perfection
             </button>
           )}
           <button
-            onClick={() => { onNavigate(item.id); setOpen(false); }}
+            onClick={() => { onStartWorkflow(item, 'valuation'); setOpen(false); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50 transition-colors text-left"
           >
             <CalendarClock size={13} className="text-indigo-500 shrink-0" /> Schedule Valuation
           </button>
           <button
-            onClick={() => { onNavigate(item.id); setOpen(false); }}
+            onClick={() => { onStartWorkflow(item, 'substitution'); setOpen(false); }}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors text-left"
           >
             <ArrowLeftRight size={13} className="text-orange-500 shrink-0" /> New Substitution
           </button>
           {canRelease && (
             <button
-              onClick={() => { onNavigate(item.id); setOpen(false); }}
+              onClick={() => { onStartWorkflow(item, 'release'); setOpen(false); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-amber-700 hover:bg-amber-50 transition-colors text-left"
             >
               <Unlock size={13} className="text-amber-500 shrink-0" /> Initiate Release
@@ -192,6 +172,7 @@ export default function CollateralTable({
   onEdit,
   onView,
   onStatusChange,
+  onStartWorkflow,
   currentPage,
   totalPages,
   totalCount,
@@ -831,10 +812,7 @@ export default function CollateralTable({
                         </button>
                         <RowActionMenu
                           item={item}
-                          onView={onView}
-                          onEdit={onEdit}
-                          onNavigate={(id) => router.push(`/collateral-detail/${id}`)}
-                          onStatusChange={onStatusChange}
+                          onStartWorkflow={onStartWorkflow}
                         />
                       </div>
                     </td>

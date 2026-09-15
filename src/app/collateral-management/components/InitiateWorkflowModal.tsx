@@ -6,6 +6,7 @@ import {
   workflowTemplateService,
   workflowInstanceService,
   WorkflowTemplate,
+  WorkflowTemplateType,
 } from '@/lib/supabase/workflowEngineService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,9 +14,20 @@ import { useAuth } from '@/contexts/AuthContext';
 interface InitiateWorkflowModalProps {
   open: boolean;
   collateral: CollateralRecord | null;
+  /** When set, pre-filters/pre-selects templates of this type and titles the modal accordingly. */
+  initialWorkflowType?: WorkflowTemplateType;
   onClose: () => void;
   onLaunched?: (instanceId: string) => void;
 }
+
+const WORKFLOW_TYPE_LABELS: Record<WorkflowTemplateType, string> = {
+  perfection: 'Start Perfection Workflow',
+  valuation: 'Schedule Valuation',
+  substitution: 'Initiate Substitution',
+  release: 'Initiate Release',
+  document_approval: 'Document Approval Workflow',
+  custom: 'Initiate Workflow',
+};
 
 const PRIORITY_OPTIONS = [
   { value: 'normal', label: 'Normal' },
@@ -133,6 +145,7 @@ function CollateralPicker({ selectedId, onSelect }: CollateralPickerProps) {
 export default function InitiateWorkflowModal({
   open,
   collateral,
+  initialWorkflowType,
   onClose,
   onLaunched,
 }: InitiateWorkflowModalProps) {
@@ -163,12 +176,26 @@ export default function InitiateWorkflowModal({
     setLaunchedInstanceId('');
     workflowTemplateService
       .getVisible()
-      .then((all) => setTemplates(all))
+      .then((all) => {
+        setTemplates(all);
+        if (initialWorkflowType) {
+          const match = all.find((t) => t.workflowType === initialWorkflowType);
+          if (match) setSelectedTemplateId(match.id);
+        }
+      })
       .catch(() => toast.error('Failed to load workflow templates'))
       .finally(() => setLoadingTemplates(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Narrow the picker to templates of the requested type, when one was requested
+  const typeMatchedTemplates = initialWorkflowType
+    ? templates.filter((t) => t.workflowType === initialWorkflowType)
+    : templates;
+  const availableTemplates = typeMatchedTemplates.length > 0 ? typeMatchedTemplates : templates;
+
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) ?? null;
+  const modalTitle = initialWorkflowType ? WORKFLOW_TYPE_LABELS[initialWorkflowType] : 'Initiate Workflow';
 
   const handleLaunch = async () => {
     if (!selectedTemplateId || !effectiveCollateral || !user) return;
@@ -216,7 +243,7 @@ export default function InitiateWorkflowModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h2 className="text-base font-700 text-foreground">Initiate Workflow</h2>
+            <h2 className="text-base font-700 text-foreground">{modalTitle}</h2>
             {effectiveCollateral ? (
               <p className="text-xs text-muted-foreground mt-0.5">
                 {effectiveCollateral.collateralId} · {effectiveCollateral.obligor}
@@ -320,12 +347,18 @@ export default function InitiateWorkflowModal({
                       className="w-full appearance-none border border-border rounded-md px-3 py-2 pr-8 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground"
                     >
                       <option value="">— Select a template —</option>
-                      {templates.map((t) => (
+                      {availableTemplates.map((t) => (
                         <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
                     </select>
                     <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   </div>
+                )}
+                {initialWorkflowType && typeMatchedTemplates.length === 0 && templates.length > 0 && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle size={12} />
+                    No {initialWorkflowType} templates found — showing all available templates instead.
+                  </p>
                 )}
 
                 {selectedTemplate && (

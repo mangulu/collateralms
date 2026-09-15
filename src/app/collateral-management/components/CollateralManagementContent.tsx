@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play, CheckCircle, Clock, AlertTriangle, Eye, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
+import type { WorkflowTemplateType } from '@/lib/supabase/workflowEngineService';
 import { documentService } from '@/lib/supabase/documentService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
 import { collateralTypeRequiredDocsService } from '@/lib/supabase/collateralTypeRequiredDocsService';
@@ -91,6 +92,7 @@ export default function CollateralManagementContent() {
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
   const [workflowTarget, setWorkflowTarget] = useState<CollateralRecord | null>(null);
   const [assignOfficerModalOpen, setAssignOfficerModalOpen] = useState(false);
+  const [workflowInitialType, setWorkflowInitialType] = useState<WorkflowTemplateType | undefined>(undefined);
 
   // ─── Persist state to sessionStorage ──────────────────────────────────────
   useEffect(() => {
@@ -346,6 +348,12 @@ export default function CollateralManagementContent() {
     } catch {
       toast.error('Failed to update status');
     }
+  };
+
+  const handleStartWorkflow = (item: CollateralRecord, workflowType: WorkflowTemplateType) => {
+    setWorkflowTarget(item);
+    setWorkflowInitialType(workflowType);
+    setWorkflowModalOpen(true);
   };
 
   const handleSave = async (data: Partial<CollateralRecord>, pendingFiles?: { file: File; docType: string; notes: string }[]) => {
@@ -614,6 +622,7 @@ export default function CollateralManagementContent() {
               setWorkflowTarget(selectedIds.length === 1
                 ? (collateralData.find((c) => c.id === selectedIds[0]) ?? null)
                 : null);
+              setWorkflowInitialType(undefined);
               setWorkflowModalOpen(true);
             }}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
@@ -784,6 +793,7 @@ export default function CollateralManagementContent() {
           onEdit={(item) => setEditItem(item)}
           onView={(item) => setQuickViewItem(item)}
           onStatusChange={handleStatusChange}
+          onStartWorkflow={handleStartWorkflow}
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={filtered.length}
@@ -812,13 +822,16 @@ export default function CollateralManagementContent() {
       <InitiateWorkflowModal
         open={workflowModalOpen}
         collateral={workflowTarget}
+        initialWorkflowType={workflowInitialType}
         onClose={() => {
           setWorkflowModalOpen(false);
           setWorkflowTarget(null);
+          setWorkflowInitialType(undefined);
         }}
         onLaunched={() => {
           setWorkflowModalOpen(false);
           setWorkflowTarget(null);
+          setWorkflowInitialType(undefined);
         }}
       />
 
