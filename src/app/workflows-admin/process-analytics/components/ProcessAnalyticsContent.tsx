@@ -65,16 +65,27 @@ function getWeekLabel(date: Date): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+// workflowInstanceService doesn't populate instanceStep.step, so step display
+// names are looked up from the owning template's step definitions instead.
+function buildStepNameMap(templates: WorkflowTemplate[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  templates.forEach((t) => {
+    t.steps.forEach((s) => { map[s.id] = s.name; });
+  });
+  return map;
+}
+
 function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemplate[]): AnalyticsData {
-  const completed = instances.filter((i) => i.status === 'completed');
-  const active = instances.filter((i) => i.status === 'active');
-  const escalated = instances.filter((i) => i.status === 'escalated');
+  const stepNameById = buildStepNameMap(templates);
+  const completed = instances.filter((i) => i.instanceStatus === 'completed');
+  const active = instances.filter((i) => i.instanceStatus === 'active');
+  const escalated = instances.filter((i) => i.instanceStatus === 'escalated');
 
   // Avg cycle time
-  const withDates = completed.filter((i) => i.started_at && i.completed_at);
+  const withDates = completed.filter((i) => i.startedAt && i.completedAt);
   const avgCycleTimeDays = withDates.length > 0
     ? withDates.reduce((sum, i) => {
-        const ms = new Date(i.completed_at!).getTime() - new Date(i.started_at!).getTime();
+        const ms = new Date(i.completedAt!).getTime() - new Date(i.startedAt!).getTime();
         return sum + ms / 86400000;
       }, 0) / withDates.length
     : null;
@@ -87,11 +98,11 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
   // Step durations — estimate from step history if available
   const stepDurationMap: Record<string, { totalDays: number; count: number; templateName: string }> = {};
   instances.forEach((inst) => {
-    const template = templates.find((t) => t.id === inst.workflow_template_id);
-    inst.steps?.forEach((step) => {
-      if (step.started_at && step.completed_at) {
-        const days = (new Date(step.completed_at).getTime() - new Date(step.started_at).getTime()) / 86400000;
-        const key = step.step_name ?? 'Unknown Step';
+    const template = templates.find((t) => t.id === inst.templateId);
+    inst.instanceSteps?.forEach((step) => {
+      if (step.startedAt && step.completedAt) {
+        const days = (new Date(step.completedAt).getTime() - new Date(step.startedAt).getTime()) / 86400000;
+        const key = stepNameById[step.stepId] ?? 'Unknown Step';
         if (!stepDurationMap[key]) stepDurationMap[key] = { totalDays: 0, count: 0, templateName: template?.name ?? '—' };
         stepDurationMap[key].totalDays += days;
         stepDurationMap[key].count++;
@@ -106,11 +117,11 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
   // Bottleneck by role
   const roleMap: Record<string, { active: number; pending: number }> = {};
   instances.forEach((inst) => {
-    inst.steps?.forEach((step) => {
-      const role = (step.assigned_role ?? 'unassigned').replace(/_/g, ' ');
+    inst.instanceSteps?.forEach((step) => {
+      const role = (step.assignedRole ?? 'unassigned').replace(/_/g, ' ');
       if (!roleMap[role]) roleMap[role] = { active: 0, pending: 0 };
-      if (step.status === 'active') roleMap[role].active++;
-      else if (step.status === 'pending') roleMap[role].pending++;
+      if (step.stepStatus === 'active') roleMap[role].active++;
+      else if (step.stepStatus === 'pending') roleMap[role].pending++;
     });
   });
   const bottleneckByRole: BottleneckByRole[] = Object.entries(roleMap)
@@ -129,16 +140,16 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
     if (!weekBuckets[label]) weekBuckets[label] = { started: 0, completed: 0, escalated: 0 };
   }
   instances.forEach((inst) => {
-    if (inst.started_at) {
-      const label = getWeekLabel(new Date(inst.started_at));
+    if (inst.startedAt) {
+      const label = getWeekLabel(new Date(inst.startedAt));
       if (weekBuckets[label]) weekBuckets[label].started++;
     }
-    if (inst.completed_at) {
-      const label = getWeekLabel(new Date(inst.completed_at));
+    if (inst.completedAt) {
+      const label = getWeekLabel(new Date(inst.completedAt));
       if (weekBuckets[label]) weekBuckets[label].completed++;
     }
-    if (inst.status === 'escalated' && inst.started_at) {
-      const label = getWeekLabel(new Date(inst.started_at));
+    if (inst.instanceStatus === 'escalated' && inst.startedAt) {
+      const label = getWeekLabel(new Date(inst.startedAt));
       if (weekBuckets[label]) weekBuckets[label].escalated++;
     }
   });
@@ -147,11 +158,11 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
   // SLA by template
   const tplMap: Record<string, { name: string; compliant: number; breached: number }> = {};
   instances.forEach((inst) => {
-    const template = templates.find((t) => t.id === inst.workflow_template_id);
+    const template = templates.find((t) => t.id === inst.templateId);
     const name = template?.name ?? 'Unknown';
     if (!tplMap[name]) tplMap[name] = { name, compliant: 0, breached: 0 };
-    if (inst.status === 'completed') tplMap[name].compliant++;
-    else if (inst.status === 'escalated') tplMap[name].breached++;
+    if (inst.instanceStatus === 'completed') tplMap[name].compliant++;
+    else if (inst.instanceStatus === 'escalated') tplMap[name].breached++;
   });
   const slaByTemplate: SLAByTemplate[] = Object.values(tplMap)
     .map((t) => {
@@ -164,12 +175,12 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
   // Completion by template (merged from KPIs)
   const templateMap: Record<string, { name: string; completed: number; active: number; escalated: number }> = {};
   instances.forEach((inst) => {
-    const template = templates.find((t) => t.id === inst.workflow_template_id);
+    const template = templates.find((t) => t.id === inst.templateId);
     const name = template?.name ?? 'Unknown';
     if (!templateMap[name]) templateMap[name] = { name, completed: 0, active: 0, escalated: 0 };
-    if (inst.status === 'completed') templateMap[name].completed++;
-    else if (inst.status === 'active') templateMap[name].active++;
-    else if (inst.status === 'escalated') templateMap[name].escalated++;
+    if (inst.instanceStatus === 'completed') templateMap[name].completed++;
+    else if (inst.instanceStatus === 'active') templateMap[name].active++;
+    else if (inst.instanceStatus === 'escalated') templateMap[name].escalated++;
   });
   const completionByTemplate = Object.values(templateMap)
     .sort((a, b) => (b.completed + b.active) - (a.completed + a.active))
