@@ -147,7 +147,7 @@ export default function LinkedCollateralsPanel({ loanId, loanNumber }: Props) {
                     </div>
                   </div>
                   <Link
-                    href={`/collateral-detail/${c.id}`}
+                    href={`/collateral-detail/${c.id}?from=loans&fromLabel=Loan+Registry&fromHref=/loan-registry`}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-primary/10 text-primary"
                     title="View collateral detail"
                   >

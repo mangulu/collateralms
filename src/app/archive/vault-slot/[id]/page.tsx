@@ -4,7 +4,7 @@ import VaultSlotDetailContent from './components/VaultSlotDetailContent';
 
 export default function VaultSlotDetailPage() {
   return (
-    <AppLayout>
+    <AppLayout currentPath="/archive/vault-slot">
       <VaultSlotDetailContent />
     </AppLayout>
   );

@@ -687,7 +687,7 @@ export default function VaultManagementContent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await archiveLocationService.getTree();
+      const data = await archiveLocationService.getTreeWithCounts();
       setTree(data);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load');

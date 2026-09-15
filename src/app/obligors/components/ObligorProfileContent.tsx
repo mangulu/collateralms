@@ -668,7 +668,7 @@ export default function ObligorProfileContent({ id }: Props) {
                       </div>
                     </div>
                     <Link
-                      href={`/collateral-detail/${c.id}`}
+                      href={`/collateral-detail/${c.id}?from=obligors&fromLabel=Obligor+Profile&fromHref=/obligors`}
                       className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
                       title="View Collateral"
                     >

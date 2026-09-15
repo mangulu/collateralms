@@ -203,6 +203,63 @@ export const archiveLocationService = {
     return roots;
   },
 
+  /** Build the tree and populate currentOccupancy with real counts:
+   *  - slot    → number of archive_placements pointing to this slot
+   *  - cabinet → number of direct child slots
+   *  - room    → number of direct child cabinets/shelves
+   *  - vault   → number of direct child rooms
+   */
+  async getTreeWithCounts(): Promise<ArchiveLocation[]> {
+    // Fetch all locations and all placements in parallel
+    const [all, placementsData] = await Promise.all([
+      archiveLocationService.getAll(),
+      supabase.from('archive_placements').select('location_id'),
+    ]);
+
+    // Build placement count per slot location
+    const placementCountByLocation: Record<string, number> = {};
+    for (const p of (placementsData.data || [])) {
+      if (p.location_id) {
+        placementCountByLocation[p.location_id] = (placementCountByLocation[p.location_id] ?? 0) + 1;
+      }
+    }
+
+    // Build a mutable map with children arrays
+    const map = new Map<string, ArchiveLocation>();
+    all.forEach((l) => { map.set(l.id, { ...l, children: [], currentOccupancy: 0 }); });
+
+    // Wire up parent→child relationships
+    all.forEach((l) => {
+      if (l.parentId && map.has(l.parentId)) {
+        map.get(l.parentId)!.children!.push(map.get(l.id)!);
+      }
+    });
+
+    // Compute occupancy bottom-up (slots first, then cabinets, rooms, vaults)
+    const computeOccupancy = (node: ArchiveLocation): number => {
+      if (node.locationType === 'slot') {
+        node.currentOccupancy = placementCountByLocation[node.id] ?? 0;
+        return node.currentOccupancy;
+      }
+      // For non-slot nodes: count direct children
+      const directChildCount = (node.children ?? []).length;
+      node.currentOccupancy = directChildCount;
+      // Also recurse so children get their own counts set
+      (node.children ?? []).forEach((child) => computeOccupancy(child));
+      return directChildCount;
+    };
+
+    const roots: ArchiveLocation[] = [];
+    all.forEach((l) => {
+      if (!l.parentId) {
+        roots.push(map.get(l.id)!);
+      }
+    });
+
+    roots.forEach((root) => computeOccupancy(root));
+    return roots;
+  },
+
   async create(payload: {
     name: string; code: string; locationType: LocationType;
     parentId?: string | null; description?: string; capacity?: number; createdBy: string;

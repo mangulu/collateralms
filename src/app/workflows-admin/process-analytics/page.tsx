@@ -1,15 +1,5 @@
-'use client';
-import React from 'react';
-import AppLayout from '@/components/AppLayout';
-import AdminGuard from '../components/AdminGuard';
-import ProcessAnalyticsContent from './components/ProcessAnalyticsContent';
+import { redirect } from 'next/navigation';
 
 export default function ProcessAnalyticsPage() {
-  return (
-    <AppLayout>
-      <AdminGuard>
-        <ProcessAnalyticsContent />
-      </AdminGuard>
-    </AppLayout>
-  );
+  redirect('/workflows-admin/kpis');
 }

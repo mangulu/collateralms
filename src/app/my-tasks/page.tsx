@@ -1,10 +1,5 @@
-import AppLayout from '@/components/AppLayout';
-import MyTasksContent from './components/MyTasksContent';
+import { redirect } from 'next/navigation';
 
 export default function MyTasksPage() {
-  return (
-    <AppLayout>
-      <MyTasksContent />
-    </AppLayout>
-  );
+  redirect('/workflows/tasks');
 }
