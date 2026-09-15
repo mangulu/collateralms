@@ -70,7 +70,7 @@ export interface WorkspaceFilters {
   search?: string;
 }
 
-function rowToTask(row: any): UserTask {
+export function rowToTask(row: any): UserTask {
   return {
     id: row.id,
     assignedTo: row.assigned_to,

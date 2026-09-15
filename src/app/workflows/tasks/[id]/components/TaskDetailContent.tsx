@@ -7,7 +7,7 @@ import {
   Loader2, AlertTriangle, ArrowLeft, Calendar, Tag, FileText, History,
   CheckSquare, Shield, MessageSquare, ChevronDown, ChevronUp, Send
 } from 'lucide-react';
-import { userTaskService, UserTask } from '@/lib/supabase/userTaskService';
+import { userTaskService, UserTask, rowToTask } from '@/lib/supabase/userTaskService';
 import {
   workflowInstanceService,
   WorkflowInstance,
@@ -234,24 +234,7 @@ export default function TaskDetailContent() {
         return;
       }
 
-      const t: UserTask = {
-        id: taskData.id,
-        assignedTo: taskData.assigned_to,
-        collateralRecordId: taskData.collateral_record_id,
-        collateralId: taskData.collateral_id ?? '',
-        taskType: taskData.task_type,
-        title: taskData.title,
-        description: taskData.description ?? '',
-        actionUrl: taskData.action_url ?? null,
-        actionLabel: taskData.action_label ?? null,
-        priority: taskData.priority,
-        taskStatus: taskData.task_status,
-        dueDate: taskData.due_date ?? null,
-        completedAt: taskData.completed_at ?? null,
-        createdBy: taskData.created_by ?? null,
-        createdAt: taskData.created_at,
-        updatedAt: taskData.updated_at,
-      };
+      const t: UserTask = rowToTask(taskData);
       setTask(t);
 
       // Load assigned user name

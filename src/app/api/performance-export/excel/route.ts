@@ -663,7 +663,7 @@ export async function POST(request: NextRequest) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const filename = `${reportSlugMap[body.reportType]}_${dateStr}.xlsx`;
 
-    return new NextResponse(xlsxBuffer, {
+    return new NextResponse(new Uint8Array(xlsxBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

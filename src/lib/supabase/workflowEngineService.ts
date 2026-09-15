@@ -806,7 +806,7 @@ export const workflowInstanceService = {
     const supabase = createClient();
     const { data } = await supabase
       .from('user_profiles')
-      .select('id, full_name, role')
+      .select('id, full_name, role, email')
       .in('id', userIds);
     const map: Record<string, { fullName: string; role: string }> = {};
     for (const row of data ?? []) {

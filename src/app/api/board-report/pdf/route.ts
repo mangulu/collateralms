@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
     // PAGE 2 — NPL AGING SCHEDULE
     // ══════════════════════════════════════════════════════════════════════════
     doc.addPage();
-    y = addPageHeader(doc, 'Section 1 — NPL Aging Schedule', `BOT Loan Classification  |  ${reportPeriod}`, pageWidth);
+    y = addPageHeader(doc, pageWidth, 'Section 1 — NPL Aging Schedule', `BOT Loan Classification  |  ${reportPeriod}`);
 
     y = addSectionBadge(doc, 'Loan Classification by BOT Tier', y);
 
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
     // PAGE 3 — PROVISION RECONCILIATION
     // ══════════════════════════════════════════════════════════════════════════
     doc.addPage();
-    y = addPageHeader(doc, 'Section 2 — Provision Reconciliation', `Movement Analysis  |  ${reportPeriod}`, pageWidth);
+    y = addPageHeader(doc, pageWidth, 'Section 2 — Provision Reconciliation', `Movement Analysis  |  ${reportPeriod}`);
 
     y = addSectionBadge(doc, 'Provision Movement by Classification Tier', y);
 
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
     // PAGE 4 — STRESS TEST RESULTS
     // ══════════════════════════════════════════════════════════════════════════
     doc.addPage();
-    y = addPageHeader(doc, 'Section 3 — Stress Test Results', `Collateral Value Decline Scenarios  |  ${reportPeriod}`, pageWidth);
+    y = addPageHeader(doc, pageWidth, 'Section 3 — Stress Test Results', `Collateral Value Decline Scenarios  |  ${reportPeriod}`);
 
     y = addSectionBadge(doc, 'Portfolio Stress Scenarios (10% / 20% / 30% Decline)', y);
 
@@ -336,7 +336,7 @@ export async function POST(request: NextRequest) {
     // PAGE 5 — CONCENTRATION BREACH LIST
     // ══════════════════════════════════════════════════════════════════════════
     doc.addPage();
-    y = addPageHeader(doc, 'Section 4 — Concentration Breach List', `Single-Obligor Concentration  |  BOT Limit: ${BOT_CONCENTRATION_LIMIT}%  |  ${reportPeriod}`, pageWidth);
+    y = addPageHeader(doc, pageWidth, 'Section 4 — Concentration Breach List', `Single-Obligor Concentration  |  BOT Limit: ${BOT_CONCENTRATION_LIMIT}%  |  ${reportPeriod}`);
 
     y = addSectionBadge(doc, 'Obligors Exceeding BOT Concentration Limit', y);
 
@@ -378,7 +378,7 @@ export async function POST(request: NextRequest) {
     // PAGE 6 — VALUATION FLAG SUMMARY
     // ══════════════════════════════════════════════════════════════════════════
     doc.addPage();
-    y = addPageHeader(doc, 'Section 5 — Valuation Flag Summary', `Pricing Integrity & Valuation Alerts  |  ${reportPeriod}`, pageWidth);
+    y = addPageHeader(doc, pageWidth, 'Section 5 — Valuation Flag Summary', `Pricing Integrity & Valuation Alerts  |  ${reportPeriod}`);
 
     y = addSectionBadge(doc, 'Active Valuation & Pricing Flags by Type', y);
 

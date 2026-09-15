@@ -109,7 +109,7 @@ export default function WorkflowsDashboardContent() {
     await Promise.allSettled([
       // Approvals
       collateralApprovalService.getAll().then((items) => {
-        const active = items.filter((i) => i.status === 'Pending' || i.status === 'Under Review');
+        const active = items.filter((i) => i.requestStatus === 'Pending' || i.requestStatus === 'Under Review');
         setApprovalCount(active.length);
         setApprovalUrgent(active.filter((i) => i.priority === 'High').length);
         setLoadingStates((p) => ({ ...p, approvals: false }));
@@ -126,7 +126,7 @@ export default function WorkflowsDashboardContent() {
 
       // Perfection
       perfectionService.getAll().then((items) => {
-        const active = items.filter((i) => i.status === 'Submitted' || i.status === 'Under Review');
+        const active = items.filter((i) => i.requestStatus === 'Submitted' || i.requestStatus === 'Under Review');
         setPerfectionCount(active.length);
         setLoadingStates((p) => ({ ...p, perfection: false }));
       }).catch(() => { setPerfectionCount(0); setLoadingStates((p) => ({ ...p, perfection: false })); }),

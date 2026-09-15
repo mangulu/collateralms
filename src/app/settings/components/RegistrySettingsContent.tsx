@@ -198,7 +198,7 @@ function RegistryCard({ registry, onUpdate, onTestConnection, onSync, isSaving }
 
         {/* Actions */}
         <div className="flex items-center gap-2 shrink-0">
-          {registry.syncStatus === 'connected' && (
+          {(registry.syncStatus === 'connected' || registry.syncStatus === 'syncing') && (
             <button
               onClick={() => onSync(registry.id)}
               disabled={registry.syncStatus === 'syncing'}

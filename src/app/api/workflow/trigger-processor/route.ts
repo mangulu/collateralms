@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -416,7 +416,7 @@ export async function GET() {
 // ─── Helper: finalize log entry ───────────────────────────────────────────────
 
 async function finalizeLog(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   logId: string,
   status: string,
   rulesEvaluated: number,

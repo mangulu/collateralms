@@ -753,7 +753,7 @@ export default function UserProfileContent() {
               <h2 className="text-sm font-semibold text-foreground mb-3">Account Details</h2>
               <div className="space-y-2">
                 {[
-                  { label: 'User ID', value: user?.id?.slice(0, 18) + '…' ?? '—' },
+                  { label: 'User ID', value: user?.id ? user.id.slice(0, 18) + '…' : '—' },
                   { label: 'Email', value: displayEmail },
                   { label: 'Account Created', value: user?.created_at ? new Date(user.created_at).toLocaleDateString() : '—' },
                   { label: 'Email Verified', value: user?.email_confirmed_at ? 'Yes' : 'No' },

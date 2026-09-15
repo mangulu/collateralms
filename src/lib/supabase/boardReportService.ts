@@ -287,7 +287,7 @@ export const boardReportService = {
           portfolioShare: share,
           botLimit: BOT_CONCENTRATION_LIMIT,
           breachAmount: breach > 0 ? (breach / 100) * totalExposure : 0,
-          severity: breach > 10 ? 'high' : breach > 5 ? 'medium' : 'low',
+          severity: breach > 10 ? 'high' as const : breach > 5 ? 'medium' as const : 'low' as const,
         };
       })
       .filter(b => b.portfolioShare > BOT_CONCENTRATION_LIMIT)

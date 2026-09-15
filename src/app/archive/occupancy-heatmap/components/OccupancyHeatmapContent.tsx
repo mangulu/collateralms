@@ -433,7 +433,7 @@ export default function OccupancyHeatmapContent() {
             </span>
             <span className="text-xs ml-1" style={{ color: '#6B7280' }}>— Locations exceeding capacity thresholds</span>
           </div>
-          <div className="divide-y" style={{ divideColor: '#FEE2E2' }}>
+          <div className="divide-y divide-[#FEE2E2]">
             {alerts.slice(0, 5).map((alert) => (
               <div key={alert.id} className="flex items-center gap-3 px-4 py-2.5 bg-white">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${alert.level === 'critical' ? 'bg-red-500' : 'bg-orange-400'}`} />
@@ -650,7 +650,7 @@ export default function OccupancyHeatmapContent() {
                     <div className="col-span-2">Occupancy</div>
                     <div className="col-span-2">Fill Level</div>
                   </div>
-                  <div className="divide-y" style={{ divideColor: '#F3F4F6' }}>
+                  <div className="divide-y divide-[#F3F4F6]">
                     {bottlenecks.map((item, idx) => {
                       const colors = getHeatColor(item.pct);
                       return (

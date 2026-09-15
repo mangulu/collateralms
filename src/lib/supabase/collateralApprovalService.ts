@@ -227,8 +227,7 @@ export const collateralApprovalService = {
           .from('collateral_records')
           .update({ status: newCollateralStatus })
           .eq('id', collateralRecordId)
-          .then(() => {})
-          .catch((e) => console.warn('[approvals] collateral status write-back failed:', e.message));
+          .then(() => {}, (e) => console.warn('[approvals] collateral status write-back failed:', e.message));
 
         // ── Send email alert for Rejected status ────────────────────────────
         if (status === 'Rejected') {
@@ -292,7 +291,7 @@ export const collateralApprovalService = {
             performed_by_name: reviewedByName,
             performed_by_role: reviewedByRole ?? null,
             comment: decisionNotes ?? null,
-          }).then(() => {}).catch((e) => console.warn('[approvals] workflow transition log failed:', e.message));
+          }).then(() => {}, (e) => console.warn('[approvals] workflow transition log failed:', e.message));
         }
       } catch (err) {
         console.warn('[approvals] workflow instance sync failed:', err);

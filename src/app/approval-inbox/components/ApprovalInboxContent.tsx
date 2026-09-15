@@ -6,7 +6,7 @@ import { perfectionService, PerfectionRequest, PerfectionRequestStatus } from '@
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
 import { classifyCollateralDocument, DocumentClassificationResult } from '@/lib/ai/documentClassificationService';
-import { useApprovalQueueRealtime } from '@/lib/hooks/useApprovalQueueRealtime';
+import { useApprovalQueueRealtime, ApprovalQueueChange } from '@/lib/hooks/useApprovalQueueRealtime';
 import {
   requestDesktopPermission,
   notifyPerfectionRequest,
@@ -806,7 +806,7 @@ export default function ApprovalInboxContent() {
   // ─── Realtime listeners ─────────────────────────────────────────────────────
   useApprovalQueueRealtime({
     enabled: true,
-    onPerfectionChange: useCallback(async (change) => {
+    onPerfectionChange: useCallback(async (change: ApprovalQueueChange) => {
       const rec = change.record;
       const status: string = rec?.request_status ?? '';
       const isPending = status === 'Submitted' || status === 'Under Review';
@@ -855,7 +855,7 @@ export default function ApprovalInboxContent() {
       }
     }, [smsAlertsEnabled, smsPhone, userProfile]),
 
-    onCollateralStatusChange: useCallback(async (change) => {
+    onCollateralStatusChange: useCallback(async (change: ApprovalQueueChange) => {
       const rec = change.record;
       const newStatus: string = rec?.status ?? '';
       const releaseStatuses = ['Release Pending', 'Discharge Requested', 'Under Release Review'];

@@ -352,8 +352,7 @@ export default function PerformanceExportContent() {
           });
         }
         setStatsLoading(false);
-      })
-      .catch(() => setStatsLoading(false));
+      }, () => setStatsLoading(false));
   }, []);
 
   const set = useCallback(<K extends keyof PerformanceSummaryConfig>(key: K, value: PerformanceSummaryConfig[K]) => {

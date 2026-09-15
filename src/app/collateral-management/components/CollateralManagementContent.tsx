@@ -239,7 +239,7 @@ export default function CollateralManagementContent() {
       // Ctrl/Cmd + F - Focus search
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
-        document.querySelector('input[type="text"]')?.focus();
+        document.querySelector<HTMLInputElement>('input[type="text"]')?.focus();
       }
       // Escape - Close modals
       if (e.key === 'Escape') {

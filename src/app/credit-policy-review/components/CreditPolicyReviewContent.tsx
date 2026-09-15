@@ -463,7 +463,7 @@ function CreateReviewModal({ open, onClose, onSaved, userId }: CreateModalProps)
   if (!open) return null;
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Initiate Credit Policy Review">
+    <Modal open={open} onClose={onClose} title="Initiate Credit Policy Review">
       <div className="space-y-4 p-1">
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">

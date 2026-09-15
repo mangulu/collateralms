@@ -196,8 +196,7 @@ export default function GeomappingContent() {
             setPins(mockPins);
           }
           setLoadingPins(false);
-        })
-        .catch(() => {
+        }, () => {
           setPins(mockPins);
           setLoadingPins(false);
         });
@@ -251,8 +250,7 @@ export default function GeomappingContent() {
             setValidations(liveValidations);
           }
           setLoadingValidations(false);
-        })
-        .catch(() => {
+        }, () => {
           setLoadingValidations(false);
         });
     });

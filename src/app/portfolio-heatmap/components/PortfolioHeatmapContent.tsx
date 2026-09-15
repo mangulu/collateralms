@@ -321,8 +321,7 @@ export default function PortfolioHeatmapContent() {
           // else: fewer than 3 geo-tagged regions — keep mock data with sample label
         }
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }, () => setLoading(false));
   }, []);
 
   const selectedData = regions.find((r) => r.region === selectedRegion) ?? null;

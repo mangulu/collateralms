@@ -127,7 +127,7 @@ function CollateralPicker({ selectedId, onSelect }: CollateralPickerProps) {
                     <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{c.obligor} · {c.type}</p>
                   </div>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 mt-0.5 ${
-                    c.status === 'Active' ? 'bg-green-50 text-green-700 border-green-200' :
+                    c.status === 'Perfected' ? 'bg-green-50 text-green-700 border-green-200' :
                     c.status === 'Overdue'? 'bg-red-50 text-red-700 border-red-200' : 'bg-muted text-muted-foreground border-border'
                   }`}>{c.status}</span>
                 </button>
@@ -317,7 +317,7 @@ export default function InitiateWorkflowModal({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
                     <span className={`text-xs font-500 px-2 py-0.5 rounded-full ${
-                      effectiveCollateral.status === 'Active' ? 'bg-green-100 text-green-700' :
+                      effectiveCollateral.status === 'Perfected' ? 'bg-green-100 text-green-700' :
                       effectiveCollateral.status === 'Overdue'? 'bg-red-100 text-red-700' : 'bg-muted text-muted-foreground'
                     }`}>{effectiveCollateral.status}</span>
                   </div>

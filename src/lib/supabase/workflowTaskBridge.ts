@@ -46,7 +46,7 @@ export async function createWorkflowTask(input: WorkflowTaskInput): Promise<void
     taskType: 'workflow_step',
     title: input.title,
     description: input.description ?? '',
-    actionUrl: input.deepLink ?? null,
+    actionUrl: input.deepLink,
     actionLabel: 'Open Task',
     priority: input.priority ?? 'normal',
     dueDate: input.deadline ? input.deadline.split('T')[0] : undefined,

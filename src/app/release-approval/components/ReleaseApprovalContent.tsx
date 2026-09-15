@@ -14,20 +14,6 @@ import {
 } from '@/lib/supabase/releaseRequestService';
 import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
-interface ReleaseRequest {
-  id: string;
-  collateralRef: string;
-  collateralType: string;
-  clientName: string;
-  loanRef: string;
-  estimatedValue: number;
-  requestedBy: string;
-  requestedDate: string;
-  releaseReason: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Under Review';
-  priority: 'High' | 'Normal' | 'Low';
-  notes?: string;
-}
 
 const STATUS_CONFIG: Record<ReleaseRequest['status'], { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   Pending:        { label: 'Pending',      color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200',  icon: <Clock size={12} /> },
@@ -313,7 +299,7 @@ export default function ReleaseApprovalContent() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [actionDialog, setActionDialog] = useState<ActionDialogState>({ open: false, request: null, action: null });
   const [processing, setProcessing] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success\' | \'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     let cancelled = false;

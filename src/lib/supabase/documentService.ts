@@ -287,7 +287,7 @@ export const documentService = {
           performed_by: userId,
           performed_by_name: userName,
           performed_at: new Date().toISOString(),
-        }).then(() => {}).catch(() => {});
+        }).then(() => {}, () => {});
       }
 
       return { doc };
@@ -362,7 +362,7 @@ export const documentService = {
         performed_by: userId,
         performed_by_name: userName,
         performed_at: now,
-      }).then(() => {}).catch(() => {});
+      }).then(() => {}, () => {});
 
       return { doc };
     } catch (err: any) {

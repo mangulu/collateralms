@@ -242,7 +242,7 @@ export const haircutService = {
       net_value: netValue,
       applied_by: payload.appliedBy ?? null,
       context: payload.context ?? 'valuation',
-    }).then(() => {}).catch((e) => console.warn('[haircut] log failed:', e.message));
+    }).then(() => {}, (e) => console.warn('[haircut] log failed:', e.message));
 
     return {
       grossValue: payload.grossValue,

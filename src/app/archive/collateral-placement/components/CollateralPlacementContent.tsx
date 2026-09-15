@@ -39,12 +39,13 @@ function generatePhysicalRef(): string {
 interface BulkMoveModalProps {
   selected: CollateralRecord[];
   locations: ArchiveLocation[];
+  totalCount: number;
   userId: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-function BulkMoveModal({ selected, locations, userId, onClose, onSaved }: BulkMoveModalProps) {
+function BulkMoveModal({ selected, locations, totalCount, userId, onClose, onSaved }: BulkMoveModalProps) {
   const slots = locations.filter((l) => l.locationType === 'slot');
   const [locationId, setLocationId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -170,7 +171,7 @@ function BulkMoveModal({ selected, locations, userId, onClose, onSaved }: BulkMo
           <Package size={13} style={{ color: '#1D4ED8' }} />
           <span className="font-medium">Selected collaterals:</span>
           <span className="ml-2 text-xs" style={{ color: '#6B7280' }}>
-            {selected.length} / {unfiledCollaterals.length}
+            {selected.length} / {totalCount}
           </span>
         </div>
 
@@ -777,6 +778,7 @@ export default function CollateralFilingContent() {
         <BulkMoveModal
           selected={selectedCollaterals}
           locations={locations}
+          totalCount={unfiledCollaterals.length}
           userId={user?.id ?? ''}
           onClose={() => setShowBulkModal(false)}
           onSaved={() => { setShowBulkModal(false); load(); }}

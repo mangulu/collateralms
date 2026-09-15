@@ -574,8 +574,7 @@ export default function ExportContent() {
           })));
         }
         setDataLoading(false);
-      })
-      .catch(() => setDataLoading(false));
+      }, () => setDataLoading(false));
   }, []);
 
   // Load performance stats
@@ -597,8 +596,7 @@ export default function ExportContent() {
           setPerfStats({ total, perfected, overdue, pending, perfectionRate: total > 0 ? (perfected / total) * 100 : 0, totalValueTSh, brela, landsRegistry });
         }
         setPerfStatsLoading(false);
-      })
-      .catch(() => setPerfStatsLoading(false));
+      }, () => setPerfStatsLoading(false));
   }, []);
 
   const set = useCallback(<K extends keyof ExportConfig>(key: K, value: ExportConfig[K]) => {

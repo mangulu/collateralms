@@ -1093,8 +1093,8 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                     { label: 'Type', value: request.collateralType },
                     { label: 'Registry', value: request.registry },
                     { label: 'Submitted', value: formatDate(request.submittedAt) },
-                    { label: 'Due Date', value: formatDate(request.dueDate) },
-                    { label: 'Assigned To', value: request.assignedTo || '—' },
+                    { label: 'Due Date', value: formatDate(request.perfectionDeadline) },
+                    { label: 'Submitted By', value: request.submittedByName || '—' },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{label}</p>

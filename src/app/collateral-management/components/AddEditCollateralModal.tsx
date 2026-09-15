@@ -450,8 +450,12 @@ export default function AddEditCollateralModal({
           pf.docType as DocumentType, pf.notes, user.id, userName
         );
         clearInterval(progressInterval);
-        setUploadProgress((prev) => ({ ...prev, [i]: 100 }));
-        if (result) uploaded.push(result);
+        if (result.doc) {
+          setUploadProgress((prev) => ({ ...prev, [i]: 100 }));
+          uploaded.push(result.doc);
+        } else {
+          setUploadProgress((prev) => ({ ...prev, [i]: -1 })); // -1 = error
+        }
       } catch {
         clearInterval(progressInterval);
         setUploadProgress((prev) => ({ ...prev, [i]: -1 })); // -1 = error

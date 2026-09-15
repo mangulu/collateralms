@@ -614,7 +614,7 @@ export const archiveCustodyService = {
       checkedOutBy: r.checked_out_by,
       overdueSince: r.overdue_since,
       updatedAt: r.updated_at,
-      collateral: r.collateral_records as ArchiveCustody['collateral'],
+      collateral: r.collateral_records as unknown as ArchiveCustody['collateral'],
       checkedOutByProfile: r.checked_out_by ? profileMap[r.checked_out_by] : undefined,
     }));
   },

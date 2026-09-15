@@ -432,9 +432,9 @@ async function generateTrendAnalysisPDF(
     const targetY = y + 4 + barAreaHeight - (TARGET / 100) * barAreaHeight;
     doc.setDrawColor(239, 68, 68);
     doc.setLineWidth(0.5);
-    doc.setLineDashPattern([2, 1], 0);
+    (doc as any).setLineDashPattern([2, 1], 0);
     doc.line(14, targetY, 14 + chartWidth, targetY);
-    doc.setLineDashPattern([], 0);
+    (doc as any).setLineDashPattern([], 0);
     doc.setFontSize(6);
     doc.setTextColor(239, 68, 68);
     doc.text('80% target', 14 + chartWidth + 1, targetY + 1);
@@ -812,7 +812,7 @@ export async function POST(request: NextRequest) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const filename = `${reportSlug}_${dateStr}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

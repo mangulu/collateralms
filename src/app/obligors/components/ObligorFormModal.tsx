@@ -25,7 +25,7 @@ export default function ObligorFormModal({ editItem, onClose, onSaved }: Props) 
   const [form, setForm] = useState({
     obligorCode: '',
     fullName: '',
-    entityType: 'company\' as \'individual\' | \'company',
+    entityType: 'company' as 'individual' | 'company',
     idNumber: '',
     registrationNumber: '',
     taxId: '',
@@ -39,7 +39,7 @@ export default function ObligorFormModal({ editItem, onClose, onSaved }: Props) 
     phoneSecondary: '',
     email: '',
     contactPerson: '',
-    riskRating: 'MEDIUM\' as \'LOW\' | \'MEDIUM\' | \'HIGH',
+    riskRating: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
     creditLimit: '',
     notes: '',
     isActive: true,

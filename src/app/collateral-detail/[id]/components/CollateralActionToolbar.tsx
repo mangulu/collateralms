@@ -1276,9 +1276,8 @@ export function ArchiveStatusBadge({
             } : undefined,
           });
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+        setLoading(false);
+      }, () => setLoading(false));
   }, [collateral.id]);
 
   if (loading || !placement) return null;
@@ -1519,8 +1518,7 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
         } else {
           setArchivePlacement(null);
         }
-      })
-      .catch(() => setArchivePlacement(null));
+      }, () => setArchivePlacement(null));
   }, [collateral.id]);
 
   // Load registry submission gate

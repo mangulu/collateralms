@@ -40,6 +40,57 @@ const DOC_TYPE_META: Record<DocumentType, { color: string; bg: string }> = {
   'Insurance Certificate':{ color: 'text-cyan-700',   bg: 'bg-cyan-50' },
   'Board Resolution':     { color: 'text-rose-700',   bg: 'bg-rose-50' },
   'Other':                { color: 'text-slate-600',  bg: 'bg-slate-100' },
+  'Deed':                 { color: 'text-blue-800',   bg: 'bg-blue-100' },
+  'Appraisal':            { color: 'text-orange-700', bg: 'bg-orange-50' },
+  'Insurance Policy':     { color: 'text-teal-700',    bg: 'bg-teal-50' },
+  // Motor Vehicle
+  'Vehicle Registration Certificate (Original)': { color: 'text-sky-700', bg: 'bg-sky-50' },
+  'Logbook (Original)':                          { color: 'text-sky-700', bg: 'bg-sky-50' },
+  'TRA Encumbrance Search Certificate':          { color: 'text-sky-700', bg: 'bg-sky-50' },
+  'Comprehensive Insurance Policy':              { color: 'text-sky-700', bg: 'bg-sky-50' },
+  'Hire Purchase / Charge Agreement':            { color: 'text-sky-700', bg: 'bg-sky-50' },
+  // Mortgage
+  'Title Deed (Original)':               { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  'Valuation Report (Certified)':         { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  'Land Rent Clearance Certificate':      { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  'Mortgage Deed / Charge Instrument':    { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  'Lands Registry Search Certificate':    { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  'Survey Plan / Plot Map':               { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  'Building Permit (if applicable)':      { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  // Debenture
+  'Debenture Deed (Executed)':                  { color: 'text-violet-700', bg: 'bg-violet-50' },
+  'Certificate of Incorporation':               { color: 'text-violet-700', bg: 'bg-violet-50' },
+  'Board Resolution (Authorising Charge)':      { color: 'text-violet-700', bg: 'bg-violet-50' },
+  'BRELA Registration Certificate':             { color: 'text-violet-700', bg: 'bg-violet-50' },
+  'Memorandum & Articles of Association':       { color: 'text-violet-700', bg: 'bg-violet-50' },
+  'Audited Financial Statements (Latest)':      { color: 'text-violet-700', bg: 'bg-violet-50' },
+  'Asset Schedule / Inventory List':            { color: 'text-violet-700', bg: 'bg-violet-50' },
+  // Shares (DSE)
+  'Share Certificate(s) (Original)':            { color: 'text-fuchsia-700', bg: 'bg-fuchsia-50' },
+  'DSE Pledge Confirmation Letter':             { color: 'text-fuchsia-700', bg: 'bg-fuchsia-50' },
+  'CDS Account Statement':                      { color: 'text-fuchsia-700', bg: 'bg-fuchsia-50' },
+  'Board Resolution (Authorising Pledge)':      { color: 'text-fuchsia-700', bg: 'bg-fuchsia-50' },
+  'Share Transfer Form (Blank, Signed)':         { color: 'text-fuchsia-700', bg: 'bg-fuchsia-50' },
+  'DSE Registry Search':                        { color: 'text-fuchsia-700', bg: 'bg-fuchsia-50' },
+  // FDR
+  'Fixed Deposit Receipt (Original)':           { color: 'text-lime-700', bg: 'bg-lime-50' },
+  'Bank Lien Letter / Pledge Confirmation':     { color: 'text-lime-700', bg: 'bg-lime-50' },
+  'Account Statement':                          { color: 'text-lime-700', bg: 'bg-lime-50' },
+  'Deed of Assignment':                         { color: 'text-lime-700', bg: 'bg-lime-50' },
+  // Guarantee
+  'Guarantee Deed (Executed)':                        { color: 'text-yellow-700', bg: 'bg-yellow-50' },
+  'Guarantor Financial Statements':                   { color: 'text-yellow-700', bg: 'bg-yellow-50' },
+  'Board Resolution (if Corporate Guarantor)':        { color: 'text-yellow-700', bg: 'bg-yellow-50' },
+  'Certificate of Incorporation (if Corporate)':       { color: 'text-yellow-700', bg: 'bg-yellow-50' },
+  'Guarantor ID / KYC Documents':                     { color: 'text-yellow-700', bg: 'bg-yellow-50' },
+  // Ship/Vessel
+  'Ship Registration Certificate (TASAC)':      { color: 'text-green-700', bg: 'bg-green-50' },
+  'Mortgage of Ship Deed':                      { color: 'text-green-700', bg: 'bg-green-50' },
+  'TASAC Encumbrance Search':                   { color: 'text-green-700', bg: 'bg-green-50' },
+  'Hull & Machinery Insurance Policy':          { color: 'text-green-700', bg: 'bg-green-50' },
+  'Valuation / Survey Report':                  { color: 'text-green-700', bg: 'bg-green-50' },
+  'Classification Society Certificate':         { color: 'text-green-700', bg: 'bg-green-50' },
+  'Crew & Manning Certificate':                 { color: 'text-green-700', bg: 'bg-green-50' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

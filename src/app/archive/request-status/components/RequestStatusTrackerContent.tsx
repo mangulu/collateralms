@@ -189,6 +189,7 @@ interface RequestDetailDrawerProps {
 
 function RequestDetailDrawer({ request, statusLog, onClose }: RequestDetailDrawerProps) {
   const sc = STATUS_CONFIG[request.requestStatus];
+  const StatusIcon = sc.icon;
   const reqLog = statusLog.filter((l) => l.requestId === request.id);
 
   return (
@@ -208,7 +209,7 @@ function RequestDetailDrawer({ request, statusLog, onClose }: RequestDetailDrawe
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
               style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
-              {sc.icon} {sc.label}
+              <StatusIcon size={13} /> {sc.label}
             </span>
           </div>
 

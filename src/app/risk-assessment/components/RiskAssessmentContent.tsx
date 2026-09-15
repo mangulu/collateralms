@@ -334,8 +334,7 @@ export default function RiskAssessmentContent() {
           })));
         }
         setCollateralsLoading(false);
-      })
-      .catch(() => setCollateralsLoading(false));
+      }, () => setCollateralsLoading(false));
   }, []);
 
   const { response, isLoading, error, sendMessage } = useChat('OPEN_AI', 'gpt-5', false);

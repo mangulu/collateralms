@@ -420,7 +420,7 @@ export async function GET(request: NextRequest) {
   addFooter(doc, pageWidth, pageHeight);
 
   // ── Compliance footer note ─────────────────────────────────────────────────
-  const totalPages = doc.internal.getNumberOfPages();
+  const totalPages = (doc.internal as any).getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     addFooter(doc, pageWidth, pageHeight);

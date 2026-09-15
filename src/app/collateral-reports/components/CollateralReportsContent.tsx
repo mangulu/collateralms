@@ -170,7 +170,7 @@ function buildReportData(rows: CollateralRow[], dateFrom: string, dateTo: string
       registry,
       ...d,
       complianceRate: rate,
-      status: rate >= 80 ? 'Compliant' : rate >= 60 ? 'At Risk' : 'Non-Compliant',
+      status: rate >= 80 ? 'Compliant' as const : rate >= 60 ? 'At Risk' as const : 'Non-Compliant' as const,
     };
   }).sort((a, b) => b.total - a.total);
 

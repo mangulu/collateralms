@@ -586,7 +586,7 @@ export async function POST(request: NextRequest) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const filename = `${reportSlug}_${dateStr}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

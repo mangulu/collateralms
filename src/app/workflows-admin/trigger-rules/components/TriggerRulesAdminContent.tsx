@@ -188,7 +188,7 @@ export default function TriggerRulesAdminContent() {
     templateId: '',
     name: '',
     description: '',
-    conditionLogic: 'AND\' as \'AND\' | \'OR',
+    conditionLogic: 'AND' as 'AND' | 'OR',
     referenceType: 'collateral',
   });
   const [conditions, setConditions] = useState<Omit<WorkflowTriggerCondition, 'id' | 'ruleId' | 'createdAt'>[]>([blankCondition()]);

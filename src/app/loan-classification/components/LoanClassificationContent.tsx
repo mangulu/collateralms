@@ -134,7 +134,7 @@ function ClassifyModal({ open, onClose, onSaved, loans, obligors, editItem, user
   const previewTier = BOT_TIERS.find(t => t.key === preview.classification);
 
   return (
-    <Modal isOpen={open} onClose={onClose} title={editItem ? 'Edit Classification' : 'Classify Loan — BOT 5-Tier Engine'} size="lg">
+    <Modal open={open} onClose={onClose} title={editItem ? 'Edit Classification' : 'Classify Loan — BOT 5-Tier Engine'} size="lg">
       <div className="space-y-5">
         {/* Loan selector */}
         {!editItem && (
