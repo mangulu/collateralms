@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox, BookOpen } from 'lucide-react';
+import { UserCog, MapPin, ShieldCheck, Workflow, Scale, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox, BookOpen } from 'lucide-react';
 import { CollateralRecord, collateralService, auditService } from '@/lib/supabase/collateralService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { createValuation } from '@/lib/supabase/valuationService';
@@ -23,7 +23,7 @@ interface CollateralActionToolbarProps {
 }
 
 type QuickEditType = 'assignee' | 'geolocation' | 'status' | null;
-type WorkflowType = 'perfection' | 'valuation' | 'document-review' | 'substitution' | 'release' | 'registry-submission' | null;
+type WorkflowType = 'perfection' | 'valuation' | 'substitution' | 'release' | 'registry-submission' | null;
 type ActionType = 'archive' | 'flag' | 'report' | 'request-file' | null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -100,12 +100,6 @@ function getWorkflowGates(collateral: CollateralRecord): Record<string, Workflow
           : s === 'Submitted'|| s === 'Under Review' ?'Perfection already in progress' :'',
     },
     valuation: {
-      disabled: s === 'Released' || s === 'Rejected',
-      reason:
-        s === 'Released' ?'Collateral is released'
-          : s === 'Rejected' ?'Collateral is rejected' :'',
-    },
-    'document-review': {
       disabled: s === 'Released' || s === 'Rejected',
       reason:
         s === 'Released' ?'Collateral is released'
@@ -556,68 +550,6 @@ function ValuationModal({ collateral, onClose, onSaved }: { collateral: Collater
         </div>
       </div>
       <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Schedule Valuation" confirmClass="bg-indigo-600 hover:bg-indigo-700" />
-    </ModalShell>
-  );
-}
-
-// ─── Initiate Workflow: Document Review ───────────────────────────────────────
-
-function DocumentReviewModal({ collateral, onClose, onSaved }: { collateral: CollateralRecord; onClose: () => void; onSaved: () => void }) {
-  const { user } = useAuth();
-  const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async () => {
-    setSaving(true);
-    try {
-      const supabase = createClient();
-      await supabase.from('document_approval_workflows').insert({
-        collateral_record_id: collateral.id,
-        collateral_id: collateral.collateralId,
-        status: 'Pending',
-        submitted_by: user?.id,
-        submitted_by_name: user?.email ?? '',
-        notes: notes || null,
-      });
-      await Promise.all([
-        auditService.log({
-          collateralRecordId: collateral.id,
-          collateralId: collateral.collateralId,
-          action: 'updated',
-          message: `Document review workflow initiated`,
-          detail: notes || 'No notes',
-          performedBy: user?.id,
-          performedByName: user?.email ?? '',
-        }),
-        logCollateralUpdate({
-          collateralRecordId: collateral.id,
-          collateralId: collateral.collateralId,
-          updateType: 'workflow_initiated',
-          fieldChanged: 'workflow_document_review',
-          newValue: 'initiated',
-          notes: notes || undefined,
-          performedBy: user?.id,
-          performedByName: user?.email ?? '',
-        }),
-      ]);
-      toast.success('Document review initiated');
-      onSaved();
-      onClose();
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Failed to initiate document review');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <ModalShell title="Initiate Document Review" icon={<FileSearch size={16} className="text-teal-600" />} iconBg="bg-teal-100" onClose={onClose}>
-      <CollateralSummaryBlock collateral={collateral} />
-      <div className="mt-3">
-        <label className="block text-xs font-600 text-foreground mb-1.5">Notes (optional)</label>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Specify which documents require review…" className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-      </div>
-      <ModalFooter onClose={onClose} onConfirm={handleSubmit} saving={saving} confirmLabel="Initiate Review" confirmClass="bg-teal-600 hover:bg-teal-700" />
     </ModalShell>
   );
 }
@@ -1679,13 +1611,6 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       disabledReason: gates.valuation.reason,
     },
     {
-      label: 'Document Review',
-      icon: FileSearch,
-      onClick: () => setActiveModal({ workflow: 'document-review' }),
-      disabled: gates['document-review'].disabled,
-      disabledReason: gates['document-review'].reason,
-    },
-    {
       label: 'Substitution',
       icon: ArrowLeftRight,
       onClick: () => setActiveModal({ workflow: 'substitution' }),
@@ -1776,9 +1701,6 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
       )}
       {activeModal.workflow === 'valuation' && (
         <ValuationModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
-      )}
-      {activeModal.workflow === 'document-review' && (
-        <DocumentReviewModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
       )}
       {activeModal.workflow === 'substitution' && (
         <SubstitutionModal collateral={collateral} onClose={closeAll} onSaved={onRefresh} />
