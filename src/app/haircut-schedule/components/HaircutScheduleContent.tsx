@@ -13,7 +13,6 @@ import {
   calculateHaircutAdjustedLtv,
 } from '@/lib/supabase/haircutService';
 import { useAuth } from '@/contexts/AuthContext';
-import Icon from '@/components/ui/AppIcon';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -88,13 +87,13 @@ function EditModal({ schedule, onClose, onSaved, userId }: EditModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
-            <Icon icon={Scissors} size={18} className="text-blue-600" />
+            <Scissors size={18} className="text-blue-600" />
             <h2 className="font-semibold text-slate-800">
               {isNew ? 'Add Haircut Rate' : `Edit — ${schedule?.collateralClass}`}
             </h2>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            <Icon icon={X} size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -102,7 +101,7 @@ function EditModal({ schedule, onClose, onSaved, userId }: EditModalProps) {
         <div className="px-6 py-5 space-y-4">
           {error && (
             <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              <Icon icon={AlertTriangle} size={14} />
+              <AlertTriangle size={14} />
               {error}
             </div>
           )}
@@ -240,7 +239,7 @@ function LtvCalculatorPanel({ schedules }: LtvCalcProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
-        <Icon icon={TrendingDown} size={16} className="text-blue-600" />
+        <TrendingDown size={16} className="text-blue-600" />
         <h3 className="font-semibold text-slate-800 text-sm">Haircut-Adjusted LTV Calculator</h3>
       </div>
 
@@ -371,7 +370,7 @@ export default function HaircutScheduleContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Icon icon={Scissors} size={22} className="text-blue-600" />
+            <Scissors size={22} className="text-blue-600" />
             Haircut Schedule Engine
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
@@ -383,14 +382,14 @@ export default function HaircutScheduleContent() {
             onClick={load}
             className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50"
           >
-            <Icon icon={RefreshCw} size={14} />
+            <RefreshCw size={14} />
             Refresh
           </button>
           <button
             onClick={() => setEditTarget(null)}
             className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            <Icon icon={Plus} size={14} />
+            <Plus size={14} />
             Add Rate
           </button>
         </div>
@@ -406,15 +405,18 @@ export default function HaircutScheduleContent() {
             { label: 'Min Haircut',       value: `${stats.minHaircutPct.toFixed(1)}%`,   icon: TrendingDown, color: 'text-green-600' },
             { label: 'Applications',      value: stats.totalApplications,                icon: History,      color: 'text-purple-600' },
             { label: 'Total Haircut Amt', value: fmtTsh(stats.totalHaircutAmount),       icon: Scissors,     color: 'text-orange-600' },
-          ].map((kpi) => (
-            <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl p-4">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Icon icon={kpi.icon} size={14} className={kpi.color} />
-                <span className="text-xs text-slate-500">{kpi.label}</span>
+          ].map((kpi) => {
+            const KpiIcon = kpi.icon;
+            return (
+              <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <KpiIcon size={14} className={kpi.color} />
+                  <span className="text-xs text-slate-500">{kpi.label}</span>
+                </div>
+                <p className="text-xl font-bold text-slate-800">{kpi.value}</p>
               </div>
-              <p className="text-xl font-bold text-slate-800">{kpi.value}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -458,7 +460,7 @@ export default function HaircutScheduleContent() {
             </div>
           ) : displayed.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
-              <Icon icon={Scissors} size={32} className="mx-auto mb-2 opacity-30" />
+              <Scissors size={32} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">No haircut schedules found.</p>
             </div>
           ) : (
@@ -482,7 +484,7 @@ export default function HaircutScheduleContent() {
                         <td className="px-4 py-3 font-medium text-slate-800">{s.collateralClass}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${colors.text} ${colors.bg} ${colors.border}`}>
-                            <Icon icon={Scissors} size={10} />
+                            <Scissors size={10} />
                             {fmtPct(s.haircutRate)}
                           </span>
                         </td>
@@ -508,7 +510,7 @@ export default function HaircutScheduleContent() {
                             onClick={() => setEditTarget(s)}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
                           >
-                            <Icon icon={Edit2} size={12} />
+                            <Edit2 size={12} />
                             Edit
                           </button>
                         </td>
@@ -522,7 +524,7 @@ export default function HaircutScheduleContent() {
 
           {/* Info banner */}
           <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-xs text-blue-700">
-            <Icon icon={Info} size={14} className="mt-0.5 flex-shrink-0" />
+            <Info size={14} className="mt-0.5 flex-shrink-0" />
             <span>
               Haircut rates are applied to gross collateral values during valuation approval and LTV calculation.
               The net (post-haircut) value is used for LTV ratio computation. Rates are configurable per asset class
@@ -548,7 +550,7 @@ export default function HaircutScheduleContent() {
             </div>
           ) : logs.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
-              <Icon icon={History} size={32} className="mx-auto mb-2 opacity-30" />
+              <History size={32} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">No haircut applications recorded yet.</p>
             </div>
           ) : (
