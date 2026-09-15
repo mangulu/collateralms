@@ -67,7 +67,9 @@ function getStageIndex(stages: string[], status: string): number {
 function normalizePerfection(r: PerfectionRequest): NormalizedWorkflow {
   const days = getDaysRemaining(r.perfectionDeadline);
   const sla = getSLAStatus(days);
-  const stageIdx = getStageIndex(PERFECTION_STAGES, r.requestStatus);
+  // "Returned" means it was submitted and reviewed, then sent back for corrections —
+  // treat it as still at the Submitted stage rather than falling back to Draft.
+  const stageIdx = getStageIndex(PERFECTION_STAGES, r.requestStatus === 'Returned' ? 'Submitted' : r.requestStatus);
   const bottleneck = r.requestStatus === 'Under Review' && (days !== null && days < 5);
   return {
     id: r.id,
