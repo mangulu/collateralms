@@ -5,7 +5,7 @@ import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
-import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, TrendingUp, ArrowRight, Calendar, Activity, Zap, FileText, Plus, Eye, Search, ChevronDown, FlaskConical,  } from 'lucide-react';
+import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, ArrowRight, Calendar, Activity, Zap, FileText, Search, ChevronDown, FlaskConical,  } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -20,7 +20,6 @@ interface ModuleCard {
   iconBg: string;
   category:
     | 'collateral' |'workflow' |'archive' |'intelligence' |'alerts' |'reports' |'audit' |'admin';
-  quickActions: { label: string; href: string; icon: React.ElementType }[];
   requiredPermission?: string;
   adminOnly?: boolean;
 }
@@ -76,12 +75,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.collateral,
     iconBg: '#007CB3',
     category: 'collateral',
-    quickActions: [
-      { label: 'New Collateral', href: '/collateral-management', icon: Plus },
-      { label: 'View Registry', href: '/collateral-management', icon: Eye },
-      { label: 'Dashboard', href: '/collateral-dashboard', icon: Activity },
-      { label: 'Stress Simulator', href: '/stress-simulator', icon: FlaskConical },
-    ],
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
   {
@@ -94,10 +87,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.collateral,
     iconBg: '#0F766E',
     category: 'collateral',
-    quickActions: [
-      { label: 'All Obligors', href: '/obligors', icon: Eye },
-      { label: 'Loan Facilities', href: '/loans', icon: FileText },
-    ],
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
   {
@@ -110,11 +99,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.workflow,
     iconBg: '#D97706',
     category: 'workflow',
-    quickActions: [
-      { label: 'Approval Inbox', href: '/approval-inbox', icon: Eye },
-      { label: 'Perfection Queue', href: '/perfection-workflow', icon: Zap },
-      { label: 'All Instances', href: '/workflows/instances', icon: Activity },
-    ],
     requiredPermission: PERMISSIONS.PERFECTION_VIEW,
   },
   {
@@ -127,11 +111,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.intelligence,
     iconBg: '#7C3AED',
     category: 'intelligence',
-    quickActions: [
-      { label: 'Executive Dashboard', href: '/executive-dashboard', icon: TrendingUp },
-      { label: 'AI Risk & Fraud', href: '/ai-risk-fraud', icon: ShieldCheck },
-      { label: 'Cohort Analytics', href: '/cohort-analytics', icon: AlertTriangle },
-    ],
     requiredPermission: PERMISSIONS.COMPLIANCE_VIEW,
   },
   {
@@ -143,10 +122,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.alerts,
     iconBg: '#DC2626',
     category: 'alerts',
-    quickActions: [
-      { label: 'Alerts Inbox', href: '/alerts-inbox', icon: Eye },
-      { label: 'Deadline Reminders', href: '/deadline-reminders', icon: Clock },
-    ],
     requiredPermission: PERMISSIONS.DASHBOARD_VIEW,
   },
   {
@@ -159,12 +134,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.reports,
     iconBg: '#059669',
     category: 'reports',
-    quickActions: [
-      { label: 'Reports Hub', href: '/reports', icon: BarChart2 },
-      { label: 'Board Report Builder', href: '/board-report-builder', icon: FileText },
-      { label: 'Custom Reports', href: '/custom-reports', icon: FileText },
-      { label: 'Export', href: '/export', icon: ArrowRight },
-    ],
     requiredPermission: PERMISSIONS.REPORTS_VIEW,
   },
   {
@@ -177,11 +146,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.audit,
     iconBg: '#9D174D',
     category: 'audit',
-    quickActions: [
-      { label: 'Audit Center', href: '/audit-center', icon: Eye },
-      { label: 'Live Activity', href: '/live-activity', icon: Activity },
-      { label: 'Compliance Rules', href: '/compliance-rules', icon: ShieldCheck },
-    ],
     requiredPermission: PERMISSIONS.AUDIT_LOG_VIEW,
   },
   {
@@ -194,10 +158,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.admin,
     iconBg: '#4B5563',
     category: 'admin',
-    quickActions: [
-      { label: 'User Management', href: '/user-management', icon: Users },
-      { label: 'System Settings', href: '/settings', icon: Settings },
-    ],
     adminOnly: true,
     requiredPermission: PERMISSIONS.USER_MANAGEMENT_VIEW,
   },
@@ -211,11 +171,6 @@ const modules: ModuleCard[] = [
     borderColor: CATEGORY_BORDER.archive,
     iconBg: '#059669',
     category: 'archive',
-    quickActions: [
-      { label: 'Vault Management', href: '/archive/vault-management', icon: Eye },
-      { label: 'File Location', href: '/archive/file-location-status', icon: Activity },
-      { label: 'Access Requests', href: '/archive/access-requests', icon: FileText },
-    ],
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
 ];
@@ -407,27 +362,12 @@ export default function ModuleHubPage() {
   // ─── Compute visible modules ──────────────────────────────────────────────
   const visibleModules = useMemo(() => {
     if (loading) return modules;
-    return modules
-      .filter((m) => {
-        if (m.adminOnly && !isSystemAdmin) return false;
-        if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission))
-          return false;
-        return true;
-      })
-      .map((m) => {
-        if (m.id === 'approvals' && isSystemAdmin) {
-          return {
-            ...m,
-            quickActions: [
-              ...m.quickActions,
-              { label: 'Templates', href: '/workflows-admin/templates', icon: FileText },
-              { label: 'Trigger Rules', href: '/workflows-admin/trigger-rules', icon: Zap },
-              { label: 'KPIs', href: '/workflows-admin/kpis', icon: TrendingUp },
-            ],
-          };
-        }
-        return m;
-      });
+    return modules.filter((m) => {
+      if (m.adminOnly && !isSystemAdmin) return false;
+      if (m.requiredPermission && !isSystemAdmin && !hasPermission(m.requiredPermission))
+        return false;
+      return true;
+    });
   }, [loading, isSystemAdmin, hasPermission]);
 
   // Filter modules based on search
@@ -881,7 +821,7 @@ export default function ModuleHubPage() {
             className="px-6 pt-8 pb-6 relative"
             style={{ borderBottom: '1px solid rgba(0,0,0,0.07)' }}
           >
-            <div className="max-w-4xl">
+            <div className="max-w-[1000px] mx-auto">
               {/* Welcome row */}
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
                 <div>
@@ -993,7 +933,7 @@ export default function ModuleHubPage() {
               className="px-6 py-4"
               style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEF9F9 100%)', borderBottom: '2px solid rgba(220,38,38,0.1)' }}
             >
-              <div className="max-w-4xl">
+              <div className="max-w-[1000px] mx-auto">
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
                     <div className="p-1 rounded-full bg-red-100 animate-pulse">
@@ -1052,7 +992,7 @@ export default function ModuleHubPage() {
 
           {/* ── Module Grid ────────────────────────────────────────────────── */}
           <div className="flex-1 px-6 py-8">
-            <div className="max-w-4xl">
+            <div className="max-w-[1000px] mx-auto">
               {/* Recently Used Modules */}
               {recentModules.length > 0 && !searchQuery && (
                 <div className="mb-6">
@@ -1151,37 +1091,23 @@ export default function ModuleHubPage() {
                           </div>
                         </div>
 
-                        {/* Row 2: Description + KPI + Actions */}
+                        {/* Row 2: Description + KPI */}
                         <div className="px-4 py-1 flex-1 flex flex-col justify-between">
                           <p className="text-xs leading-relaxed line-clamp-2" style={{ color: '#6B7280' }}>{mod.description}</p>
                           <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t" style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
-                            {kpi && (
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs font-semibold" style={{ color: borderColor }}>{kpi.primary}</span>
-                                <span className="text-[10px] truncate" style={{ color: '#9CA3AF' }}>{kpi.secondary}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1 shrink-0 ml-2">
-                              {mod.quickActions.slice(0, 2).map((action) => {
-                                const ActionIcon = action.icon;
-                                return (
-                                  <button
-                                    key={action.label}
-                                    onClick={(e) => { e.stopPropagation(); router.push(action.href); }}
-                                    className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all"
-                                    style={{ color: borderColor, backgroundColor: `${borderColor}12`, border: `1px solid ${borderColor}25` }}
-                                    onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}25`; }}
-                                    onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = `${borderColor}12`; }}
-                                  >
-                                    <ActionIcon size={8} />
-                                    <span className="hidden sm:inline">{action.label}</span>
-                                  </button>
-                                );
-                              })}
-                              <span className="text-[9px] opacity-20 group-hover:opacity-50 transition-opacity ml-0.5" style={{ color: '#6B7280' }}>
-                                ⌘{filteredModules.indexOf(mod) + 1}
-                              </span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {kpi && (
+                                <>
+                                  <span className="text-xs font-semibold" style={{ color: borderColor }}>{kpi.primary}</span>
+                                  <span className="text-[10px] truncate" style={{ color: '#9CA3AF' }}>{kpi.secondary}</span>
+                                </>
+                              )}
                             </div>
+                            <ArrowRight
+                              size={14}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
+                              style={{ color: borderColor }}
+                            />
                           </div>
                         </div>
                       </div>
