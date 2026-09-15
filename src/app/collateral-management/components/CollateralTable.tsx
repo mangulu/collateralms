@@ -10,13 +10,11 @@ import { FolderOpen } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
-// Helper to format TSh values compactly
-function fmtTShCompact(n: number | null | undefined): string {
-  if (n == null) return '—';
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return n.toLocaleString();
+// Helper to format TSh values with thousand separators
+function fmtTSh(n: string | number | null | undefined): string {
+  if (n == null || n === '') return '—';
+  const num = Number(n);
+  return Number.isFinite(num) ? num.toLocaleString() : String(n);
 }
 
 type SortKey = keyof Collateral;
@@ -433,7 +431,7 @@ export default function CollateralTable({
                 </div>
                 <div>
                   <span className="text-muted-foreground">Value: </span>
-                  <span className="font-mono font-600 text-foreground">TSh {item.valueTSh}</span>
+                  <span className="font-mono font-600 text-foreground">TSh {fmtTSh(item.valueTSh)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Registry: </span>
@@ -689,7 +687,7 @@ export default function CollateralTable({
                   {visibleColumns.includes('value') && (
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="font-mono text-xs font-600 text-foreground">
-                        TSh {item.valueTSh}
+                        TSh {fmtTSh(item.valueTSh)}
                       </span>
                     </td>
                   )}

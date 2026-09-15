@@ -90,7 +90,7 @@ export default function QuickViewModal({
                 <DollarSign size={12} />
                 Value (TSh)
               </p>
-              <p className="text-sm font-medium">TSh {item.valueTSh.toLocaleString()}</p>
+              <p className="text-sm font-medium">TSh {Number(item.valueTSh).toLocaleString()}</p>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
@@ -197,7 +197,7 @@ export default function QuickViewModal({
             </div>
             <div className="text-center p-2 bg-muted/20 rounded-lg">
               <p className="text-xs text-muted-foreground">Value</p>
-              <p className="text-sm font-semibold text-foreground">TSh {item.valueTSh.toLocaleString()}</p>
+              <p className="text-sm font-semibold text-foreground">TSh {Number(item.valueTSh).toLocaleString()}</p>
             </div>
             <div className="text-center p-2 bg-muted/20 rounded-lg">
               <p className="text-xs text-muted-foreground">Documents</p>
