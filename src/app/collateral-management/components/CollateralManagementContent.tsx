@@ -15,6 +15,7 @@ import AddEditCollateralModal from './AddEditCollateralModal';
 import NextStepsBanner from './NextStepsBanner';
 import InitiateWorkflowModal from './InitiateWorkflowModal';
 import QuickViewModal from './QuickViewModal';
+import BulkAssignOfficerModal from './BulkAssignOfficerModal';
 
 
 export interface FilterState {
@@ -89,6 +90,7 @@ export default function CollateralManagementContent() {
   const [newlyCreated, setNewlyCreated] = useState<CollateralRecord | null>(null);
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
   const [workflowTarget, setWorkflowTarget] = useState<CollateralRecord | null>(null);
+  const [assignOfficerModalOpen, setAssignOfficerModalOpen] = useState(false);
 
   // ─── Persist state to sessionStorage ──────────────────────────────────────
   useEffect(() => {
@@ -700,7 +702,7 @@ export default function CollateralManagementContent() {
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toast.info('Assign officer — bulk update dialog coming')}
+              onClick={() => setAssignOfficerModalOpen(true)}
               className="px-3 py-1.5 text-xs font-500 bg-white/20 hover:bg-white/30 rounded transition-colors hidden sm:block"
             >
               Assign Officer
@@ -817,6 +819,19 @@ export default function CollateralManagementContent() {
         onLaunched={() => {
           setWorkflowModalOpen(false);
           setWorkflowTarget(null);
+        }}
+      />
+
+      {/* Bulk Assign Officer Modal */}
+      <BulkAssignOfficerModal
+        open={assignOfficerModalOpen}
+        records={collateralData.filter((c) => selectedIds.includes(c.id))}
+        officers={filterOfficers}
+        onClose={() => setAssignOfficerModalOpen(false)}
+        onAssigned={() => {
+          setAssignOfficerModalOpen(false);
+          setSelectedIds([]);
+          fetchData();
         }}
       />
 
