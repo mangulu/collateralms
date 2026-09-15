@@ -385,6 +385,8 @@ export default function CollateralTable({
                   >
                     <Pencil size={14} />
                   </button>
+                  {/* Workflows */}
+                  <RowActionMenu item={item} onStartWorkflow={onStartWorkflow} />
                 </div>
               </div>
 
