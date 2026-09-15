@@ -284,7 +284,7 @@ export default function InitiateWorkflowModal({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Value</span>
                     <span className="text-foreground">
-                      TSh {Number(effectiveCollateral.valueTSh).toLocaleString()}
+                      TSh {effectiveCollateral.valueTSh.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between">

@@ -41,7 +41,7 @@ export interface CollateralRecord {
   obligorRefId?: string | null;
   type: CollateralType;
   description: string;
-  valueTSh: string;
+  valueTSh: number;
   facilityId: string;
   status: CollateralStatus;
   registry: RegistryType;
@@ -236,7 +236,7 @@ function rowToCollateral(row: any): CollateralRecord {
     obligorRefId: row.obligor_ref_id ?? null,
     type: row.collateral_type as CollateralType,
     description: row.description,
-    valueTSh: row.value_tsh,
+    valueTSh: parseInt(String(row.value_tsh ?? '0').replace(/,/g, ''), 10) || 0,
     facilityId: row.facility_id,
     status: row.status as CollateralStatus,
     registry: row.registry as RegistryType,
@@ -269,7 +269,7 @@ function collateralToRow(data: Partial<CollateralRecord>) {
   if (data.obligorRefId !== undefined) row.obligor_ref_id = data.obligorRefId;
   if (data.type !== undefined) row.collateral_type = data.type;
   if (data.description !== undefined) row.description = data.description;
-  if (data.valueTSh !== undefined) row.value_tsh = data.valueTSh;
+  if (data.valueTSh !== undefined) row.value_tsh = String(data.valueTSh);
   if (data.facilityId !== undefined) row.facility_id = data.facilityId;
   if (data.status !== undefined) row.status = data.status;
   if (data.registry !== undefined) row.registry = data.registry;

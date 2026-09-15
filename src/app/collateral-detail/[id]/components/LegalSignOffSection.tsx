@@ -91,7 +91,7 @@ function LegalSignOffModal({ collateral, userId, userName, userRole, onClose, on
               { label: 'Obligor', value: collateral.obligor },
               { label: 'Collateral Type', value: collateral.type },
               { label: 'Registry', value: collateral.registry },
-              { label: 'Value', value: `TSh ${collateral.valueTSh}` },
+              { label: 'Value', value: `TSh ${collateral.valueTSh.toLocaleString()}` },
               { label: 'Sign-Off Timestamp', value: signedAt.toLocaleString() },
               { label: 'Signing Officer', value: userName },
             ].map(({ label, value }) => (

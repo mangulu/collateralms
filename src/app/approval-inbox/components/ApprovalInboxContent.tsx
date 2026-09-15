@@ -104,7 +104,7 @@ function CollateralDetailPanel({ collateralId }: { collateralId: string }) {
     { label: 'Obligor',         value: record.obligor },
     { label: 'Obligor ID',      value: record.obligorId },
     { label: 'Facility ID',     value: record.facilityId },
-    { label: 'Value (TSh)',     value: record.valueTSh },
+    { label: 'Value (TSh)',     value: record.valueTSh.toLocaleString() },
     { label: 'Registry',        value: record.registry },
     { label: 'Status',          value: record.status },
     { label: 'Reg. Date',       value: formatDate(record.registrationDate) },

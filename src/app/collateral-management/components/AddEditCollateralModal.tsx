@@ -183,7 +183,7 @@ export default function AddEditCollateralModal({
           reset({
             type: editItem.type ?? '',
             description: editItem.description ?? '',
-            valueTS: editItem.valueTSh ?? '',
+            valueTS: editItem.valueTSh != null ? String(editItem.valueTSh) : '',
             registry: editItem.registry ?? '',
             registrationDate: editItem.registrationDate ?? '',
             perfectionDeadline: editItem.perfectionDeadline ?? '',
@@ -514,7 +514,7 @@ export default function AddEditCollateralModal({
       obligorRefId: selectedObligor.id || null,
       type: data.type as Collateral['type'],
       description: data.description,
-      valueTSh: data.valueTS,
+      valueTSh: Number(data.valueTS.replace(/,/g, '')) || 0,
       facilityId: selectedLoanId || '',
       registry: data.registry as Collateral['registry'],
       registrationDate: data.registrationDate,

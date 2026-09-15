@@ -11,10 +11,8 @@ import Icon from '@/components/ui/AppIcon';
 
 
 // Helper to format TSh values with thousand separators
-function fmtTSh(n: string | number | null | undefined): string {
-  if (n == null || n === '') return '—';
-  const num = Number(n);
-  return Number.isFinite(num) ? num.toLocaleString() : String(n);
+function fmtTSh(n: number | null | undefined): string {
+  return n == null ? '—' : n.toLocaleString();
 }
 
 type SortKey = keyof Collateral;

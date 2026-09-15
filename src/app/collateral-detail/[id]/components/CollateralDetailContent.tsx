@@ -226,7 +226,7 @@ function KPIStrip({ collateral, utilization }: { collateral: CollateralRecord; u
   const utilizationPct = utilization ? utilization.utilizationPercentage : null;
 
   const kpis = [
-    { label: 'Collateral Value', value: collateral.valueTSh ? `TSh ${collateral.valueTSh}` : '—', icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/5' },
+    { label: 'Collateral Value', value: collateral.valueTSh ? `TSh ${collateral.valueTSh.toLocaleString()}` : '—', icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/5' },
     { label: 'Utilization', value: utilizationPct != null ? `${utilizationPct.toFixed(1)}%` : '—', icon: PieChart, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Active Charges', value: activeCharges != null ? String(activeCharges) : '—', icon: Layers, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Days to Deadline', value: deadlineLabel, icon: Clock, color: deadlineColor, bg: isOverdue ? 'bg-red-50' : isApproaching ? 'bg-amber-50' : 'bg-green-50' },
@@ -515,7 +515,7 @@ export default function CollateralDetailContent({
                     } icon={Building2} />
                     <DetailRow label="Collateral Type" value={collateral.type} icon={FileText} />
                     <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{collateral.description}</p>} icon={FileText} />
-                    <DetailRow label="Collateral Value" value={<span className="font-mono font-semibold text-base">TSh {collateral.valueTSh}</span>} icon={Building2} />
+                    <DetailRow label="Collateral Value" value={<span className="font-mono font-semibold text-base">TSh {collateral.valueTSh.toLocaleString()}</span>} icon={Building2} />
                     <DetailRow label="Facility ID" value={
                       collateral.facilityId ? (
                         <Link href={`/loans?facility=${encodeURIComponent(collateral.facilityId)}`} className="font-mono text-xs text-primary hover:underline flex items-center gap-1">

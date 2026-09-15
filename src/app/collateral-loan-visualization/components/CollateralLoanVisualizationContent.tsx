@@ -12,7 +12,7 @@ interface CollateralSummary {
   collateralId: string;
   obligor: string;
   type: string;
-  valueTSh: string;
+  valueTSh: number;
   status: string;
 }
 

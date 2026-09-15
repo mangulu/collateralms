@@ -360,7 +360,7 @@ export default function CollateralDetailModal({
                 <DetailRow label="Obligor" value={<div><p className="font-500">{item.obligor}</p><p className="text-xs text-muted-foreground font-mono">{item.obligorId}</p></div>} icon={Building2} />
                 <DetailRow label="Collateral Type" value={item.type} icon={FileText} />
                 <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{item.description}</p>} icon={FileText} />
-                <DetailRow label="Collateral Value" value={<span className="font-mono font-600 text-base">TSh {Number(item.valueTSh).toLocaleString()}</span>} icon={Building2} />
+                <DetailRow label="Collateral Value" value={<span className="font-mono font-600 text-base">TSh {item.valueTSh.toLocaleString()}</span>} icon={Building2} />
                 <DetailRow label="Facility ID" value={<span className="font-mono text-xs">{item.facilityId}</span>} icon={FileText} />
                 <DetailRow label="Assigned Officer" value={item.assignedOfficer} icon={User} />
               </div>

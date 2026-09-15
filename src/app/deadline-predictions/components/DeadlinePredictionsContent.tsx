@@ -77,7 +77,7 @@ export default function DeadlinePredictionsPanel() {
       obligorId: r.obligor_id,
       type: r.collateral_type,
       description: r.description,
-      valueTSh: r.value_tsh,
+      valueTSh: parseInt(String(r.value_tsh ?? '0').replace(/,/g, ''), 10) || 0,
       facilityId: r.facility_id,
       status: r.status,
       registry: r.registry,

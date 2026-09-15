@@ -69,7 +69,7 @@ interface LiveCollateralOption {
   collateralId: string;
   collateralType: string;
   obligor: string;
-  valueTSh: string;
+  valueTSh: number;
   registry: string;
   registrationDate: string;
   perfectionDeadline: string;
@@ -86,6 +86,12 @@ const riskLevelConfig: Record<RiskLevel, { label: string; color: string; bg: str
   LOW:    { label: 'Low Risk',    color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200',  dot: 'bg-blue-400',   barColor: 'bg-blue-400' },
   CLEAR:  { label: 'Clear',       color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200', dot: 'bg-green-500',  barColor: 'bg-green-500' },
 };
+
+function fmtValueTSh(v: string): string {
+  if (!v) return v;
+  const n = Number(String(v).replace(/,/g, ''));
+  return Number.isFinite(n) ? n.toLocaleString() : v;
+}
 
 function scoreToLevel(score: number): RiskLevel {
   if (score >= 70) return 'HIGH';
@@ -318,7 +324,7 @@ export default function RiskAssessmentContent() {
             collateralId: row.collateral_id,
             collateralType: row.collateral_type ?? '',
             obligor: row.obligor ?? '',
-            valueTSh: row.value_tsh ?? '0',
+            valueTSh: parseInt(String(row.value_tsh ?? '0').replace(/,/g, ''), 10) || 0,
             registry: row.registry ?? '',
             registrationDate: row.registration_date ?? '',
             perfectionDeadline: row.perfection_deadline ?? '',
@@ -364,7 +370,7 @@ export default function RiskAssessmentContent() {
       collateralId: found.collateralId,
       collateralType: found.collateralType,
       obligor: found.obligor,
-      valueTSh: found.valueTSh,
+      valueTSh: String(found.valueTSh),
       registry: found.registry,
       registrationDate: found.registrationDate,
       perfectionDeadline: found.perfectionDeadline,
@@ -502,7 +508,7 @@ export default function RiskAssessmentContent() {
                   {[
                     { label: 'Type', value: activeInput.collateralType, icon: FileText },
                     { label: 'Obligor', value: activeInput.obligor, icon: Building2 },
-                    { label: 'Value (TSh)', value: activeInput.valueTSh, icon: TrendingUp },
+                    { label: 'Value (TSh)', value: fmtValueTSh(activeInput.valueTSh), icon: TrendingUp },
                     { label: 'Registry', value: activeInput.registry, icon: BadgeAlert },
                     { label: 'Status', value: activeInput.status, icon: Info },
                     { label: 'Deadline', value: activeInput.perfectionDeadline, icon: Clock },

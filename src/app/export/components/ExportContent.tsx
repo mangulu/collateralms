@@ -44,7 +44,7 @@ interface CollateralRow {
   type: string;
   registry: string;
   status: string;
-  valueTSh: string;
+  valueTSh: number;
   perfectionDeadline: string;
   daysToDeadline: number | null;
   assignedOfficer: string;
@@ -380,7 +380,7 @@ function PreviewStats({ config, allRows }: { config: ExportConfig; allRows: Coll
   const compliant = filtered.filter((c) => c.status === 'Perfected').length;
   const overdue = filtered.filter((c) => c.status === 'Overdue').length;
   const pending = filtered.filter((c) => ['Draft', 'Submitted', 'Under Review'].includes(c.status)).length;
-  const totalValue = filtered.reduce((sum, c) => sum + parseInt((c.valueTSh ?? '0').replace(/,/g, ''), 10), 0);
+  const totalValue = filtered.reduce((sum, c) => sum + c.valueTSh, 0);
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -567,7 +567,7 @@ export default function ExportContent() {
             type: row.collateral_type ?? '',
             registry: row.registry ?? '',
             status: row.status ?? '',
-            valueTSh: row.value_tsh ?? '0',
+            valueTSh: parseInt(String(row.value_tsh ?? '0').replace(/,/g, ''), 10) || 0,
             perfectionDeadline: row.perfection_deadline ?? '',
             daysToDeadline: row.days_to_deadline ?? null,
             assignedOfficer: row.assigned_officer ?? '',

@@ -17,7 +17,7 @@ interface CollateralRow {
   type: string;
   registry: string;
   status: string;
-  valueTSh: string;
+  valueTSh: number;
   perfectionDeadline: string;
   daysToDeadline: number | null;
   assignedOfficer: string;
@@ -38,17 +38,13 @@ interface RegistryItem {
   type: string;
   registry: string;
   status: string;
-  valueTSh: string;
+  valueTSh: number;
   perfectionDeadline: string;
   daysToDeadline: number | null;
   complianceStatus: 'Compliant' | 'Non-Compliant' | 'Pending' | 'Overdue';
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function parseVal(v: string): number {
-  return parseInt((v ?? '0').replace(/,/g, ''), 10) || 0;
-}
 
 function fmtVal(n: number): string {
   return n.toLocaleString('en-US');
@@ -221,7 +217,7 @@ export default function ReportsDashboardContent() {
         type: row.collateral_type,
         registry: row.registry,
         status: row.status,
-        valueTSh: row.value_tsh,
+        valueTSh: parseInt(String(row.value_tsh ?? '0').replace(/,/g, ''), 10) || 0,
         perfectionDeadline: row.perfection_deadline ?? '',
         daysToDeadline: row.days_to_deadline ?? null,
         assignedOfficer: row.assigned_officer ?? '—',
@@ -307,7 +303,7 @@ export default function ReportsDashboardContent() {
     compliant: filteredBrela.filter(b => b.complianceStatus === 'Compliant').length,
     overdue: filteredBrela.filter(b => b.complianceStatus === 'Overdue' || b.complianceStatus === 'Non-Compliant').length,
     pending: filteredBrela.filter(b => b.complianceStatus === 'Pending').length,
-    totalValue: fmtVal(filteredBrela.reduce((acc, b) => acc + parseVal(b.valueTSh), 0)),
+    totalValue: fmtVal(filteredBrela.reduce((acc, b) => acc + b.valueTSh, 0)),
   };
   const brelaRate = brelaKPI.total > 0 ? Math.round((brelaKPI.compliant / brelaKPI.total) * 100) : 0;
 
@@ -403,7 +399,7 @@ export default function ReportsDashboardContent() {
       ['Collateral ID', 'Obligor', 'Type', 'Registry', 'Status', 'Compliance', 'Value (TSh)', 'Perfection Deadline', 'Days to Deadline'],
       filteredRegistryItems.map(b => [
         b.collateralId, `"${b.obligor}"`, b.type, b.registry, b.status, b.complianceStatus,
-        b.valueTSh, b.perfectionDeadline || '—', b.daysToDeadline !== null ? String(b.daysToDeadline) : '—',
+        String(b.valueTSh), b.perfectionDeadline || '—', b.daysToDeadline !== null ? String(b.daysToDeadline) : '—',
       ]),
       `Registry_Compliance_${new Date().toISOString().slice(0, 10)}.csv`
     );
@@ -629,7 +625,7 @@ export default function ReportsDashboardContent() {
                         {b.complianceStatus}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-foreground">{b.valueTSh}</td>
+                    <td className="px-3 py-2.5 font-mono text-foreground">{fmtVal(b.valueTSh)}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{fmtDate(b.perfectionDeadline)}</td>
                     <td className="px-3 py-2.5">
                       {b.daysToDeadline === null ? (

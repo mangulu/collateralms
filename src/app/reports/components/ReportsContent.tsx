@@ -19,7 +19,7 @@ interface ComplianceSummaryRow {
   type: string;
   registry: string;
   status: string;
-  valueTSh: string;
+  valueTSh: number;
   perfectionDeadline: string;
   daysToDeadline: number | null;
   assignedOfficer: string;
@@ -77,7 +77,7 @@ interface RegistryComplianceItem {
   type: string;
   registry: string;
   status: string;
-  valueTSh: string;
+  valueTSh: number;
   perfectionDeadline: string;
   daysToDeadline: number | null;
   complianceStatus: 'Compliant' | 'Non-Compliant' | 'Pending' | 'Overdue';
@@ -111,7 +111,7 @@ interface OverdueRow {
   obligor: string;
   collateralType: string;
   registry: string;
-  valueTsh: string;
+  valueTsh: number;
   deadline: string;
   daysOverdue: number;
   officer: string;
@@ -473,7 +473,7 @@ export default function ReportsContent() {
         type: r.type ?? r.collateral_type,
         registry: r.registry,
         status: r.status,
-        valueTSh: r.valueTSh ?? r.value_tsh ?? '0',
+        valueTSh: parseValueTSh(r.valueTSh ?? r.value_tsh ?? '0'),
         perfectionDeadline: r.perfectionDeadline ?? r.perfection_deadline ?? '',
         daysToDeadline: r.daysToDeadline ?? r.days_to_deadline ?? null,
         assignedOfficer: r.assignedOfficer ?? r.assigned_officer ?? '—',
@@ -486,7 +486,7 @@ export default function ReportsContent() {
       const nonCompliant = rows.filter(r => r.complianceStatus === 'Non-Compliant').length;
       const pending = rows.filter(r => r.complianceStatus === 'Pending').length;
       const overdue = rows.filter(r => r.complianceStatus === 'Overdue').length;
-      const totalVal = rows.reduce((acc, r) => acc + parseValueTSh(r.valueTSh), 0);
+      const totalVal = rows.reduce((acc, r) => acc + r.valueTSh, 0);
       setKpi({
         total: rows.length,
         compliant,
@@ -582,7 +582,7 @@ export default function ReportsContent() {
           type: r.collateral_type ?? '',
           registry: r.registry ?? '',
           status: r.status ?? '',
-          valueTSh: r.value_tsh ?? '0',
+          valueTSh: parseValueTSh(r.value_tsh ?? '0'),
           perfectionDeadline: r.perfection_deadline ?? '',
           daysToDeadline: r.days_to_deadline ?? null,
           complianceStatus: cs,
@@ -668,7 +668,7 @@ export default function ReportsContent() {
             obligor: r.obligor ?? '',
             collateralType: r.collateral_type ?? '',
             registry: r.registry ?? '',
-            valueTsh: r.value_tsh ?? '0',
+            valueTsh: parseValueTSh(r.value_tsh ?? '0'),
             deadline: r.perfection_deadline ?? '',
             daysOverdue: Math.max(0, daysOverdue),
             officer: r.assigned_officer ?? 'Unassigned',
@@ -1172,7 +1172,7 @@ export default function ReportsContent() {
                             {r.complianceStatus}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-xs text-foreground font-mono">{r.valueTSh}</td>
+                        <td className="px-4 py-2.5 text-xs text-foreground font-mono">{formatValueTSh(r.valueTSh)}</td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.perfectionDeadline ? formatDate(r.perfectionDeadline) : '—'}</td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.assignedOfficer}</td>
                       </tr>
@@ -1679,7 +1679,7 @@ export default function ReportsContent() {
                             <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.type}</td>
                             <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.registry}</td>
                             <td className="px-4 py-2.5 text-xs">{r.status}</td>
-                            <td className="px-4 py-2.5 text-xs font-mono">{r.valueTSh}</td>
+                            <td className="px-4 py-2.5 text-xs font-mono">{formatValueTSh(r.valueTSh)}</td>
                             <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.perfectionDeadline ? new Date(r.perfectionDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
                             <td className="px-4 py-2.5">
                               <span className={`text-[10px] font-700 px-2 py-0.5 rounded-full ${r.complianceStatus === 'Compliant' ? 'bg-green-100 text-green-700' : r.complianceStatus === 'Non-Compliant' ? 'bg-red-100 text-red-700' : r.complianceStatus === 'Overdue' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-700'}`}>
@@ -1877,7 +1877,7 @@ export default function ReportsContent() {
                               <td className="px-4 py-3 font-600 text-foreground text-xs">{r.obligor}</td>
                               <td className="px-4 py-3 text-xs text-muted-foreground">{r.collateralType}</td>
                               <td className="px-4 py-3 text-xs text-muted-foreground">{r.registry}</td>
-                              <td className="px-4 py-3 text-xs font-mono">{r.valueTsh}</td>
+                              <td className="px-4 py-3 text-xs font-mono">{formatValueTSh(r.valueTsh)}</td>
                               <td className="px-4 py-3 text-xs text-muted-foreground">{r.deadline ? new Date(r.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
                               <td className="px-4 py-3">
                                 <span className={`text-xs font-700 ${r.daysOverdue > 30 ? 'text-red-700' : r.daysOverdue > 7 ? 'text-orange-600' : 'text-amber-600'}`}>{r.daysOverdue}d</span>

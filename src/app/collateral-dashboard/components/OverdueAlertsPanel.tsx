@@ -109,7 +109,7 @@ export default function OverdueAlertsPanel() {
                   >
                     {item.registry}
                   </span>
-                  <span className="font-mono text-xs font-semibold" style={{ color: 'var(--izou-text)' }}>TSh {item.valueTSh}</span>
+                  <span className="font-mono text-xs font-semibold" style={{ color: 'var(--izou-text)' }}>TSh {item.valueTSh.toLocaleString()}</span>
                 </div>
               </div>
             ))}
@@ -161,7 +161,7 @@ export default function OverdueAlertsPanel() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs font-semibold" style={{ color: 'var(--izou-text)' }}>TSh {item.valueTSh}</span>
+                      <span className="font-mono text-xs font-semibold" style={{ color: 'var(--izou-text)' }}>TSh {item.valueTSh.toLocaleString()}</span>
                     </td>
                     <td className="px-4 py-3 text-xs" style={{ color: 'var(--izou-muted)' }}>{item.assignedOfficer}</td>
                   </tr>

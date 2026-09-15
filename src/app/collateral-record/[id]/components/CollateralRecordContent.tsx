@@ -494,7 +494,7 @@ function PerfectionSubmitModal({ collateral, userId, userName, userRole, onClose
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Value</span>
-              <span className="text-xs font-mono font-semibold text-foreground">TSh {collateral.valueTSh}</span>
+              <span className="text-xs font-mono font-semibold text-foreground">TSh {collateral.valueTSh.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Perfection Deadline</span>
@@ -1241,7 +1241,7 @@ function LegalSignOffModal({ collateral, userId, userName, userRole, onClose, on
               ['Obligor', collateral.obligor],
               ['Collateral Type', collateral.type],
               ['Registry', collateral.registry],
-              ['Value', `TSh ${collateral.valueTSh}`],
+              ['Value', `TSh ${collateral.valueTSh.toLocaleString()}`],
               ['Signing Officer', userName],
             ].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between">
@@ -1386,7 +1386,7 @@ function KPIStrip({ collateral }: { collateral: CollateralRecord }) {
   const deadlineColor = isOverdue ? 'text-red-600' : isApproaching ? 'text-amber-600' : 'text-green-600';
 
   const kpis = [
-    { label: 'Collateral Value', value: collateral.valueTSh ? `TSh ${collateral.valueTSh}` : '—', icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/5' },
+    { label: 'Collateral Value', value: collateral.valueTSh ? `TSh ${collateral.valueTSh.toLocaleString()}` : '—', icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/5' },
     { label: 'LTV Ratio', value: collateral.ltvRatio != null ? `${(collateral.ltvRatio * 100).toFixed(1)}%` : '—', icon: PieChart, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Available Equity', value: collateral.availableEquity != null ? `TSh ${(collateral.availableEquity / 1_000_000).toFixed(1)}M` : '—', icon: Layers, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Days to Deadline', value: deadlineLabel, icon: Clock, color: deadlineColor, bg: isOverdue ? 'bg-red-50' : isApproaching ? 'bg-amber-50' : 'bg-green-50' },
@@ -1588,7 +1588,7 @@ export default function CollateralRecordContent({
                       { label: 'Obligor', value: <div><p className="font-500">{collateral.obligor}</p><p className="text-xs text-muted-foreground font-mono">{collateral.obligorId}</p></div> },
                       { label: 'Collateral Type', value: collateral.type },
                       { label: 'Asset Description', value: <p className="text-xs leading-relaxed">{collateral.description}</p> },
-                      { label: 'Collateral Value', value: <span className="font-mono font-600">TSh {collateral.valueTSh}</span> },
+                      { label: 'Collateral Value', value: <span className="font-mono font-600">TSh {collateral.valueTSh.toLocaleString()}</span> },
                       { label: 'Facility ID', value: <span className="font-mono text-xs">{collateral.facilityId}</span> },
                       { label: 'Assigned Officer', value: collateral.assignedOfficer },
                     ].map(({ label, value }) => (

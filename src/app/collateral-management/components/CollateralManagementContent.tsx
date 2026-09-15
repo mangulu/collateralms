@@ -419,7 +419,7 @@ export default function CollateralManagementContent() {
           collateralId: created.collateralId,
           action: 'created',
           message: `New collateral registered: ${created.collateralId}`,
-          detail: `${created.obligor} · ${created.type} · TSh ${created.valueTSh}`,
+          detail: `${created.obligor} · ${created.type} · TSh ${created.valueTSh.toLocaleString()}`,
           performedBy: user?.id,
           performedByName: user?.email ?? '',
         });

@@ -123,7 +123,7 @@ function SignOffModal({ collateral, userId, userName, userRole, onClose, onSigne
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Value</span>
-              <span className="text-xs font-mono font-semibold text-foreground">TSh {collateral.valueTSh}</span>
+              <span className="text-xs font-mono font-semibold text-foreground">TSh {collateral.valueTSh.toLocaleString()}</span>
             </div>
           </div>
           <div>
