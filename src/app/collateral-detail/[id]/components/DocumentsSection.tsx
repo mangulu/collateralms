@@ -582,7 +582,7 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
     }
 
     // Check allow_multiple setting for this doc type + collateral type
-    const collateralTypeName = collateral.collateralType ?? '';
+    const collateralTypeName = collateral.type ?? '';
     const allowMultiple = await collateralTypeRequiredDocsService.getAllowMultiple(collateralTypeName, docType);
 
     if (allowMultiple) {
@@ -605,7 +605,7 @@ export default function DocumentsSection({ collateral }: { collateral: Collatera
       setReplacingDoc(null);
       setShowUploadModal(true);
     }
-  }, [collateral.collateralType, docs]);
+  }, [collateral.type, docs]);
 
   const handleConfirmVersionUpload = () => {
     if (!duplicateConflict) return;

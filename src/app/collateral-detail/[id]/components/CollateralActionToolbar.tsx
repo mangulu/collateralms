@@ -4,6 +4,8 @@ import { UserCog, MapPin, ShieldCheck, Workflow, Scale, FileSearch, ArrowLeftRig
 import { CollateralRecord, collateralService, auditService } from '@/lib/supabase/collateralService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { createValuation } from '@/lib/supabase/valuationService';
+import { createSubstitution } from '@/lib/supabase/substitutionService';
+import { releaseRequestService } from '@/lib/supabase/releaseRequestService';
 import { workflowInstanceService, workflowTemplateService } from '@/lib/supabase/workflowEngineService';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -277,13 +279,13 @@ function GeolocationEditModal({
   const { user } = useAuth();
   const [lat, setLat] = useState(collateral.latitude?.toString() ?? '');
   const [lng, setLng] = useState(collateral.longitude?.toString() ?? '');
-  const [address, setAddress] = useState(collateral.physicalAddress ?? '');
+  const [address, setAddress] = useState(collateral.locationAddress ?? '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updates: Partial<CollateralRecord> = { physicalAddress: address };
+      const updates: Partial<CollateralRecord> = { locationAddress: address };
       if (lat && !isNaN(parseFloat(lat))) updates.latitude = parseFloat(lat);
       if (lng && !isNaN(parseFloat(lng))) updates.longitude = parseFloat(lng);
       await collateralService.update(collateral.id, updates);
@@ -302,7 +304,7 @@ function GeolocationEditModal({
           collateralId: collateral.collateralId,
           updateType: 'geolocation_change',
           fieldChanged: 'geolocation',
-          oldValue: `${collateral.latitude ?? ''},${collateral.longitude ?? ''},${collateral.physicalAddress ?? ''}`,
+          oldValue: `${collateral.latitude ?? ''},${collateral.longitude ?? ''},${collateral.locationAddress ?? ''}`,
           newValue: `${lat},${lng},${address}`,
           performedBy: user?.id,
           performedByName: user?.email ?? '',
@@ -430,16 +432,19 @@ function PerfectionModal({ collateral, onClose, onSaved }: { collateral: Collate
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      await perfectionService.create({
-        collateralId: collateral.id,
-        collateralRefId: collateral.collateralId,
-        obligor: collateral.obligor,
-        type: collateral.type,
-        registry: collateral.registry,
-        submittedBy: user?.id ?? '',
-        submittedByName: user?.email ?? '',
-        notes: notes || undefined,
-      });
+      await perfectionService.create(
+        {
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          obligor: collateral.obligor,
+          collateralType: collateral.type,
+          registry: collateral.registry,
+          perfectionDeadline: collateral.perfectionDeadline,
+          priority: 'Normal',
+        },
+        user?.id ?? '',
+        user?.email ?? ''
+      );
       await Promise.all([
         startWorkflowEngineInstance('perfection', collateral, user?.id ?? '', `Perfection — ${collateral.collateralId}`).catch(() => {}),
         logCollateralUpdate({
@@ -628,13 +633,12 @@ function SubstitutionModal({ collateral, onClose, onSaved }: { collateral: Colla
     if (!reason.trim()) { toast.error('Please provide a substitution reason'); return; }
     setSaving(true);
     try {
-      const supabase = createClient();
-      await supabase.from('collateral_substitutions').insert({
-        original_collateral_id: collateral.id,
-        status: 'Pending',
-        requested_by: user?.id,
-        requested_by_name: user?.email ?? '',
+      await createSubstitution({
+        facilityId: collateral.facilityId,
+        outgoingCollateralId: collateral.id,
         reason,
+        requestedBy: user?.id,
+        requestedByName: user?.email ?? '',
       });
       await Promise.all([
         startWorkflowEngineInstance('substitution', collateral, user?.id ?? '', `Substitution — ${collateral.collateralId}`).catch(() => {}),
@@ -681,15 +685,20 @@ function ReleaseModal({ collateral, onClose, onSaved }: { collateral: Collateral
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      const supabase = createClient();
-      await supabase.from('release_requests').insert({
-        collateral_record_id: collateral.id,
-        collateral_id: collateral.collateralId,
-        status: 'Pending',
-        requested_by: user?.id,
-        requested_by_name: user?.email ?? '',
-        notes: notes || null,
-      });
+      await releaseRequestService.create(
+        {
+          collateralRef: collateral.collateralId,
+          collateralType: collateral.type,
+          clientName: collateral.obligor,
+          loanRef: collateral.facilityId,
+          estimatedValue: collateral.valueTSh,
+          requestedBy: user?.email ?? user?.id ?? 'Unknown',
+          requestedDate: new Date().toISOString().slice(0, 10),
+          releaseReason: notes || 'Release requested',
+          notes: notes || undefined,
+        },
+        user?.id
+      );
       await Promise.all([
         startWorkflowEngineInstance('release', collateral, user?.id ?? '', `Release — ${collateral.collateralId}`).catch(() => {}),
         logCollateralUpdate({

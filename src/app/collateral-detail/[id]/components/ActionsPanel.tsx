@@ -1,14 +1,14 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Zap, Calendar, AlertTriangle, Clock, CheckCircle2, PenLine, RefreshCw, X, Stamp, AlertCircle, BadgeCheck, ShieldCheck, ClipboardCheck, Workflow, Unlock, FolderOpen, Send, CalendarClock, ArrowLeftRight, Loader2, ChevronDown, ChevronUp,  } from 'lucide-react';
+import { Zap, Calendar, AlertTriangle, Clock, CheckCircle2, PenLine, RefreshCw, X, Stamp, AlertCircle, BadgeCheck, ShieldCheck, ClipboardCheck, Workflow, Unlock, Send, CalendarClock, ArrowLeftRight, Loader2, ChevronDown, ChevronUp,  } from 'lucide-react';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { legalSignOffService, LegalSignOff } from '@/lib/supabase/legalSignOffService';
 import { auditLogService } from '@/lib/supabase/auditLogService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
-import { archiveRequestService } from '@/lib/supabase/archiveService';
 import { createValuation } from '@/lib/supabase/valuationService';
 import { type CovenantType } from '@/lib/supabase/covenantService';
 import { createSubstitution } from '@/lib/supabase/substitutionService';
+import { releaseRequestService } from '@/lib/supabase/releaseRequestService';
 
 import { type LoanOption } from '@/lib/supabase/workflowLookupsService';
 import { workflowInstanceService, workflowTemplateService } from '@/lib/supabase/workflowEngineService';
@@ -173,7 +173,7 @@ function SignOffModal({ collateral, userId, userName, userRole, onClose, onSigne
 
 // ─── Confirm Modal (Perfection / Release / Record Request) ────────────────────
 
-type ProcessType = 'perfection' | 'release' | 'record-request' | null;
+type ProcessType = 'perfection' | 'release' | null;
 
 interface ConfirmModalProps {
   processType: ProcessType;
@@ -199,12 +199,6 @@ function ConfirmModal({ processType, collateral, onConfirm, onClose, submitting 
       icon: Unlock, iconBg: 'bg-amber-100', iconColor: 'text-amber-600', btnBg: 'bg-amber-600 hover:bg-amber-700',
       description: `Initiate a release/discharge process for ${collateral.collateralId}.`,
       notesLabel: 'Release reason / notes', confirmLabel: 'Initiate Release',
-    },
-    'record-request': {
-      title: 'Raise Record Request',
-      icon: FolderOpen, iconBg: 'bg-purple-100', iconColor: 'text-purple-600', btnBg: 'bg-purple-600 hover:bg-purple-700',
-      description: `Request physical file retrieval for ${collateral.collateralId} from the archive vault.`,
-      notesLabel: 'Purpose / reason for retrieval', confirmLabel: 'Raise Request',
     },
   };
 
@@ -467,15 +461,38 @@ export default function ActionsPanel({ collateral, onActionComplete }: ActionsPa
     setSubmitting(true);
     try {
       if (activeProcess === 'perfection') {
-        await perfectionService.create({ collateralRecordId: collateral.id, collateralId: collateral.collateralId, submittedBy: user.id, submittedByName: userProfile?.full_name || user.email || '', notes: notes || undefined });
+        await perfectionService.create(
+          {
+            collateralRecordId: collateral.id,
+            collateralId: collateral.collateralId,
+            obligor: collateral.obligor,
+            collateralType: collateral.type,
+            registry: collateral.registry,
+            perfectionDeadline: collateral.perfectionDeadline,
+            priority: 'Normal',
+          },
+          user.id,
+          userProfile?.full_name || user.email || ''
+        );
         await startWorkflowEngineInstance('perfection', collateral, user.id, `Perfection — ${collateral.collateralId}`);
         toast.success('Perfection process started');
       } else if (activeProcess === 'release') {
+        await releaseRequestService.create(
+          {
+            collateralRef: collateral.collateralId,
+            collateralType: collateral.type,
+            clientName: collateral.obligor,
+            loanRef: collateral.facilityId,
+            estimatedValue: collateral.valueTSh,
+            requestedBy: userProfile?.full_name || user.email || 'Unknown',
+            requestedDate: new Date().toISOString().slice(0, 10),
+            releaseReason: notes || 'Release requested',
+            notes: notes || undefined,
+          },
+          user.id
+        );
         await startWorkflowEngineInstance('release', collateral, user.id, `Release — ${collateral.collateralId}`);
         toast.success('Release process initiated');
-      } else if (activeProcess === 'record-request') {
-        await archiveRequestService.create({ collateralRecordId: collateral.id, collateralId: collateral.collateralId, requestedBy: user.id, requestedByName: userProfile?.full_name || user.email || '', purpose: notes || 'Record retrieval', notes: notes || undefined });
-        toast.success('Record request raised');
       }
       setActiveProcess(null);
       onActionComplete?.();
@@ -616,15 +633,6 @@ export default function ActionsPanel({ collateral, onActionComplete }: ActionsPa
                 >
                   <Unlock size={14} className="shrink-0" />
                   <span>Initiate Release</span>
-                </button>
-
-                {/* Raise Record Request */}
-                <button
-                  onClick={() => setActiveProcess('record-request')}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors text-left"
-                >
-                  <FolderOpen size={14} className="shrink-0" />
-                  <span>Raise Record Request</span>
                 </button>
               </div>
             )}
