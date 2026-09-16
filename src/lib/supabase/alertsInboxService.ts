@@ -2,16 +2,13 @@
 
 import { createClient } from '@/lib/supabase/client';
 
-export type AlertChannel = 'sms' | 'email';
 export type AlertType = 'fraud_detection' | 'brela_deadline' | 'approval_request' | 'overdue_collateral' | 'status_change' | 'system';
 
 export interface InboxAlert {
   id: string;
-  channel: AlertChannel;
   type: AlertType;
   subject: string;
   body: string;
-  sender: string;
   recipient: string;
   isRead: boolean;
   priority: 'high' | 'medium' | 'low';
@@ -72,31 +69,12 @@ function buildSubjectFromSms(alertType: string, message: string, collateralId?: 
   }
 }
 
-function auditActionToInboxType(action: string, eventCategory?: string): AlertType {
-  if (eventCategory === 'approval' || ['approved', 'rejected', 'reviewed', 'returned'].includes(action)) {
-    return 'approval_request';
-  }
-  if (action === 'overdue') return 'overdue_collateral';
-  if (['status_changed', 'perfected', 'submitted'].includes(action)) return 'status_change';
-  if (action === 'created' || action === 'updated') return 'status_change';
-  return 'system';
-}
-
-function auditActionToPriority(action: string): 'high' | 'medium' | 'low' {
-  if (['overdue', 'rejected'].includes(action)) return 'high';
-  if (['approved', 'submitted', 'reviewed', 'returned', 'status_changed'].includes(action)) return 'medium';
-  return 'low';
-}
-
 function rowToInboxAlert(row: any): InboxAlert {
-  const inboxType = smsAlertTypeToInboxType(row.alert_type);
   return {
-    id: `sms-${row.id}`,
-    channel: 'sms',
-    type: inboxType,
+    id: row.id,
+    type: smsAlertTypeToInboxType(row.alert_type),
     subject: buildSubjectFromSms(row.alert_type, row.message, row.collateral_id),
     body: row.message,
-    sender: 'CollateralMS System',
     recipient: row.recipient_phone,
     isRead: row.status === 'DELIVERED' || row.status === 'SENT',
     priority: smsAlertTypeToPriority(row.alert_type),
@@ -107,80 +85,33 @@ function rowToInboxAlert(row: any): InboxAlert {
   };
 }
 
-function auditRowToInboxAlert(row: any): InboxAlert {
-  const inboxType = auditActionToInboxType(row.action, row.event_category);
-  const collateralId = row.collateral_id ?? undefined;
-  const actionHref = smsAlertTypeToActionHref(
-    inboxType === 'fraud_detection' ? 'FRAUD_DETECTION' :
-    inboxType === 'brela_deadline' ? 'BRELA_DEADLINE' :
-    inboxType === 'approval_request' ? 'APPROVAL_REQUEST' :
-    inboxType === 'overdue_collateral' ? 'OVERDUE_COLLATERAL' : 'SYSTEM'
-  );
-  return {
-    id: `audit-${row.id}`,
-    channel: 'email',
-    type: inboxType,
-    subject: row.message,
-    body: row.detail || row.message,
-    sender: 'noreply@collateralms.system',
-    recipient: row.performed_by_name || 'System',
-    isRead: true,
-    priority: auditActionToPriority(row.action),
-    receivedAt: row.created_at,
-    collateralId,
-    actionLabel: 'View Details',
-    actionHref: actionHref,
-  };
-}
-
 export const alertsInboxService = {
+  /**
+   * Triage view over real SMS alerts (sms_alerts). This used to also
+   * synthesize a fake "email" channel from audit_logs rows — no email
+   * was ever actually sent for those, so that channel was dropped.
+   */
   async fetchAlerts(limit = 100): Promise<InboxAlert[]> {
     const supabase = createClient();
-
-    const [smsResult, auditResult] = await Promise.all([
-      supabase
-        .from('sms_alerts')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit),
-      supabase
-        .from('audit_logs')
-        .select('*')
-        .in('action', ['overdue', 'approved', 'rejected', 'returned', 'submitted', 'status_changed', 'perfected'])
-        .order('created_at', { ascending: false })
-        .limit(limit),
-    ]);
-
-    const smsAlerts: InboxAlert[] = (smsResult.data ?? []).map(rowToInboxAlert);
-    const auditAlerts: InboxAlert[] = (auditResult.data ?? []).map(auditRowToInboxAlert);
-
-    // Merge and sort by receivedAt descending
-    const all = [...smsAlerts, ...auditAlerts].sort(
-      (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
-    );
-
-    return all;
+    const { data, error } = await supabase
+      .from('sms_alerts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) {
+      console.error('alertsInboxService.fetchAlerts:', error.message);
+      return [];
+    }
+    return (data ?? []).map(rowToInboxAlert);
   },
 
   async markRead(id: string): Promise<void> {
-    // For SMS alerts, update status to DELIVERED
-    if (id.startsWith('sms-')) {
-      const supabase = createClient();
-      const realId = id.replace('sms-', '');
-      await supabase
-        .from('sms_alerts')
-        .update({ status: 'DELIVERED' })
-        .eq('id', realId);
-    }
-    // Audit log entries don't have a read status — handled client-side only
+    const supabase = createClient();
+    await supabase.from('sms_alerts').update({ status: 'DELIVERED' }).eq('id', id);
   },
 
   async deleteAlert(id: string): Promise<void> {
-    if (id.startsWith('sms-')) {
-      const supabase = createClient();
-      const realId = id.replace('sms-', '');
-      await supabase.from('sms_alerts').delete().eq('id', realId);
-    }
-    // Audit log entries are immutable — deletion is client-side only
+    const supabase = createClient();
+    await supabase.from('sms_alerts').delete().eq('id', id);
   },
 };

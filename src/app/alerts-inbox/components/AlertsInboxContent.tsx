@@ -1,14 +1,12 @@
 'use client';
 import React, { useState, useCallback, useEffect } from 'react';
-import { Inbox, Mail, MessageSquare, AlertTriangle, Search, RefreshCw, CheckCheck, Trash2, X, Filter, ChevronDown, Shield, GitBranch, Building2, FileText, Activity, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
+import { Inbox, MessageSquare, AlertTriangle, Search, RefreshCw, CheckCheck, Trash2, X, Filter, ChevronDown, Shield, GitBranch, Building2, FileText, Activity, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
 import { alertsInboxService, type InboxAlert } from '@/lib/supabase/alertsInboxService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AlertChannel = 'sms' | 'email';
 type AlertType = 'fraud_detection' | 'brela_deadline' | 'approval_request' | 'overdue_collateral' | 'status_change' | 'system';
 type ReadStatus = 'all' | 'unread' | 'read';
-type ChannelFilter = 'all' | AlertChannel;
 type TypeFilter = 'all' | AlertType;
 type SortOrder = 'newest' | 'oldest' | 'priority';
 
@@ -74,11 +72,6 @@ const PRIORITY_CONFIG: Record<string, { dot: string; label: string }> = {
   low: { dot: 'bg-blue-400', label: 'Low' },
 };
 
-const CHANNEL_CONFIG: Record<AlertChannel, { icon: React.ElementType; bg: string; text: string; label: string }> = {
-  sms: { icon: MessageSquare, bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'SMS' },
-  email: { icon: Mail, bg: 'bg-sky-50', text: 'text-sky-700', label: 'Email' },
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatRelativeTime(iso: string): string {
@@ -115,9 +108,7 @@ interface AlertRowProps {
 
 function AlertRow({ alert, selected, onSelect, onMarkRead, onMarkUnread, onDelete, expanded, onToggleExpand }: AlertRowProps) {
   const typeCfg = TYPE_CONFIG[alert.type];
-  const channelCfg = CHANNEL_CONFIG[alert.channel];
   const TypeIcon = typeCfg.icon;
-  const ChannelIcon = channelCfg.icon;
 
   return (
     <div className={`border-b border-border last:border-0 transition-colors ${!alert.isRead ? 'bg-primary/[0.025]' : 'bg-white'} ${selected ? 'bg-primary/5' : ''}`}>
@@ -133,9 +124,9 @@ function AlertRow({ alert, selected, onSelect, onMarkRead, onMarkUnread, onDelet
           />
         </div>
 
-        {/* Channel badge */}
-        <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border ${channelCfg.bg} ${channelCfg.text} border-current/20 mt-0.5`}>
-          <ChannelIcon size={14} />
+        {/* Channel icon */}
+        <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border bg-emerald-50 text-emerald-700 border-current/20 mt-0.5">
+          <MessageSquare size={14} />
         </div>
 
         {/* Main content */}
@@ -148,10 +139,6 @@ function AlertRow({ alert, selected, onSelect, onMarkRead, onMarkUnread, onDelet
                   <TypeIcon size={9} />
                   {typeCfg.label}
                 </span>
-                <span className={`inline-flex items-center gap-1 text-[10px] font-500 px-1.5 py-0.5 rounded ${channelCfg.bg} ${channelCfg.text}`}>
-                  <ChannelIcon size={9} />
-                  {channelCfg.label}
-                </span>
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_CONFIG[alert.priority].dot}`} title={`${PRIORITY_CONFIG[alert.priority].label} priority`} />
                 {alert.collateralId && (
                   <span className="font-mono text-[10px] text-muted-foreground">{alert.collateralId}</span>
@@ -163,9 +150,9 @@ function AlertRow({ alert, selected, onSelect, onMarkRead, onMarkUnread, onDelet
                 {alert.subject}
               </p>
 
-              {/* Sender / recipient */}
+              {/* Recipient */}
               <p className="text-[11px] text-muted-foreground">
-                {alert.channel === 'email' ? `From: ${alert.sender}` : `To: ${alert.recipient}`}
+                To: {alert.recipient}
               </p>
 
               {/* Expanded body */}
@@ -174,7 +161,6 @@ function AlertRow({ alert, selected, onSelect, onMarkRead, onMarkUnread, onDelet
                   <p className="text-sm text-foreground/80 leading-relaxed">{alert.body}</p>
                   <p className="text-[11px] text-muted-foreground mt-2">
                     Received: {formatAbsoluteTime(alert.receivedAt)}
-                    {alert.channel === 'email' && ` · To: ${alert.recipient}`}
                   </p>
                   {alert.actionLabel && alert.actionHref && (
                     <a
@@ -250,7 +236,6 @@ export default function AlertsInboxContent() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
   const [readFilter, setReadFilter] = useState<ReadStatus>('all');
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
@@ -314,7 +299,6 @@ export default function AlertsInboxContent() {
   const filtered = alerts
     .filter((a) => {
       if (typeFilter !== 'all' && a.type !== typeFilter) return false;
-      if (channelFilter !== 'all' && a.channel !== channelFilter) return false;
       if (readFilter === 'unread' && a.isRead) return false;
       if (readFilter === 'read' && !a.isRead) return false;
       if (search.trim()) {
@@ -322,7 +306,7 @@ export default function AlertsInboxContent() {
         if (
           !a.subject.toLowerCase().includes(q) &&
           !a.body.toLowerCase().includes(q) &&
-          !a.sender.toLowerCase().includes(q) &&
+          !a.recipient.toLowerCase().includes(q) &&
           !(a.collateralId?.toLowerCase().includes(q))
         ) return false;
       }
@@ -336,8 +320,7 @@ export default function AlertsInboxContent() {
     });
 
   const unreadCount = alerts.filter((a) => !a.isRead).length;
-  const smsCount = alerts.filter((a) => a.channel === 'sms').length;
-  const emailCount = alerts.filter((a) => a.channel === 'email').length;
+  const highPriorityCount = alerts.filter((a) => a.priority === 'high').length;
   const highPriorityUnread = alerts.filter((a) => !a.isRead && a.priority === 'high').length;
 
   const allFilteredSelected = filtered.length > 0 && filtered.every((a) => selectedIds.has(a.id));
@@ -371,7 +354,7 @@ export default function AlertsInboxContent() {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 p-6 gap-5">
+    <div className="flex flex-col p-6 gap-5">
       {/* Page Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
@@ -401,8 +384,8 @@ export default function AlertsInboxContent() {
         {[
           { label: 'Total Alerts', value: alerts.length, icon: Inbox, color: 'text-foreground', bg: 'bg-muted/50' },
           { label: 'Unread', value: unreadCount, icon: Bell, color: 'text-primary', bg: 'bg-primary/5' },
-          { label: 'SMS Alerts', value: smsCount, icon: MessageSquare, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-          { label: 'Email Alerts', value: emailCount, icon: Mail, color: 'text-sky-700', bg: 'bg-sky-50' },
+          { label: 'High Priority', value: highPriorityCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Read', value: alerts.length - unreadCount, icon: CheckCheck, color: 'text-emerald-700', bg: 'bg-emerald-50' },
         ].map((stat) => {
           const StatIcon = stat.icon;
           return (
@@ -464,23 +447,6 @@ export default function AlertsInboxContent() {
                 <X size={12} />
               </button>
             )}
-          </div>
-
-          {/* Channel filter */}
-          <div className="flex items-center gap-1 border border-border rounded-lg overflow-hidden bg-white">
-            {(['all', 'sms', 'email'] as ChannelFilter[]).map((ch) => (
-              <button
-                key={ch}
-                onClick={() => setChannelFilter(ch)}
-                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-500 capitalize transition-colors ${
-                  channelFilter === ch ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                {ch === 'sms' && <MessageSquare size={11} />}
-                {ch === 'email' && <Mail size={11} />}
-                {ch === 'all' ? 'All Channels' : ch.toUpperCase()}
-              </button>
-            ))}
           </div>
 
           {/* Read status filter */}
