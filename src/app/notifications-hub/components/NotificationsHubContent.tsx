@@ -6,24 +6,12 @@ import {
   FileText, Shield, Activity
 } from 'lucide-react';
 import Link from 'next/link';
-
+import { useAuth } from '@/contexts/AuthContext';
+import { notificationsService, type AppNotification, type NotificationType } from '@/lib/supabase/notificationsService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type NotificationType = 'brela_deadline' | 'status_change' | 'overdue_action' | 'document_expiry' | 'workflow' | 'system';
-
-interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  collateralId?: string;
-  actionHref?: string;
-  actionLabel?: string;
-  isRead: boolean;
-  createdAt: string;
-  priority: 'high' | 'medium' | 'low';
-}
+type Notification = AppNotification;
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -84,132 +72,6 @@ const PRIORITY_DOT: Record<string, string> = {
   low: 'bg-blue-400',
 };
 
-// ─── Mock Data Generator ──────────────────────────────────────────────────────
-
-function generateMockNotifications(): Notification[] {
-  const now = new Date();
-  const ago = (minutes: number) => new Date(now.getTime() - minutes * 60 * 1000).toISOString();
-
-  return [
-    {
-      id: 'n-001',
-      type: 'overdue_action',
-      title: 'Perfection Overdue — COL-2024-0045',
-      message: 'BRELA registration for Land Title (Plot 45, Mikocheni) is 12 days past the submission deadline.',
-      collateralId: 'COL-2024-0045',
-      actionHref: '/collateral-management',
-      actionLabel: 'View Collateral',
-      isRead: false,
-      createdAt: ago(15),
-      priority: 'high',
-    },
-    {
-      id: 'n-002',
-      type: 'brela_deadline',
-      title: 'BRELA Deadline in 3 Days — COL-2024-0067',
-      message: 'Company charge registration for Karibu Enterprises Ltd is due on 29 Apr 2026. Immediate action required.',
-      collateralId: 'COL-2024-0067',
-      actionHref: '/collateral-management',
-      actionLabel: 'Take Action',
-      isRead: false,
-      createdAt: ago(42),
-      priority: 'high',
-    },
-    {
-      id: 'n-003',
-      type: 'status_change',
-      title: 'Perfection Request Approved',
-      message: 'Request PR-2024-0112 for COL-2024-0031 has been approved by Legal Officer. Status changed: Under Review → Perfected.',
-      collateralId: 'COL-2024-0031',
-      actionHref: '/perfection-workflow',
-      actionLabel: 'View Workflow',
-      isRead: false,
-      createdAt: ago(90),
-      priority: 'medium',
-    },
-    {
-      id: 'n-004',
-      type: 'overdue_action',
-      title: 'Perfection Overdue — COL-2024-0028',
-      message: 'Lands Registry filing for residential property in Masaki is 7 days overdue. Assigned to: J. Mwangi.',
-      collateralId: 'COL-2024-0028',
-      actionHref: '/collateral-management',
-      actionLabel: 'View Collateral',
-      isRead: true,
-      createdAt: ago(180),
-      priority: 'high',
-    },
-    {
-      id: 'n-005',
-      type: 'workflow',
-      title: 'New Perfection Request Submitted',
-      message: 'Credit Officer A. Kimani submitted perfection request PR-2024-0118 for COL-2024-0072 (Motor Vehicle — Toyota Land Cruiser).',
-      collateralId: 'COL-2024-0072',
-      actionHref: '/perfection-workflow',
-      actionLabel: 'Review Request',
-      isRead: false,
-      createdAt: ago(210),
-      priority: 'medium',
-    },
-    {
-      id: 'n-006',
-      type: 'brela_deadline',
-      title: 'BRELA Deadline in 7 Days — COL-2024-0089',
-      message: 'Debenture registration for Simba Holdings Ltd is due on 3 May 2026. Assign an officer to proceed.',
-      collateralId: 'COL-2024-0089',
-      actionHref: '/collateral-management',
-      actionLabel: 'Take Action',
-      isRead: true,
-      createdAt: ago(360),
-      priority: 'medium',
-    },
-    {
-      id: 'n-007',
-      type: 'document_expiry',
-      title: 'Insurance Certificate Expiring — COL-2024-0055',
-      message: 'Fire insurance certificate for commercial property (Kariakoo) expires in 14 days. Upload renewal document.',
-      collateralId: 'COL-2024-0055',
-      actionHref: '/document-management',
-      actionLabel: 'Manage Documents',
-      isRead: true,
-      createdAt: ago(480),
-      priority: 'medium',
-    },
-    {
-      id: 'n-008',
-      type: 'status_change',
-      title: 'Perfection Request Returned for Revision',
-      message: 'Request PR-2024-0109 was returned by Legal Officer. Reason: Incomplete title deed documentation for COL-2024-0019.',
-      collateralId: 'COL-2024-0019',
-      actionHref: '/perfection-workflow',
-      actionLabel: 'View Workflow',
-      isRead: true,
-      createdAt: ago(720),
-      priority: 'medium',
-    },
-    {
-      id: 'n-009',
-      type: 'overdue_action',
-      title: 'Perfection Overdue — COL-2024-0011',
-      message: 'TRA lien registration for equipment collateral is 21 days overdue. Escalation may be required.',
-      collateralId: 'COL-2024-0011',
-      actionHref: '/collateral-management',
-      actionLabel: 'View Collateral',
-      isRead: true,
-      createdAt: ago(1440),
-      priority: 'high',
-    },
-    {
-      id: 'n-010',
-      type: 'system',
-      title: 'System Maintenance Completed',
-      message: 'Scheduled database maintenance completed successfully. All services are operational.',
-      isRead: true,
-      createdAt: ago(2880),
-      priority: 'low',
-    },
-  ];
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -337,46 +199,56 @@ function NotificationCard({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function NotificationsHubContent() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
   const [search, setSearch] = useState('');
 
-  // Load mock data (replace with real Supabase query when notifications table exists)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setNotifications(generateMockNotifications());
+  const loadNotifications = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await notificationsService.getAll(user?.id);
+      setNotifications(data);
+    } catch {
+      setNotifications([]);
+    } finally {
       setIsLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [user?.id]);
+
+  useEffect(() => { loadNotifications(); }, [loadNotifications]);
 
   const handleMarkRead = useCallback((id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-  }, []);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    if (user?.id) notificationsService.markRead(user.id, id).catch(() => {});
+  }, [user?.id]);
 
   const handleDelete = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+    if (user?.id) notificationsService.dismiss(user.id, id).catch(() => {});
+  }, [user?.id]);
 
   const handleMarkAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  }, []);
+    setNotifications((prev) => {
+      const unreadIds = prev.filter((n) => !n.isRead).map((n) => n.id);
+      if (user?.id) notificationsService.markManyRead(user.id, unreadIds).catch(() => {});
+      return prev.map((n) => ({ ...n, isRead: true }));
+    });
+  }, [user?.id]);
 
   const handleClearAll = useCallback(() => {
-    setNotifications((prev) => prev.filter((n) => !n.isRead));
-  }, []);
+    setNotifications((prev) => {
+      const readIds = prev.filter((n) => n.isRead).map((n) => n.id);
+      if (user?.id) notificationsService.dismissMany(user.id, readIds).catch(() => {});
+      return prev.filter((n) => !n.isRead);
+    });
+  }, [user?.id]);
 
   const handleRefresh = useCallback(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setNotifications(generateMockNotifications());
-      setIsLoading(false);
-    }, 500);
-  }, []);
+    loadNotifications();
+  }, [loadNotifications]);
 
   // Filtered list
   const filtered = notifications.filter((n) => {
