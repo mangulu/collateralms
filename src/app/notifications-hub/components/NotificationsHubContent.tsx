@@ -270,7 +270,7 @@ export default function NotificationsHubContent() {
   const highPriorityCount = notifications.filter((n) => n.priority === 'high' && !n.isRead).length;
 
   return (
-    <div className="flex flex-col h-full min-h-0 p-6 gap-5">
+    <div className="flex flex-col p-6 gap-5">
       {/* Page Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
