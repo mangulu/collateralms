@@ -18,12 +18,13 @@ import {
   Building2,
   MessageSquare,
   Loader2,
+  ShieldAlert,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { collateralService, type AuditLog, type CollateralRecord } from '@/lib/supabase/collateralService';
-import Icon from '@/components/ui/AppIcon';
+import { collateralService, type CollateralRecord } from '@/lib/supabase/collateralService';
+import { auditLogService, type AuditLogEntry } from '@/lib/supabase/auditLogService';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
 import { buildDeadlineMessage, getAuthorityBadge } from '@/lib/perfectionAuthorities';
+import RiskPriorityPanel from './RiskPriorityPanel';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -259,7 +260,8 @@ function SmsDeadlineModal({ record, onClose }: SmsDeadlineModalProps) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ComplianceAuditContent() {
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [tab, setTab] = useState<'overview' | 'risk'>('overview');
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [collaterals, setCollaterals] = useState<CollateralRecord[]>([]);
   const [summary, setSummary] = useState<ComplianceSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -273,23 +275,10 @@ export default function ComplianceAuditContent() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const supabase = createClient();
-      const [logsResult, collateralsResult] = await Promise.all([
-        supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
+      const [logs, collateralsResult] = await Promise.all([
+        auditLogService.getAll(undefined, 200),
         collateralService.getAll(),
       ]);
-
-      const logs: AuditLog[] = (logsResult.data ?? []).map((row: any) => ({
-        id: row.id,
-        collateralRecordId: row.collateral_record_id,
-        collateralId: row.collateral_id,
-        action: row.action,
-        message: row.message,
-        detail: row.detail ?? '',
-        performedBy: row.performed_by,
-        performedByName: row.performed_by_name ?? '',
-        createdAt: row.created_at,
-      }));
 
       setAuditLogs(logs);
       setCollaterals(collateralsResult);
@@ -385,24 +374,46 @@ export default function ComplianceAuditContent() {
     }, 600);
   };
 
-  if (isLoading) {
-    return (
-      <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 max-w-screen-2xl mx-auto">
-        <div className="h-8 w-64 bg-muted animate-pulse rounded mb-2" />
-        <div className="h-4 w-96 bg-muted animate-pulse rounded mb-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={`sk-${i}`} className="h-28 bg-muted animate-pulse rounded-xl" />
-          ))}
-        </div>
-        <div className="h-64 bg-muted animate-pulse rounded-xl mb-6" />
-        <div className="h-64 bg-muted animate-pulse rounded-xl" />
-      </div>
-    );
-  }
-
   return (
     <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 max-w-screen-2xl mx-auto">
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-border mb-6">
+        <button
+          onClick={() => setTab('overview')}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <ClipboardList size={14} />
+          Compliance Overview
+        </button>
+        <button
+          onClick={() => setTab('risk')}
+          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'risk' ? 'border-amber-500 text-amber-600' : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <ShieldAlert size={14} />
+          Risk Priority View
+        </button>
+      </div>
+
+      {tab === 'risk' ? (
+        <RiskPriorityPanel />
+      ) : isLoading ? (
+        <>
+          <div className="h-8 w-64 bg-muted animate-pulse rounded mb-2" />
+          <div className="h-4 w-96 bg-muted animate-pulse rounded mb-8" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={`sk-${i}`} className="h-28 bg-muted animate-pulse rounded-xl" />
+            ))}
+          </div>
+          <div className="h-64 bg-muted animate-pulse rounded-xl mb-6" />
+          <div className="h-64 bg-muted animate-pulse rounded-xl" />
+        </>
+      ) : (
+        <>
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5 sm:mb-7">
         <div>
@@ -694,6 +705,8 @@ export default function ComplianceAuditContent() {
 
       {smsDeadlineRecord && (
         <SmsDeadlineModal record={smsDeadlineRecord} onClose={() => setSmsDeadlineRecord(null)} />
+      )}
+        </>
       )}
     </div>
   );
