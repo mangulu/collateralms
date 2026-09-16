@@ -6,6 +6,7 @@ import { userTaskService, UserTask } from '@/lib/supabase/userTaskService';
 import { collateralApprovalService, CollateralApprovalRequest } from '@/lib/supabase/collateralApprovalService';
 import { perfectionService, PerfectionRequest } from '@/lib/supabase/perfectionService';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/lib/rbac';
 import Link from 'next/link';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ function ItemCard({ item, onMarkComplete }: { item: UnifiedItem; onMarkComplete?
                 </button>
               )}
               <Link
-                href={`/workflows/tasks/${item.id}`}
+                href={item.category === 'task' ? `/workflows/tasks/${item.id}` : (item.actionUrl ?? '/workflows')}
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-500 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors"
               >
                 View <ChevronRight size={11} />
@@ -154,6 +155,7 @@ function ItemCard({ item, onMarkComplete }: { item: UnifiedItem; onMarkComplete?
 
 export default function UnifiedTaskListContent() {
   const { user } = useAuth();
+  const { role } = usePermissions();
   const router = useRouter();
   const [items, setItems] = useState<UnifiedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,9 +188,14 @@ export default function UnifiedTaskListContent() {
         });
       }).catch(() => {}) : Promise.resolve(),
 
-      // Approval requests
+      // Approval requests — only ones assigned to me directly, or routed
+      // to my role and not yet claimed by anyone else.
       collateralApprovalService.getAll().then((approvals) => {
-        approvals.forEach((a) => {
+        const roleLabel = role ? role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : null;
+        const mine = approvals.filter((a) =>
+          a.assignedTo === user?.id || (!a.assignedTo && !!roleLabel && a.assignedToRole === roleLabel)
+        );
+        mine.forEach((a) => {
           unified.push({
             id: a.id,
             category: 'approval',
@@ -205,9 +212,13 @@ export default function UnifiedTaskListContent() {
         });
       }).catch(() => {}),
 
-      // Perfection requests
-      perfectionService.getAll().then((perfs) => {
-        perfs.forEach((p) => {
+      // Perfection requests — only ones I personally submitted (there's
+      // no per-item assignee on this table, unlike approvals; requests
+      // awaiting anyone's review live in Approval Inbox / Perfection
+      // Workflow instead).
+      user?.id ? perfectionService.getAll().then((perfs) => {
+        const mine = perfs.filter((p) => p.submittedBy === user.id);
+        mine.forEach((p) => {
           unified.push({
             id: p.id,
             category: 'perfection',
@@ -222,12 +233,12 @@ export default function UnifiedTaskListContent() {
             raw: p,
           });
         });
-      }).catch(() => {}),
+      }).catch(() => {}) : Promise.resolve(),
     ]);
 
     setItems(unified);
     setLoading(false);
-  }, [user?.id]);
+  }, [user?.id, role]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
