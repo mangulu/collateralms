@@ -104,9 +104,14 @@ const CONDITION_OPERATORS: WorkflowConditionOperator[] = [
   'greater_than_or_equal', 'less_than_or_equal', 'contains', 'not_contains',
 ];
 
+// An edited step keeps its original id (so saving preserves identity for
+// existing steps); a step added in this session has no id yet — the
+// service assigns one on save.
+type EditableStep = Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'> & { id?: string };
+
 // ─── Blank Step Factory ───────────────────────────────────────────────────────
 
-function blankStep(): Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'> {
+function blankStep(): EditableStep {
   return {
     templateId: '',
     stepOrder: 1,
@@ -129,8 +134,8 @@ function blankStep(): Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'> {
 // ─── Escalation Panel ─────────────────────────────────────────────────────────
 
 interface EscalationPanelProps {
-  step: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>;
-  onChange: (updated: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  step: EditableStep;
+  onChange: (updated: EditableStep) => void;
 }
 
 function EscalationPanel({ step, onChange }: EscalationPanelProps) {
@@ -284,10 +289,10 @@ function EscalationPanel({ step, onChange }: EscalationPanelProps) {
 // ─── Step Editor ──────────────────────────────────────────────────────────────
 
 interface StepEditorProps {
-  step: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>;
+  step: EditableStep;
   index: number;
   total: number;
-  onChange: (updated: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onChange: (updated: EditableStep) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
@@ -676,7 +681,7 @@ export default function WorkflowTemplatesContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<WorkflowTemplate | null>(null);
-  const [editSteps, setEditSteps] = useState<Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>[]>([]);
+  const [editSteps, setEditSteps] = useState<EditableStep[]>([]);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [showNewForm, setShowNewForm] = useState(false);
@@ -705,6 +710,7 @@ export default function WorkflowTemplatesContent() {
     setEditName(template.name);
     setEditDescription(template.description);
     setEditSteps(template.steps.map((s) => ({
+      id: s.id,
       templateId: s.templateId,
       stepOrder: s.stepOrder,
       name: s.name,
@@ -732,7 +738,7 @@ export default function WorkflowTemplatesContent() {
     setEditSteps((prev) => [...prev, blankStep()]);
   }
 
-  function updateStep(i: number, updated: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>) {
+  function updateStep(i: number, updated: EditableStep) {
     setEditSteps((prev) => prev.map((s, idx) => idx === i ? updated : s));
   }
 
@@ -760,8 +766,14 @@ export default function WorkflowTemplatesContent() {
         description: editDescription,
         updatedBy: userProfile?.id,
       });
-      await workflowTemplateService.saveSteps(editingTemplate.id, editSteps);
-      toast.success('Template saved successfully');
+      const { blockedStepNames } = await workflowTemplateService.saveSteps(editingTemplate.id, editSteps);
+      if (blockedStepNames.length > 0) {
+        toast.error(
+          `Template saved, but couldn't remove ${blockedStepNames.length === 1 ? 'this step' : 'these steps'} — still in use by an active workflow instance: ${blockedStepNames.join(', ')}`
+        );
+      } else {
+        toast.success('Template saved successfully');
+      }
       closeEdit();
       load();
     } catch {

@@ -376,13 +376,51 @@ export const workflowTemplateService = {
     }
   },
 
-  async saveSteps(templateId: string, steps: Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> {
+  /**
+   * Upserts a template's steps instead of replacing them wholesale, so
+   * editing one step (or just the template name) doesn't recreate every
+   * step's id — which would silently null out workflow_instances'
+   * current_step_id and workflow_transition_log's step references, and
+   * outright fail (FK restrict) for any template already in use.
+   *
+   * Steps removed in the UI are deleted individually: if a given step is
+   * actually in use (blocked by workflow_instance_steps), only that
+   * step's removal is skipped — its name is returned in
+   * blockedStepNames — while the rest of the save still succeeds.
+   */
+  async saveSteps(
+    templateId: string,
+    steps: (Omit<WorkflowStep, 'id' | 'createdAt' | 'updatedAt'> & { id?: string })[]
+  ): Promise<{ blockedStepNames: string[] }> {
     const supabase = createClient();
-    // Delete existing steps (cascade deletes actors + conditions)
-    await supabase.from('workflow_steps').delete().eq('template_id', templateId);
-    if (steps.length === 0) return;
-    // Insert steps
+
+    const { data: existingRows, error: existingErr } = await supabase
+      .from('workflow_steps')
+      .select('id, name')
+      .eq('template_id', templateId);
+    if (existingErr) throw existingErr;
+
+    const incomingIds = new Set(steps.filter((s) => s.id).map((s) => s.id as string));
+    const removed = (existingRows ?? []).filter((r: any) => !incomingIds.has(r.id));
+
+    const blockedStepNames: string[] = [];
+    for (const r of removed) {
+      const { error } = await supabase.from('workflow_steps').delete().eq('id', r.id);
+      if (error) {
+        if (error.code === '23503') {
+          blockedStepNames.push(r.name);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (steps.length === 0) return { blockedStepNames };
+
+    // Every row gets an explicit id (existing steps keep theirs, new
+    // steps get a fresh one) so the upsert payload has uniform columns.
     const stepRows = steps.map((s, i) => ({
+      id: s.id ?? crypto.randomUUID(),
       template_id: templateId,
       step_order: i + 1,
       name: s.name,
@@ -397,13 +435,22 @@ export const workflowTemplateService = {
       notify_on_complete: s.notifyOnComplete,
       notify_roles: s.notifyRoles,
     }));
-    const { data: insertedSteps, error: stepsErr } = await supabase
-      .from('workflow_steps').insert(stepRows).select();
-    if (stepsErr) throw stepsErr;
-    // Insert actors and conditions
+    const { data: savedSteps, error: upsertErr } = await supabase
+      .from('workflow_steps')
+      .upsert(stepRows, { onConflict: 'id' })
+      .select();
+    if (upsertErr) throw upsertErr;
+
+    // Replace actors/conditions for every surviving step — safe to
+    // delete+reinsert, since nothing else references these rows by id.
+    const stepIds = (savedSteps ?? []).map((s: any) => s.id);
+    if (stepIds.length > 0) {
+      await supabase.from('workflow_step_actors').delete().in('step_id', stepIds);
+      await supabase.from('workflow_step_conditions').delete().in('step_id', stepIds);
+    }
     const actorRows: any[] = [];
     const conditionRows: any[] = [];
-    (insertedSteps ?? []).forEach((dbStep: any, i: number) => {
+    (savedSteps ?? []).forEach((dbStep: any, i: number) => {
       const src = steps[i];
       src.actors.forEach((a) => actorRows.push({
         step_id: dbStep.id,
@@ -431,6 +478,8 @@ export const workflowTemplateService = {
       const { error } = await supabase.from('workflow_step_conditions').insert(conditionRows);
       if (error) throw error;
     }
+
+    return { blockedStepNames };
   },
 };
 
