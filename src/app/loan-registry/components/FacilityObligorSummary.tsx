@@ -219,7 +219,7 @@ export default function FacilityObligorSummary({ loan }: Props) {
         <p className="text-[10px] font-700 text-muted-foreground uppercase tracking-wide mb-2">Quick Actions</p>
         <div className="space-y-1">
           {[
-            { label: 'All Loans for Obligor', href: `/loans?facility=${encodeURIComponent(summary.obligor_code)}`, icon: CreditCard },
+            { label: 'All Loans for Obligor', href: `/loan-registry?facility=${encodeURIComponent(summary.obligor_code)}`, icon: CreditCard },
             { label: 'Valuation Workflow', href: `/valuation-workflow?loanId=${loan.id}`, icon: RefreshCw },
             { label: 'Covenant Tracking', href: `/covenant-tracking?loanId=${loan.id}`, icon: Scale },
             { label: 'Collateral Substitution', href: `/collateral-substitution?loanId=${loan.id}`, icon: ArrowLeftRight },

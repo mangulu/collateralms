@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { Plus, Search, X, Loader2, AlertCircle, RefreshCw, Building2, CreditCard, Calendar, CheckCircle2, XCircle, Clock, Edit2, Trash2, BarChart2, ChevronRight } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Plus, Search, X, Loader2, AlertCircle, RefreshCw, Building2, CreditCard, Calendar, CheckCircle2, XCircle, Clock, Edit2, Trash2, BarChart2 } from 'lucide-react';
 import { loanService, Loan } from '@/lib/supabase/loanService';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +52,7 @@ function formatTsh(val: number | null | undefined): string {
 
 export default function LoanRegistryContent() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [obligors, setObligors] = useState<Obligor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +90,12 @@ export default function LoanRegistryContent() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
+
+  // Pre-filter by facility query param (deep links from Collateral Registry/Detail)
+  useEffect(() => {
+    const facility = searchParams.get('facility');
+    if (facility) setSearch(facility);
+  }, [searchParams]);
 
   const filtered = loans.filter((l) => {
     const q = search.toLowerCase();
@@ -455,12 +462,6 @@ export default function LoanRegistryContent() {
                   >
                     <Trash2 size={12} /> Delete
                   </button>
-                  <Link
-                    href={`/loans`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-500 text-muted-foreground hover:bg-muted transition-colors ml-auto"
-                  >
-                    View in Loans Module <ChevronRight size={11} />
-                  </Link>
                 </div>
               </div>
 

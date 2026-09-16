@@ -70,7 +70,7 @@ const MODULES: ModuleGuide[] = [
       { label: 'Collateral Registry', href: '/collateral-management', icon: FolderOpen, description: 'Add, edit, and search all collateral records. The primary data entry point.' },
       { label: 'Loan–Collateral Map', href: '/collateral-loan-visualization', icon: GitMerge, description: 'Visual network map linking loans to their collateral assets.' },
       { label: 'Collateral Documents', href: '/collateral-documents', icon: Files, description: 'Manage documents attached to collateral, including the Security Pocket.' },
-      { label: 'Loan Facilities', href: '/loans', icon: Landmark, description: 'Register and manage loan facilities linked to obligors — supports multiple facility types, repayment schedules, and live status tracking.' },
+      { label: 'Loan Registry', href: '/loan-registry', icon: Landmark, description: 'Register and manage loan facilities linked to obligors — supports multiple facility types, repayment schedules, linked-collateral view, and live status tracking.' },
       { label: 'Batch Release', href: '/batch-release', icon: Unlock, description: 'Release multiple collateral records simultaneously in a single operation.' },
       { label: 'Bulk Upload', href: '/bulk-upload', icon: Upload, description: 'Import hundreds of collateral records at once via CSV template.' },
       { label: 'Scheduled Jobs', href: '/scheduled-jobs', icon: CalendarClock, description: 'Monitor automated background tasks like expiry checks and notifications.' },

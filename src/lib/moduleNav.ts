@@ -78,8 +78,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Obligor Management',
         items: [
           { label: 'Obligors', icon: Users, href: '/obligors', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Loan Facilities', icon: Landmark, href: '/loans', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Loan Registry', icon: ClipboardList, href: '/loan-registry', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Loan Registry', icon: Landmark, href: '/loan-registry', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
@@ -294,7 +293,6 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/document-management': 'archive',
   '/document-approval': 'workflows',
   '/obligors': 'obligors',
-  '/loans': 'obligors',
   '/loan-registry': 'obligors',
   '/loan-classification': 'obligors',
   '/provisioning-calculator': 'obligors',

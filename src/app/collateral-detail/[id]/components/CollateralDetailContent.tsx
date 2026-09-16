@@ -518,7 +518,7 @@ export default function CollateralDetailContent({
                     <DetailRow label="Collateral Value" value={<span className="font-mono font-semibold text-base">TSh {collateral.valueTSh.toLocaleString()}</span>} icon={Building2} />
                     <DetailRow label="Facility ID" value={
                       collateral.facilityId ? (
-                        <Link href={`/loans?facility=${encodeURIComponent(collateral.facilityId)}`} className="font-mono text-xs text-primary hover:underline flex items-center gap-1">
+                        <Link href={`/loan-registry?facility=${encodeURIComponent(collateral.facilityId)}`} className="font-mono text-xs text-primary hover:underline flex items-center gap-1">
                           {collateral.facilityId}<ExternalLink size={11} className="shrink-0" />
                         </Link>
                       ) : (
@@ -642,7 +642,7 @@ export default function CollateralDetailContent({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2 p-3 bg-muted/30 rounded-lg">
                     <div className="min-w-0">
-                      <Link href={`/loans?facility=${encodeURIComponent(collateral.facilityId)}`} className="text-sm font-bold font-mono text-primary hover:underline flex items-center gap-1">
+                      <Link href={`/loan-registry?facility=${encodeURIComponent(collateral.facilityId)}`} className="text-sm font-bold font-mono text-primary hover:underline flex items-center gap-1">
                         {collateral.facilityId}<ExternalLink size={11} className="shrink-0" />
                       </Link>
                       {loanData?.facilityType && (
