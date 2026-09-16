@@ -282,6 +282,32 @@ export const auditLogService = {
     );
   },
 
+  /**
+   * Free-form audit entry for one-off events that don't fit one of the
+   * semantic log* methods below. Prefer a semantic method when one exists.
+   */
+  async log(entry: {
+    collateralRecordId?: string;
+    collateralId?: string;
+    action: string;
+    message: string;
+    detail?: string;
+    performedBy?: string;
+    performedByName?: string;
+  }): Promise<boolean> {
+    return insertAuditLog({
+      collateral_record_id: entry.collateralRecordId ?? null,
+      collateral_id:        entry.collateralId ?? null,
+      entity_type:          'collateral',
+      action:                entry.action,
+      message:              entry.message,
+      detail:               entry.detail ?? '',
+      performed_by:         entry.performedBy ?? null,
+      performed_by_name:    entry.performedByName ?? 'System',
+      event_category:       EVENT_CATEGORIES.COLLATERAL_CHANGE,
+    });
+  },
+
   // ── Collateral lifecycle ───────────────────────────────────────────────────
 
   /** Log collateral creation */

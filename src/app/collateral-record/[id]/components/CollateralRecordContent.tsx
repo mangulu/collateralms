@@ -7,7 +7,6 @@ import Badge from '@/components/ui/Badge';
 import {
   CollateralRecord,
   CollateralStatus,
-  auditService,
   collateralService,
 } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
@@ -308,7 +307,7 @@ function StatusChangeModal({ collateral, targetStatus, userId, userName, onClose
     try {
       const updated = await collateralService.update(collateral.id, { status: targetStatus });
       if (!updated) { setError('Status update failed. Please try again.'); setSubmitting(false); return; }
-      await auditService.log({
+      await auditLogService.log({
         collateralRecordId: collateral.id,
         collateralId: collateral.collateralId,
         action: 'status_changed',
@@ -444,7 +443,7 @@ function PerfectionSubmitModal({ collateral, userId, userName, userRole, onClose
       );
       if (!req) { setError('Failed to create perfection request.'); setSubmitting(false); return; }
       await perfectionService.submit(req.id, userId, userName, comment || 'Perfection request submitted for review.', userRole);
-      await auditService.log({
+      await auditLogService.log({
         collateralRecordId: collateral.id,
         collateralId: collateral.collateralId,
         action: 'submitted',
@@ -1429,7 +1428,7 @@ export default function CollateralRecordContent({
     try {
       const updated = await collateralService.update(collateral.id, data);
       if (updated) {
-        await auditService.log({
+        await auditLogService.log({
           collateralRecordId: collateral.id,
           collateralId: collateral.collateralId,
           action: 'updated',

@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play, CheckCircle, Clock, AlertTriangle, Eye, Edit } from 'lucide-react';
 import { toast } from 'sonner';
-import { collateralService, auditService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
+import { collateralService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
+import { auditLogService } from '@/lib/supabase/auditLogService';
 import type { WorkflowTemplateType } from '@/lib/supabase/workflowEngineService';
 import { documentService } from '@/lib/supabase/documentService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
@@ -333,7 +334,7 @@ export default function CollateralManagementContent() {
       await collateralService.updateStatus(id, status);
       const record = collateralData.find((c) => c.id === id);
       if (record) {
-        await auditService.log({
+        await auditLogService.log({
           collateralRecordId: id,
           collateralId: record.collateralId,
           action: 'status_changed',
@@ -372,7 +373,7 @@ export default function CollateralManagementContent() {
       }
 
       try {
-        await auditService.log({
+        await auditLogService.log({
           collateralRecordId: editItem.id,
           collateralId: editItem.collateralId,
           action: 'updated',
@@ -424,7 +425,7 @@ export default function CollateralManagementContent() {
       }
 
       try {
-        await auditService.log({
+        await auditLogService.log({
           collateralRecordId: created.id,
           collateralId: created.collateralId,
           action: 'created',

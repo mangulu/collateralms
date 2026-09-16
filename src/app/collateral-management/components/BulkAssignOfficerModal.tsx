@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { UserCog, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Modal from '@/components/ui/Modal';
-import { collateralService, auditService, CollateralRecord } from '@/lib/supabase/collateralService';
+import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
+import { auditLogService } from '@/lib/supabase/auditLogService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface BulkAssignOfficerModalProps {
@@ -38,7 +39,7 @@ export default function BulkAssignOfficerModal({
       await Promise.all(
         records.map(async (record) => {
           await collateralService.update(record.id, { assignedOfficer: selectedOfficer });
-          await auditService.log({
+          await auditLogService.log({
             collateralRecordId: record.id,
             collateralId: record.collateralId,
             action: 'officer_assigned',

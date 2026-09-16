@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { UserCog, MapPin, ShieldCheck, Workflow, Scale, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox, BookOpen } from 'lucide-react';
-import { CollateralRecord, collateralService, auditService } from '@/lib/supabase/collateralService';
+import { CollateralRecord, collateralService } from '@/lib/supabase/collateralService';
+import { auditLogService } from '@/lib/supabase/auditLogService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { createValuation } from '@/lib/supabase/valuationService';
 import { createSubstitution } from '@/lib/supabase/substitutionService';
@@ -197,7 +198,7 @@ function AssigneeEditModal({
     try {
       await collateralService.update(collateral.id, { assignedOfficer: selected });
       await Promise.all([
-        auditService.log({
+        auditLogService.log({
           collateralRecordId: collateral.id,
           collateralId: collateral.collateralId,
           action: 'updated',
@@ -284,7 +285,7 @@ function GeolocationEditModal({
       if (lng && !isNaN(parseFloat(lng))) updates.longitude = parseFloat(lng);
       await collateralService.update(collateral.id, updates);
       await Promise.all([
-        auditService.log({
+        auditLogService.log({
           collateralRecordId: collateral.id,
           collateralId: collateral.collateralId,
           action: 'updated',
@@ -362,7 +363,7 @@ function StatusEditModal({
     try {
       await collateralService.update(collateral.id, { status: status as any });
       await Promise.all([
-        auditService.log({
+        auditLogService.log({
           collateralRecordId: collateral.id,
           collateralId: collateral.collateralId,
           action: 'status_changed',
