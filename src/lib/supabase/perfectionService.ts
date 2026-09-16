@@ -509,7 +509,7 @@ export const perfectionService = {
       .from('perfection_comments')
       .insert({
         perfection_request_id: id,
-        action: 'approved',
+        action: 'perfected',
         comment: decisionNotes || 'Collateral perfected successfully.',
         performed_by: userId,
         performed_by_name: userName,

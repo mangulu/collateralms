@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File, ExternalLink, Maximize2, Minimize2, ChevronUp, ChevronDown } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File, ExternalLink, Maximize2, Minimize2, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,7 +32,8 @@ const PRIORITY_CONFIG: Record<string, { color: string; bg: string }> = {
 const ACTION_LABELS: Record<string, string> = {
   submitted: 'Submitted',
   reviewed: 'Review Started',
-  approved: 'Approved / Perfected',
+  approved: 'Approved',
+  perfected: 'Perfected',
   rejected: 'Rejected',
   returned: 'Returned for Revision',
   commented: 'Comment Added',
@@ -42,7 +43,8 @@ const ACTION_LABELS: Record<string, string> = {
 const ACTION_COLORS: Record<string, string> = {
   submitted: 'bg-blue-500',
   reviewed: 'bg-amber-500',
-  approved: 'bg-emerald-500',
+  approved: 'bg-green-500',
+  perfected: 'bg-emerald-500',
   rejected: 'bg-red-500',
   returned: 'bg-orange-500',
   commented: 'bg-gray-400',
@@ -218,8 +220,9 @@ function RoleGuidanceBanner({ userRole }: { userRole: string }) {
       title: 'You are a Legal Officer',
       steps: [
         'Open any "Submitted" request and click "Start Review" to begin',
-        'Once reviewing, open the "Under Review" request and choose: Perfect, Return, or Reject',
-        'Add notes when perfecting or rejecting — they are required',
+        'While "Under Review", choose Return or Reject here, or approve it in Pending Approvals',
+        'Once "Approved", open the request here and click "Mark as Perfected" to complete it',
+        'Add notes when rejecting, returning, or marking as perfected — they are required',
       ],
       color: 'text-amber-800',
       bg: 'bg-amber-50',
@@ -230,7 +233,7 @@ function RoleGuidanceBanner({ userRole }: { userRole: string }) {
       title: 'You are a System Admin',
       steps: [
         'You can perform all Credit Officer and Legal Officer actions',
-        'Create, submit, review, perfect, return, or reject any request',
+        'Create, submit, review, approve (via Pending Approvals), mark as perfected, return, or reject any request',
       ],
       color: 'text-purple-800',
       bg: 'bg-purple-50',
@@ -242,7 +245,7 @@ function RoleGuidanceBanner({ userRole }: { userRole: string }) {
   if (!cfg) return null;
 
   return (
-    <div className={`mx-6 mt-4 mb-1 rounded-xl border ${cfg.border} ${cfg.bg} px-4 py-3`}>
+    <div className={`rounded-xl border ${cfg.border} ${cfg.bg} px-4 py-3`}>
       <div className={`flex items-center gap-2 font-semibold text-sm mb-2 ${cfg.color}`}>
         {cfg.icon}
         {cfg.title} — How this workflow works for you:
@@ -262,22 +265,21 @@ function RoleGuidanceBanner({ userRole }: { userRole: string }) {
 }
 
 // ─── Workflow Stage Bar ────────────────────────────────────────────────────────
-const WORKFLOW_STAGES: PerfectionRequestStatus[] = ['Submitted', 'Under Review', 'Perfected'];
+const WORKFLOW_STAGES: PerfectionRequestStatus[] = ['Submitted', 'Under Review', 'Approved', 'Perfected'];
 
 const STAGE_DESCRIPTIONS: Record<PerfectionRequestStatus, string> = {
   Submitted: 'Waiting for Legal Officer to start review',
   'Under Review': 'Legal Officer is reviewing this request',
+  Approved: 'Approved by Legal Officer — awaiting final perfection confirmation',
   Perfected: 'Collateral has been successfully perfected',
   Draft: 'Not yet submitted',
-  Approved: 'Approved',
   Rejected: 'Request was rejected',
   Returned: 'Returned to Credit Officer for revision',
 };
 
 function WorkflowStageBar({ status, userRole }: { status: PerfectionRequestStatus; userRole: string }) {
   const isRejected = status === 'Rejected' || status === 'Returned';
-  const currentIdx = WORKFLOW_STAGES.indexOf(status);
-  const effectiveIdx = status === 'Approved' ? 2 : currentIdx;
+  const effectiveIdx = WORKFLOW_STAGES.indexOf(status);
 
   const nextActionHint: Partial<Record<PerfectionRequestStatus, Record<string, string>>> = {
     Draft: {
@@ -290,9 +292,14 @@ function WorkflowStageBar({ status, userRole }: { status: PerfectionRequestStatu
       credit_officer: '⏳ Waiting for Legal Officer to start review',
     },
     'Under Review': {
-      legal_officer: '👉 Your turn: Choose Perfect, Return, or Reject',
-      system_admin: '👉 Choose Perfect, Return, or Reject to complete review',
+      legal_officer: '👉 Your turn: Approve it in Pending Approvals, or choose Return or Reject here',
+      system_admin: '👉 Approve it in Pending Approvals, or choose Return or Reject here',
       credit_officer: '⏳ Legal Officer is reviewing — no action needed',
+    },
+    Approved: {
+      legal_officer: '👉 Your turn: Click "Mark as Perfected" once registry perfection is confirmed',
+      system_admin: '👉 Click "Mark as Perfected" once registry perfection is confirmed',
+      credit_officer: '⏳ Approved — awaiting final perfection confirmation',
     },
     Returned: {
       credit_officer: '👉 Your turn: Review the feedback and resubmit',
@@ -431,9 +438,11 @@ function BatchActionPanel({ selectedIds, selectedRequests, userRole, userId, use
     availableActions.push({ value: 'review', label: 'Start Review', color: 'bg-amber-600 hover:bg-amber-700', icon: <Eye size={14} />, requiresComment: false });
   }
   if (isLegalOfficer && selectedStatuses.has('Under Review')) {
-    availableActions.push({ value: 'perfected', label: 'Mark as Perfected', color: 'bg-emerald-600 hover:bg-emerald-700', icon: <Award size={14} />, requiresComment: true });
     availableActions.push({ value: 'return', label: 'Return for Revision', color: 'bg-orange-500 hover:bg-orange-600', icon: <RotateCcw size={14} />, requiresComment: true });
     availableActions.push({ value: 'reject', label: 'Reject', color: 'bg-red-600 hover:bg-red-700', icon: <XCircle size={14} />, requiresComment: true });
+  }
+  if (isLegalOfficer && selectedStatuses.has('Approved')) {
+    availableActions.push({ value: 'perfected', label: 'Mark as Perfected', color: 'bg-emerald-600 hover:bg-emerald-700', icon: <Award size={14} />, requiresComment: true });
   }
 
   const selectedActionConfig = availableActions.find(a => a.value === batchAction);
@@ -443,7 +452,8 @@ function BatchActionPanel({ selectedIds, selectedRequests, userRole, userId, use
     return selectedRequests.filter(r => {
       if (action === 'submit') return r.requestStatus === 'Draft' || r.requestStatus === 'Returned';
       if (action === 'review') return r.requestStatus === 'Submitted';
-      if (action === 'perfected' || action === 'return' || action === 'reject') return r.requestStatus === 'Under Review';
+      if (action === 'return' || action === 'reject') return r.requestStatus === 'Under Review';
+      if (action === 'perfected') return r.requestStatus === 'Approved';
       return false;
     });
   }
@@ -741,6 +751,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
   const canSubmit = (userRole === 'credit_officer' || isAdmin) && (request.requestStatus === 'Draft' || request.requestStatus === 'Returned');
   const canReview = (userRole === 'legal_officer' || isAdmin) && request.requestStatus === 'Submitted';
   const canDecide = (userRole === 'legal_officer' || isAdmin) && request.requestStatus === 'Under Review';
+  const canMarkPerfected = (userRole === 'legal_officer' || isAdmin) && request.requestStatus === 'Approved';
   const canComment = ['credit_officer', 'legal_officer', 'system_admin'].includes(userRole);
 
   async function handleAction(type: 'submit' | 'review' | 'perfected' | 'reject' | 'return' | 'comment') {
@@ -783,7 +794,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
     }
   }
 
-  const hasActions = canSubmit || canReview || canDecide || (canComment && !canSubmit && !canReview && !canDecide);
+  const hasActions = canSubmit || canReview || canDecide || canMarkPerfected || (canComment && !canSubmit && !canReview && !canDecide && !canMarkPerfected);
   const showSmsButton = request.requestStatus === 'Submitted' || request.requestStatus === 'Under Review';
 
   const actionHeaderLabel = canSubmit
@@ -791,7 +802,9 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
     : canReview
     ? { icon: <Eye size={14} />, text: 'Start your review of this request', color: 'text-amber-700 bg-amber-50 border-amber-200' }
     : canDecide
-    ? { icon: <Award size={14} />, text: 'Make your decision on this request', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
+    ? { icon: <Award size={14} />, text: 'Return or reject this request (approve it in Pending Approvals)', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
+    : canMarkPerfected
+    ? { icon: <Award size={14} />, text: 'Confirm this collateral has been perfected', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
     : null;
 
   return (
@@ -1163,7 +1176,7 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                       </button>
                     )}
 
-                    {canDecide && (
+                    {(canDecide || canMarkPerfected) && (
                       <div className="space-y-3">
                         {activeAction && (
                           <div className="space-y-2">
@@ -1219,15 +1232,10 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                             </div>
                           </div>
                         )}
-                        {!activeAction && (
+                        {!activeAction && canDecide && (
                           <div className="space-y-2">
                             <p className="text-xs text-muted-foreground font-medium">Choose your decision:</p>
                             <div className="flex gap-2">
-                              <button onClick={() => setActiveAction('perfected')} className="flex-1 flex flex-col items-center gap-1 bg-emerald-600 text-white text-xs font-semibold py-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
-                                <Award size={16} />
-                                <span>Mark Perfected</span>
-                                <ActionHelpIcon text="Confirm that all perfection requirements are met. The collateral status will be updated to Perfected and the Credit Officer will be notified." position="top" />
-                              </button>
                               <button onClick={() => setConfirmModal({ open: true, action: 'return' })} className="flex-1 flex flex-col items-center gap-1 bg-orange-500 text-white text-xs font-semibold py-3 rounded-lg hover:bg-orange-600 transition-colors shadow-sm">
                                 <RotateCcw size={16} />
                                 <span>Return</span>
@@ -1239,12 +1247,20 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
                                 <ActionHelpIcon text="Permanently reject this perfection request. A rejection reason is required. This action closes the request and cannot be undone." position="top" />
                               </button>
                             </div>
+                            <p className="text-[11px] text-muted-foreground italic">To approve, use the Pending Approvals queue.</p>
                           </div>
+                        )}
+                        {!activeAction && canMarkPerfected && (
+                          <button onClick={() => setActiveAction('perfected')} className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white text-sm font-semibold py-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                            <Award size={16} />
+                            <span>Mark as Perfected</span>
+                            <ActionHelpIcon text="Confirm that registry perfection is complete. The collateral status will be updated to Perfected and the Credit Officer will be notified." position="top" />
+                          </button>
                         )}
                       </div>
                     )}
 
-                    {canComment && !canSubmit && !canReview && !canDecide && (
+                    {canComment && !canSubmit && !canReview && !canDecide && !canMarkPerfected && (
                       <div className="space-y-2">
                         <textarea
                           value={commentText}
@@ -1811,6 +1827,7 @@ export default function PerfectionWorkflowContent() {
   const [selectedRequest, setSelectedRequest] = useState<PerfectionRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showGuideDrawer, setShowGuideDrawer] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -1882,7 +1899,8 @@ export default function PerfectionWorkflowContent() {
     total: requests.length,
     submitted: requests.filter(r => r.requestStatus === 'Submitted').length,
     underReview: requests.filter(r => r.requestStatus === 'Under Review').length,
-    perfected: requests.filter(r => r.requestStatus === 'Perfected' || r.requestStatus === 'Approved').length,
+    approved: requests.filter(r => r.requestStatus === 'Approved').length,
+    perfected: requests.filter(r => r.requestStatus === 'Perfected').length,
     rejected: requests.filter(r => r.requestStatus === 'Rejected').length,
   };
 
@@ -1897,6 +1915,9 @@ export default function PerfectionWorkflowContent() {
     }
     if ((userRole === 'legal_officer' || isAdmin) && req.requestStatus === 'Under Review') {
       return { label: 'Awaiting Decision', color: 'bg-orange-100 text-orange-700' };
+    }
+    if ((userRole === 'legal_officer' || isAdmin) && req.requestStatus === 'Approved') {
+      return { label: 'Awaiting Perfection Confirmation', color: 'bg-green-100 text-green-700' };
     }
     return null;
   }
@@ -1971,15 +1992,26 @@ export default function PerfectionWorkflowContent() {
                 <Plus size={15} /> New Request
               </button>
             )}
+            {userRole && (
+              <button
+                onClick={() => setShowGuideDrawer(true)}
+                className="flex items-center justify-center w-9 h-9 bg-white border border-border text-muted-foreground rounded-lg hover:bg-muted hover:text-foreground transition-colors"
+                title="How this workflow works for you"
+                aria-label="How this workflow works for you"
+              >
+                <HelpCircle size={16} />
+              </button>
+            )}
           </div>
         </div>
 
         {/* KPI Strip */}
-        <div className="grid grid-cols-5 gap-3 mt-4">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4">
           {[
             { label: 'Total', value: kpis.total, color: 'text-foreground', bg: 'bg-muted/50', filter: '' },
             { label: 'Submitted', value: kpis.submitted, color: 'text-blue-700', bg: 'bg-blue-50', filter: 'Submitted' },
             { label: 'Under Review', value: kpis.underReview, color: 'text-amber-700', bg: 'bg-amber-50', filter: 'Under Review' },
+            { label: 'Approved', value: kpis.approved, color: 'text-green-700', bg: 'bg-green-50', filter: 'Approved' },
             { label: 'Perfected', value: kpis.perfected, color: 'text-emerald-700', bg: 'bg-emerald-50', filter: 'Perfected' },
             { label: 'Rejected', value: kpis.rejected, color: 'text-red-700', bg: 'bg-red-50', filter: 'Rejected' },
           ].map((k) => (
@@ -1998,8 +2030,18 @@ export default function PerfectionWorkflowContent() {
         </div>
       </div>
 
-      {/* Role Guidance Banner */}
-      {userRole && !batchMode && <RoleGuidanceBanner userRole={userRole} />}
+      {/* Role Guidance Drawer */}
+      {userRole && (
+        <WorkflowDrawer
+          open={showGuideDrawer}
+          onClose={() => setShowGuideDrawer(false)}
+          title="How This Workflow Works For You"
+        >
+          <div className="p-5 overflow-y-auto">
+            <RoleGuidanceBanner userRole={userRole} />
+          </div>
+        </WorkflowDrawer>
+      )}
 
       {/* Batch mode hint */}
       {batchMode && (
