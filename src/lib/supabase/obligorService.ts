@@ -155,6 +155,23 @@ export const obligorService = {
     return true;
   },
 
+  // What deleting this obligor would affect: loans and loan_classifications
+  // cascade-delete, pledge_documents cascade-delete (and orphan their storage
+  // files unless removed first), collateral_records only lose the reference.
+  async getDeletionImpact(id: string): Promise<{ loanCount: number; pledgeDocumentCount: number; collateralCount: number }> {
+    const supabase = createClient();
+    const [loans, pledgeDocs, collaterals] = await Promise.all([
+      supabase.from('loans').select('id', { count: 'exact', head: true }).eq('obligor_id', id),
+      supabase.from('pledge_documents').select('id', { count: 'exact', head: true }).eq('obligor_id', id),
+      supabase.from('collateral_records').select('id', { count: 'exact', head: true }).eq('obligor_ref_id', id),
+    ]);
+    return {
+      loanCount: loans.count ?? 0,
+      pledgeDocumentCount: pledgeDocs.count ?? 0,
+      collateralCount: collaterals.count ?? 0,
+    };
+  },
+
   async getLinkedCollaterals(obligorId: string): Promise<any[]> {
     const supabase = createClient();
     const { data, error } = await supabase

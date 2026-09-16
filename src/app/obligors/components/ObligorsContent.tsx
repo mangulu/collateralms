@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Users, Plus, Search, Building2, User, MapPin, Phone, Mail, RefreshCw, AlertCircle, X, AlertTriangle, Loader2, Edit2, Trash2, Eye,  } from 'lucide-react';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
+import { pledgeDocumentService } from '@/lib/supabase/pledgeDocumentService';
 import { useAuth } from '@/contexts/AuthContext';
 import ObligorFormModal from './ObligorFormModal';
 
@@ -24,6 +25,8 @@ export default function ObligorsContent() {
   const [editItem, setEditItem] = useState<Obligor | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<{ loanCount: number; pledgeDocumentCount: number; collateralCount: number } | null>(null);
+  const [impactLoading, setImpactLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,13 +55,39 @@ export default function ObligorsContent() {
     return matchSearch && matchType && matchRisk;
   });
 
+  const openDeleteConfirm = async (id: string) => {
+    setDeleteConfirm(id);
+    setDeleteImpact(null);
+    setImpactLoading(true);
+    const impact = await obligorService.getDeletionImpact(id);
+    setImpactLoading(false);
+    setDeleteImpact(impact);
+  };
+
+  const closeDeleteConfirm = () => {
+    setDeleteConfirm(null);
+    setDeleteImpact(null);
+  };
+
   const handleDelete = async (id: string) => {
+    if (!deleteImpact || deleteImpact.loanCount > 0) return;
     setDeleting(true);
-    const ok = await obligorService.delete(id);
-    setDeleting(false);
-    if (ok) {
-      setObligors((prev) => prev.filter((o) => o.id !== id));
-      setDeleteConfirm(null);
+    try {
+      // Clean up pledge-document storage files before the cascade delete
+      // removes their rows out from under us.
+      const docs = await pledgeDocumentService.getByObligorId(id);
+      const userId = user?.id ?? '';
+      const userName = user?.user_metadata?.full_name ?? user?.email ?? 'Unknown';
+      for (const doc of docs) {
+        await pledgeDocumentService.delete(doc, userId, userName);
+      }
+      const ok = await obligorService.delete(id);
+      if (ok) {
+        setObligors((prev) => prev.filter((o) => o.id !== id));
+        closeDeleteConfirm();
+      }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -273,7 +302,7 @@ export default function ObligorsContent() {
                             <Edit2 size={14} />
                           </button>
                           <button
-                            onClick={() => setDeleteConfirm(o.id)}
+                            onClick={() => openDeleteConfirm(o.id)}
                             className="p-1.5 rounded-md hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-600"
                             title="Delete"
                           >
@@ -303,24 +332,46 @@ export default function ObligorsContent() {
                 <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
               </div>
             </div>
-            <p className="text-sm text-foreground mb-5">
-              Are you sure you want to delete this obligor? Linked collateral records will not be deleted but will lose the obligor reference.
-            </p>
+            {impactLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-5">
+                <Loader2 size={14} className="animate-spin" />
+                Checking linked loans and documents…
+              </div>
+            ) : deleteImpact && deleteImpact.loanCount > 0 ? (
+              <div className="flex items-start gap-2 p-3 mb-5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <AlertTriangle size={15} className="shrink-0 mt-0.5" />
+                <span>
+                  This obligor has {deleteImpact.loanCount} loan{deleteImpact.loanCount === 1 ? '' : 's'} on record and cannot be deleted — loan and compliance history must be preserved. Use <strong>Edit</strong> and switch it to inactive instead.
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-foreground mb-5">
+                Are you sure you want to delete this obligor?
+                {deleteImpact && deleteImpact.pledgeDocumentCount > 0 && (
+                  <> {deleteImpact.pledgeDocumentCount} pledge document{deleteImpact.pledgeDocumentCount === 1 ? '' : 's'} (and its file{deleteImpact.pledgeDocumentCount === 1 ? '' : 's'}) will be permanently deleted.</>
+                )}
+                {deleteImpact && deleteImpact.collateralCount > 0 && (
+                  <> {deleteImpact.collateralCount} linked collateral record{deleteImpact.collateralCount === 1 ? '' : 's'} will lose the obligor reference.</>
+                )}
+              </p>
+            )}
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => setDeleteConfirm(null)}
+                onClick={closeDeleteConfirm}
                 className="px-4 py-2 text-sm font-500 text-foreground hover:bg-muted rounded-lg transition-colors"
               >
-                Cancel
+                {deleteImpact && deleteImpact.loanCount > 0 ? 'Close' : 'Cancel'}
               </button>
-              <button
-                onClick={() => handleDelete(deleteConfirm)}
-                disabled={deleting}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-600 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-              >
-                {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                Delete
-              </button>
+              {(!deleteImpact || deleteImpact.loanCount === 0) && (
+                <button
+                  onClick={() => handleDelete(deleteConfirm)}
+                  disabled={deleting || impactLoading}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-600 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         </div>

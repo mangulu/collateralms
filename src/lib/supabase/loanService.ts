@@ -133,6 +133,30 @@ export const loanService = {
     return true;
   },
 
+  // What deleting this loan would affect: loan_covenants (and their breach
+  // log), loan_classifications and regulatory_submissions cascade-delete;
+  // collateral_records and collateral_substitutions only lose the reference.
+  async getDeletionImpact(id: string): Promise<{
+    covenantCount: number;
+    classificationCount: number;
+    regulatorySubmissionCount: number;
+    collateralCount: number;
+  }> {
+    const supabase = createClient();
+    const [covenants, classifications, submissions, collaterals] = await Promise.all([
+      supabase.from('loan_covenants').select('id', { count: 'exact', head: true }).eq('loan_id', id),
+      supabase.from('loan_classifications').select('id', { count: 'exact', head: true }).eq('loan_id', id),
+      supabase.from('regulatory_submissions').select('id', { count: 'exact', head: true }).eq('loan_id', id),
+      supabase.from('collateral_records').select('id', { count: 'exact', head: true }).eq('loan_id', id),
+    ]);
+    return {
+      covenantCount: covenants.count ?? 0,
+      classificationCount: classifications.count ?? 0,
+      regulatorySubmissionCount: submissions.count ?? 0,
+      collateralCount: collaterals.count ?? 0,
+    };
+  },
+
   async generateLoanNumber(): Promise<string> {
     const supabase = createClient();
     const { count } = await supabase

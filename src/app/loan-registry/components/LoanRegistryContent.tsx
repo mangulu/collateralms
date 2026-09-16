@@ -67,6 +67,8 @@ export default function LoanRegistryContent() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Loan | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<{ covenantCount: number; classificationCount: number; regulatorySubmissionCount: number; collateralCount: number } | null>(null);
+  const [impactLoading, setImpactLoading] = useState(false);
   // Selected loan for detail panel
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
@@ -181,8 +183,25 @@ export default function LoanRegistryContent() {
     }
   };
 
+  const openDeleteConfirm = async (loan: Loan) => {
+    setDeleteConfirm(loan);
+    setDeleteImpact(null);
+    setImpactLoading(true);
+    const impact = await loanService.getDeletionImpact(loan.id);
+    setImpactLoading(false);
+    setDeleteImpact(impact);
+  };
+
+  const closeDeleteConfirm = () => {
+    setDeleteConfirm(null);
+    setDeleteImpact(null);
+  };
+
+  const hasBlockingHistory = (impact: typeof deleteImpact) =>
+    !!impact && (impact.covenantCount > 0 || impact.classificationCount > 0 || impact.regulatorySubmissionCount > 0);
+
   const handleDelete = async () => {
-    if (!deleteConfirm) return;
+    if (!deleteConfirm || !deleteImpact || hasBlockingHistory(deleteImpact)) return;
     setDeleting(true);
     const ok = await loanService.delete(deleteConfirm.id);
     if (ok) {
@@ -191,9 +210,9 @@ export default function LoanRegistryContent() {
         const remaining = loans.filter((l) => l.id !== deleteConfirm.id);
         setSelectedLoan(remaining[0] ?? null);
       }
+      closeDeleteConfirm();
     }
     setDeleting(false);
-    setDeleteConfirm(null);
   };
 
   const totalActive = loans.filter((l) => l.loanStatus === 'Active').length;
@@ -353,7 +372,7 @@ export default function LoanRegistryContent() {
                           <Edit2 size={10} /> Edit
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); setDeleteConfirm(loan); }}
+                          onClick={(e) => { e.stopPropagation(); openDeleteConfirm(loan); }}
                           className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-500 text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
                         >
                           <Trash2 size={10} /> Delete
@@ -431,7 +450,7 @@ export default function LoanRegistryContent() {
                     <Edit2 size={12} /> Edit Loan
                   </button>
                   <button
-                    onClick={() => setDeleteConfirm(selectedLoan)}
+                    onClick={() => openDeleteConfirm(selectedLoan)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-500 text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <Trash2 size={12} /> Delete
@@ -612,19 +631,44 @@ export default function LoanRegistryContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="text-base font-700 text-foreground mb-2">Delete Loan?</h3>
-            <p className="text-sm text-muted-foreground mb-5">
-              Are you sure you want to delete <span className="font-600 text-foreground">{deleteConfirm.loanNumber}</span>? This action cannot be undone.
-            </p>
+            {impactLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-5">
+                <Loader2 size={14} className="animate-spin" />
+                Checking covenants, classifications and regulatory history…
+              </div>
+            ) : deleteImpact && hasBlockingHistory(deleteImpact) ? (
+              <div className="flex items-start gap-2 p-3 mb-5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                <span>
+                  <span className="font-600 text-foreground">{deleteConfirm.loanNumber}</span> has
+                  {deleteImpact.classificationCount > 0 && <> {deleteImpact.classificationCount} BOT classification record{deleteImpact.classificationCount === 1 ? '' : 's'},</>}
+                  {deleteImpact.regulatorySubmissionCount > 0 && <> {deleteImpact.regulatorySubmissionCount} regulatory submission{deleteImpact.regulatorySubmissionCount === 1 ? '' : 's'},</>}
+                  {deleteImpact.covenantCount > 0 && <> {deleteImpact.covenantCount} covenant{deleteImpact.covenantCount === 1 ? '' : 's'},</>}
+                  {' '}and cannot be deleted — this history must be preserved for compliance. Set its status to Closed or Written Off instead.
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-5">
+                Are you sure you want to delete <span className="font-600 text-foreground">{deleteConfirm.loanNumber}</span>?
+                {deleteImpact && deleteImpact.collateralCount > 0 && (
+                  <> {deleteImpact.collateralCount} linked collateral record{deleteImpact.collateralCount === 1 ? '' : 's'} will lose the loan reference.</>
+                )} This action cannot be undone.
+              </p>
+            )}
             <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteConfirm(null)} className="px-4 py-2 rounded-lg border border-border text-sm font-500 hover:bg-muted transition-colors">Cancel</button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-600 hover:bg-red-700 transition-colors disabled:opacity-60"
-              >
-                {deleting && <Loader2 size={13} className="animate-spin" />}
-                Delete
+              <button onClick={closeDeleteConfirm} className="px-4 py-2 rounded-lg border border-border text-sm font-500 hover:bg-muted transition-colors">
+                {deleteImpact && hasBlockingHistory(deleteImpact) ? 'Close' : 'Cancel'}
               </button>
+              {(!deleteImpact || !hasBlockingHistory(deleteImpact)) && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting || impactLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-600 hover:bg-red-700 transition-colors disabled:opacity-60"
+                >
+                  {deleting && <Loader2 size={13} className="animate-spin" />}
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         </div>
