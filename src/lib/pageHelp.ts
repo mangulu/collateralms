@@ -59,6 +59,17 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Sort by Newest, Oldest, or Priority to change how the list is ordered',
     ],
   },
+  '/alerts-delivery': {
+    title: 'Alert Delivery Log',
+    narrative: "Alert Delivery Log tracks the outcome of every SMS alert the system has attempted to send — Sent, Delivered, Failed, or Pending — with the Twilio message ID and error detail for failures, plus a per-recipient send history. It's the ops view for whether alerts actually went out; Alerts Inbox is where you read the alerts sent to you.",
+    steps: [
+      'Use the status tabs (Sent, Delivered, Failed, Pending) or the alert-type filter to narrow the delivery history',
+      'Click a row to expand it and see the full message, timestamps, Twilio message SID, and — for failures — the error detail',
+      "Click Retry on a Failed alert to resend it; the list refreshes with the new attempt once it's done",
+      "Switch to the Recipient History tab to see each recipient's total sent/failed counts and success rate",
+      'Search by recipient, message text, or collateral ID, and use Refresh to pull the latest state',
+    ],
+  },
 };
 
 export function getPageHelp(pathname: string): PageHelpContent | null {
