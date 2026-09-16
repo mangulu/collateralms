@@ -6,6 +6,7 @@ import { loanService, Loan } from '@/lib/supabase/loanService';
 import { obligorService, Obligor } from '@/lib/supabase/obligorService';
 import { useAuth } from '@/contexts/AuthContext';
 import Modal from '@/components/ui/Modal';
+import ProvisioningReportsPanel from './ProvisioningReportsPanel';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -277,6 +278,7 @@ export default function LoanClassificationContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<LoanClassification | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'classifications' | 'reports'>('classifications');
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -319,27 +321,49 @@ export default function LoanClassificationContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Loan Classification</h1>
-          <p className="text-sm text-slate-500 mt-0.5">BOT 5-Tier Classification Engine — Risk Assets Regulations 2014</p>
+          <p className="text-sm text-slate-500 mt-0.5">BOT 5-Tier Classification Engine &amp; Quarterly Provisioning — Risk Assets Regulations 2014</p>
         </div>
-        <div className="flex items-center gap-3">
-          <select value={quarter} onChange={e => setQuarter(e.target.value)}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            {Array.from({ length: 6 }, (_, i) => {
-              const d = new Date(); d.setMonth(d.getMonth() - i * 3);
-              const q = `${d.getFullYear()}-Q${Math.ceil((d.getMonth() + 1) / 3)}`;
-              return <option key={q} value={q}>{q}</option>;
-            })}
-          </select>
-          <button onClick={load} className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50">
-            <RefreshCw className="w-4 h-4 text-slate-600" />
-          </button>
-          <button onClick={() => { setEditItem(null); setModalOpen(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Classify Loan
-          </button>
-        </div>
+        {tab === 'classifications' && (
+          <div className="flex items-center gap-3">
+            <select value={quarter} onChange={e => setQuarter(e.target.value)}
+              className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              {Array.from({ length: 6 }, (_, i) => {
+                const d = new Date(); d.setMonth(d.getMonth() - i * 3);
+                const q = `${d.getFullYear()}-Q${Math.ceil((d.getMonth() + 1) / 3)}`;
+                return <option key={q} value={q}>{q}</option>;
+              })}
+            </select>
+            <button onClick={load} className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50">
+              <RefreshCw className="w-4 h-4 text-slate-600" />
+            </button>
+            <button onClick={() => { setEditItem(null); setModalOpen(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">
+              <Plus className="w-4 h-4" /> Classify Loan
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200">
+        <button
+          onClick={() => setTab('classifications')}
+          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'classifications' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+        >
+          Classifications
+        </button>
+        <button
+          onClick={() => setTab('reports')}
+          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${tab === 'reports' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+        >
+          Provisioning Reports
+        </button>
+      </div>
+
+      {tab === 'reports' ? (
+        <ProvisioningReportsPanel />
+      ) : (
+        <>
       {/* BOT Rate Schedule Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div className="flex items-start gap-3">
@@ -523,6 +547,8 @@ export default function LoanClassificationContent() {
         editItem={editItem}
         userId={user?.id}
       />
+        </>
+      )}
     </div>
   );
 }

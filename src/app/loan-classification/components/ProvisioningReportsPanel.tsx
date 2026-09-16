@@ -1,11 +1,9 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { BarChart2, FileSpreadsheet, FileText, Loader2, AlertCircle, CheckCircle2, Clock, Info, Send, PieChart,  } from 'lucide-react';
-import { loanClassificationService, ProvisioningReport, getCurrentQuarter,  } from '@/lib/supabase/loanClassificationService';
+import { BarChart2, FileSpreadsheet, FileText, Loader2, AlertCircle, CheckCircle2, Clock, Info, Send, PieChart } from 'lucide-react';
+import { loanClassificationService, ProvisioningReport, getCurrentQuarter } from '@/lib/supabase/loanClassificationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import Icon from '@/components/ui/AppIcon';
-
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -163,9 +161,9 @@ async function exportToExcel(report: ProvisioningReport) {
   XLSX.writeFile(wb, `provisioning-report-${report.quarter}.xlsx`);
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main Panel ───────────────────────────────────────────────────────────────
 
-export default function ProvisioningCalculatorContent() {
+export default function ProvisioningReportsPanel() {
   const { user } = useAuth();
   const [reports, setReports] = useState<ProvisioningReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<ProvisioningReport | null>(null);
@@ -236,13 +234,10 @@ export default function ProvisioningCalculatorContent() {
   const StatusIcon = selectedReport ? (STATUS_CONFIG[selectedReport.status]?.icon ?? Clock) : Clock;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Provisioning Calculator</h1>
-          <p className="text-sm text-slate-500 mt-0.5">BOT Rate Schedule — Quarterly Reporting Output</p>
-        </div>
+        <p className="text-sm text-slate-500">Quarterly provisioning output, generated from the classifications above.</p>
         <div className="flex items-center gap-3">
           <select value={quarter} onChange={e => setQuarter(e.target.value)}
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
