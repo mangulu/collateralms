@@ -65,18 +65,6 @@ export interface CollateralRecord {
   locationAddress?: string | null;
 }
 
-export interface AuditLog {
-  id: string;
-  collateralRecordId?: string;
-  collateralId?: string;
-  action: string;
-  message: string;
-  detail: string;
-  performedBy?: string;
-  performedByName: string;
-  createdAt: string;
-}
-
 function classifySupabaseError(error: any): CollateralWriteError {
   if (!error) {
     return new CollateralWriteError('unknown', 'Unknown error', 'An unexpected error occurred. Please try again.');
@@ -445,35 +433,6 @@ export const collateralService = {
 };
 
 export const auditService = {
-  async getRecent(limit = 8): Promise<AuditLog[]> {
-    const supabase = createClient();
-    try {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
-      return (data ?? []).map((row) => ({
-        id: row.id,
-        collateralRecordId: row.collateral_record_id,
-        collateralId: row.collateral_id,
-        action: row.action ?? row.event_category ?? 'updated',
-        message: row.message,
-        detail: row.detail ?? '',
-        performedBy: row.performed_by,
-        performedByName: row.performed_by_name ?? '',
-        createdAt: row.created_at,
-      }));
-    } catch (err: any) {
-      throw err;
-    }
-  },
-
   async log(entry: {
     collateralRecordId?: string;
     collateralId?: string;

@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { FileCheck, FilePlus, AlertCircle, CheckCircle2, ArrowUpRight } from 'lucide-react';
-import { auditService, AuditLog } from '@/lib/supabase/collateralService';
+import { auditLogService, type AuditLogEntry } from '@/lib/supabase/auditLogService';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 
 
@@ -31,12 +31,12 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function RecentActivityFeed() {
-  const [activities, setActivities] = useState<AuditLog[]>([]);
+  const [activities, setActivities] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadActivities = () => {
-    auditService.getRecent(8).then((data) => {
+    auditLogService.getAll(undefined, 8).then((data) => {
       setActivities(data);
       setIsLoading(false);
     }).catch(() => {
@@ -51,7 +51,7 @@ export default function RecentActivityFeed() {
 
   useCollateralRealtime({
     onAuditChange: () => {
-      auditService.getRecent(8).then((data) => setActivities(data)).catch(() => {});
+      auditLogService.getAll(undefined, 8).then((data) => setActivities(data)).catch(() => {});
     },
   });
 
