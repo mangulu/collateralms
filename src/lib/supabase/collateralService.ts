@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { complianceEngineService } from '@/lib/supabase/complianceEngineService';
 
 export type CollateralStatus =
   | 'Draft' | 'Submitted' | 'Under Review' | 'Perfected' | 'Monitoring' | 'Released' | 'Overdue' | 'Rejected';
@@ -354,7 +355,9 @@ export const collateralService = {
       if (!data) {
         throw new CollateralWriteError('unknown', 'No data returned after insert', 'Failed to create record. Please try again.');
       }
-      return rowToCollateral(data);
+      const created = rowToCollateral(data);
+      complianceEngineService.runForCollateral(created.id).catch(() => {});
+      return created;
     };
 
     return withRetry(doInsert, 3, 600);
@@ -378,7 +381,9 @@ export const collateralService = {
       if (!data) {
         throw new CollateralWriteError('unknown', 'No data returned after update', 'Failed to update record. Please try again.');
       }
-      return rowToCollateral(data);
+      const updated = rowToCollateral(data);
+      complianceEngineService.runForCollateral(updated.id).catch(() => {});
+      return updated;
     };
 
     return withRetry(doUpdate, 3, 600);
