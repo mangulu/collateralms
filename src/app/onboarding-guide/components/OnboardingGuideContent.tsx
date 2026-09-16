@@ -384,8 +384,8 @@ const MODULES: ModuleGuide[] = [
       { label: 'Collateral Placement', href: '/archive/collateral-placement', icon: MapPin, description: 'Record and track where each original document is physically stored.' },
       { label: 'Documents Library', href: '/archive/documents-library', icon: Library, description: 'Searchable library of all archived documents with version history.' },
       { label: 'Document Management', href: '/document-management', icon: FolderArchive, description: 'Manage document templates, policies, and classification rules.' },
-      { label: 'Request Workflow', href: '/archive/request-workflow', icon: ClipboardCheck, description: 'Handle requests to retrieve, loan out, or return archived documents.' },
-      { label: 'Custody Tracker', href: '/archive/custody-tracker', icon: Eye, description: 'Real-time tracker showing the current custody status of every document.' },
+      { label: 'Access Requests', href: '/archive/access-requests', icon: ClipboardCheck, description: 'Handle requests to retrieve, loan out, or return archived documents.' },
+      { label: 'Custody', href: '/archive/custody', icon: Eye, description: 'Real-time tracker showing the current custody status of every document.' },
     ],
     journeys: [
       {
@@ -394,16 +394,16 @@ const MODULES: ModuleGuide[] = [
         steps: [
           { action: 'Open Vault Management and select the target vault', where: 'Vault Management', href: '/archive/vault-management' },
           { action: 'Record the document placement with location details', where: 'Collateral Placement', href: '/archive/collateral-placement' },
-          { action: 'Update the custody status in the tracker', where: 'Custody Tracker', href: '/archive/custody-tracker' },
+          { action: 'Update the custody status in the tracker', where: 'Custody', href: '/archive/custody' },
           { action: 'Verify the document appears in the Documents Library', where: 'Documents Library', href: '/archive/documents-library' },
         ],
       },
     ],
     shortcuts: [
       { label: 'Vault Management', href: '/archive/vault-management', icon: Building2, description: 'Physical vaults' },
-      { label: 'Custody Tracker', href: '/archive/custody-tracker', icon: Eye, description: 'Document custody' },
+      { label: 'Custody', href: '/archive/custody', icon: Eye, description: 'Document custody' },
       { label: 'Documents Library', href: '/archive/documents-library', icon: Library, description: 'Archived docs' },
-      { label: 'Request Workflow', href: '/archive/request-workflow', icon: ClipboardCheck, description: 'Retrieval requests' },
+      { label: 'Access Requests', href: '/archive/access-requests', icon: ClipboardCheck, description: 'Retrieval requests' },
     ],
   },
 ];

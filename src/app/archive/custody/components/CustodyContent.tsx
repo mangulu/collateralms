@@ -24,12 +24,16 @@ const STATUS_CONFIG: Record<CustodyStatus, { label: string; bg: string; text: st
 };
 
 async function sendOverdueSmsReminder(custody: ArchiveCustody, userId: string): Promise<void> {
+  const phone = custody.checkedOutByProfile?.phone;
+  if (!phone) {
+    throw new Error(`No phone number on file for ${custody.checkedOutByProfile?.full_name ?? 'the officer who checked this out'}.`);
+  }
   const message = `[CollateralMS] OVERDUE NOTICE: Physical file for collateral "${custody.collateral?.collateral_type ?? ''} — ${custody.collateral?.obligor ?? ''}" is overdue for return. Please return immediately. Ref: ${custody.collateralId.slice(0, 8).toUpperCase()}`;
   await fetch('/api/sms/send-alert', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      to: '+255700000000',
+      to: phone,
       message,
       alertType: 'OVERDUE_COLLATERAL',
       collateralId: custody.collateralId,
@@ -284,8 +288,9 @@ export default function CustodyContent() {
       await sendOverdueSmsReminder(c, user?.id ?? '');
       setSmsSuccess(c.id);
       setTimeout(() => setSmsSuccess(null), 3000);
-    } catch { /* silent */ }
-    finally { setSmsSending(null); }
+    } catch (e: unknown) {
+      setCustodyError(e instanceof Error ? e.message : 'Failed to send SMS reminder');
+    } finally { setSmsSending(null); }
   };
 
   // Custody tracker filtered

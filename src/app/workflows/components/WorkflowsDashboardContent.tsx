@@ -264,7 +264,7 @@ export default function WorkflowsDashboardContent() {
       id: 'archive',
       title: 'Archive Requests',
       description: 'Physical document archive and retrieval requests in progress',
-      href: '/archive/request-workflow',
+      href: '/archive/access-requests',
       icon: <FolderArchive size={20} className="text-slate-600" />,
       accentColor: 'bg-slate-50',
       bgColor: 'bg-white',
@@ -431,7 +431,7 @@ export default function WorkflowsDashboardContent() {
             { label: 'Perfection Workflow', href: '/perfection-workflow', icon: <GitBranch size={14} /> },
             { label: 'Document Approval', href: '/document-approval', icon: <CheckCircle2 size={14} /> },
             { label: 'Release Approval', href: '/release-approval', icon: <XCircle size={14} /> },
-            { label: 'Archive Requests', href: '/archive/request-workflow', icon: <FolderArchive size={14} /> },
+            { label: 'Archive Requests', href: '/archive/access-requests', icon: <FolderArchive size={14} /> },
           ].map((link) => (
             <Link
               key={link.href}

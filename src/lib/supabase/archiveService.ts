@@ -74,7 +74,7 @@ export interface ArchiveCustody {
   overdueSince: string | null;
   updatedAt: string;
   collateral?: { id: string; collateral_type: string; description: string; obligor: string };
-  checkedOutByProfile?: { full_name: string };
+  checkedOutByProfile?: { full_name: string; phone: string | null };
   currentRequest?: ArchiveRequest;
 }
 
@@ -595,13 +595,13 @@ export const archiveCustodyService = {
 
     const rows = data || [];
     const userIds = [...new Set(rows.map((r) => r.checked_out_by).filter(Boolean))] as string[];
-    const profileMap: Record<string, { full_name: string }> = {};
+    const profileMap: Record<string, { full_name: string; phone: string | null }> = {};
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
         .from('user_profiles')
-        .select('id, full_name')
+        .select('id, full_name, phone')
         .in('id', userIds);
-      (profiles || []).forEach((p) => { profileMap[p.id] = { full_name: p.full_name }; });
+      (profiles || []).forEach((p) => { profileMap[p.id] = { full_name: p.full_name, phone: p.phone ?? null }; });
     }
 
     return rows.map((r) => ({

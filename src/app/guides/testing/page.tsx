@@ -232,7 +232,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
       { label: 'Custody screen shows correct status', href: '/archive/custody' },
       { label: 'Raise and approve access request', href: '/archive/access-requests' },
       { label: 'Documents library lists all archived docs', href: '/archive/documents-library' },
-      { label: 'Chain of custody log is accurate', href: '/archive/chain-of-custody' },
+      { label: 'Chain of custody log is accurate', href: '/archive/custody' },
       { label: 'Occupancy heatmap renders', href: '/archive/occupancy-heatmap' },
     ],
   },

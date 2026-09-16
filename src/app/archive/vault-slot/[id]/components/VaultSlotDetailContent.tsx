@@ -10,6 +10,7 @@ import {
   archiveLocationService,
   archivePlacementService,
   archiveAuditService,
+  archiveCustodyChainService,
   ArchiveLocation,
   ArchivePlacement,
   LocationType,
@@ -827,6 +828,21 @@ export default function VaultSlotDetailContent() {
             { collateral_id: p.collateralId, current_status: 'returned', last_returned_at: new Date().toISOString() },
             { onConflict: 'collateral_id' }
           );
+        await archiveCustodyChainService.log({
+          collateralId: p.collateralId,
+          eventType: 'custody_received',
+          toLocationId: id,
+          confirmedBy: user?.id,
+          confirmationStatus: 'confirmed',
+          notes: 'Marked as received from vault slot page',
+        });
+        await archiveAuditService.log({
+          eventType: 'returned',
+          collateralId: p.collateralId,
+          locationId: id,
+          performedBy: user?.id,
+          description: `Marked as received in slot — ${p.collateral?.description ?? 'collateral'}`,
+        });
         updated++;
       } catch { /* continue */ }
     }

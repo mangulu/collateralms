@@ -1,10 +1,19 @@
-import { Metadata } from 'next';
+'use client';
+import AppLayout from '@/components/AppLayout';
 import CustodyContent from './components/CustodyContent';
-
-export const metadata: Metadata = {
-  title: 'Custody',
-};
+import { usePermissions, PERMISSIONS } from '@/lib/rbac';
+import AccessDenied from '@/components/AccessDenied';
 
 export default function CustodyPage() {
-  return <CustodyContent />;
+  const { hasPermission, loading } = usePermissions();
+
+  return (
+    <AppLayout currentPath="/archive/custody">
+      {!loading && !hasPermission(PERMISSIONS.COLLATERAL_VIEW) ? (
+        <AccessDenied title="Custody" />
+      ) : (
+        <CustodyContent />
+      )}
+    </AppLayout>
+  );
 }

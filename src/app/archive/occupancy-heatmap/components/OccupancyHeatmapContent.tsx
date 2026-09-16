@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { RefreshCw, AlertTriangle, TrendingUp, Layers, Building2, DoorOpen, BookOpen, Grid3X3, ChevronRight, Activity, BarChart2, Zap, Info } from 'lucide-react';
-import { archiveLocationService, ArchiveLocation, LocationType } from '@/lib/supabase/archiveService';
+import { archiveLocationService, archiveAuditService, ArchiveLocation, ArchiveAuditEntry, LocationType } from '@/lib/supabase/archiveService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -250,6 +250,7 @@ function SlotDetailPanel({ slot, onClose }: SlotDetailPanelProps) {
 
 export default function OccupancyHeatmapContent() {
   const [locations, setLocations] = useState<ArchiveLocation[]>([]);
+  const [auditEntries, setAuditEntries] = useState<ArchiveAuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedVaultId, setSelectedVaultId] = useState<string>('all');
@@ -261,8 +262,12 @@ export default function OccupancyHeatmapContent() {
     setLoading(true);
     setError(null);
     try {
-      const tree = await archiveLocationService.getTree();
+      const [tree, audit] = await Promise.all([
+        archiveLocationService.getTree(),
+        archiveAuditService.getAll(1000),
+      ]);
       setLocations(tree);
+      setAuditEntries(audit);
       setLastRefresh(new Date());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load vault data');
@@ -327,23 +332,22 @@ export default function OccupancyHeatmapContent() {
       parentPath: l.description ?? '',
     }));
 
-  // ── Historical Trends (simulated from current data) ──────────────────────────
+  // ── Historical Filing & Retrieval Trends (real, from the archive audit log) ──
   const trendData = React.useMemo(() => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-    const totalCap = allFlat.filter((l) => l.locationType === 'slot').reduce((s, l) => s + l.capacity, 0) || 100;
-    const currentOcc = allFlat.filter((l) => l.locationType === 'slot').reduce((s, l) => s + l.currentOccupancy, 0);
-    const currentPct = Math.round((currentOcc / totalCap) * 100);
-    // Simulate a growth curve ending at current
-    return months.map((month, i) => {
-      const factor = 0.4 + (i / (months.length - 1)) * 0.6;
-      return {
-        month,
-        occupancy: Math.round(currentPct * factor),
-        filings: Math.round(8 + i * 3 + Math.random() * 5),
-        retrievals: Math.round(3 + i * 1.5 + Math.random() * 3),
-      };
+    const now = new Date();
+    const buckets = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (6 - i), 1);
+      return { year: d.getFullYear(), monthIdx: d.getMonth(), month: d.toLocaleString('en-GB', { month: 'short' }), filings: 0, retrievals: 0 };
     });
-  }, [allFlat]);
+    for (const entry of auditEntries) {
+      const d = new Date(entry.createdAt);
+      const bucket = buckets.find((b) => b.year === d.getFullYear() && b.monthIdx === d.getMonth());
+      if (!bucket) continue;
+      if (entry.eventType === 'placement_assigned' || entry.eventType === 'collateral_moved') bucket.filings++;
+      else if (entry.eventType === 'checked_out' || entry.eventType === 'returned') bucket.retrievals++;
+    }
+    return buckets.map(({ month, filings, retrievals }) => ({ month, filings, retrievals }));
+  }, [auditEntries]);
 
   // ── Summary KPIs ─────────────────────────────────────────────────────────────
   const slots = allFlat.filter((l) => l.locationType === 'slot');
@@ -584,17 +588,16 @@ export default function OccupancyHeatmapContent() {
                   <TrendingUp size={16} style={{ color: '#15803D' }} />
                   <h3 className="text-sm font-bold" style={{ color: '#1E3A8A' }}>Historical Filing & Retrieval Trends</h3>
                 </div>
-                <p className="text-xs mb-4" style={{ color: '#9CA3AF' }}>Monthly filing and retrieval activity over the past 7 months</p>
+                <p className="text-xs mb-4" style={{ color: '#9CA3AF' }}>Monthly filing and retrieval activity over the past 7 months, from the archive audit log</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={trendData} margin={{ top: 4, right: 8, left: -16, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6B7280' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} allowDecimals={false} />
                     <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Line type="monotone" dataKey="filings" stroke="#1D4ED8" strokeWidth={2} dot={{ r: 3 }} name="Filings" />
                     <Line type="monotone" dataKey="retrievals" stroke="#15803D" strokeWidth={2} dot={{ r: 3 }} name="Retrievals" />
-                    <Line type="monotone" dataKey="occupancy" stroke="#F97316" strokeWidth={2} strokeDasharray="4 2" dot={{ r: 3 }} name="Occupancy %" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
