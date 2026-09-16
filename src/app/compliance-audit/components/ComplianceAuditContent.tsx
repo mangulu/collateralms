@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import {
   ClipboardList,
   Download,
@@ -8,10 +9,6 @@ import {
   XCircle,
   Clock,
   AlertTriangle,
-  Filter,
-  Search,
-  ChevronDown,
-  Shield,
   FileText,
   CalendarClock,
   User,
@@ -19,6 +16,7 @@ import {
   MessageSquare,
   Loader2,
   ShieldAlert,
+  ExternalLink,
 } from 'lucide-react';
 import { collateralService, type CollateralRecord } from '@/lib/supabase/collateralService';
 import { auditLogService, type AuditLogEntry } from '@/lib/supabase/auditLogService';
@@ -74,20 +72,6 @@ function deadlineUrgency(days: number | null): 'overdue' | 'critical' | 'warning
   if (days <= 7) return 'warning';
   return 'ok';
 }
-
-const actionColorMap: Record<string, string> = {
-  created: 'bg-green-100 text-green-700',
-  updated: 'bg-blue-100 text-blue-700',
-  deleted: 'bg-red-100 text-red-700',
-  status_changed: 'bg-purple-100 text-purple-700',
-  perfected: 'bg-emerald-100 text-emerald-700',
-  submitted: 'bg-sky-100 text-sky-700',
-  released: 'bg-teal-100 text-teal-700',
-  overdue: 'bg-rose-100 text-rose-700',
-  document_uploaded: 'bg-amber-100 text-amber-700',
-  document_deleted: 'bg-orange-100 text-orange-700',
-  sms_sent: 'bg-cyan-100 text-cyan-700',
-};
 
 const statusBadge: Record<string, string> = {
   Perfected: 'bg-green-100 text-green-700 border-green-200',
@@ -265,8 +249,6 @@ export default function ComplianceAuditContent() {
   const [collaterals, setCollaterals] = useState<CollateralRecord[]>([]);
   const [summary, setSummary] = useState<ComplianceSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [auditSearch, setAuditSearch] = useState('');
-  const [actionFilter, setActionFilter] = useState('All');
   const [deadlineFilter, setDeadlineFilter] = useState('All');
   const [exportingPDF, setExportingPDF] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
@@ -307,18 +289,6 @@ export default function ComplianceAuditContent() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Filtered audit logs
-  const uniqueActions = ['All', ...Array.from(new Set(auditLogs.map((l) => l.action)))];
-  const filteredLogs = auditLogs.filter((log) => {
-    const matchesSearch =
-      !auditSearch ||
-      log.message.toLowerCase().includes(auditSearch.toLowerCase()) ||
-      (log.collateralId ?? '').toLowerCase().includes(auditSearch.toLowerCase()) ||
-      log.performedByName.toLowerCase().includes(auditSearch.toLowerCase());
-    const matchesAction = actionFilter === 'All' || log.action === actionFilter;
-    return matchesSearch && matchesAction;
-  });
-
   // Deadline records
   const deadlineRecords: DeadlineRecord[] = collaterals
     .filter((c) => c.requiresPerfection && c.perfectionDeadline)
@@ -343,7 +313,8 @@ export default function ComplianceAuditContent() {
   });
 
   // Compliance by collateral (group audit logs per collateral)
-  const complianceByCollateral = collaterals.slice(0, 12).map((c) => {
+  const COMPLIANCE_TABLE_LIMIT = 25;
+  const complianceByCollateral = collaterals.slice(0, COMPLIANCE_TABLE_LIMIT).map((c) => {
     const logs = auditLogs.filter((l) => l.collateralId === c.collateralId);
     const isCompliant = c.status === 'Perfected';
     const isNonCompliant = c.status === 'Overdue' || c.status === 'Rejected';
@@ -463,10 +434,20 @@ export default function ComplianceAuditContent() {
 
       {/* ── Compliance Status by Collateral ──────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-border shadow-card p-5 mb-6">
-        <SectionHeader
-          title="Compliance Status by Collateral"
-          sub="Per-item compliance overview for legal officer review and regulatory submission"
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
+          <SectionHeader
+            title="Compliance Status by Collateral"
+            sub="Per-item compliance overview for legal officer review and regulatory submission"
+          />
+          {collaterals.length > COMPLIANCE_TABLE_LIMIT && (
+            <p className="text-xs text-muted-foreground shrink-0 mb-4">
+              Showing {complianceByCollateral.length} of {collaterals.length} —{' '}
+              <Link href="/collateral-management" className="text-primary hover:underline inline-flex items-center gap-1">
+                View Collateral Registry <ExternalLink size={11} />
+              </Link>
+            </p>
+          )}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -621,86 +602,26 @@ export default function ComplianceAuditContent() {
         </div>
       </div>
 
-      {/* ── Audit Trail Log ───────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-border shadow-card p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <SectionHeader
-            title="Audit Trail Log"
-            sub="Full chronological record of all system actions for regulatory submission"
-          />
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search logs…"
-                value={auditSearch}
-                onChange={(e) => setAuditSearch(e.target.value)}
-                className="pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-primary/40 w-44"
-              />
-            </div>
-            <div className="relative">
-              <Filter size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <select
-                value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
-                className="pl-7 pr-6 py-1.5 text-xs border border-border rounded-md bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 appearance-none"
-              >
-                {uniqueActions.map((a) => <option key={a} value={a}>{a}</option>)}
-              </select>
-              <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
+      {/* ── Full audit trail lives in Compliance Trail ───────────────────────── */}
+      <div className="bg-white rounded-xl border border-border shadow-card p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <ClipboardList size={18} className="text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Looking for the full audit trail?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Search, filter, and export every system event — logins, document actions, status changes, and more — in Compliance Trail.
+            </p>
           </div>
         </div>
-
-        {filteredLogs.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground text-sm">
-            <ClipboardList size={32} className="mx-auto mb-2 opacity-30" />
-            No audit log entries match your search.
-          </div>
-        ) : (
-          <div className="space-y-0 divide-y divide-border/50">
-            {filteredLogs.map((log) => (
-              <div key={log.id} className="py-3 flex items-start gap-3 hover:bg-muted/20 px-2 -mx-2 rounded transition-colors">
-                <div className="shrink-0 mt-0.5">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${actionColorMap[log.action] ?? 'bg-gray-100 text-gray-600'}`}>
-                    {log.action}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground font-medium leading-snug">{log.message}</p>
-                  {log.detail && (
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{log.detail}</p>
-                  )}
-                  <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    {log.collateralId && (
-                      <span className="inline-flex items-center gap-1 text-xs text-primary font-mono">
-                        <Shield size={10} />
-                        {log.collateralId}
-                      </span>
-                    )}
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <User size={10} />
-                      {log.performedByName || 'System'}
-                    </span>
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDateTime(log.createdAt)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {filteredLogs.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Showing <span className="font-semibold text-foreground">{filteredLogs.length}</span> of <span className="font-semibold text-foreground">{auditLogs.length}</span> entries
-            </p>
-            <p className="text-xs text-muted-foreground">For regulatory submission — export CSV above</p>
-          </div>
-        )}
+        <Link
+          href="/audit-trail"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors shrink-0"
+        >
+          Open Compliance Trail
+          <ExternalLink size={14} />
+        </Link>
       </div>
 
       {smsDeadlineRecord && (
