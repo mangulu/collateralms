@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Zap, Star, RefreshCw, User, Search, Copy, CheckCircle2, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { obligorService, type Obligor } from '@/lib/supabase/obligorService';
+import { obligorTierService } from '@/lib/supabase/obligorTierService';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,30 +28,6 @@ interface WorkflowStep {
   standard: string;
   fastTrack: string;
   skipped: boolean;
-}
-
-// ─── Tier persistence helpers ─────────────────────────────────────────────────
-
-async function loadTierMap(): Promise<Record<string, { tier: CustomerTier; since: string; reason: string }>> {
-  try {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('system_config')
-      .select('config_value')
-      .eq('config_key', 'fast_track_tiers')
-      .maybeSingle();
-    if (data?.config_value) return JSON.parse(data.config_value as string);
-  } catch { /* silent */ }
-  return {};
-}
-
-async function saveTierMap(map: Record<string, { tier: CustomerTier; since: string; reason: string }>): Promise<void> {
-  try {
-    const supabase = createClient();
-    await supabase
-      .from('system_config')
-      .upsert({ config_key: 'fast_track_tiers', config_value: JSON.stringify(map) }, { onConflict: 'config_key' });
-  } catch { /* silent */ }
 }
 
 // ─── Derive customer from obligor + tier map ──────────────────────────────────
@@ -247,10 +224,14 @@ export default function FastTrackContent() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [obligors, savedTierMap] = await Promise.all([
+      const [obligors, savedTiers] = await Promise.all([
         obligorService.getAll(),
-        loadTierMap(),
+        obligorTierService.getAll(),
       ]);
+      const savedTierMap: Record<string, { tier: CustomerTier; since: string; reason: string }> = {};
+      savedTiers.forEach((t) => {
+        savedTierMap[t.obligorId] = { tier: t.tier, since: t.effectiveDate, reason: t.reason };
+      });
 
       // Load collateral counts per obligor
       const supabase = createClient();
@@ -293,12 +274,11 @@ export default function FastTrackContent() {
       .maybeSingle();
 
     const obligorId = obligorRow?.id ?? selectedCustomer.id;
-    const newMap = {
-      ...tierMap,
-      [obligorId]: { tier, since: new Date().toISOString().slice(0, 10), reason },
-    };
-    setTierMap(newMap);
-    await saveTierMap(newMap);
+    const since = new Date().toISOString().slice(0, 10);
+    setTierMap((prev) => ({ ...prev, [obligorId]: { tier, since, reason } }));
+    try {
+      await obligorTierService.setTier(obligorId, tier, reason);
+    } catch { /* optimistic update already applied; matches prior silent-fail behavior */ }
 
     // Update local customer list
     const updated: Customer = { ...selectedCustomer, tier, reason, tierEffectiveDate: new Date().toISOString().slice(0, 10) };
