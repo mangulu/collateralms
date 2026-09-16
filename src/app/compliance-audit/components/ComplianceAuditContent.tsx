@@ -75,13 +75,17 @@ function deadlineUrgency(days: number | null): 'overdue' | 'critical' | 'warning
 }
 
 const actionColorMap: Record<string, string> = {
-  CREATE: 'bg-green-100 text-green-700',
-  UPDATE: 'bg-blue-100 text-blue-700',
-  DELETE: 'bg-red-100 text-red-700',
-  STATUS_CHANGE: 'bg-purple-100 text-purple-700',
-  DOCUMENT_UPLOAD: 'bg-amber-100 text-amber-700',
-  DOCUMENT_DELETE: 'bg-orange-100 text-orange-700',
-  REVIEW: 'bg-cyan-100 text-cyan-700',
+  created: 'bg-green-100 text-green-700',
+  updated: 'bg-blue-100 text-blue-700',
+  deleted: 'bg-red-100 text-red-700',
+  status_changed: 'bg-purple-100 text-purple-700',
+  perfected: 'bg-emerald-100 text-emerald-700',
+  submitted: 'bg-sky-100 text-sky-700',
+  released: 'bg-teal-100 text-teal-700',
+  overdue: 'bg-rose-100 text-rose-700',
+  document_uploaded: 'bg-amber-100 text-amber-700',
+  document_deleted: 'bg-orange-100 text-orange-700',
+  sms_sent: 'bg-cyan-100 text-cyan-700',
 };
 
 const statusBadge: Record<string, string> = {
