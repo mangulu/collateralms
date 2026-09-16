@@ -4,7 +4,7 @@ import {
   ShieldCheck, Search, Filter, Download, RefreshCw, ChevronDown, ChevronRight,
   User, Clock, FileText, ArrowRight, X, AlertCircle, Globe, LogIn, FolderOpen,
   GitBranch, Upload, Activity, Pen, CheckCircle2, Stamp, FileSignature,
-  PlusCircle, Printer, ShieldAlert,
+  PlusCircle, Printer, ShieldAlert, Users,
 } from 'lucide-react';
 import { auditLogService, AuditLogEntry, FieldChange } from '@/lib/supabase/auditLogService';
 import RiskPriorityPanel from './RiskPriorityPanel';
@@ -23,6 +23,18 @@ function formatDateTime(iso: string): string {
 function formatDateShort(iso: string): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function timeAgo(iso: string): string {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
 }
 
 // ─── Category Config ──────────────────────────────────────────────────────────
@@ -128,6 +140,27 @@ function KpiCard({ label, value, icon: IconComp, color, sub }: {
         <p className="text-2xl font-bold tabular-nums text-foreground font-mono">{value}</p>
         <p className="text-xs text-muted-foreground leading-tight">{label}</p>
         {sub && <p className="text-xs text-muted-foreground/70 leading-tight mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── User Activity Summary Card ───────────────────────────────────────────────
+
+function UserActivityCard({ name, count, lastSeen, ip }: { name: string; count: number; lastSeen: string; ip: string }) {
+  const initials = name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-muted/20 transition-colors">
+      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+        {initials}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{name}</p>
+        <p className="text-xs text-muted-foreground font-mono">{ip}</p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-bold text-foreground tabular-nums">{count}</p>
+        <p className="text-xs text-muted-foreground">{timeAgo(lastSeen)}</p>
       </div>
     </div>
   );
@@ -325,6 +358,19 @@ export default function AuditTrailContent() {
   const uniqueActors       = new Set(filtered.map((e) => e.performedByName)).size;
   const uniqueCollaterals  = new Set(filtered.map((e) => e.collateralId).filter(Boolean)).size;
 
+  // Top active users + recent logins for the sidebar
+  const actorMap: Record<string, { count: number; lastSeen: string; ip: string }> = {};
+  entries.forEach((e) => {
+    if (!actorMap[e.performedByName]) actorMap[e.performedByName] = { count: 0, lastSeen: e.createdAt, ip: e.ipAddress ?? '' };
+    actorMap[e.performedByName].count++;
+    if (new Date(e.createdAt) > new Date(actorMap[e.performedByName].lastSeen)) {
+      actorMap[e.performedByName].lastSeen = e.createdAt;
+      actorMap[e.performedByName].ip = e.ipAddress ?? '';
+    }
+  });
+  const topActors = Object.entries(actorMap).sort((a, b) => b[1].count - a[1].count).slice(0, 6);
+  const recentLogins = entries.filter((e) => e.eventCategory === 'login').slice(0, 4);
+
   const hasActiveFilters = search || actionFilter !== 'All' || categoryFilter !== 'All'
     || dateFrom || dateTo || userFilter !== 'All' || collateralFilter !== 'All'
     || collateralActionFilter !== 'all_collateral';
@@ -349,21 +395,25 @@ export default function AuditTrailContent() {
   }
 
   function exportCSV() {
-    const headers = ['#', 'Timestamp', 'Event Type', 'Action', 'Officer / Actor', 'IP Address', 'Collateral ID', 'Message', 'Detail', 'Field Changes'];
-    const rows = filtered.map((e, i) => [
-      String(i + 1),
-      formatDateTime(e.createdAt),
-      getEntryCategory(e).label,
-      e.action,
-      e.performedByName,
-      e.ipAddress ?? '',
-      e.collateralId ?? '',
-      e.message,
-      e.detail,
-      e.fieldChanges
-        ? e.fieldChanges.map((f) => `${f.label}: ${f.old_value || 'empty'} → ${f.new_value || 'empty'}`).join('; ')
-        : '',
-    ]);
+    const headers = ['#', 'Timestamp', 'Event Type', 'Action', 'Officer / Actor', 'IP Address', 'Collateral ID', 'Message', 'Detail', 'Justification', 'Field Changes'];
+    const rows = filtered.map((e, i) => {
+      const justification = e.detail?.includes('Justification:') ? e.detail.split('Justification:')[1]?.trim() : '';
+      return [
+        String(i + 1),
+        formatDateTime(e.createdAt),
+        getEntryCategory(e).label,
+        e.action,
+        e.performedByName,
+        e.ipAddress ?? '',
+        e.collateralId ?? '',
+        e.message,
+        e.detail,
+        justification ?? '',
+        e.fieldChanges
+          ? e.fieldChanges.map((f) => `${f.label}: ${f.old_value || 'empty'} → ${f.new_value || 'empty'}`).join('; ')
+          : '',
+      ];
+    });
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -623,8 +673,9 @@ export default function AuditTrailContent() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
+      {/* Table + Sidebar */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-y-auto px-6 pb-6">
         <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
           {/* Table header bar */}
           <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
@@ -634,10 +685,14 @@ export default function AuditTrailContent() {
             {totalPages > 1 && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>Page {page} of {totalPages}</span>
+                <button disabled={page === 1} onClick={() => setPage(1)}
+                  className="px-2 py-1 border border-border rounded hover:bg-muted disabled:opacity-40 transition-colors">« First</button>
                 <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}
                   className="px-2 py-1 border border-border rounded hover:bg-muted disabled:opacity-40 transition-colors">‹</button>
                 <button disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}
                   className="px-2 py-1 border border-border rounded hover:bg-muted disabled:opacity-40 transition-colors">›</button>
+                <button disabled={page === totalPages} onClick={() => setPage(totalPages)}
+                  className="px-2 py-1 border border-border rounded hover:bg-muted disabled:opacity-40 transition-colors">Last »</button>
               </div>
             )}
           </div>
@@ -798,6 +853,31 @@ export default function AuditTrailContent() {
           )}
         </div>
 
+        {/* Bottom pagination */}
+        {totalPages > 1 && !isLoading && paginated.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <button onClick={() => setPage(1)} disabled={page === 1}
+              className="px-3 py-1.5 text-xs rounded-lg border border-border bg-white hover:bg-muted disabled:opacity-40 transition-colors">
+              First
+            </button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 text-xs rounded-lg border border-border bg-white hover:bg-muted disabled:opacity-40 transition-colors">
+              ← Prev
+            </button>
+            <span className="text-sm text-muted-foreground font-medium px-2">
+              Page {page} of {totalPages}
+            </span>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 text-xs rounded-lg border border-border bg-white hover:bg-muted disabled:opacity-40 transition-colors">
+              Next →
+            </button>
+            <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
+              className="px-3 py-1.5 text-xs rounded-lg border border-border bg-white hover:bg-muted disabled:opacity-40 transition-colors">
+              Last
+            </button>
+          </div>
+        )}
+
         {/* Compliance notice */}
         <div className="mt-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <ShieldCheck size={14} className="text-amber-600 shrink-0 mt-0.5" />
@@ -805,6 +885,42 @@ export default function AuditTrailContent() {
             <span className="font-semibold">Regulatory Notice:</span> This security &amp; compliance trail is an immutable record of all system actions. Records are retained for compliance with Bank of Tanzania regulatory requirements and applicable perfection authority rules (BRELA, Lands Registry, TRA, DSE, TASAC). Use the Export button to download CSV or PDF for offline archival and regulatory submissions.
           </p>
         </div>
+      </div>
+
+      {/* Right Sidebar: Top Active Users */}
+      <div className="w-64 shrink-0 border-l border-border bg-white flex-col overflow-hidden hidden lg:flex">
+        <div className="px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Users size={14} className="text-primary" />
+            <p className="text-sm font-semibold text-foreground">Top Active Users</p>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">By total events in current view</p>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {topActors.map(([name, data]) => (
+            <UserActivityCard key={name} name={name} count={data.count} lastSeen={data.lastSeen} ip={data.ip} />
+          ))}
+        </div>
+
+        {/* Login History Summary */}
+        <div className="border-t border-border px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <LogIn size={13} className="text-violet-600" />
+            <p className="text-xs font-semibold text-foreground">Recent Logins</p>
+          </div>
+          <div className="space-y-1.5">
+            {recentLogins.map((e) => (
+              <div key={e.id} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${e.action === 'login_failed' ? 'bg-red-500' : e.action === 'logout' ? 'bg-gray-400' : 'bg-green-500'}`} />
+                  <span className="text-xs text-foreground/80 truncate">{e.performedByName}</span>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">{timeAgo(e.createdAt)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
       </div>
         </>
       )}

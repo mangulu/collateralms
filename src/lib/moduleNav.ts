@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ClipboardList, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -197,9 +197,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Audit',
         items: [
           { label: 'Live Activity Stream', icon: Radio, href: '/live-activity', permission: PERMISSIONS.AUDIT_LOG_VIEW },
-          { label: 'Activity Log', icon: Activity, href: '/activity-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
-          { label: 'Audit Center', icon: DatabaseZap, href: '/audit-center', permission: PERMISSIONS.AUDIT_LOG_VIEW },
-          { label: 'Compliance Trail', icon: ClipboardList, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
+          { label: 'Compliance Trail', icon: DatabaseZap, href: '/audit-trail', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Audit Report', icon: BookOpen, href: '/audit-report', permission: PERMISSIONS.AUDIT_LOG_VIEW },
           { label: 'Archive Audit Log', icon: FileStack, href: '/archive/audit-log', permission: PERMISSIONS.AUDIT_LOG_VIEW },
         ],

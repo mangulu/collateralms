@@ -109,7 +109,6 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/live-activity': PERMISSIONS.AUDIT_LOG_VIEW,
   '/audit-trail': PERMISSIONS.AUDIT_LOG_VIEW,
   '/audit-log': PERMISSIONS.AUDIT_LOG_VIEW,
-  '/activity-log': PERMISSIONS.AUDIT_LOG_VIEW,
   '/audit-report': PERMISSIONS.AUDIT_LOG_VIEW,
   '/reports': PERMISSIONS.REPORTS_VIEW,
   '/reports-dashboard': PERMISSIONS.REPORTS_VIEW,

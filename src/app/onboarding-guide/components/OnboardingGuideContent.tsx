@@ -7,7 +7,7 @@ import {
   ChevronRight, ChevronDown, Zap, Map, ShieldAlert, ScanSearch, Target, LineChart, TrendingUp,
   Flame, LayoutDashboard, Activity, GitMerge, Files, Unlock, Upload, CalendarClock, MailCheck,
   GitBranch, BadgeCheck, Inbox, AlarmClock, SendHorizonal, ScrollText, Download, Radio,
-  DatabaseZap, ClipboardList, BookOpen, FileStack, Scale, KeyRound, Landmark, SlidersHorizontal,
+  DatabaseZap, BookOpen, FileStack, Scale, KeyRound, Landmark, SlidersHorizontal,
   Building2, MapPin, Library, FolderArchive, ClipboardCheck, Eye, BookMarked, Lightbulb,
   ArrowRight, Play, Star, Route,
 } from 'lucide-react';
@@ -308,8 +308,7 @@ const MODULES: ModuleGuide[] = [
     textColor: '#9D174D',
     features: [
       { label: 'Live Activity Stream', href: '/live-activity', icon: Radio, description: 'Real-time feed of all user actions across the system — auto-refreshes every 30 seconds.' },
-      { label: 'Audit Center', href: '/audit-center', icon: DatabaseZap, description: 'Searchable audit database with advanced filters by user, action, date, and module.' },
-      { label: 'Security & Compliance Trail', href: '/audit-trail', icon: ClipboardList, description: 'Immutable compliance trail for regulatory submissions and internal audits.' },
+      { label: 'Security & Compliance Trail', href: '/audit-trail', icon: DatabaseZap, description: 'Searchable, immutable audit database with advanced filters by user, action, date, and collateral — for regulatory submissions and internal audits.' },
       { label: 'Audit Report', href: '/audit-report', icon: BookOpen, description: 'Generate formal PDF audit reports for specific periods or events.' },
       { label: 'Archive Audit Log', href: '/archive/audit-log', icon: FileStack, description: 'Dedicated audit log for all archive module operations.' },
       { label: 'Compliance Rules', href: '/compliance-rules', icon: Scale, description: 'Define and manage the compliance rules that govern collateral submissions.' },
@@ -320,7 +319,7 @@ const MODULES: ModuleGuide[] = [
         title: 'Prepare for a regulatory audit',
         role: 'Legal Manager',
         steps: [
-          { action: 'Open the Audit Center and set the audit period', where: 'Audit Center', href: '/audit-center' },
+          { action: 'Open the Security & Compliance Trail and set the audit period', where: 'Security & Compliance Trail', href: '/audit-trail' },
           { action: 'Filter by relevant actions and export the trail', where: 'Security & Compliance Trail', href: '/audit-trail' },
           { action: 'Generate a formal audit report PDF', where: 'Audit Report', href: '/audit-report' },
           { action: 'Review compliance rule adherence', where: 'Compliance Audit', href: '/compliance-audit' },
@@ -329,8 +328,7 @@ const MODULES: ModuleGuide[] = [
     ],
     shortcuts: [
       { label: 'Live Activity', href: '/live-activity', icon: Radio, description: 'Real-time stream' },
-      { label: 'Audit Center', href: '/audit-center', icon: DatabaseZap, description: 'Search all events' },
-      { label: 'Compliance Trail', href: '/audit-trail', icon: ClipboardList, description: 'Regulatory trail' },
+      { label: 'Compliance Trail', href: '/audit-trail', icon: DatabaseZap, description: 'Search all events' },
       { label: 'Audit Report', href: '/audit-report', icon: BookOpen, description: 'Generate PDF report' },
     ],
   },

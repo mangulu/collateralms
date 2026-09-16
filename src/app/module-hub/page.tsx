@@ -142,7 +142,7 @@ const modules: ModuleCard[] = [
     description:
       'Full audit trails, archive audit log, compliance rules, live activity streams, and audit reports.',
     icon: ShieldCheck,
-    href: '/audit-center',
+    href: '/audit-trail',
     borderColor: CATEGORY_BORDER.audit,
     iconBg: '#9D174D',
     category: 'audit',

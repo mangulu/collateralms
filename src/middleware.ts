@@ -66,7 +66,6 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/live-activity': ['audit_log.view'],
   '/audit-trail': ['audit_log.view'],
   '/audit-log': ['audit_log.view'],
-  '/activity-log': ['audit_log.view'],
   '/audit-report': ['audit_log.view'],
   '/reports': ['reports.view'],
   '/reports-dashboard': ['reports.view'],

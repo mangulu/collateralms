@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Activity, GitMerge, Files, Unlock, Upload, CalendarClock,
   TrendingUp, LineChart, Target, ShieldAlert, ScanSearch, Zap, Map, Flame,
   Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap,
-  ClipboardList, BookOpen, Scale, ShieldCheck, Radio, KeyRound, Settings,
+  BookOpen, Scale, ShieldCheck, Radio, KeyRound, Settings,
   Landmark, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
   MailCheck, GitBranch, BadgeCheck, Brain, SlidersHorizontal, FolderArchive,
   LayoutGrid, Sparkles, ArrowRight, Hash, CheckSquare,
@@ -87,8 +87,7 @@ const NAV_INDEX: NavResult[] = [
 
   // ── Audit & Compliance ──
   { id: 'n-aud-live', kind: 'screen', module: 'Audit & Compliance', moduleId: 'audit', label: 'Live Activity Stream', description: 'Real-time system activity feed', href: '/live-activity', icon: Radio, keywords: ['live', 'activity', 'stream', 'realtime'] },
-  { id: 'n-aud-center', kind: 'screen', module: 'Audit & Compliance', moduleId: 'audit', label: 'Audit Center', description: 'Comprehensive audit management hub', href: '/audit-center', icon: DatabaseZap, keywords: ['audit', 'center', 'hub', 'management'] },
-  { id: 'n-aud-trail', kind: 'screen', module: 'Audit & Compliance', moduleId: 'audit', label: 'Security & Compliance Trail', description: 'Full security and compliance audit trail', href: '/audit-trail', icon: ClipboardList, keywords: ['security', 'compliance', 'trail', 'audit'] },
+  { id: 'n-aud-trail', kind: 'screen', module: 'Audit & Compliance', moduleId: 'audit', label: 'Security & Compliance Trail', description: 'Comprehensive, searchable audit management hub with advanced filters', href: '/audit-trail', icon: DatabaseZap, keywords: ['security', 'compliance', 'trail', 'audit', 'center', 'hub', 'management'] },
   { id: 'n-aud-report', kind: 'screen', module: 'Audit & Compliance', moduleId: 'audit', label: 'Audit Report', description: 'Generate formal audit reports', href: '/audit-report', icon: BookOpen, keywords: ['audit', 'report', 'formal', 'generate'] },
   { id: 'n-aud-arch', kind: 'screen', module: 'Audit & Compliance', moduleId: 'audit', label: 'Archive Audit Log', description: 'Audit log for archived collateral activity', href: '/archive/audit-log', icon: FileStack, keywords: ['archive', 'audit', 'log'] },
   { id: 'n-aud-rules', kind: 'screen', module: 'Audit & Compliance', moduleId: 'audit', label: 'Compliance Rules', description: 'Define and manage compliance rule sets', href: '/compliance-rules', icon: Scale, keywords: ['compliance', 'rules', 'policy', 'define'] },
@@ -492,7 +491,7 @@ export default function GlobalSearch() {
                       { id: 'intelligence', label: 'Intelligence', href: '/executive-dashboard', icon: Brain },
                       { id: 'alerts', label: 'Alerts', href: '/notifications-hub', icon: Bell },
                       { id: 'reports', label: 'Reports', href: '/reports', icon: BarChart2 },
-                      { id: 'audit', label: 'Audit & Compliance', href: '/audit-center', icon: ShieldCheck },
+                      { id: 'audit', label: 'Audit & Compliance', href: '/audit-trail', icon: ShieldCheck },
                       { id: 'administration', label: 'Administration', href: '/user-management', icon: Settings },
                       { id: 'archive', label: 'Archive', href: '/archive/vault-management', icon: FolderArchive },
                     ].map((mod) => {

@@ -188,7 +188,7 @@ const TEST_PHASES: TestPhase[] = [
       { step: 3, action: 'Open Workflows Admin → Templates and verify templates exist', where: 'Workflow Templates', href: '/workflows-admin/templates', expect: 'At least one active workflow template is listed.' },
       { step: 4, action: 'Open Auto-Trigger Rules and verify at least one rule is active', where: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules', expect: 'Active trigger rules are listed with their event types and target templates.' },
       { step: 5, action: 'Open Process Analytics & KPIs and verify metrics load', where: 'Process Analytics & KPIs', href: '/workflows-admin/process-analytics', expect: 'Cycle time charts and SLA compliance metrics render with data.' },
-      { step: 6, action: 'Open Audit Center and search for actions from today', where: 'Audit Center', href: '/audit-center', expect: 'All actions performed during this test session appear in the audit log.' },
+      { step: 6, action: 'Open the Compliance Trail and search for actions from today', where: 'Compliance Trail', href: '/audit-trail', expect: 'All actions performed during this test session appear in the audit log.' },
       { step: 7, action: 'Open Live Activity and verify the real-time feed is updating', where: 'Live Activity', href: '/live-activity', expect: 'Activity feed shows recent events. Auto-refresh is working.' },
     ],
   },
@@ -272,7 +272,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
       { label: 'Process Analytics & KPIs load', href: '/workflows-admin/process-analytics' },
       { label: 'Workflow KPIs page renders', href: '/workflows-admin/kpis' },
       { label: 'Set alert threshold', href: '/alert-thresholds' },
-      { label: 'Audit Center shows all test actions', href: '/audit-center' },
+      { label: 'Compliance Trail shows all test actions', href: '/audit-trail' },
     ],
   },
 ];
