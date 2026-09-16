@@ -37,6 +37,28 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       ],
     },
   },
+  '/notifications-hub': {
+    title: 'Notifications Hub',
+    narrative: 'Notifications Hub pulls together everything that needs your attention across the app — open compliance breaches, your pending workflow tasks, recent status-change events, and insurance policies expiring soon — into one real-time feed, instead of requiring you to check each source separately.',
+    steps: [
+      'Use the type tabs (Overdue, BRELA, Status, Workflow, Documents, System) or the search box to narrow down what you\'re looking at',
+      "Click a notification's action link to jump straight to the relevant record",
+      'Use "Mark read" on a notification once you\'ve dealt with it, or "Mark all read" to clear the whole unread count at once',
+      'Use "Dismiss" on a notification you no longer need to see, or "Clear read" to remove everything you\'ve already read in one go',
+      "Click Refresh to pull in anything new since you last loaded the page",
+    ],
+  },
+  '/alerts-inbox': {
+    title: 'Alerts Inbox',
+    narrative: 'Alerts Inbox is your triage view over the SMS alerts the system has sent you — fraud detection, BRELA deadlines, approval requests, overdue collateral, and status changes — with the full message text and a link to the relevant record for each one. Alert Delivery Log is the separate place to check delivery status and retry failed sends for the same alerts.',
+    steps: [
+      'Use the type tabs, the read/unread filter, or search to find specific alerts',
+      'Click an alert row to expand it and read the full message',
+      'Use the eye icon to mark a single alert read/unread, or select several and use the bulk "Mark Read"/"Mark Unread" buttons',
+      'Delete an alert once you\'re done with it — select multiple and use the bulk Delete button to clear several at once',
+      'Sort by Newest, Oldest, or Priority to change how the list is ordered',
+    ],
+  },
 };
 
 export function getPageHelp(pathname: string): PageHelpContent | null {
