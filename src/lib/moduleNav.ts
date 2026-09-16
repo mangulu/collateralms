@@ -100,6 +100,9 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         items: [
           { label: 'My Tasks', icon: CheckSquare, href: '/workflows/tasks', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Pending Approvals', icon: Inbox, href: '/approval-inbox', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Perfection Workflow', icon: ShieldCheck, href: '/perfection-workflow', permission: PERMISSIONS.PERFECTION_VIEW },
+          { label: 'Document Approval', icon: FileCheck, href: '/document-approval', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Release Approval', icon: Unlock, href: '/release-approval', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Registry Submissions', icon: BookText, href: '/workflows/registry-submissions', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
@@ -296,6 +299,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/user-guide': 'administration',
   '/admin': 'administration',
   '/approval-inbox': 'workflows',
+  '/approvals': 'workflows',
   '/perfection-workflow': 'workflows',
   '/release-approval': 'workflows',
   '/performance-export': 'reports',
