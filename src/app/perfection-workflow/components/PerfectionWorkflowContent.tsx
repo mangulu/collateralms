@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File, ExternalLink, Maximize2, Minimize2, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ChevronRight, MessageSquare, Send, RotateCcw, Eye, Plus, Search, X, History, Award, ArrowRight, UserCheck, Zap, CheckSquare, Square, Layers, Upload, FileText, Trash2, Download, FileType2, FileImage, File, ExternalLink, Maximize2, Minimize2, ChevronUp, ChevronDown } from 'lucide-react';
 import ActionHelpIcon from '@/components/ui/ActionHelpIcon';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -194,72 +194,6 @@ function InlineDocViewer({ signedUrl, fileName, mimeType }: { signedUrl: string;
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── Role Guidance Banner ──────────────────────────────────────────────────────
-function RoleGuidanceBanner({ userRole }: { userRole: string }) {
-  if (!userRole) return null;
-
-  const config: Record<string, { icon: React.ReactNode; title: string; steps: string[]; color: string; bg: string; border: string }> = {
-    credit_officer: {
-      icon: <Send size={16} />,
-      title: 'You are a Credit Officer',
-      steps: [
-        'Create a new perfection request using "New Request"',
-        'Open a Draft or Returned request and click "Submit to Legal Officer"',
-        'Monitor progress — you\'ll see updates as Legal reviews your request',
-      ],
-      color: 'text-blue-800',
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-    },
-    legal_officer: {
-      icon: <UserCheck size={16} />,
-      title: 'You are a Legal Officer',
-      steps: [
-        'Open any "Submitted" request and click "Start Review" to begin',
-        'While "Under Review", choose Return or Reject here, or approve it in Pending Approvals',
-        'Once "Approved", open the request here and click "Mark as Perfected" to complete it',
-        'Add notes when rejecting, returning, or marking as perfected — they are required',
-      ],
-      color: 'text-amber-800',
-      bg: 'bg-amber-50',
-      border: 'border-amber-200',
-    },
-    system_admin: {
-      icon: <Zap size={16} />,
-      title: 'You are a System Admin',
-      steps: [
-        'You can perform all Credit Officer and Legal Officer actions',
-        'Create, submit, review, approve (via Pending Approvals), mark as perfected, return, or reject any request',
-      ],
-      color: 'text-purple-800',
-      bg: 'bg-purple-50',
-      border: 'border-purple-200',
-    },
-  };
-
-  const cfg = config[userRole];
-  if (!cfg) return null;
-
-  return (
-    <div className={`rounded-xl border ${cfg.border} ${cfg.bg} px-4 py-3`}>
-      <div className={`flex items-center gap-2 font-semibold text-sm mb-2 ${cfg.color}`}>
-        {cfg.icon}
-        {cfg.title} — How this workflow works for you:
-      </div>
-      <ol className="space-y-1">
-        {cfg.steps.map((step, i) => (
-          <li key={i} className={`flex items-start gap-2 text-xs ${cfg.color}`}>
-            <span className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5 ${cfg.color} border ${cfg.border} bg-white`}>
-              {i + 1}
-            </span>
-            {step}
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }
@@ -1827,7 +1761,6 @@ export default function PerfectionWorkflowContent() {
   const [selectedRequest, setSelectedRequest] = useState<PerfectionRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
-  const [showGuideDrawer, setShowGuideDrawer] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -1992,16 +1925,6 @@ export default function PerfectionWorkflowContent() {
                 <Plus size={15} /> New Request
               </button>
             )}
-            {userRole && (
-              <button
-                onClick={() => setShowGuideDrawer(true)}
-                className="flex items-center justify-center w-9 h-9 bg-white border border-border text-muted-foreground rounded-lg hover:bg-muted hover:text-foreground transition-colors"
-                title="How this workflow works for you"
-                aria-label="How this workflow works for you"
-              >
-                <HelpCircle size={16} />
-              </button>
-            )}
           </div>
         </div>
 
@@ -2029,19 +1952,6 @@ export default function PerfectionWorkflowContent() {
           ))}
         </div>
       </div>
-
-      {/* Role Guidance Drawer */}
-      {userRole && (
-        <WorkflowDrawer
-          open={showGuideDrawer}
-          onClose={() => setShowGuideDrawer(false)}
-          title="How This Workflow Works For You"
-        >
-          <div className="p-5 overflow-y-auto">
-            <RoleGuidanceBanner userRole={userRole} />
-          </div>
-        </WorkflowDrawer>
-      )}
 
       {/* Batch mode hint */}
       {batchMode && (

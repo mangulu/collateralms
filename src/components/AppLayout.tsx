@@ -3,11 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import GlobalSearch from './GlobalSearch';
-import { Menu, LogOut, CheckSquare, ChevronDown, AlertCircle, LayoutGrid, BookOpen, Library, FlaskConical } from 'lucide-react';
+import { Menu, LogOut, CheckSquare, ChevronDown, AlertCircle, LayoutGrid, BookOpen, Library, FlaskConical, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { userTaskService, UserTask } from '@/lib/supabase/userTaskService';
 import { getRoleGuideHref } from '@/app/guides/data/guideData';
+import { getPageHelp } from '@/lib/pageHelp';
+import PageHelpDrawer from './ui/PageHelpDrawer';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -26,6 +28,7 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [pageHelpOpen, setPageHelpOpen] = useState(false);
   const [tasks, setTasks] = useState<UserTask[]>([]);
   const [taskCount, setTaskCount] = useState(0);
   const pathname = usePathname();
@@ -35,6 +38,7 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const activePath = pathname || currentPath;
+  const pageHelpContent = activePath ? getPageHelp(activePath) : null;
 
   const initials = userProfile?.initials ||
     (userProfile?.full_name
@@ -105,6 +109,33 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
           </div>
         </div>
       </div>
+
+      {/* Page Help icon — only shown when this page has help content */}
+      {pageHelpContent && (
+        <div className="relative group">
+          <button
+            onClick={() => setPageHelpOpen(true)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+            style={{ color: 'var(--izou-text-muted)', border: '1px solid var(--izou-border)' }}
+            onMouseOver={e => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)';
+            }}
+            onMouseOut={e => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+              (e.currentTarget as HTMLElement).style.color = 'var(--izou-text-muted)';
+            }}
+            aria-label="Page help"
+          >
+            <HelpCircle size={16} />
+          </button>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="text-white text-xs px-2 py-1 rounded-md whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
+              Page Help
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Onboarding Guide icon */}
       <div className="relative group">
@@ -448,6 +479,13 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
           {children}
         </div>
       </main>
+
+      <PageHelpDrawer
+        open={pageHelpOpen}
+        onClose={() => setPageHelpOpen(false)}
+        content={pageHelpContent}
+        role={userProfile?.role}
+      />
     </div>
   );
 }
