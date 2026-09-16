@@ -203,8 +203,8 @@ export default function WorkflowsAdminDashboardContent() {
     {
       id: 'trigger-processor',
       title: 'Trigger Processor',
-      description: 'Run the auto-trigger job, view execution logs, and monitor rule match results',
-      href: '/workflows-admin/trigger-processor',
+      description: 'Run the auto-trigger job, view execution logs, and monitor rule match results (Run History tab)',
+      href: '/workflows-admin/trigger-rules',
       icon: <Play size={20} className="text-teal-600" />,
       accentColor: 'bg-teal-50',
       bgColor: 'bg-white',

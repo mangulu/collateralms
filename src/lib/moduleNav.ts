@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, Play, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot } from 'lucide-react';
+import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, Library, ClipboardCheck, Eye, FileStack, FolderCheck, UserCog, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, AlertTriangle, Thermometer, MapPin, HandCoins, KeyRound, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -122,7 +122,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Escalation Config', icon: AlertTriangle, href: '/workflows-admin/escalation', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Analytics & KPIs', icon: BarChart3, href: '/workflows-admin/kpis', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Fast Track Tiers', icon: Zap, href: '/fast-track', permission: PERMISSIONS.SETTINGS_VIEW },
-          { label: 'Trigger Processor', icon: Play, href: '/workflows-admin/trigger-processor', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Migration Tool', icon: Settings2, href: '/workflows-admin/migration', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },

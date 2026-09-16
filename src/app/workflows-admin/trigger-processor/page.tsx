@@ -1,15 +1,5 @@
-'use client';
-import React from 'react';
-import AppLayout from '@/components/AppLayout';
-import AdminGuard from '../components/AdminGuard';
-import TriggerProcessorAdminContent from './components/TriggerProcessorAdminContent';
+import { redirect } from 'next/navigation';
 
 export default function TriggerProcessorAdminPage() {
-  return (
-    <AppLayout>
-      <AdminGuard>
-        <TriggerProcessorAdminContent />
-      </AdminGuard>
-    </AppLayout>
-  );
+  redirect('/workflows-admin/trigger-rules');
 }
