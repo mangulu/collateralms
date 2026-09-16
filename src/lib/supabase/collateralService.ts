@@ -430,6 +430,40 @@ export const collateralService = {
       throw err;
     }
   },
+
+  /**
+   * Active (non-Perfected, non-Released) collaterals whose days_to_deadline
+   * falls within +/-1 day of daysBeforeDeadline, or overdue when negative.
+   */
+  async getByDeadlineWindow(daysBeforeDeadline: number, limit = 20): Promise<CollateralRecord[]> {
+    const supabase = createClient();
+    try {
+      let query = supabase
+        .from('collateral_records')
+        .select('*')
+        .not('status', 'eq', 'Perfected')
+        .not('status', 'eq', 'Released');
+
+      if (daysBeforeDeadline < 0) {
+        query = query.lt('days_to_deadline', 0);
+      } else {
+        query = query
+          .gte('days_to_deadline', daysBeforeDeadline - 1)
+          .lte('days_to_deadline', daysBeforeDeadline + 1);
+      }
+
+      const { data, error } = await query.limit(limit);
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        console.log('Fetch error:', error.message);
+        return [];
+      }
+      return (data ?? []).map(rowToCollateral);
+    } catch (err: any) {
+      console.log('Schema error:', err.message);
+      throw err;
+    }
+  },
 };
 
 export const dashboardService = {

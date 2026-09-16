@@ -2,57 +2,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Clock, Send, AlertTriangle, RefreshCw, Plus, Trash2, Play, Pause } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { collateralService } from '@/lib/supabase/collateralService';
+import { smsAlertService, type SmsAlertType } from '@/lib/supabase/smsAlertService';
+import {
+  deadlineReminderRulesService,
+  type DeadlineReminderRule,
+} from '@/lib/supabase/deadlineReminderRulesService';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-interface ReminderRule {
-  id: string;
-  name: string;
-  daysBeforeDeadline: number;
-  alertType: string;
-  recipientRole: string;
-  messageTemplate: string;
-  isActive: boolean;
-  lastRunAt: string | null;
-  sentCount: number;
-}
-
-const DEFAULT_RULES: Omit<ReminderRule, 'id' | 'lastRunAt' | 'sentCount'>[] = [
-  {
-    name: '14-Day Advance Warning',
-    daysBeforeDeadline: 14,
-    alertType: 'BRELA_DEADLINE',
-    recipientRole: 'credit_officer',
-    messageTemplate: '[CollateralMS WARNING] Collateral {id} perfection deadline in 14 days. Registry: {registry}. Take action: {url}',
-    isActive: true,
-  },
-  {
-    name: '7-Day Critical Alert',
-    daysBeforeDeadline: 7,
-    alertType: 'BRELA_DEADLINE',
-    recipientRole: 'credit_officer',
-    messageTemplate: '[CollateralMS CRITICAL] Collateral {id} deadline in 7 days. Immediate action required: {url}',
-    isActive: true,
-  },
-  {
-    name: '3-Day Final Notice',
-    daysBeforeDeadline: 3,
-    alertType: 'OVERDUE_COLLATERAL',
-    recipientRole: 'legal_officer',
-    messageTemplate: '[CollateralMS FINAL] Collateral {id} deadline in 3 days. Legal review needed: {url}',
-    isActive: true,
-  },
-  {
-    name: 'Overdue Escalation',
-    daysBeforeDeadline: -1,
-    alertType: 'OVERDUE_COLLATERAL',
-    recipientRole: 'system_admin',
-    messageTemplate: '[CollateralMS OVERDUE] Collateral {id} is past deadline. Escalation required: {url}',
-    isActive: true,
-  },
-];
-
 export default function DeadlineRemindersContent() {
-  const [rules, setRules] = useState<ReminderRule[]>([]);
+  const { user } = useAuth();
+  const [rules, setRules] = useState<DeadlineReminderRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -60,74 +21,54 @@ export default function DeadlineRemindersContent() {
 
   const loadRules = useCallback(async () => {
     setLoading(true);
-    // Use local state seeded from defaults (no DB table for rules in this implementation)
-    // In production, these would be stored in a compliance_rules or reminder_rules table
-    const stored = localStorage.getItem('deadline_reminder_rules');
-    if (stored) {
-      try { setRules(JSON.parse(stored)); } catch { seedDefaults(); }
-    } else {
-      seedDefaults();
+    try {
+      const data = await deadlineReminderRulesService.listRules();
+      setRules(data);
+    } catch {
+      setRules([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
-
-  const seedDefaults = () => {
-    const seeded: ReminderRule[] = DEFAULT_RULES.map((r, i) => ({
-      ...r,
-      id: `rule-${i + 1}`,
-      lastRunAt: null,
-      sentCount: 0,
-    }));
-    setRules(seeded);
-    localStorage.setItem('deadline_reminder_rules', JSON.stringify(seeded));
-  };
 
   useEffect(() => { loadRules(); }, [loadRules]);
 
-  const saveRules = (updated: ReminderRule[]) => {
-    setRules(updated);
-    localStorage.setItem('deadline_reminder_rules', JSON.stringify(updated));
+  const toggleRule = async (id: string) => {
+    const rule = rules.find((r) => r.id === id);
+    if (!rule) return;
+    const nextActive = !rule.isActive;
+    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, isActive: nextActive } : r)));
+    const ok = await deadlineReminderRulesService.setActive(id, nextActive);
+    if (!ok) {
+      setRules((prev) => prev.map((r) => (r.id === id ? { ...r, isActive: !nextActive } : r)));
+      toast.error('Failed to update rule');
+    }
   };
 
-  const toggleRule = (id: string) => {
-    const updated = rules.map((r) => r.id === id ? { ...r, isActive: !r.isActive } : r);
-    saveRules(updated);
+  const deleteRule = async (id: string) => {
+    const previous = rules;
+    setRules((prev) => prev.filter((r) => r.id !== id));
+    const ok = await deadlineReminderRulesService.remove(id);
+    if (!ok) {
+      setRules(previous);
+      toast.error('Failed to delete rule');
+    }
   };
 
-  const deleteRule = (id: string) => {
-    saveRules(rules.filter((r) => r.id !== id));
-  };
-
-  const runRule = async (rule: ReminderRule) => {
+  const runRule = async (rule: DeadlineReminderRule) => {
     setRunning(rule.id);
     try {
-      const supabase = createClient();
       const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
 
-      // Find collateral matching this rule's deadline window
-      let query = supabase
-        .from('collateral_records')
-        .select('id, collateral_id, obligor, registry, assigned_officer, days_to_deadline')
-        .not('status', 'eq', 'Perfected')
-        .not('status', 'eq', 'Released');
+      const collaterals = await collateralService.getByDeadlineWindow(rule.daysBeforeDeadline);
 
-      if (rule.daysBeforeDeadline < 0) {
-        query = query.lt('days_to_deadline', 0);
-      } else {
-        const lower = rule.daysBeforeDeadline - 1;
-        const upper = rule.daysBeforeDeadline + 1;
-        query = query.gte('days_to_deadline', lower).lte('days_to_deadline', upper);
-      }
-
-      const { data: collaterals } = await query.limit(20);
-
-      if (!collaterals || collaterals.length === 0) {
+      if (collaterals.length === 0) {
         toast.info(`No collateral matches rule "${rule.name}" right now`);
         setRunning(null);
         return;
       }
 
-      // Get officers matching the role
+      const supabase = createClient();
       const { data: officers } = await supabase
         .from('user_profiles')
         .select('id, full_name, phone')
@@ -139,31 +80,30 @@ export default function DeadlineRemindersContent() {
         for (const officer of (officers ?? [])) {
           if (!officer.phone) continue;
           const msg = rule.messageTemplate
-            .replace('{id}', col.collateral_id)
+            .replace('{collateralId}', col.collateralId)
+            .replace('{id}', col.collateralId)
             .replace('{registry}', col.registry ?? 'Registry')
             .replace('{url}', `${appUrl}/collateral-management`);
 
-          await fetch('/api/sms/send-alert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: officer.phone,
-              message: msg,
-              alertType: rule.alertType,
-              collateralId: col.collateral_id,
-              recipientName: officer.full_name,
-            }),
+          await smsAlertService.sendAlertViaApi({
+            to: officer.phone,
+            message: msg,
+            alertType: rule.alertType as SmsAlertType,
+            collateralId: col.collateralId,
+            recipientName: officer.full_name,
           });
           sentCount++;
         }
       }
 
-      const updated = rules.map((r) =>
-        r.id === rule.id
-          ? { ...r, lastRunAt: new Date().toISOString(), sentCount: r.sentCount + sentCount }
-          : r
+      await deadlineReminderRulesService.recordRun(rule.id, sentCount);
+      setRules((prev) =>
+        prev.map((r) =>
+          r.id === rule.id
+            ? { ...r, lastRunAt: new Date().toISOString(), sentCount: r.sentCount + sentCount }
+            : r
+        )
       );
-      saveRules(updated);
       toast.success(`Sent ${sentCount} reminder${sentCount !== 1 ? 's' : ''} for "${rule.name}"`);
     } catch (err: any) {
       toast.error('Failed to run reminder: ' + err?.message);
@@ -172,20 +112,21 @@ export default function DeadlineRemindersContent() {
     }
   };
 
-  const addRule = () => {
+  const addRule = async () => {
     if (!newRule.name.trim()) return;
-    const rule: ReminderRule = {
-      id: `rule-${Date.now()}`,
+    const created = await deadlineReminderRulesService.create({
       name: newRule.name,
       daysBeforeDeadline: Number(newRule.days),
       alertType: 'BRELA_DEADLINE',
       recipientRole: newRule.role,
-      messageTemplate: newRule.template || `[CollateralMS] Collateral {id} deadline reminder. Action required: {url}`,
-      isActive: true,
-      lastRunAt: null,
-      sentCount: 0,
-    };
-    saveRules([...rules, rule]);
+      messageTemplate: newRule.template || `[CollateralMS] Collateral {collateralId} deadline reminder. Action required: {url}`,
+      createdBy: user?.id,
+    });
+    if (!created) {
+      toast.error('Failed to add rule');
+      return;
+    }
+    setRules((prev) => [...prev, created]);
     setNewRule({ name: '', days: '7', role: 'credit_officer', template: '' });
     setShowAddForm(false);
     toast.success('Reminder rule added');
@@ -242,7 +183,7 @@ export default function DeadlineRemindersContent() {
             <div>
               <label className="text-xs font-medium text-muted-foreground uppercase mb-1 block">Message Template</label>
               <input type="text" value={newRule.template} onChange={(e) => setNewRule({ ...newRule, template: e.target.value })}
-                placeholder="Use {id}, {registry}, {url}" className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                placeholder="Use {collateralId}, {registry}, {url}" className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/30" />
             </div>
           </div>
           <div className="flex gap-2 justify-end">
