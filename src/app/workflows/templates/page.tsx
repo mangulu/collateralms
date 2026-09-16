@@ -1,12 +1,5 @@
-'use client';
-import React from 'react';
-import AppLayout from '@/components/AppLayout';
-import WorkflowTemplatesContent from './components/WorkflowTemplatesContent';
+import { redirect } from 'next/navigation';
 
 export default function WorkflowTemplatesPage() {
-  return (
-    <AppLayout>
-      <WorkflowTemplatesContent />
-    </AppLayout>
-  );
+  redirect('/workflows-admin/templates');
 }

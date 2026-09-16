@@ -1,15 +1,5 @@
-'use client';
-import React from 'react';
-import AppLayout from '@/components/AppLayout';
-import AdminGuard from '../components/AdminGuard';
-import WorkflowInstancesContent from '@/app/workflows/instances/components/WorkflowInstancesContent';
+import { redirect } from 'next/navigation';
 
 export default function WorkflowsAdminInstancesPage() {
-  return (
-    <AppLayout>
-      <AdminGuard>
-        <WorkflowInstancesContent />
-      </AdminGuard>
-    </AppLayout>
-  );
+  redirect('/workflows/instances');
 }
