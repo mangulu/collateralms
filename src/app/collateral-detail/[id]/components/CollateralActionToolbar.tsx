@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserCog, MapPin, ShieldCheck, Workflow, Scale, ArrowLeftRight, Unlock, Archive, Flag, FileBarChart2, ChevronDown, X, Loader2, Send, AlertTriangle, Info, Package, Clock, Building2, Hash, FileText, Inbox, BookOpen } from 'lucide-react';
 import { CollateralRecord, collateralService } from '@/lib/supabase/collateralService';
 import { auditLogService } from '@/lib/supabase/auditLogService';
+import { triggerStatusChangeSms } from '@/lib/supabase/smsNotificationRulesService';
 import { perfectionService } from '@/lib/supabase/perfectionService';
 import { createValuation } from '@/lib/supabase/valuationService';
 import { createSubstitution } from '@/lib/supabase/substitutionService';
@@ -382,6 +383,13 @@ function StatusEditModal({
           notes: reason,
           performedBy: user?.id,
           performedByName: user?.email ?? '',
+        }),
+        triggerStatusChangeSms({
+          collateralId: collateral.collateralId,
+          collateralDescription: collateral.description,
+          previousStatus: collateral.status,
+          newStatus: status,
+          changedBy: user?.email ?? undefined,
         }),
       ]);
       toast.success(`Status updated to ${status}`);

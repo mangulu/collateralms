@@ -11,6 +11,7 @@ import {
 } from '@/lib/supabase/collateralService';
 import { documentService, CollateralDocument, DocumentType } from '@/lib/supabase/documentService';
 import { auditLogService, AuditLogEntry } from '@/lib/supabase/auditLogService';
+import { triggerStatusChangeSms } from '@/lib/supabase/smsNotificationRulesService';
 import { perfectionService, PerfectionRequest, PerfectionComment } from '@/lib/supabase/perfectionService';
 import { legalSignOffService, LegalSignOff } from '@/lib/supabase/legalSignOffService';
 import AddEditCollateralModal from '@/app/collateral-management/components/AddEditCollateralModal';
@@ -307,15 +308,24 @@ function StatusChangeModal({ collateral, targetStatus, userId, userName, onClose
     try {
       const updated = await collateralService.update(collateral.id, { status: targetStatus });
       if (!updated) { setError('Status update failed. Please try again.'); setSubmitting(false); return; }
-      await auditLogService.log({
-        collateralRecordId: collateral.id,
-        collateralId: collateral.collateralId,
-        action: 'status_changed',
-        message: `Status changed from ${collateral.status} to ${targetStatus}`,
-        detail: reason.trim(),
-        performedBy: userId,
-        performedByName: userName,
-      });
+      await Promise.all([
+        auditLogService.log({
+          collateralRecordId: collateral.id,
+          collateralId: collateral.collateralId,
+          action: 'status_changed',
+          message: `Status changed from ${collateral.status} to ${targetStatus}`,
+          detail: reason.trim(),
+          performedBy: userId,
+          performedByName: userName,
+        }),
+        triggerStatusChangeSms({
+          collateralId: collateral.collateralId,
+          collateralDescription: collateral.description,
+          previousStatus: collateral.status,
+          newStatus: targetStatus,
+          changedBy: userName,
+        }),
+      ]);
       toast.success(`Status updated to ${targetStatus}`);
       onChanged();
       onClose();

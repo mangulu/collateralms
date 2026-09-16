@@ -4,6 +4,7 @@ import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Pla
 import { toast } from 'sonner';
 import { collateralService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { auditLogService } from '@/lib/supabase/auditLogService';
+import { triggerStatusChangeSms } from '@/lib/supabase/smsNotificationRulesService';
 import type { WorkflowTemplateType } from '@/lib/supabase/workflowEngineService';
 import { documentService } from '@/lib/supabase/documentService';
 import { collateralLookupsService } from '@/lib/supabase/collateralLookupsService';
@@ -334,15 +335,24 @@ export default function CollateralManagementContent() {
       await collateralService.updateStatus(id, status);
       const record = collateralData.find((c) => c.id === id);
       if (record) {
-        await auditLogService.log({
-          collateralRecordId: id,
-          collateralId: record.collateralId,
-          action: 'status_changed',
-          message: `Status updated to ${status} for ${record.collateralId}`,
-          detail: `${record.obligor} · ${record.type}`,
-          performedBy: user?.id,
-          performedByName: user?.email ?? '',
-        });
+        await Promise.all([
+          auditLogService.log({
+            collateralRecordId: id,
+            collateralId: record.collateralId,
+            action: 'status_changed',
+            message: `Status updated to ${status} for ${record.collateralId}`,
+            detail: `${record.obligor} · ${record.type}`,
+            performedBy: user?.id,
+            performedByName: user?.email ?? '',
+          }),
+          triggerStatusChangeSms({
+            collateralId: record.collateralId,
+            collateralDescription: record.description,
+            previousStatus: record.status,
+            newStatus: status,
+            changedBy: user?.email ?? undefined,
+          }),
+        ]);
       }
       toast.success(`Status updated to ${status}`);
       fetchData();
