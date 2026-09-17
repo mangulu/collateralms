@@ -11,11 +11,12 @@ import { useAuth } from '@/contexts/AuthContext';
 
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
-  pending:     { label: 'Pending',     bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', icon: Clock },
-  approved:    { label: 'Approved',    bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle },
-  rejected:    { label: 'Rejected',    bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3', icon: XCircle },
-  checked_out: { label: 'Checked Out', bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: ArrowRight },
-  returned:    { label: 'Returned',    bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD', icon: RotateCcw },
+  pending:                  { label: 'Pending',               bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', icon: Clock },
+  pending_second_approval:  { label: 'Awaiting 2nd Approval',  bg: '#F5F3FF', text: '#7C3AED', border: '#DDD6FE', icon: Shield },
+  approved:                 { label: 'Approved',               bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle },
+  rejected:                 { label: 'Rejected',               bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3', icon: XCircle },
+  checked_out:              { label: 'Checked Out',            bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: ArrowRight },
+  returned:                 { label: 'Returned',               bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD', icon: RotateCcw },
 };
 
 function formatDate(iso: string) {
@@ -175,8 +176,11 @@ function ActionModal({ request, action, userId, onClose, onDone }: ActionModalPr
     setSaving(true);
     try {
       if (action === 'approve') {
-        await archiveRequestService.approve(request.id, userId, notes);
-        await archiveAuditService.log({ eventType: 'request_approved', collateralId: request.collateralId, requestId: request.id, performedBy: userId, description: 'Request approved and file checked out' });
+        const finalized = await archiveRequestService.approve(request.id, userId, notes);
+        await archiveAuditService.log({
+          eventType: 'request_approved', collateralId: request.collateralId, requestId: request.id, performedBy: userId,
+          description: finalized ? 'Request approved and file checked out' : 'First approval given — awaiting a second, different approver',
+        });
       } else if (action === 'reject') {
         await archiveRequestService.reject(request.id, notes);
         await archiveAuditService.log({ eventType: 'request_rejected', collateralId: request.collateralId, requestId: request.id, performedBy: userId, description: `Request rejected: ${notes}` });
@@ -231,12 +235,14 @@ interface RequestDetailDrawerProps {
   onClose: () => void;
   onAction: (action: 'approve' | 'reject' | 'return') => void;
   isApprover: boolean;
+  currentUserId: string;
 }
 
-function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover }: RequestDetailDrawerProps) {
+function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover, currentUserId }: RequestDetailDrawerProps) {
   const sc = STATUS_CONFIG[request.requestStatus];
   const reqLog = statusLog.filter((l) => l.requestId === request.id);
   const isOverdue = request.expectedReturnDate && request.requestStatus === 'approved' && new Date(request.expectedReturnDate) < new Date();
+  const isSameApprover = request.requestStatus === 'pending_second_approval' && request.firstApprovedBy === currentUserId;
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end" onClick={onClose}>
@@ -260,6 +266,16 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">Overdue</span>
             )}
           </div>
+
+          {request.requestStatus === 'pending_second_approval' && (
+            <div className="flex items-start gap-2 p-3 rounded-xl text-xs" style={{ backgroundColor: '#F5F3FF', border: '1px solid #DDD6FE', color: '#6D28D9' }}>
+              <Shield size={14} className="shrink-0 mt-0.5" />
+              <span>
+                This collateral is above the dual-custody threshold. <strong>{request.firstApprovedByProfile?.full_name ?? 'An officer'}</strong> gave
+                the first approval on {formatDateTime(request.firstApprovedAt ?? request.createdAt)} — a different officer must approve to check it out.
+              </span>
+            </div>
+          )}
 
           <div className="p-3 rounded-xl" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
             <p className="text-xs font-medium mb-1" style={{ color: '#9CA3AF' }}>Collateral</p>
@@ -328,13 +344,14 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
           )}
         </div>
 
-        {(isApprover && request.requestStatus === 'pending') || request.requestStatus === 'approved' ? (
+        {(isApprover && (request.requestStatus === 'pending' || request.requestStatus === 'pending_second_approval')) || request.requestStatus === 'approved' ? (
           <div className="px-5 py-4 border-t" style={{ borderColor: '#E5E7EB' }}>
             <div className="flex items-center gap-2">
-              {isApprover && request.requestStatus === 'pending' && (
+              {isApprover && (request.requestStatus === 'pending' || request.requestStatus === 'pending_second_approval') && (
                 <>
-                  <button onClick={() => onAction('approve')}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                  <button onClick={() => onAction('approve')} disabled={isSameApprover}
+                    title={isSameApprover ? 'A different officer must give the second approval' : undefined}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600">
                     <CheckCircle size={14} /> Approve
                   </button>
                   <button onClick={() => onAction('reject')}
@@ -426,7 +443,7 @@ export default function AccessRequestsContent() {
     return acc;
   }, {} as Record<string, number>);
 
-  const pendingCount = requests.filter((r) => r.requestStatus === 'pending').length;
+  const pendingCount = requests.filter((r) => r.requestStatus === 'pending' || r.requestStatus === 'pending_second_approval').length;
   const myRequestsCount = requests.filter((r) => r.requestedBy === user?.id).length;
 
   const exportCSV = () => {
@@ -508,8 +525,8 @@ export default function AccessRequestsContent() {
       </div>
 
       {/* KPI summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-        {(['pending', 'approved', 'checked_out', 'returned', 'rejected'] as RequestStatus[]).map((s) => {
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+        {(['pending', 'pending_second_approval', 'approved', 'checked_out', 'returned', 'rejected'] as RequestStatus[]).map((s) => {
           const sc = STATUS_CONFIG[s];
           const StatusIcon = sc.icon;
           return (
@@ -617,10 +634,12 @@ export default function AccessRequestsContent() {
                       style={{ color: '#6B7280' }}>
                       {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </button>
-                    {isApprover && req.requestStatus === 'pending' && (
+                    {isApprover && (req.requestStatus === 'pending' || req.requestStatus === 'pending_second_approval') && (
                       <>
                         <button onClick={() => setActionModal({ request: req, action: 'approve' })}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
+                          disabled={req.requestStatus === 'pending_second_approval' && req.firstApprovedBy === user?.id}
+                          title={req.requestStatus === 'pending_second_approval' && req.firstApprovedBy === user?.id ? 'A different officer must give the second approval' : undefined}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
                           style={{ backgroundColor: '#15803D' }}>
                           <CheckCircle size={12} /> Approve
                         </button>
@@ -682,6 +701,7 @@ export default function AccessRequestsContent() {
             setDetailRequest(null);
           }}
           isApprover={isApprover}
+          currentUserId={user?.id ?? ''}
         />
       )}
 

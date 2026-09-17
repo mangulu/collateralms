@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { fetchConfigByKey } from '@/lib/supabase/systemConfigService';
 
 const supabase = createClient();
 
@@ -6,11 +7,12 @@ const supabase = createClient();
 
 export type LocationType = 'vault' | 'room' | 'cabinet' | 'shelf' | 'slot';
 export type CustodyStatus = 'in_vault' | 'on_loan' | 'overdue' | 'returned' | 'missing';
-export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'checked_out' | 'returned';
+export type RequestStatus = 'pending' | 'pending_second_approval' | 'approved' | 'rejected' | 'checked_out' | 'returned';
 export type ArchiveEventType =
   | 'vault_created' | 'vault_updated' |'placement_assigned'| 'placement_updated' | 'placement_removed' | 'collateral_moved' |'request_raised'| 'request_approved' | 'request_rejected' |'checked_out' | 'returned' | 'overdue_flagged' | 'sms_sent'
   | 'document_added' | 'document_removed'
-  | 'custody_handoff' | 'custody_received' | 'officer_assigned';
+  | 'custody_handoff' | 'custody_received' | 'officer_assigned'
+  | 'disposal_flagged' | 'disposal_approved' | 'disposed';
 
 export interface ArchiveLocation {
   id: string;
@@ -38,9 +40,14 @@ export interface ArchivePlacement {
   placedBy: string | null;
   placedAt: string;
   updatedAt: string;
+  retentionEligibleAt: string | null;
+  disposedAt: string | null;
+  disposedBy: string | null;
+  disposalReason: string | null;
   collateral?: { id: string; collateral_type: string; description: string; obligor: string };
   location?: ArchiveLocation;
   placedByProfile?: { full_name: string };
+  disposedByProfile?: { full_name: string };
 }
 
 export interface ArchiveRequest {
@@ -48,6 +55,8 @@ export interface ArchiveRequest {
   collateralId: string;
   requestedBy: string | null;
   approvedBy: string | null;
+  firstApprovedBy: string | null;
+  firstApprovedAt: string | null;
   requestStatus: RequestStatus;
   purpose: string;
   expectedReturnDate: string | null;
@@ -58,9 +67,10 @@ export interface ArchiveRequest {
   smsReminderSent: boolean;
   createdAt: string;
   updatedAt: string;
-  collateral?: { id: string; collateral_type: string; description: string; obligor: string };
+  collateral?: { id: string; collateral_type: string; description: string; obligor: string; value_tsh: number };
   requestedByProfile?: { full_name: string; email: string };
   approvedByProfile?: { full_name: string };
+  firstApprovedByProfile?: { full_name: string };
 }
 
 export interface ArchiveCustody {
@@ -159,6 +169,8 @@ function mapRequest(r: Record<string, unknown>): ArchiveRequest {
     collateralId: r.collateral_id as string,
     requestedBy: (r.requested_by as string) ?? null,
     approvedBy: (r.approved_by as string) ?? null,
+    firstApprovedBy: (r.first_approved_by as string) ?? null,
+    firstApprovedAt: (r.first_approved_at as string) ?? null,
     requestStatus: r.request_status as RequestStatus,
     purpose: r.purpose as string,
     expectedReturnDate: (r.expected_return_date as string) ?? null,
@@ -172,6 +184,7 @@ function mapRequest(r: Record<string, unknown>): ArchiveRequest {
     collateral: r.collateral_records as ArchiveRequest['collateral'],
     requestedByProfile: r.requested_by_profile as ArchiveRequest['requestedByProfile'],
     approvedByProfile: r.approved_by_profile as ArchiveRequest['approvedByProfile'],
+    firstApprovedByProfile: r.first_approved_by_profile as ArchiveRequest['firstApprovedByProfile'],
   };
 }
 
@@ -309,6 +322,28 @@ export const archiveLocationService = {
 
 // ─── Placement Service ────────────────────────────────────────────────────────
 
+function mapPlacement(r: Record<string, any>): ArchivePlacement {
+  return {
+    id: r.id,
+    collateralId: r.collateral_id,
+    locationId: r.location_id,
+    physicalRef: r.physical_ref,
+    electronicRecordUrl: r.electronic_record_url,
+    notes: r.notes,
+    placedBy: r.placed_by,
+    placedAt: r.placed_at,
+    updatedAt: r.updated_at,
+    retentionEligibleAt: r.retention_eligible_at ?? null,
+    disposedAt: r.disposed_at ?? null,
+    disposedBy: r.disposed_by ?? null,
+    disposalReason: r.disposal_reason ?? null,
+    collateral: r.collateral_records as ArchivePlacement['collateral'],
+    location: r.archive_locations ? mapLocation(r.archive_locations as Record<string, unknown>) : undefined,
+    placedByProfile: undefined,
+    disposedByProfile: r.disposed_by_profile as ArchivePlacement['disposedByProfile'],
+  };
+}
+
 export const archivePlacementService = {
   async getAll(): Promise<ArchivePlacement[]> {
     const { data, error } = await supabase
@@ -320,20 +355,7 @@ export const archivePlacementService = {
       `)
       .order('placed_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map((r) => ({
-      id: r.id,
-      collateralId: r.collateral_id,
-      locationId: r.location_id,
-      physicalRef: r.physical_ref,
-      electronicRecordUrl: r.electronic_record_url,
-      notes: r.notes,
-      placedBy: r.placed_by,
-      placedAt: r.placed_at,
-      updatedAt: r.updated_at,
-      collateral: r.collateral_records as ArchivePlacement['collateral'],
-      location: r.archive_locations ? mapLocation(r.archive_locations as Record<string, unknown>) : undefined,
-      placedByProfile: undefined,
-    }));
+    return (data || []).map(mapPlacement);
   },
 
   async getByLocation(locationId: string): Promise<ArchivePlacement[]> {
@@ -347,20 +369,145 @@ export const archivePlacementService = {
       .eq('location_id', locationId)
       .order('placed_at', { ascending: false });
     if (error) throw error;
-    return (data || []).map((r) => ({
-      id: r.id,
-      collateralId: r.collateral_id,
-      locationId: r.location_id,
-      physicalRef: r.physical_ref,
-      electronicRecordUrl: r.electronic_record_url,
-      notes: r.notes,
-      placedBy: r.placed_by,
-      placedAt: r.placed_at,
-      updatedAt: r.updated_at,
-      collateral: r.collateral_records as ArchivePlacement['collateral'],
-      location: r.archive_locations ? mapLocation(r.archive_locations as Record<string, unknown>) : undefined,
-      placedByProfile: undefined,
-    }));
+    return (data || []).map(mapPlacement);
+  },
+
+  /** Lazily flags placements whose retention period has elapsed as disposal-eligible. */
+  async flagDisposalEligible(): Promise<number> {
+    const now = new Date().toISOString();
+    const { data: eligible, error } = await supabase
+      .from('archive_placements')
+      .select('id, collateral_id, location_id')
+      .lte('retention_eligible_at', now)
+      .is('disposed_at', null);
+    if (error) throw error;
+    if (!eligible || eligible.length === 0) return 0;
+
+    const collateralIds = eligible.map((p) => p.collateral_id);
+    const { data: alreadyFlagged } = await supabase
+      .from('archive_audit_log')
+      .select('collateral_id')
+      .eq('event_type', 'disposal_flagged')
+      .in('collateral_id', collateralIds);
+    const flaggedCollateralIds = new Set((alreadyFlagged || []).map((r) => r.collateral_id));
+
+    // Each collateral has at most one placement (archive_placements.collateral_id is UNIQUE).
+    const toFlag = eligible.filter((p) => !flaggedCollateralIds.has(p.collateral_id));
+    for (const p of toFlag) {
+      await supabase.from('archive_audit_log').insert({
+        event_type: 'disposal_flagged',
+        collateral_id: p.collateral_id,
+        location_id: p.location_id,
+        description: 'Retention period elapsed — eligible for disposal',
+        metadata: { placement_id: p.id },
+      });
+    }
+    return toFlag.length;
+  },
+
+  /** Placements whose retention period has elapsed and that haven't been disposed of yet. */
+  async getDisposalQueue(): Promise<ArchivePlacement[]> {
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('archive_placements')
+      .select(`
+        *,
+        collateral_records(id, collateral_type, description, obligor),
+        archive_locations(id, name, code, location_type)
+      `)
+      .lte('retention_eligible_at', now)
+      .is('disposed_at', null)
+      .order('retention_eligible_at', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapPlacement);
+  },
+
+  /** Records approved disposal of a placement's physical document — the row is kept for audit history. */
+  async approveDisposal(placementId: string, userId: string, reason: string): Promise<void> {
+    const { data: placement, error: fetchErr } = await supabase
+      .from('archive_placements')
+      .select('collateral_id, location_id')
+      .eq('id', placementId)
+      .single();
+    if (fetchErr) throw fetchErr;
+
+    const { error } = await supabase
+      .from('archive_placements')
+      .update({ disposed_at: new Date().toISOString(), disposed_by: userId, disposal_reason: reason })
+      .eq('id', placementId);
+    if (error) throw error;
+
+    await supabase.from('archive_audit_log').insert({
+      event_type: 'disposal_approved',
+      collateral_id: placement.collateral_id,
+      location_id: placement.location_id,
+      performed_by: userId,
+      reason,
+      description: 'Physical document disposal approved',
+      metadata: { placement_id: placementId },
+    });
+    await supabase.from('archive_audit_log').insert({
+      event_type: 'disposed',
+      collateral_id: placement.collateral_id,
+      location_id: placement.location_id,
+      performed_by: userId,
+      description: 'Physical document disposed',
+      metadata: { placement_id: placementId },
+    });
+  },
+
+  /**
+   * Stamps a filed placement's retention_eligible_at once its collateral is released.
+   * Takes the longest retention period among: the bank-wide default in Settings →
+   * System Config → Retention Policies ("Released Collateral Records"), and any
+   * per-document-type override set in Settings → Document Types for the collateral's
+   * filed document types (a physical file can bundle several document types, so it
+   * can't be disposed of until every document inside it is safe to destroy). A
+   * document type left blank simply defers to the bank-wide default. If neither is
+   * configured anywhere, retention stays indefinite (null) rather than guessing.
+   */
+  async stampRetentionEligibility(collateralId: string): Promise<void> {
+    const { data: placement } = await supabase
+      .from('archive_placements')
+      .select('id')
+      .eq('collateral_id', collateralId)
+      .is('disposed_at', null)
+      .maybeSingle();
+    if (!placement) return;
+
+    const retentionConfig = await fetchConfigByKey('document_retention');
+    const globalYears = typeof retentionConfig?.released_collateral_years === 'number' ? retentionConfig.released_collateral_years : null;
+    let maxMonths: number | null = globalYears != null ? globalYears * 12 : null;
+
+    const { data: docs } = await supabase
+      .from('collateral_documents')
+      .select('document_type')
+      .eq('collateral_record_id', collateralId);
+    const docTypeNames = [...new Set((docs || []).map((d) => d.document_type))];
+
+    if (docTypeNames.length > 0) {
+      const { data: settings } = await supabase
+        .from('document_type_settings')
+        .select('name, retention_period_months')
+        .in('name', docTypeNames);
+      const explicitMonths = (settings || [])
+        .map((s) => s.retention_period_months)
+        .filter((m): m is number => typeof m === 'number');
+      if (explicitMonths.length > 0) {
+        const docTypeMax = Math.max(...explicitMonths);
+        maxMonths = maxMonths != null ? Math.max(maxMonths, docTypeMax) : docTypeMax;
+      }
+    }
+
+    if (maxMonths == null) return;
+
+    const eligibleAt = new Date();
+    eligibleAt.setMonth(eligibleAt.getMonth() + maxMonths);
+
+    await supabase
+      .from('archive_placements')
+      .update({ retention_eligible_at: eligibleAt.toISOString() })
+      .eq('id', placement.id);
   },
 
   async upsert(payload: {
@@ -453,9 +600,10 @@ export const archiveRequestService = {
       .from('archive_requests')
       .select(`
         *,
-        collateral_records(id, collateral_type, description, obligor),
+        collateral_records(id, collateral_type, description, obligor, value_tsh),
         requested_by_profile:user_profiles!requested_by(full_name, email),
-        approved_by_profile:user_profiles!approved_by(full_name)
+        approved_by_profile:user_profiles!approved_by(full_name),
+        first_approved_by_profile:user_profiles!first_approved_by(full_name)
       `)
       .order('created_at', { ascending: false });
     if (error) throw error;
@@ -480,13 +628,33 @@ export const archiveRequestService = {
     return mapRequest(data);
   },
 
-  async approve(id: string, approvedBy: string, checkoutNotes?: string): Promise<void> {
+  /** Returns true once the file is actually checked out (final approval); false if this was only the first of two required approvals. */
+  async approve(id: string, approvedBy: string, checkoutNotes?: string): Promise<boolean> {
     const { data: req, error: fetchErr } = await supabase
       .from('archive_requests')
-      .select('collateral_id')
+      .select('collateral_id, request_status, first_approved_by, collateral_records(value_tsh)')
       .eq('id', id)
       .single();
     if (fetchErr) throw fetchErr;
+
+    const thresholdsConfig = await fetchConfigByKey('default_thresholds');
+    const threshold = typeof thresholdsConfig?.archive_dual_custody_threshold_tsh === 'number'
+      ? thresholdsConfig.archive_dual_custody_threshold_tsh : null;
+    const collateralValue = Number((req.collateral_records as { value_tsh?: number } | null)?.value_tsh ?? 0);
+    const needsDualCustody = threshold != null && collateralValue >= threshold;
+
+    if (needsDualCustody && req.request_status === 'pending') {
+      const { error: firstApprovalErr } = await supabase
+        .from('archive_requests')
+        .update({ request_status: 'pending_second_approval', first_approved_by: approvedBy, first_approved_at: new Date().toISOString() })
+        .eq('id', id);
+      if (firstApprovalErr) throw firstApprovalErr;
+      return false;
+    }
+
+    if (req.request_status === 'pending_second_approval' && req.first_approved_by === approvedBy) {
+      throw new Error('This request already has your first approval — a different officer must give the second one.');
+    }
 
     const { error } = await supabase
       .from('archive_requests')
@@ -515,6 +683,7 @@ export const archiveRequestService = {
       confirmed_at: new Date().toISOString(),
       notes: checkoutNotes ?? 'File checked out via approved request',
     });
+    return true;
   },
 
   async reject(id: string, rejectionReason: string): Promise<void> {

@@ -8,7 +8,7 @@ import {
   BookOpen, Scale, ShieldCheck, Radio, KeyRound, Settings,
   Landmark, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
   MailCheck, GitBranch, BadgeCheck, Brain, SlidersHorizontal, FolderArchive,
-  LayoutGrid, Sparkles, ArrowRight, Hash, CheckSquare,
+  LayoutGrid, Sparkles, ArrowRight, Hash, CheckSquare, Trash2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -112,6 +112,7 @@ const NAV_INDEX: NavResult[] = [
   { id: 'n-arc-filestat', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'File Location Status', description: 'Real-time location status for every physical file', href: '/archive/file-location-status', icon: Map, keywords: ['file', 'location', 'status', 'track'] },
   { id: 'n-arc-heatmap', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Occupancy Heatmap', description: 'Vault room/shelf/slot occupancy and capacity alerts', href: '/archive/occupancy-heatmap', icon: Flame, keywords: ['occupancy', 'heatmap', 'capacity', 'vault'] },
   { id: 'n-arc-auditlog', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Archive Audit Log', description: 'Every vault movement timestamped and attributed', href: '/archive/audit-log', icon: FileStack, keywords: ['audit', 'log', 'archive', 'history'] },
+  { id: 'n-arc-disposal', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Disposal Queue', description: 'Physical documents past retention and eligible for destruction', href: '/archive/disposal-queue', icon: Trash2, keywords: ['disposal', 'retention', 'destroy', 'archive', 'compliance'] },
 
   // ── Quick Actions ──
   { id: 'qa-new-col', kind: 'quick-action', module: 'Quick Actions', moduleId: 'quick-actions', label: 'New Collateral', description: 'Register a new collateral record', href: '/collateral-management', icon: FolderOpen, keywords: ['new', 'add', 'create', 'collateral', 'register'] },

@@ -1269,6 +1269,10 @@ export function ArchiveStatusBadge({
             placedBy: data.placed_by,
             placedAt: data.placed_at,
             updatedAt: data.updated_at,
+            retentionEligibleAt: data.retention_eligible_at ?? null,
+            disposedAt: data.disposed_at ?? null,
+            disposedBy: data.disposed_by ?? null,
+            disposalReason: data.disposal_reason ?? null,
             location: data.archive_locations ? {
               id: data.archive_locations.id,
               name: data.archive_locations.name,
@@ -1509,6 +1513,10 @@ export default function CollateralActionToolbar({ collateral, onRefresh }: Colla
             placedBy: data.placed_by,
             placedAt: data.placed_at,
             updatedAt: data.updated_at,
+            retentionEligibleAt: data.retention_eligible_at ?? null,
+            disposedAt: data.disposed_at ?? null,
+            disposedBy: data.disposed_by ?? null,
+            disposalReason: data.disposal_reason ?? null,
             location: data.archive_locations ? {
               id: data.archive_locations.id,
               name: data.archive_locations.name,

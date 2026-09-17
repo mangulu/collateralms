@@ -21,6 +21,9 @@ const EVENT_CONFIG: Partial<Record<ArchiveEventType, { label: string; color: str
   checked_out:         { label: 'Checked Out',     color: '#1D4ED8', bg: '#EFF6FF', icon: ArrowRight },
   returned:            { label: 'Returned',        color: '#0369A1', bg: '#F0F9FF', icon: ArrowRight },
   overdue_flagged:     { label: 'Overdue',         color: '#DC2626', bg: '#FEF2F2', icon: AlertCircle },
+  disposal_flagged:    { label: 'Disposal Flagged',  color: '#B45309', bg: '#FFFBEB', icon: Clock },
+  disposal_approved:   { label: 'Disposal Approved', color: '#C2410C', bg: '#FFF7ED', icon: FileText },
+  disposed:            { label: 'Disposed',          color: '#DC2626', bg: '#FEF2F2', icon: X },
 };
 
 function getEventConfig(eventType: ArchiveEventType) {

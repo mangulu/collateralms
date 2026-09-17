@@ -70,6 +70,24 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Search by recipient, message text, or collateral ID, and use Refresh to pull the latest state',
     ],
   },
+  '/archive/disposal-queue': {
+    title: 'Disposal Queue',
+    narrative: "Disposal Queue lists physical collateral documents whose retention period has elapsed since their collateral was released — each document type's retention period is set in Settings, and the clock starts once a Release Request is approved. Items appear here automatically; nothing is ever deleted without an explicit, reasoned approval.",
+    steps: {
+      legal_officer: [
+        'Review a listed item\'s collateral, slot, and how long it\'s been eligible',
+        'Click "Approve Disposal" and enter a reason — this is required and kept in the audit trail',
+        'The filing record stays in the system after disposal for compliance history; only its physical document is marked destroyed',
+      ],
+      system_admin: [
+        'You have the same disposal rights as a Legal Officer',
+        'Set each document type\'s retention period in Settings → Document Types',
+      ],
+      default: [
+        'You can view the queue, but only a Legal Officer or System Admin can approve a disposal',
+      ],
+    },
+  },
 };
 
 export function getPageHelp(pathname: string): PageHelpContent | null {

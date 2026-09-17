@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { sendCollateralStatusEmail } from '@/lib/supabase/collateralStatusEmailService';
 import { createReleaseApprovalTask } from '@/lib/supabase/workflowTaskBridge';
+import { archivePlacementService } from '@/lib/supabase/archiveService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -239,6 +240,10 @@ export const releaseRequestService = {
             notes: notes || undefined,
             workflowType: 'Release / Settlement Workflow',
           }).catch((e) => console.warn('[releaseRequest] status email failed:', e.message));
+
+          // ── Start the archive retention clock on the filed physical document ──
+          archivePlacementService.stampRetentionEligibility(collateralRecordId)
+            .catch((e) => console.warn('[releaseRequest] retention stamp failed:', e.message));
         } else if (current?.collateral_ref) {
           // Fallback: look up by collateral_id text field
           const { data: crRow } = await supabase
@@ -262,6 +267,9 @@ export const releaseRequestService = {
               notes: notes || undefined,
               workflowType: 'Release / Settlement Workflow',
             }).catch((e) => console.warn('[releaseRequest] status email (fallback) failed:', e.message));
+
+            archivePlacementService.stampRetentionEligibility(crRow.id)
+              .catch((e) => console.warn('[releaseRequest] retention stamp (fallback) failed:', e.message));
           }
         }
       }

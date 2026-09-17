@@ -10,6 +10,8 @@ export interface DocumentTypeSetting {
   expiryTracked: boolean;
   isActive: boolean;
   sortOrder: number;
+  /** Months to retain a filed document after its collateral is released. Null = retain indefinitely. */
+  retentionPeriodMonths: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -23,6 +25,7 @@ function rowToSetting(row: any): DocumentTypeSetting {
     expiryTracked: row.expiry_tracked,
     isActive: row.is_active,
     sortOrder: row.sort_order ?? 0,
+    retentionPeriodMonths: row.retention_period_months ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -81,6 +84,7 @@ export const documentTypeSettingsService = {
           expiry_tracked: setting.expiryTracked,
           is_active: setting.isActive,
           sort_order: setting.sortOrder,
+          retention_period_months: setting.retentionPeriodMonths,
         })
         .select()
         .single();
@@ -106,6 +110,7 @@ export const documentTypeSettingsService = {
       if (setting.expiryTracked !== undefined) row.expiry_tracked = setting.expiryTracked;
       if (setting.isActive !== undefined) row.is_active = setting.isActive;
       if (setting.sortOrder !== undefined) row.sort_order = setting.sortOrder;
+      if (setting.retentionPeriodMonths !== undefined) row.retention_period_months = setting.retentionPeriodMonths;
       row.updated_at = new Date().toISOString();
 
       const { data, error } = await supabase

@@ -149,9 +149,10 @@ function DrillDownDrawer({ row, onClose }: DrillDownDrawerProps) {
               <div className="space-y-2">
                 {activeRequests.map((req) => {
                   const reqStatuses: Record<string, { bg: string; text: string; label: string }> = {
-                    pending:     { bg: '#FFFBEB', text: '#B45309', label: 'Pending' },
-                    approved:    { bg: '#F0FDF4', text: '#15803D', label: 'Approved' },
-                    checked_out: { bg: '#EFF6FF', text: '#1D4ED8', label: 'Checked Out' },
+                    pending:                 { bg: '#FFFBEB', text: '#B45309', label: 'Pending' },
+                    pending_second_approval: { bg: '#F5F3FF', text: '#7C3AED', label: 'Awaiting 2nd Approval' },
+                    approved:                { bg: '#F0FDF4', text: '#15803D', label: 'Approved' },
+                    checked_out:             { bg: '#EFF6FF', text: '#1D4ED8', label: 'Checked Out' },
                   };
                   const rs = reqStatuses[req.requestStatus] ?? { bg: '#F3F4F6', text: '#374151', label: req.requestStatus };
                   return (
@@ -224,7 +225,7 @@ export default function FileLocationStatusContent() {
       const placementMap = new Map<string, ArchivePlacement>();
       placements.forEach((p) => placementMap.set(p.collateralId, p));
 
-      const activeStatuses = new Set(['pending', 'approved', 'checked_out']);
+      const activeStatuses = new Set(['pending', 'pending_second_approval', 'approved', 'checked_out']);
       const requestsByCollateral = new Map<string, ArchiveRequest[]>();
       requests.forEach((r) => {
         if (!activeStatuses.has(r.requestStatus)) return;
@@ -495,9 +496,10 @@ export default function FileLocationStatusContent() {
                     </p>
                     {activeRequests.map((req) => {
                       const reqStatuses: Record<string, { bg: string; text: string; label: string }> = {
-                        pending:     { bg: '#FFFBEB', text: '#B45309', label: 'Pending' },
-                        approved:    { bg: '#F0FDF4', text: '#15803D', label: 'Approved' },
-                        checked_out: { bg: '#EFF6FF', text: '#1D4ED8', label: 'Checked Out' },
+                        pending:                 { bg: '#FFFBEB', text: '#B45309', label: 'Pending' },
+                        pending_second_approval: { bg: '#F5F3FF', text: '#7C3AED', label: 'Awaiting 2nd Approval' },
+                        approved:                { bg: '#F0FDF4', text: '#15803D', label: 'Approved' },
+                        checked_out:             { bg: '#EFF6FF', text: '#1D4ED8', label: 'Checked Out' },
                       };
                       const rs = reqStatuses[req.requestStatus] ?? { bg: '#F3F4F6', text: '#374151', label: req.requestStatus };
                       return (

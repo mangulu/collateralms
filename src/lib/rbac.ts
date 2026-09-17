@@ -126,6 +126,7 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/archive/custody': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/occupancy-heatmap': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/vault-slot': PERMISSIONS.COLLATERAL_VIEW,
+  '/archive/disposal-queue': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/audit-log': PERMISSIONS.AUDIT_LOG_VIEW,
 };
 

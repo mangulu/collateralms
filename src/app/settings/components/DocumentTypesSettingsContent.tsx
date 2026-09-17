@@ -9,9 +9,10 @@ interface EditState {
   description: string;
   required: boolean;
   expiryTracked: boolean;
+  retentionPeriodMonths: string;
 }
 
-const emptyEdit: EditState = { id: null, name: '', description: '', required: false, expiryTracked: false };
+const emptyEdit: EditState = { id: null, name: '', description: '', required: false, expiryTracked: false, retentionPeriodMonths: '' };
 
 export default function DocumentTypesSettingsContent() {
   const [types, setTypes] = useState<DocumentTypeSetting[]>([]);
@@ -41,7 +42,14 @@ export default function DocumentTypesSettingsContent() {
 
   const openAdd = () => setEdit({ ...emptyEdit });
   const openEdit = (dt: DocumentTypeSetting) =>
-    setEdit({ id: dt.id, name: dt.name, description: dt.description, required: dt.required, expiryTracked: dt.expiryTracked });
+    setEdit({
+      id: dt.id,
+      name: dt.name,
+      description: dt.description,
+      required: dt.required,
+      expiryTracked: dt.expiryTracked,
+      retentionPeriodMonths: dt.retentionPeriodMonths != null ? String(dt.retentionPeriodMonths) : '',
+    });
 
   const showSaved = () => {
     setSaved(true);
@@ -52,6 +60,7 @@ export default function DocumentTypesSettingsContent() {
     if (!edit || !edit.name.trim()) return;
     setSaving(true);
     setError(null);
+    const retentionPeriodMonths = edit.retentionPeriodMonths.trim() ? Number(edit.retentionPeriodMonths) : null;
     try {
       if (edit.id) {
         const updated = await documentTypeSettingsService.update(edit.id, {
@@ -59,6 +68,7 @@ export default function DocumentTypesSettingsContent() {
           description: edit.description.trim(),
           required: edit.required,
           expiryTracked: edit.expiryTracked,
+          retentionPeriodMonths,
         });
         if (updated) {
           setTypes((prev) => prev.map((t) => (t.id === edit.id ? updated : t)));
@@ -72,6 +82,7 @@ export default function DocumentTypesSettingsContent() {
           description: edit.description.trim(),
           required: edit.required,
           expiryTracked: edit.expiryTracked,
+          retentionPeriodMonths,
           isActive: true,
           sortOrder: types.length + 1,
         });
@@ -195,6 +206,23 @@ export default function DocumentTypesSettingsContent() {
               <span className="text-sm text-foreground">Track expiry date</span>
             </label>
           </div>
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">
+              Retention period after collateral release (months)
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={edit.retentionPeriodMonths}
+              onChange={(e) => setEdit({ ...edit, retentionPeriodMonths: e.target.value })}
+              placeholder="Leave blank to use the bank-wide default"
+              className="w-full sm:w-64 px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Once a collateral filed under this document type is released, its physical document becomes eligible for disposal after this many months.
+              Leave blank to fall back to the bank-wide default set in System Settings → Retention Policies — or to retain indefinitely if no default is set either.
+            </p>
+          </div>
           <div className="flex items-center gap-2 pt-1">
             <button
               onClick={handleSave}
@@ -230,6 +258,7 @@ export default function DocumentTypesSettingsContent() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Description</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Required</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expiry</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Retention</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -262,6 +291,13 @@ export default function DocumentTypesSettingsContent() {
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Tracked</span>
                     ) : (
                       <span className="text-muted-foreground text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {dt.retentionPeriodMonths != null ? (
+                      <span className="text-xs text-foreground">{dt.retentionPeriodMonths} mo</span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">Indefinite</span>
                     )}
                   </td>
                   <td className="px-4 py-3">

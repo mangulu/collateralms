@@ -24,6 +24,9 @@ const EVENT_CONFIG: Record<ArchiveEventType, { label: string; color: string; bg:
   sms_sent:            { label: 'SMS Sent',            color: '#0369A1', bg: '#F0F9FF' },
   document_added:      { label: 'Document Added',      color: '#15803D', bg: '#F0FDF4' },
   document_removed:    { label: 'Document Removed',    color: '#BE123C', bg: '#FFF1F2' },
+  disposal_flagged:    { label: 'Disposal Flagged',    color: '#B45309', bg: '#FFFBEB' },
+  disposal_approved:   { label: 'Disposal Approved',   color: '#C2410C', bg: '#FFF7ED' },
+  disposed:            { label: 'Disposed',            color: '#BE123C', bg: '#FFF1F2' },
 };
 
 function formatDateTime(iso: string): string {

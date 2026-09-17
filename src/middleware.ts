@@ -82,6 +82,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/archive/custody': ['collateral.view'],
   '/archive/occupancy-heatmap': ['collateral.view'],
   '/archive/vault-slot': ['collateral.view'],
+  '/archive/disposal-queue': ['collateral.view'],
   '/archive/audit-log': ['audit_log.view'],
 };
 
