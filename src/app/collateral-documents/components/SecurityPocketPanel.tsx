@@ -40,7 +40,7 @@ function VaultSlotPicker({ selectedSlotId, onSelect }: VaultSlotPickerProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    archiveLocationService.getAll()
+    archiveLocationService.getAllWithCounts()
       .then((all) => {
         setLocations(all.filter((l) => l.isActive));
         setLoading(false);

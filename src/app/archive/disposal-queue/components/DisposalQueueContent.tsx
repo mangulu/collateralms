@@ -91,19 +91,22 @@ export default function DisposalQueueContent() {
     setError('');
     try {
       await archivePlacementService.flagDisposalEligible();
-      const [eligible, auditEntries] = await Promise.all([
-        archivePlacementService.getDisposalQueue(),
-        archiveAuditService.getAll(500),
-      ]);
+      const eligible = await archivePlacementService.getDisposalQueue();
       setQueue(eligible);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load disposal queue');
+    } finally { setLoading(false); }
+    // "Disposed this month" is a secondary KPI — don't let it block the primary queue.
+    try {
+      const auditEntries = await archiveAuditService.getAll(500);
       const now = new Date();
       setDisposedThisMonth(auditEntries.filter((e) => {
         const d = new Date(e.createdAt);
         return e.eventType === 'disposed' && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
       }).length);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load disposal queue');
-    } finally { setLoading(false); }
+    } catch {
+      setDisposedThisMonth(0);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);

@@ -262,17 +262,20 @@ export default function OccupancyHeatmapContent() {
     setLoading(true);
     setError(null);
     try {
-      const [tree, audit] = await Promise.all([
-        archiveLocationService.getTree(),
-        archiveAuditService.getAll(1000),
-      ]);
+      const tree = await archiveLocationService.getTreeWithCounts();
       setLocations(tree);
-      setAuditEntries(audit);
       setLastRefresh(new Date());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load vault data');
     } finally {
       setLoading(false);
+    }
+    // Trend data is a secondary chart — don't let it block the primary heatmap view.
+    try {
+      const audit = await archiveAuditService.getAll(1000);
+      setAuditEntries(audit);
+    } catch {
+      setAuditEntries([]);
     }
   }, []);
 

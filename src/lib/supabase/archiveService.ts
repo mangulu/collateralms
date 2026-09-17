@@ -201,21 +201,6 @@ export const archiveLocationService = {
     return (data || []).map(mapLocation);
   },
 
-  async getTree(): Promise<ArchiveLocation[]> {
-    const all = await archiveLocationService.getAll();
-    const map = new Map<string, ArchiveLocation>();
-    all.forEach((l) => { map.set(l.id, { ...l, children: [] }); });
-    const roots: ArchiveLocation[] = [];
-    all.forEach((l) => {
-      if (l.parentId && map.has(l.parentId)) {
-        map.get(l.parentId)!.children!.push(map.get(l.id)!);
-      } else if (!l.parentId) {
-        roots.push(map.get(l.id)!);
-      }
-    });
-    return roots;
-  },
-
   /** Build the tree and populate currentOccupancy with real counts:
    *  - slot    → number of archive_placements pointing to this slot
    *  - cabinet → number of direct child slots
@@ -271,6 +256,21 @@ export const archiveLocationService = {
 
     roots.forEach((root) => computeOccupancy(root));
     return roots;
+  },
+
+  /** Same real occupancy counts as getTreeWithCounts(), flattened back into a plain list. */
+  async getAllWithCounts(): Promise<ArchiveLocation[]> {
+    const tree = await archiveLocationService.getTreeWithCounts();
+    const flat: ArchiveLocation[] = [];
+    const walk = (nodes: ArchiveLocation[]) => {
+      nodes.forEach((n) => {
+        const { children, ...rest } = n;
+        flat.push(rest as ArchiveLocation);
+        if (children) walk(children);
+      });
+    };
+    walk(tree);
+    return flat;
   },
 
   async create(payload: {

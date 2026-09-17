@@ -728,7 +728,9 @@ export default function VaultSlotDetailContent() {
       ]);
       setAllLocations(allLocs);
       const found = allLocs.find((l) => l.id === id) ?? null;
-      setSlot(found);
+      // archiveLocationService.getAll() returns the raw, unmaintained current_occupancy
+      // column — use the placements we just fetched for this exact slot instead.
+      setSlot(found ? { ...found, currentOccupancy: slotPlacements.length } : null);
       setPlacements(slotPlacements);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load slot data');
