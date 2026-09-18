@@ -90,6 +90,86 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Toggle the rule on or off, then click "Save Rule" — a rule with no recipients or left disabled sends nothing',
     ],
   },
+  '/executive-dashboard': {
+    title: 'Executive Dashboard',
+    narrative: 'Executive Dashboard is the real-time, portfolio-wide view for leadership — total value, perfection rate, LTV exposure, and overdue/approaching-deadline counts, plus a six-month perfection trend and a collateral-type breakdown, all computed live from current records rather than a periodic snapshot.',
+    steps: [
+      'The KPI strip covers portfolio value, perfection rate, item counts, average LTV (with a risk badge), overdue actions, and items approaching deadline',
+      'The Perfection Trend chart shows perfected/submitted/overdue counts over the last 6 months; the pie chart breaks the portfolio down by collateral type',
+      'Click Refresh to recompute every KPI and chart from the latest data',
+    ],
+  },
+  '/cohort-analytics': {
+    title: 'Cohort Analytics',
+    narrative: 'Cohort Analytics tracks perfection performance over time and across officers — perfection-rate trends by collateral type, per-officer completion and turnaround stats, LTV drift patterns, and forecasting alerts that flag developing risk before it becomes a breach — plus AI document analysis and a Portfolio Heatmap tab for geographic concentration.',
+    steps: [
+      'Forecasting Alerts at the top surface LTV drift, officer slowdowns, or trend reversals worth attention right now',
+      'Perfection Rate Trends and Officer Performance Distribution break results down by collateral type and by officer',
+      'LTV Drift Patterns tracks how loan-to-value ratios are moving across the portfolio over time',
+      'Scroll down to Collateral Document Analysis to run an AI review of a record\'s documents for risk flags, valuation anomalies, and legal exposure',
+      'Switch to the Portfolio Heatmap tab for the geographic view — see "Portfolio Heatmap" help for that tab specifically',
+      'Use Refresh to recompute everything from the latest data',
+    ],
+  },
+  '/portfolio-heatmap': {
+    title: 'Portfolio Heatmap',
+    narrative: "Portfolio Heatmap maps collateral concentration, average LTV, and overdue rate by region across Tanzania, so you can spot where risk is geographically concentrated. It's also reachable as a tab inside Cohort Analytics; standalone here it's meant for direct linking from dashboards.",
+    steps: [
+      'Switch the metric toggle (Concentration / Avg LTV / Overdue Rate) to recolor the map and charts by that measure',
+      'Click a region bubble, chart bar, or table row to drill into that region\'s detail panel',
+      'The Regional Risk Summary table lists every region with its collateral count, value, LTV, and overdue rate side by side',
+      "If fewer than 3 regions have geo-tagged collateral, the page falls back to labeled sample data rather than an empty map — a visible banner tells you when that's happening",
+    ],
+  },
+  '/deadline-predictions': {
+    title: 'Smart Deadline Predictions',
+    narrative: 'Smart Deadline Predictions scores every non-perfected collateral record by how likely it is to miss its perfection deadline, weighting days remaining, current status, LTV, and whether perfection is still required — surfacing the ones needing attention first instead of waiting for them to actually go overdue.',
+    steps: [
+      'Each item shows a 0–100 risk score with the specific factors that drove it (e.g. "3d left", "High LTV 82%")',
+      'Filter to "High+" or "Critical Only" to focus on the most urgent items, or "All" to see everything monitored',
+      'The summary cards give a running count of Critical, High Risk, and Total Monitored items',
+      'Click Refresh to rescore against the latest collateral data',
+    ],
+  },
+  '/ai-risk-fraud': {
+    title: 'AI Risk & Fraud',
+    narrative: 'AI Risk & Fraud combines two AI-driven tools in one place: Fraud Prevention, which detects suspicious submission patterns and tracks fraud alerts through to resolution, and Risk Assessment, which runs a full AI risk analysis on any collateral record. Both are also reachable as their own standalone pages (via alert links, SMS, and other pages) — this page just tabs between them.',
+    steps: [
+      'Use the tab bar to switch between AI Fraud Prevention and AI Risk Assessment — see each one\'s own help for details',
+      'Fraud Prevention: click "Run AI Analysis" to screen a submission, then Mark False Positive or Escalate for Investigation on any resulting alert',
+      'Risk Assessment: pick a live collateral record or enter details manually, then click Run Assessment for a scored, multi-dimension AI risk analysis',
+    ],
+  },
+  '/fraud-prevention': {
+    title: 'AI Fraud Prevention',
+    narrative: "AI Fraud Prevention screens collateral submissions for suspicious patterns — duplicate titles, identity mismatches, valuation anomalies, and more — and tracks every resulting alert through to a resolution (false positive, escalated, or resolved). It's also reachable as the Fraud tab inside AI Risk & Fraud.",
+    steps: [
+      'Click "Run AI Analysis" and fill in the submission details to screen it before it\'s accepted',
+      'Review flagged alerts in the list below — expand one for the full detail behind the flag',
+      'Mark an alert as a False Positive to clear it, or Escalate for Investigation if it needs follow-up',
+      'Use "Send Fraud Alert SMS" to notify the right officer directly about a specific alert',
+    ],
+  },
+  '/risk-assessment': {
+    title: 'AI Risk Assessment',
+    narrative: "AI Risk Assessment runs a full AI-driven risk analysis on a collateral record — legal, financial, and operational dimensions, an overall score and level, and a plain-language narrative for each — using either a live record from the registry or details you enter manually. It's also reachable as the Risk tab inside AI Risk & Fraud.",
+    steps: [
+      'Select an existing collateral record from the dropdown, or switch to manual entry and fill in the details yourself',
+      'Click "Run Assessment" to get an overall risk score/level plus a breakdown across each risk dimension',
+      'Expand a risk dimension for its detailed narrative and contributing factors',
+      'Recent Assessments below keeps a running history of what you\'ve scored this session',
+    ],
+  },
+  '/geomapping': {
+    title: 'Geomapping',
+    narrative: 'Geomapping plots geo-tagged collateral on a map of Tanzania, cross-checks each address against the ID/registry address on file to flag mismatches, and highlights high-risk zones by region — with a geocoding tool for turning a plain address into coordinates.',
+    steps: [
+      'Map View: filter pins by collateral type, status, or risk zone, search by collateral ID/obligor/region, and toggle the heatmap overlay for risk concentration instead of individual pins',
+      'Click a pin (or a row in the High Risk Collateral list) to open its detail panel, or use the geocode search box to look up coordinates for an address via OpenStreetMap',
+      'Address Validation tab: see ID-vs-collateral address match scores and flagged mismatches',
+      'Risk Zones tab: view collateral grouped by risk zone (Low/Medium/High)',
+    ],
+  },
   '/archive/disposal-queue': {
     title: 'Disposal Queue',
     narrative: "Disposal Queue lists physical collateral documents whose retention period has elapsed since their collateral was released — each document type's retention period is set in Settings, and the clock starts once a Release Request is approved. Items appear here automatically; nothing is ever deleted without an explicit, reasoned approval.",
