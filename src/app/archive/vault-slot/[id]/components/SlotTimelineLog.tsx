@@ -28,7 +28,8 @@ const EVENT_CONFIG: Partial<Record<ArchiveEventType, { label: string; color: str
   reconciliation_discrepancy: { label: 'Reconciliation Discrepancy', color: '#DC2626', bg: '#FEF2F2', icon: AlertCircle },
 };
 
-function getEventConfig(eventType: ArchiveEventType) {
+function getEventConfig(eventType: ArchiveEventType | null | undefined) {
+  if (!eventType) return { label: 'Unknown', color: '#6B7280', bg: '#F9FAFB', icon: Clock };
   return EVENT_CONFIG[eventType] ?? { label: eventType.replace(/_/g, ' '), color: '#6B7280', bg: '#F9FAFB', icon: Clock };
 }
 

@@ -976,7 +976,7 @@ export const archiveAuditService = {
         *,
         collateral_records(collateral_type, description),
         performed_by_profile:user_profiles!performed_by(full_name),
-        archive_locations(name, code)
+        archive_locations!location_id(name, code)
       `)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -1008,7 +1008,7 @@ export const archiveAuditService = {
         *,
         collateral_records(collateral_type, description),
         performed_by_profile:user_profiles!performed_by(full_name),
-        archive_locations(name, code)
+        archive_locations!location_id(name, code)
       `)
       .or(`location_id.eq.${locationId},source_location_id.eq.${locationId},destination_location_id.eq.${locationId}`)
       .order('created_at', { ascending: false })
@@ -1047,7 +1047,7 @@ export const archiveAuditService = {
     description: string;
     metadata?: Record<string, unknown>;
   }): Promise<void> {
-    await supabase.from('archive_audit_log').insert({
+    const { error } = await supabase.from('archive_audit_log').insert({
       event_type: entry.eventType,
       collateral_id: entry.collateralId ?? null,
       request_id: entry.requestId ?? null,
@@ -1060,6 +1060,7 @@ export const archiveAuditService = {
       description: entry.description,
       metadata: entry.metadata ?? {},
     });
+    if (error) console.error('archiveAuditService.log failed:', error);
   },
 
   subscribeToChanges(callback: () => void) {
