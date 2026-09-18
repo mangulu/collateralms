@@ -231,7 +231,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
       { label: 'Place document in vault slot', href: '/archive/vault-management' },
       { label: 'Custody screen shows correct status', href: '/archive/custody' },
       { label: 'Raise and approve access request', href: '/archive/access-requests' },
-      { label: 'Documents library lists all archived docs', href: '/archive/documents-library' },
+      { label: 'Document Management lists all archived docs', href: '/document-management' },
       { label: 'Chain of custody log is accurate', href: '/archive/custody' },
       { label: 'Occupancy heatmap renders', href: '/archive/occupancy-heatmap' },
     ],

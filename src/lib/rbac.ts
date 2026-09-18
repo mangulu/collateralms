@@ -120,7 +120,7 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/system-config': PERMISSIONS.SETTINGS_MANAGE,
   '/archive/vault-management': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/collateral-placement': PERMISSIONS.COLLATERAL_VIEW,
-  '/archive/documents-library': PERMISSIONS.COLLATERAL_VIEW,
+  '/document-management': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/access-requests': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/file-location-status': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/custody': PERMISSIONS.COLLATERAL_VIEW,

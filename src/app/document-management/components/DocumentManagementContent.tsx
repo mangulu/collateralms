@@ -480,9 +480,8 @@ export default function DocumentManagementContent() {
           <div>
             <p className="text-xs font-semibold" style={{ color: '#15803D' }}>Document Management — Upload &amp; Manage</p>
             <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
-              Use this page to <strong>upload, classify, version-control, and link</strong> supporting documents to collateral records.
-              To <strong>browse and download</strong> the full document archive, go to{' '}
-              <a href="/archive/documents-library" className="underline font-medium">Documents Library</a>.
+              Use this page to <strong>upload, classify, version-control, and link</strong> supporting documents to collateral records,
+              or to <strong>browse, search, and download</strong> the full document archive.
             </p>
           </div>
         </div>

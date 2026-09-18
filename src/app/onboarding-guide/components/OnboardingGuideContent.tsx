@@ -8,7 +8,7 @@ import {
   Flame, LayoutDashboard, Activity, GitMerge, Files, Unlock, Upload, CalendarClock, MailCheck,
   GitBranch, BadgeCheck, Inbox, AlarmClock, SendHorizonal, ScrollText, Download, Radio,
   DatabaseZap, BookOpen, FileStack, Scale, KeyRound, Landmark, SlidersHorizontal,
-  Building2, MapPin, Library, FolderArchive, ClipboardCheck, Eye, BookMarked, Lightbulb,
+  Building2, MapPin, FolderArchive, ClipboardCheck, Eye, BookMarked, Lightbulb,
   ArrowRight, Play, Star, Route,
 } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
@@ -382,8 +382,7 @@ const MODULES: ModuleGuide[] = [
     features: [
       { label: 'Vault Management', href: '/archive/vault-management', icon: Building2, description: 'Manage physical vault locations, capacity, and document placement records.' },
       { label: 'Collateral Placement', href: '/archive/collateral-placement', icon: MapPin, description: 'Record and track where each original document is physically stored.' },
-      { label: 'Documents Library', href: '/archive/documents-library', icon: Library, description: 'Searchable library of all archived documents with version history.' },
-      { label: 'Document Management', href: '/document-management', icon: FolderArchive, description: 'Manage document templates, policies, and classification rules.' },
+      { label: 'Document Management', href: '/document-management', icon: FolderArchive, description: 'Upload, classify, and version-control documents, or browse and search the full archive.' },
       { label: 'Access Requests', href: '/archive/access-requests', icon: ClipboardCheck, description: 'Handle requests to retrieve, loan out, or return archived documents.' },
       { label: 'Custody', href: '/archive/custody', icon: Eye, description: 'Real-time tracker showing the current custody status of every document.' },
     ],
@@ -395,14 +394,14 @@ const MODULES: ModuleGuide[] = [
           { action: 'Open Vault Management and select the target vault', where: 'Vault Management', href: '/archive/vault-management' },
           { action: 'Record the document placement with location details', where: 'Collateral Placement', href: '/archive/collateral-placement' },
           { action: 'Update the custody status in the tracker', where: 'Custody', href: '/archive/custody' },
-          { action: 'Verify the document appears in the Documents Library', where: 'Documents Library', href: '/archive/documents-library' },
+          { action: 'Verify the document appears in Document Management', where: 'Document Management', href: '/document-management' },
         ],
       },
     ],
     shortcuts: [
       { label: 'Vault Management', href: '/archive/vault-management', icon: Building2, description: 'Physical vaults' },
       { label: 'Custody', href: '/archive/custody', icon: Eye, description: 'Document custody' },
-      { label: 'Documents Library', href: '/archive/documents-library', icon: Library, description: 'Archived docs' },
+      { label: 'Document Management', href: '/document-management', icon: FolderArchive, description: 'Archived docs' },
       { label: 'Access Requests', href: '/archive/access-requests', icon: ClipboardCheck, description: 'Retrieval requests' },
     ],
   },

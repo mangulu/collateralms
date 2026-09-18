@@ -109,13 +109,14 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'A physical reference (PHY-YYYYMMDD-XXXX) is auto-generated for each filing but can be edited',
     ],
   },
-  '/archive/documents-library': {
-    title: 'Documents Library',
-    narrative: "Documents Library is a read-only reference library of every collateral-linked document uploaded across the system, with full version history. To upload or manage documents, use Document Management instead — this page is for browsing and downloading only.",
+  '/document-management': {
+    title: 'Document Management',
+    narrative: "Document Management is the single place for every collateral-linked document uploaded across the system — upload, classify, version-control, and link supporting documents to collateral records, or browse, search, and download the full archive.",
     steps: [
       'Use the search box or the type filter to narrow down by file name, owner, or document type',
       'Click "History" on a document to see all its prior versions and roll back if needed',
       'Click "Download" to open the current version in a new tab',
+      'Use Upload to attach a new document to a collateral record, classified by document type',
     ],
   },
   '/archive/access-requests': {

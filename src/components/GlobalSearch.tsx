@@ -6,7 +6,7 @@ import {
   TrendingUp, LineChart, Target, ShieldAlert, ScanSearch, Zap, Map, Flame,
   Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap,
   BookOpen, Scale, ShieldCheck, Radio, KeyRound, Settings,
-  Landmark, Building2, MapPin, Library, ClipboardCheck, Eye, FileStack,
+  Landmark, Building2, MapPin, ClipboardCheck, Eye, FileStack,
   MailCheck, GitBranch, BadgeCheck, Brain, SlidersHorizontal, FolderArchive,
   LayoutGrid, Sparkles, ArrowRight, Hash, CheckSquare, Trash2, ClipboardSignature,
 } from 'lucide-react';
@@ -105,8 +105,7 @@ const NAV_INDEX: NavResult[] = [
   // ── Archive ──
   { id: 'n-arc-vault', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Vault Management', description: 'Manage physical vault storage locations', href: '/archive/vault-management', icon: Building2, keywords: ['vault', 'storage', 'physical', 'manage'] },
   { id: 'n-arc-place', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Collateral Placement', description: 'Track collateral placement in vaults', href: '/archive/collateral-placement', icon: MapPin, keywords: ['placement', 'vault', 'location', 'track'] },
-  { id: 'n-arc-lib', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Documents Library', description: 'Archived document repository', href: '/archive/documents-library', icon: Library, keywords: ['documents', 'library', 'archive', 'repository'] },
-  { id: 'n-arc-docmgmt', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Document Management', description: 'Manage and organise archived documents', href: '/document-management', icon: FolderArchive, keywords: ['document', 'management', 'organise', 'archive'] },
+  { id: 'n-arc-docmgmt', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Document Management', description: 'Upload, manage, and browse the full document archive', href: '/document-management', icon: FolderArchive, keywords: ['document', 'management', 'organise', 'archive', 'library', 'repository'] },
   { id: 'n-arc-req', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Access Requests', description: 'Raise, approve, and track physical file loan requests', href: '/archive/access-requests', icon: ClipboardCheck, keywords: ['request', 'access', 'retrieval', 'archive', 'approve'] },
   { id: 'n-arc-cust', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'Custody', description: 'Live custody status and chain-of-custody history', href: '/archive/custody', icon: Eye, keywords: ['custody', 'tracker', 'chain', 'archive'] },
   { id: 'n-arc-filestat', kind: 'screen', module: 'Archive', moduleId: 'archive', label: 'File Location Status', description: 'Real-time location status for every physical file', href: '/archive/file-location-status', icon: Map, keywords: ['file', 'location', 'status', 'track'] },

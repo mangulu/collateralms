@@ -76,7 +76,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   // Archive module
   '/archive/vault-management': ['collateral.view'],
   '/archive/collateral-placement': ['collateral.view'],
-  '/archive/documents-library': ['collateral.view'],
+  '/document-management': ['collateral.view'],
   '/archive/access-requests': ['collateral.view'],
   '/archive/file-location-status': ['collateral.view'],
   '/archive/custody': ['collateral.view'],
