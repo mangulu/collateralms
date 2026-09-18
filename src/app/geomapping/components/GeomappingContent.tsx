@@ -50,18 +50,6 @@ interface AddressValidation {
   geocodedLng?: number;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const mockPins: CollateralPin[] = [
-  { id: '1', collateralId: 'COL-2024-0891', titleDeed: 'TD-00123', obligor: 'Tanzanian Steel Industries', type: 'Land & Property', status: 'Perfected', lat: -6.7924, lng: 39.2083, address: 'Ohio Street, Dar es Salaam, Tanzania', addressVerified: true, riskZone: 'LOW', utilization: 72.5, valueTZS: '2,500,000,000', region: 'Dar es Salaam' },
-  { id: '2', collateralId: 'COL-2024-0756', titleDeed: 'TD-00456', obligor: 'Kilimanjaro Coffee Exporters', type: 'Land & Property', status: 'Under Review', lat: -3.3731, lng: 36.6823, address: 'Moshi Town, Kilimanjaro, Tanzania', addressVerified: true, riskZone: 'LOW', utilization: 55.0, valueTZS: '850,000,000', region: 'Kilimanjaro' },
-  { id: '3', collateralId: 'COL-2024-0612', titleDeed: 'TD-00789', obligor: 'Dar es Salaam Logistics Co.', type: 'Motor Vehicles', status: 'Perfected', lat: -6.8160, lng: 39.2803, address: 'Temeke, Dar es Salaam, Tanzania', addressVerified: false, riskZone: 'MEDIUM', utilization: 88.3, valueTZS: '320,000,000', region: 'Dar es Salaam' },
-  { id: '4', collateralId: 'COL-2024-0534', titleDeed: 'TD-01012', obligor: 'Mwanza Fish Processing Ltd', type: 'Equipment', status: 'Overdue', lat: -2.5164, lng: 32.9175, address: 'Mwanza City Centre, Tanzania', addressVerified: true, riskZone: 'HIGH', utilization: 95.1, valueTZS: '180,000,000', region: 'Mwanza' },
-  { id: '5', collateralId: 'COL-2024-0489', titleDeed: 'TD-01345', obligor: 'Arusha New Ventures Ltd', type: 'Land & Property', status: 'Submitted', lat: -3.3869, lng: 36.6830, address: 'Arusha CBD, Tanzania', addressVerified: true, riskZone: 'LOW', utilization: 60.0, valueTZS: '1,200,000,000', region: 'Arusha' },
-  { id: '6', collateralId: 'COL-2024-0321', titleDeed: 'TD-01678', obligor: 'Dodoma Grain Traders', type: 'Land & Property', status: 'Perfected', lat: -6.1722, lng: 35.7395, address: 'Dodoma Capital Area, Tanzania', addressVerified: true, riskZone: 'MEDIUM', utilization: 45.2, valueTZS: '650,000,000', region: 'Dodoma' },
-  { id: '7', collateralId: 'COL-2024-0290', titleDeed: 'TD-02001', obligor: 'Zanzibar Spice Exports', type: 'Land & Property', status: 'Draft', lat: -6.1659, lng: 39.2026, address: 'Stone Town, Zanzibar, Tanzania', addressVerified: false, riskZone: 'HIGH', utilization: 0, valueTZS: '420,000,000', region: 'Zanzibar' },
-];
-
 // ─── Address match scoring helper ────────────────────────────────────────────
 
 function computeAddressMatch(
@@ -161,6 +149,7 @@ export default function GeomappingContent() {
   const [geocodeResult, setGeocodeResult] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [geocodeLoading, setGeocodeLoading] = useState(false);
   const [loadingPins, setLoadingPins] = useState(true);
+  const [pinsError, setPinsError] = useState(false);
   const [loadingValidations, setLoadingValidations] = useState(true);
   const [flyToPin, setFlyToPin] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -173,31 +162,35 @@ export default function GeomappingContent() {
         .select('id, collateral_id, obligor, collateral_type, status, latitude, longitude, location_address, description, value_tsh')
         .not('latitude', 'is', null)
         .not('longitude', 'is', null)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            const livePins: CollateralPin[] = data.map((row: any) => ({
-              id: row.id,
-              collateralId: row.collateral_id,
-              titleDeed: row.collateral_id,
-              obligor: row.obligor ?? 'Unknown',
-              type: row.collateral_type ?? 'Other',
-              status: row.status as CollateralStatus,
-              lat: parseFloat(row.latitude),
-              lng: parseFloat(row.longitude),
-              address: row.location_address ?? row.description ?? '',
-              addressVerified: true,
-              riskZone: 'LOW' as RiskZone,
-              utilization: 0,
-              valueTZS: row.value_tsh ?? '0',
-              region: row.location_address ?? '',
-            }));
-            setPins(livePins);
-          } else {
-            setPins(mockPins);
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Failed to load collateral pins:', error);
+            setPinsError(true);
+            setPins([]);
+            setLoadingPins(false);
+            return;
           }
+          const livePins: CollateralPin[] = (data ?? []).map((row: any) => ({
+            id: row.id,
+            collateralId: row.collateral_id,
+            titleDeed: row.collateral_id,
+            obligor: row.obligor ?? 'Unknown',
+            type: row.collateral_type ?? 'Other',
+            status: row.status as CollateralStatus,
+            lat: parseFloat(row.latitude),
+            lng: parseFloat(row.longitude),
+            address: row.location_address ?? row.description ?? '',
+            addressVerified: true,
+            riskZone: 'LOW' as RiskZone,
+            utilization: 0,
+            valueTZS: row.value_tsh ?? '0',
+            region: row.location_address ?? '',
+          }));
+          setPins(livePins);
           setLoadingPins(false);
         }, () => {
-          setPins(mockPins);
+          setPinsError(true);
+          setPins([]);
           setLoadingPins(false);
         });
     });
@@ -441,6 +434,13 @@ export default function GeomappingContent() {
                 <span><strong>Geocoded:</strong> {geocodeResult.address}</span>
                 <span className="font-mono ml-auto shrink-0">{geocodeResult.lat.toFixed(4)}, {geocodeResult.lng.toFixed(4)}</span>
                 <button onClick={() => setGeocodeResult(null)} className="ml-1 text-teal-500 hover:text-teal-700"><X size={12} /></button>
+              </div>
+            )}
+
+            {pinsError && (
+              <div className="mb-3 flex items-center gap-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                <AlertTriangle size={13} className="text-red-600 shrink-0" />
+                <span>Couldn't load collateral locations from the database. Try refreshing the page.</span>
               </div>
             )}
 

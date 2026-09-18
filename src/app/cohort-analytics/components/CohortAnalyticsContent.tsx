@@ -385,9 +385,9 @@ export default function CohortAnalyticsContent() {
       const highRisk = rows.filter(r => r.ltv_ratio != null && r.ltv_ratio > 0.80).length;
 
       setKpis([
-        { label: 'Overall Perfection Rate', value: `${overallRate}%`, delta: '+2.4pp MoM', direction: 'up', good: true },
+        { label: 'Overall Perfection Rate', value: `${overallRate}%`, delta: 'current snapshot', direction: 'neutral', good: true },
         { label: 'Total Collateral Items', value: String(total), delta: `${perfected} perfected`, direction: 'neutral', good: true },
-        { label: 'Avg Portfolio LTV', value: `${(avgLTV * 100).toFixed(1)}%`, delta: '+0.8pp drift', direction: 'up', good: false },
+        { label: 'Avg Portfolio LTV', value: `${(avgLTV * 100).toFixed(1)}%`, delta: 'current snapshot', direction: 'neutral', good: false },
         { label: 'High-Risk LTV Items', value: String(highRisk), delta: `>${80}% threshold`, direction: 'neutral', good: false },
       ]);
 
