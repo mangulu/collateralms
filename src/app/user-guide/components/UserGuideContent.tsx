@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { BookOpen, ChevronDown, ChevronRight, Shield, Users, Scale, Briefcase, LayoutDashboard, FolderOpen, GitBranch, Files, Upload, Bell, BarChart2, ShieldCheck, Settings, CheckCircle, Eye, Edit, Download, AlertTriangle, Zap, Map, ClipboardList, ScrollText, Lock, Info, Search, Radio, Inbox, SendHorizonal, ScanSearch, ShieldAlert, CalendarClock, Unlock, Activity, GitMerge, TrendingUp, LineChart, Target, AlarmClock, Landmark, Building2, Library, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, UserCog, KeyRound, SlidersHorizontal, MailCheck, BadgeCheck, Flame, ClipboardCheck, DatabaseZap, FileStack,  } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, Shield, Users, Scale, Briefcase, LayoutDashboard, FolderOpen, GitBranch, Files, Upload, Bell, BarChart2, ShieldCheck, Settings, CheckCircle, Eye, Edit, Download, AlertTriangle, Zap, Map, ClipboardList, ScrollText, Lock, Info, Search, Radio, Inbox, SendHorizonal, ScanSearch, ShieldAlert, CalendarClock, Unlock, Activity, GitMerge, TrendingUp, LineChart, Target, AlarmClock, Landmark, Building2, Library, FolderArchive, FolderCheck, Thermometer, Link2, ListChecks, SlidersHorizontal, MailCheck, BadgeCheck, Flame, ClipboardCheck, DatabaseZap, FileStack,  } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -300,9 +300,7 @@ const ROLE_GUIDES: RoleGuide[] = [
     ],
     screens: [
       { screen: 'Admin Console', icon: ShieldCheck, actions: ['Full Access'], notes: 'Central administration hub — manage system-wide settings.' },
-      { screen: 'User Management', icon: Users, actions: ['View', 'Create', 'Edit', 'Deactivate', 'Screen Access'], notes: 'Full user lifecycle management including screen access matrix.' },
-      { screen: 'Officer Management', icon: UserCog, actions: ['View', 'Create', 'Edit', 'Deactivate'], notes: 'Create and manage officers, assign roles (Legal Officer, Supervisor, Admin), and deactivate accounts.' },
-      { screen: 'Officer Permissions', icon: KeyRound, actions: ['View', 'Configure'], notes: 'Map role-specific permissions (view, edit, escalate, approve) per officer.' },
+      { screen: 'User Management', icon: Users, actions: ['View', 'Create', 'Edit', 'Deactivate', 'Roles & Permissions', 'Screen Access'], notes: 'Full user lifecycle management — create and deactivate accounts, assign roles (Credit Officer, Legal Officer, System Admin), edit role permissions, and configure screen access.' },
       { screen: 'Client Bank Accounts', icon: Landmark, actions: ['View', 'Create', 'Edit', 'Deactivate'], notes: 'Manage client bank account records linked to obligors.' },
       { screen: 'System Settings', icon: Settings, actions: ['View', 'Configure'], notes: 'Email provider, notification, document types, collateral types, and registry settings.' },
       { screen: 'Alert Thresholds', icon: SlidersHorizontal, actions: ['View', 'Configure'], notes: 'Set thresholds for automated alerts (e.g. LTV ratio, expiry days, value changes).' },
@@ -317,7 +315,7 @@ const ROLE_GUIDES: RoleGuide[] = [
     ],
     workflows: [
       { step: 1, title: 'Create a New User', description: 'Go to User Management → click "Add User". Enter name, email, and assign a role. The user will receive an email invitation to set their password.' },
-      { step: 2, title: 'Manage Officers', description: 'Navigate to Officer Management → click "Add Officer". Assign a role (Legal Officer, Supervisor, Admin) and set default permissions. Use Officer Permissions to fine-tune per-officer access.' },
+      { step: 2, title: 'Assign a Role', description: 'In User Management, edit a user and assign their role (Credit Officer, Legal Officer, System Admin). Use the Roles & Permissions tab to change what a role can do — permission changes apply to everyone with that role.' },
       { step: 3, title: 'Configure Alert Thresholds', description: 'Go to Alert Thresholds to set trigger values for automated alerts — e.g. LTV ratio above 80%, collateral expiring within 30 days, or value drop exceeding 20%.' },
       { step: 4, title: 'Configure Screen Access', description: 'In User Management → Screen Access tab, use the matrix to control which screens each role can access and what actions they can perform.' },
       { step: 5, title: 'Configure System Settings', description: 'Go to System Settings to configure email provider (SMTP/API), notification preferences, document types, collateral types, and registry integrations.' },
@@ -332,7 +330,7 @@ const ROLE_GUIDES: RoleGuide[] = [
       'Export the Compliance Trail monthly as a compliance record — store it in a secure location.',
       'Test email provider settings using the "Send Test Email" button before saving changes.',
       'Use Alert Thresholds to proactively trigger notifications before collateral reaches critical risk levels.',
-      'Officer Management audit log tracks all officer activity by date range — use it for periodic reviews.',
+      'The Audit Trail tracks all user activity by date range — use it for periodic reviews.',
     ],
     restrictions: [
       'System Admin actions are fully logged in the immutable Audit Trail — all changes are traceable.',

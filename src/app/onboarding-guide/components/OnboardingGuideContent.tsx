@@ -343,8 +343,7 @@ const MODULES: ModuleGuide[] = [
     iconBg: '#4B5563',
     textColor: '#374151',
     features: [
-      { label: 'User Management', href: '/user-management', icon: Users, description: 'Create, edit, and deactivate user accounts. Manage screen access per user.' },
-      { label: 'Officer Permissions', href: '/officer-permissions', icon: KeyRound, description: 'Fine-grained permission matrix — control exactly what each officer can do.' },
+      { label: 'User Management', href: '/user-management', icon: Users, description: 'Create, edit, and deactivate user accounts, assign roles, and manage role-based permissions and screen access.' },
       { label: 'Client Bank Accounts', href: '/client-bank-accounts', icon: Landmark, description: 'Manage client bank account records linked to collateral and loan data.' },
       { label: 'System Settings', href: '/settings', icon: Settings, description: 'Configure email providers, document types, notification preferences, and registries.' },
       { label: 'Alert Thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, description: 'Set numeric thresholds that trigger automated alerts (e.g. LTV > 80%).' },
@@ -356,15 +355,15 @@ const MODULES: ModuleGuide[] = [
         role: 'System Admin',
         steps: [
           { action: 'Open User Management and click "Add User"', where: 'User Management', href: '/user-management' },
-          { action: 'Assign role and set initial permissions', where: 'Officer Permissions', href: '/officer-permissions' },
-          { action: 'Configure screen access for the user', where: 'User Management', href: '/user-management' },
+          { action: 'Assign their role in the Users tab', where: 'User Management', href: '/user-management' },
+          { action: 'Configure screen access for the role in the Screen Access tab', where: 'User Management', href: '/user-management?tab=screen_access' },
           { action: 'User receives login credentials via email', where: 'System Settings', href: '/settings' },
         ],
       },
     ],
     shortcuts: [
       { label: 'User Management', href: '/user-management', icon: Users, description: 'Manage accounts' },
-      { label: 'Permissions', href: '/officer-permissions', icon: KeyRound, description: 'Role permissions' },
+      { label: 'Roles & Permissions', href: '/user-management?tab=roles', icon: KeyRound, description: 'Role permissions' },
       { label: 'System Settings', href: '/settings', icon: Settings, description: 'Platform config' },
       { label: 'Alert Thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, description: 'Trigger rules' },
     ],

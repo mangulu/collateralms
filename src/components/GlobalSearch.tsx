@@ -95,7 +95,7 @@ const NAV_INDEX: NavResult[] = [
 
   // ── Administration ──
   { id: 'n-adm-users', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'User Management', description: 'Add, edit, and deactivate system users', href: '/user-management', icon: Users, keywords: ['users', 'manage', 'add', 'edit', 'deactivate'] },
-  { id: 'n-adm-perms', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Officer Permissions', description: 'Configure role-based access for officers', href: '/officer-permissions', icon: KeyRound, keywords: ['permissions', 'rbac', 'roles', 'access', 'officer'] },
+  { id: 'n-adm-perms', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Roles & Permissions', description: 'Configure role-based access and permissions', href: '/user-management?tab=roles', icon: KeyRound, keywords: ['permissions', 'rbac', 'roles', 'access', 'officer'] },
   { id: 'n-adm-bank', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Client Bank Accounts', description: 'Manage client bank account records', href: '/client-bank-accounts', icon: Landmark, keywords: ['bank', 'accounts', 'client', 'financial'] },
   { id: 'n-adm-settings', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'System Settings', description: 'Configure system-wide settings', href: '/settings', icon: Settings, keywords: ['settings', 'config', 'system', 'configure'] },
   { id: 'n-adm-thresh', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Alert Thresholds', description: 'Set alert trigger thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, keywords: ['thresholds', 'alerts', 'trigger', 'configure'] },

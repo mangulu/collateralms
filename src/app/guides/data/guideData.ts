@@ -1,4 +1,4 @@
-import { FolderOpen, Upload, CalendarClock, GitMerge, BarChart2, Unlock, Scale, BadgeCheck, GitBranch, FileText, ShieldCheck, TrendingUp, LineChart, Target, BarChart, Users, KeyRound, Settings, SlidersHorizontal, GitPullRequest, Zap, AlertTriangle, DatabaseZap, ScrollText, Archive, Building2, Library, ClipboardCheck, Eye, LayoutDashboard, Activity, Files, MailCheck, Radio, ShieldAlert, Map, Settings2, Layers, AlarmClock, SendHorizonal, CheckSquare, RefreshCw, Inbox, BookText, TrendingDown } from 'lucide-react';
+import { FolderOpen, Upload, CalendarClock, GitMerge, BarChart2, Unlock, Scale, BadgeCheck, GitBranch, FileText, ShieldCheck, TrendingUp, LineChart, Target, BarChart, Users, Settings, SlidersHorizontal, GitPullRequest, Zap, AlertTriangle, DatabaseZap, ScrollText, Archive, Building2, Library, ClipboardCheck, Eye, LayoutDashboard, Activity, Files, MailCheck, Radio, ShieldAlert, Map, Settings2, Layers, AlarmClock, SendHorizonal, CheckSquare, RefreshCw, Inbox, BookText, TrendingDown } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -360,8 +360,7 @@ export const SYSTEM_ADMIN_GUIDE: RoleGuide = {
   summary:
     'As a System Admin you control the entire CollateralMS platform. You manage user accounts and role assignments, configure workflow templates and trigger rules, set alert thresholds, manage system settings, and run the migration tool for data operations. You are the only role with access to all modules — use this power carefully and always test configuration changes before applying them to production.',
   modules: [
-    { label: 'User Management', href: '/user-management', icon: Users, why: 'Create, edit, and deactivate user accounts. Manage screen access per user.' },
-    { label: 'Officer Permissions', href: '/officer-permissions', icon: KeyRound, why: 'Fine-grained permission matrix — control exactly what each officer can do.' },
+    { label: 'User Management', href: '/user-management', icon: Users, why: 'Create, edit, and deactivate user accounts, assign roles, and manage role-based permissions and screen access.' },
     { label: 'Workflows Admin', href: '/workflows-admin', icon: Settings2, why: 'Central hub for all workflow engine configuration and monitoring.' },
     { label: 'Workflow Templates', href: '/workflows-admin/templates', icon: GitPullRequest, why: 'Create and edit workflow templates that define approval stages.' },
     { label: 'Auto-Trigger Rules', href: '/workflows-admin/trigger-rules', icon: Zap, why: 'Configure the rules that automatically launch workflows on events.' },
@@ -385,8 +384,7 @@ export const SYSTEM_ADMIN_GUIDE: RoleGuide = {
       steps: [
         { action: 'Open User Management and click "Add User"', where: 'User Management', href: '/user-management' },
         { action: 'Enter the user\'s name, email, and assign their role', where: 'User Management', href: '/user-management' },
-        { action: 'Set their screen access permissions in the Screen Access tab', where: 'User Management', href: '/user-management' },
-        { action: 'Configure fine-grained permissions in Officer Permissions', where: 'Officer Permissions', href: '/officer-permissions' },
+        { action: 'Set their screen access permissions in the Screen Access tab', where: 'User Management', href: '/user-management?tab=screen_access' },
         { action: 'The user receives login credentials via email automatically', where: 'System Settings', href: '/settings' },
       ],
     },
