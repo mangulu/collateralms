@@ -395,13 +395,14 @@ export const archivePlacementService = {
     // Each collateral has at most one placement (archive_placements.collateral_id is UNIQUE).
     const toFlag = eligible.filter((p) => !flaggedCollateralIds.has(p.collateral_id));
     for (const p of toFlag) {
-      await supabase.from('archive_audit_log').insert({
+      const { error: flagErr } = await supabase.from('archive_audit_log').insert({
         event_type: 'disposal_flagged',
         collateral_id: p.collateral_id,
         location_id: p.location_id,
         description: 'Retention period elapsed — eligible for disposal',
         metadata: { placement_id: p.id },
       });
+      if (flagErr) console.error('archivePlacementService.flagDisposalEligible failed:', flagErr);
     }
     return toFlag.length;
   },
@@ -438,7 +439,7 @@ export const archivePlacementService = {
       .eq('id', placementId);
     if (error) throw error;
 
-    await supabase.from('archive_audit_log').insert({
+    const { error: approvedLogErr } = await supabase.from('archive_audit_log').insert({
       event_type: 'disposal_approved',
       collateral_id: placement.collateral_id,
       location_id: placement.location_id,
@@ -447,7 +448,8 @@ export const archivePlacementService = {
       description: 'Physical document disposal approved',
       metadata: { placement_id: placementId },
     });
-    await supabase.from('archive_audit_log').insert({
+    if (approvedLogErr) console.error('archivePlacementService.approveDisposal log failed:', approvedLogErr);
+    const { error: disposedLogErr } = await supabase.from('archive_audit_log').insert({
       event_type: 'disposed',
       collateral_id: placement.collateral_id,
       location_id: placement.location_id,
@@ -455,6 +457,7 @@ export const archivePlacementService = {
       description: 'Physical document disposed',
       metadata: { placement_id: placementId },
     });
+    if (disposedLogErr) console.error('archivePlacementService.approveDisposal log failed:', disposedLogErr);
   },
 
   /**
@@ -505,10 +508,11 @@ export const archivePlacementService = {
     const eligibleAt = new Date();
     eligibleAt.setMonth(eligibleAt.getMonth() + maxMonths);
 
-    await supabase
+    const { error: retentionErr } = await supabase
       .from('archive_placements')
       .update({ retention_eligible_at: eligibleAt.toISOString() })
       .eq('id', placement.id);
+    if (retentionErr) console.error('archivePlacementService.stampRetentionEligibility failed:', retentionErr);
   },
 
   async upsert(payload: {
@@ -536,14 +540,15 @@ export const archivePlacementService = {
     if (error) throw error;
 
     // Ensure custody record exists
-    await supabase
+    const { error: custodyErr } = await supabase
       .from('archive_custody')
       .upsert({ collateral_id: payload.collateralId, current_status: 'in_vault' }, { onConflict: 'collateral_id' });
+    if (custodyErr) console.error('archivePlacementService.upsert custody update failed:', custodyErr);
 
     // Log movement in audit log
     const sourceLocId = payload.sourceLocationId ?? existing?.location_id ?? null;
     const isMove = sourceLocId && sourceLocId !== payload.locationId;
-    await supabase.from('archive_audit_log').insert({
+    const { error: logErr } = await supabase.from('archive_audit_log').insert({
       event_type: isMove ? 'collateral_moved' : 'placement_assigned',
       collateral_id: payload.collateralId,
       location_id: payload.locationId,
@@ -554,6 +559,7 @@ export const archivePlacementService = {
       reason: payload.reason ?? null,
       metadata: { source_location_id: sourceLocId, destination_location_id: payload.locationId },
     });
+    if (logErr) console.error('archivePlacementService.upsert log failed:', logErr);
   },
 
   async remove(collateralId: string, performedBy?: string, reason?: string): Promise<void> {
@@ -572,7 +578,7 @@ export const archivePlacementService = {
 
     // Log removal
     if (performedBy) {
-      await supabase.from('archive_audit_log').insert({
+      const { error: logErr } = await supabase.from('archive_audit_log').insert({
         event_type: 'placement_removed',
         collateral_id: collateralId,
         location_id: existing?.location_id ?? null,
@@ -582,6 +588,7 @@ export const archivePlacementService = {
         reason: reason ?? null,
         metadata: {},
       });
+      if (logErr) console.error('archivePlacementService.remove log failed:', logErr);
     }
   },
 
@@ -664,7 +671,7 @@ export const archiveRequestService = {
     if (error) throw error;
 
     // Update custody
-    await supabase
+    const { error: custodyErr } = await supabase
       .from('archive_custody')
       .upsert({
         collateral_id: req.collateral_id,
@@ -673,9 +680,10 @@ export const archiveRequestService = {
         last_checked_out_at: new Date().toISOString(),
         checked_out_by: approvedBy,
       }, { onConflict: 'collateral_id' });
+    if (custodyErr) console.error('archiveRequestService.approve custody update failed:', custodyErr);
 
     // Log custody chain
-    await supabase.from('archive_custody_chain').insert({
+    const { error: chainErr } = await supabase.from('archive_custody_chain').insert({
       collateral_id: req.collateral_id,
       event_type: 'custody_handoff',
       to_officer_id: approvedBy,
@@ -684,6 +692,7 @@ export const archiveRequestService = {
       confirmed_at: new Date().toISOString(),
       notes: checkoutNotes ?? 'File checked out via approved request',
     });
+    if (chainErr) console.error('archiveRequestService.approve custody chain log failed:', chainErr);
     return true;
   },
 
@@ -713,7 +722,7 @@ export const archiveRequestService = {
       .eq('id', id);
     if (error) throw error;
 
-    await supabase
+    const { error: custodyErr } = await supabase
       .from('archive_custody')
       .update({
         current_status: 'in_vault',
@@ -723,15 +732,17 @@ export const archiveRequestService = {
         overdue_since: null,
       })
       .eq('collateral_id', req.collateral_id);
+    if (custodyErr) console.error('archiveRequestService.markReturned custody update failed:', custodyErr);
 
     // Log custody chain return
-    await supabase.from('archive_custody_chain').insert({
+    const { error: chainErr } = await supabase.from('archive_custody_chain').insert({
       collateral_id: req.collateral_id,
       event_type: 'custody_received',
       confirmation_status: 'confirmed',
       confirmed_at: new Date().toISOString(),
       notes: returnNotes ?? 'File returned to vault',
     });
+    if (chainErr) console.error('archiveRequestService.markReturned custody chain log failed:', chainErr);
   },
 
   subscribeToChanges(callback: () => void) {
@@ -800,10 +811,11 @@ export const archiveCustodyService = {
     if (!overdueReqs || overdueReqs.length === 0) return 0;
 
     for (const req of overdueReqs) {
-      await supabase
+      const { error } = await supabase
         .from('archive_custody')
         .update({ current_status: 'overdue', overdue_since: new Date().toISOString() })
         .eq('collateral_id', req.collateral_id);
+      if (error) console.error('archiveCustodyService.flagOverdue failed:', error);
     }
     return overdueReqs.length;
   },

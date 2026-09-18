@@ -819,12 +819,13 @@ export default function VaultSlotDetailContent() {
     const supabase = createClient();
     for (const p of selectedPlacements) {
       try {
-        await supabase
+        const { error: custodyErr } = await supabase
           .from('archive_custody')
           .upsert(
             { collateral_id: p.collateralId, current_status: 'returned', last_returned_at: new Date().toISOString() },
             { onConflict: 'collateral_id' }
           );
+        if (custodyErr) throw custodyErr;
         await archiveCustodyChainService.log({
           collateralId: p.collateralId,
           eventType: 'custody_received',

@@ -221,9 +221,10 @@ export const archiveReconciliationService = {
     if (error) throw error;
 
     for (const collateralId of missingCollateralIds) {
-      await supabase
+      const { error: custodyErr } = await supabase
         .from('archive_custody')
         .upsert({ collateral_id: collateralId, current_status: 'missing' }, { onConflict: 'collateral_id' });
+      if (custodyErr) console.error('archiveReconciliationService.reportDiscrepancy custody update failed:', custodyErr);
       await archiveAuditService.log({
         eventType: 'reconciliation_discrepancy',
         collateralId,
