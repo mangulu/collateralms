@@ -131,6 +131,59 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/archive/audit-log': PERMISSIONS.AUDIT_LOG_VIEW,
 };
 
+// ─── Screen Access Rules ──────────────────────────────────────────────────────
+// The 22 screens configurable in User Management > Screen Access. Screen ids
+// here must match ScreenAccessContent's ALL_SCREENS exactly (that's where
+// each id's label/group/actions live) -- this is just the id<->path mapping
+// needed to enforce the 'view' action against nav visibility.
+export const SCREEN_ACCESS_PATHS: { id: string; path: string }[] = [
+  { id: 'dashboard', path: '/collateral-dashboard' },
+  { id: 'portfolio_monitoring', path: '/portfolio-monitoring' },
+  { id: 'collateral_registry', path: '/collateral-management' },
+  { id: 'approval_workflow', path: '/perfection-workflow' },
+  { id: 'collateral_documents', path: '/collateral-documents' },
+  { id: 'batch_release', path: '/batch-release' },
+  { id: 'bulk_upload', path: '/bulk-upload' },
+  { id: 'scheduled_jobs', path: '/scheduled-jobs' },
+  { id: 'fraud_prevention', path: '/fraud-prevention' },
+  { id: 'risk_assessment', path: '/risk-assessment' },
+  { id: 'fast_track', path: '/fast-track' },
+  { id: 'geomapping', path: '/geomapping' },
+  { id: 'compliance_rules', path: '/compliance-rules' },
+  { id: 'notifications_hub', path: '/notifications-hub' },
+  { id: 'alerts_inbox', path: '/alerts-inbox' },
+  { id: 'alerts_delivery', path: '/alerts-delivery' },
+  { id: 'audit_trail', path: '/audit-trail' },
+  { id: 'audit_log', path: '/audit-log' },
+  { id: 'audit_report', path: '/audit-report' },
+  { id: 'reports', path: '/reports' },
+  { id: 'export', path: '/export' },
+  { id: 'user_management', path: '/user-management' },
+  { id: 'settings', path: '/settings' },
+  { id: 'admin', path: '/admin' },
+];
+
+const SCREEN_ID_BY_PATH: Record<string, string> = Object.fromEntries(
+  SCREEN_ACCESS_PATHS.map((s) => [s.path, s.id])
+);
+
+/** Every explicit 'view' rule for a role, keyed by screen_id. A screen with no row here has no explicit rule either way. */
+export async function fetchScreenViewAccess(roleName: string): Promise<Record<string, boolean>> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('screen_access_rules')
+    .select('screen_id, is_allowed')
+    .eq('role_name', roleName)
+    .eq('action_key', 'view');
+  if (error) {
+    console.error('fetchScreenViewAccess failed:', error);
+    return {};
+  }
+  const map: Record<string, boolean> = {};
+  (data ?? []).forEach((r: any) => { map[r.screen_id] = r.is_allowed; });
+  return map;
+}
+
 // ─── Hook: usePermissions ─────────────────────────────────────────────────────
 
 export interface UsePermissionsResult {
@@ -138,6 +191,8 @@ export interface UsePermissionsResult {
   role: string | null;
   loading: boolean;
   hasPermission: (key: string) => boolean;
+  /** False only when an explicit "view" = denied rule exists for this role in Screen Access; screens with no rule, or for system_admin, are always visible. */
+  canViewScreen: (path: string) => boolean;
   isSystemAdmin: boolean;
   isCreditOfficer: boolean;
   isLegalOfficer: boolean;
@@ -149,6 +204,7 @@ export interface UsePermissionsResult {
 export function usePermissions(): UsePermissionsResult {
   const [permissions, setPermissions] = useState<Set<string>>(new Set());
   const [role, setRole] = useState<string | null>(null);
+  const [screenViewAccess, setScreenViewAccess] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -190,6 +246,7 @@ export function usePermissions(): UsePermissionsResult {
         (rolePerms || []).map((rp: { permission_key: string }) => rp.permission_key)
       );
       setPermissions(permSet);
+      setScreenViewAccess(await fetchScreenViewAccess(userRole));
     } catch {
       // Silently fail — no permissions
     } finally {
@@ -211,11 +268,20 @@ export function usePermissions(): UsePermissionsResult {
   const isCreditOfficer = role === 'credit_officer';
   const isLegalOfficer = role === 'legal_officer';
 
+  const canViewScreen = (path: string) => {
+    if (isSystemAdmin) return true; // never let a Screen Access misconfiguration lock out admins
+    const screenId = SCREEN_ID_BY_PATH[path.split('?')[0]];
+    if (!screenId) return true; // screen isn't in the matrix at all — don't restrict
+    const allowed = screenViewAccess[screenId];
+    return allowed === undefined ? true : allowed; // no explicit rule yet — default open
+  };
+
   return {
     permissions,
     role,
     loading,
     hasPermission: (key: string) => permissions.has(key),
+    canViewScreen,
     isSystemAdmin,
     isCreditOfficer,
     isLegalOfficer,

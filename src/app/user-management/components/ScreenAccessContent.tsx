@@ -281,7 +281,7 @@ export default function ScreenAccessContent() {
           <div>
             <p className="text-sm font-600 text-foreground">Screen-Level Access Rules</p>
             <p className="text-xs text-muted-foreground">
-              Define which roles can access each screen and what actions they may perform.
+              The View column controls whether a screen appears in the sidebar for each role. Other actions are recorded here for reference but aren't enforced on individual buttons within each screen yet.
             </p>
           </div>
         </div>

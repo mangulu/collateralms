@@ -36,7 +36,7 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
     return new Set<string>();
   });
   const [fraudPendingCount, setFraudPendingCount] = useState<number | null>(null);
-  const { hasPermission, loading: permsLoading, isSystemAdmin } = usePermissions();
+  const { hasPermission, canViewScreen, loading: permsLoading, isSystemAdmin } = usePermissions();
   const router = useRouter();
 
   useEffect(() => {
@@ -125,7 +125,11 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
           {!collapsed && expanded && (
             <div className="ml-4 pl-3 mb-1" style={{ borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
               {item.children!
-                .filter((child) => !child.permission || isSystemAdmin || permsLoading || hasPermission(child.permission))
+                .filter((child) => {
+                  if (permsLoading || isSystemAdmin) return true;
+                  if (child.permission && !hasPermission(child.permission)) return false;
+                  return canViewScreen(child.href);
+                })
                 .map((child) => {
                   const ChildIcon = child.icon;
                   const childIsActive = currentPath === child.href || currentPath?.startsWith(child.href.split('?')[0] + '/');
@@ -225,10 +229,10 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
               const visibleItems = permsLoading
                 ? group.items
                 : group.items.filter((item) => {
-                    if (!item.permission) return true;
                     if (isSystemAdmin) return true;
                     if (item.children) return true;
-                    return hasPermission(item.permission);
+                    if (item.permission && !hasPermission(item.permission)) return false;
+                    return canViewScreen(item.href);
                   });
 
               if (visibleItems.length === 0) return null;
