@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, RefreshCw, FileText, Trash2, MoveRight, AlertCircle,
   Package, Search, ChevronRight, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3, X, Check,
-  CheckSquare, Square, CheckCheck, Loader2, Plus, Unlock, Activity,
+  CheckSquare, Square, CheckCheck, Loader2, Plus,
 } from 'lucide-react';
 import {
   archiveLocationService,
@@ -19,7 +19,6 @@ import { collateralService, CollateralRecord } from '@/lib/supabase/collateralSe
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import SlotTimelineLog from './SlotTimelineLog';
-import StatCard from '@/components/ui/StatCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
@@ -913,16 +912,6 @@ export default function VaultSlotDetailContent() {
           </button>
         </div>
       </div>
-
-      {/* Slot stats */}
-      {slot && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <StatCard label="Total Capacity" value={slot.capacity} icon={<Package size={16} />} color="#1D4ED8" />
-          <StatCard label="Current Items" value={slot.currentOccupancy} icon={<FileText size={16} />} color="#15803D" />
-          <StatCard label="Available Space" value={Math.max(0, slot.capacity - slot.currentOccupancy)} icon={<Unlock size={16} />} color="#0369A1" />
-          <StatCard label="Occupancy" value={`${occupancyPct}%`} icon={<Activity size={16} />} color={occupancyColor} />
-        </div>
-      )}
 
       {/* Occupancy bar */}
       {slot && (
