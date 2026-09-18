@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { ltvBreachAlertService } from '@/lib/supabase/ltvBreachAlertService';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ export async function approveValuation(
   // Fetch current record for audit trail + collateral write-back
   const { data: current } = await supabase
     .from('collateral_valuations')
-    .select('valuation_status, collateral_id, valuation_amount, collateral_records(description, id)')
+    .select('valuation_status, collateral_id, valuation_amount, collateral_records(description, id, collateral_type, loan_id)')
     .eq('id', id)
     .maybeSingle();
 
@@ -175,6 +176,31 @@ export async function approveValuation(
       .update(updatePayload)
       .eq('id', collateralRecordDbId)
       .then(() => {}, (e) => console.warn('[valuation] collateral status write-back failed:', e.message));
+  }
+
+  // ── Check for an LTV covenant breach against this new valuation ──────────────
+  const loanId = (current as any)?.collateral_records?.loan_id ?? null;
+  const collateralType = (current as any)?.collateral_records?.collateral_type ?? null;
+  if (collateralRecordDbId && loanId && collateralType && valuationAmount) {
+    try {
+      const { data: loan } = await supabase
+        .from('loans')
+        .select('outstanding_balance, facility_amount')
+        .eq('id', loanId)
+        .maybeSingle();
+      const loanExposure = parseFloat(loan?.outstanding_balance ?? loan?.facility_amount ?? 0);
+      if (loanExposure > 0) {
+        await ltvBreachAlertService.checkAndCreateBreachAlert({
+          collateralId: collateralRecordDbId,
+          loanId,
+          collateralType,
+          collateralValue: valuationAmount,
+          loanExposure,
+        });
+      }
+    } catch (e: any) {
+      console.warn('[valuation] LTV breach check failed:', e.message);
+    }
   }
 
   // ── Write audit trail ──────────────────────────────────────────────────────
