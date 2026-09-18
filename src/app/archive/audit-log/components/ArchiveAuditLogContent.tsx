@@ -4,6 +4,8 @@ import {
   ScrollText, RefreshCw, AlertCircle, Search, Filter,
 } from 'lucide-react';
 import { archiveAuditService, ArchiveAuditEntry, ArchiveEventType } from '@/lib/supabase/archiveService';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 const EVENT_CONFIG: Record<ArchiveEventType, { label: string; color: string; bg: string }> = {
   vault_created:       { label: 'Vault Created',       color: '#1D4ED8', bg: '#EFF6FF' },
@@ -86,10 +88,7 @@ export default function ArchiveAuditLogContent() {
           { label: 'Returns', value: entries.filter((e) => e.eventType === 'returned').length, color: '#0369A1' },
           { label: 'SMS Sent', value: entries.filter((e) => e.eventType === 'sms_sent').length, color: '#B45309' },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-            <p className="text-xs font-medium mb-1" style={{ color: '#6B7280' }}>{s.label}</p>
-            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-          </div>
+          <StatCard key={s.label} label={s.label} value={s.value} color={s.color} />
         ))}
       </div>
 
@@ -140,9 +139,7 @@ export default function ArchiveAuditLogContent() {
                 <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: ec.color }} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: ec.bg, color: ec.color }}>
-                      {ec.label}
-                    </span>
+                    <StatusBadge label={ec.label} bg={ec.bg} text={ec.color} />
                     {entry.collateral && (
                       <span className="text-xs font-medium" style={{ color: '#1E3A8A' }}>
                         {entry.collateral.collateral_type}

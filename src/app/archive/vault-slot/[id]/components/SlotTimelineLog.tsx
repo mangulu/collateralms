@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { archiveAuditService, ArchiveAuditEntry, ArchiveEventType } from '@/lib/supabase/archiveService';
 import Icon from '@/components/ui/AppIcon';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 
 const EVENT_CONFIG: Partial<Record<ArchiveEventType, { label: string; color: string; bg: string; icon: React.ElementType }>> = {
@@ -211,11 +212,7 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
                       style={{ backgroundColor: idx % 2 === 0 ? '#F8FAFF' : 'white', border: '1px solid #DBEAFE' }}>
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                            style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-                            {cfg.label}
-                          </span>
+                          <StatusBadge label={cfg.label} bg={cfg.bg} text={cfg.color} />
                           {entry.collateral && (
                             <span className="text-xs font-medium" style={{ color: '#1E3A8A' }}>
                               {entry.collateral.collateral_type} — {entry.collateral.description}

@@ -8,6 +8,8 @@ import { documentService, CollateralDocument } from '@/lib/supabase/documentServ
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import DocumentVersionHistoryModal from '@/components/DocumentVersionHistoryModal';
 import { useAuth } from '@/contexts/AuthContext';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 function getFileIcon(mimeType: string) {
   if (mimeType?.includes('pdf')) return <FileType2 size={18} className="text-red-500" />;
@@ -119,10 +121,7 @@ export default function DocumentsLibraryContent() {
           { label: 'Collaterals Covered', value: new Set(documents.map((d) => d.collateralId)).size, color: '#7E22CE' },
           { label: 'With Notes', value: documents.filter((d) => d.notes).length, color: '#B45309' },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-            <p className="text-xs font-medium mb-1" style={{ color: '#6B7280' }}>{s.label}</p>
-            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-          </div>
+          <StatCard key={s.label} label={s.label} value={s.value} color={s.color} />
         ))}
       </div>
 
@@ -176,10 +175,7 @@ export default function DocumentsLibraryContent() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>{doc.fileName}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
-                      {doc.documentType}
-                    </span>
+                    <StatusBadge label={doc.documentType} bg="#EFF6FF" text="#1D4ED8" />
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                     {col && (

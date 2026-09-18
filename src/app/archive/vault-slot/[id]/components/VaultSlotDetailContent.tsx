@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, RefreshCw, FileText, Trash2, MoveRight, AlertCircle,
   Package, Search, ChevronRight, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3, X, Check,
-  CheckSquare, Square, CheckCheck, Loader2, Plus,
+  CheckSquare, Square, CheckCheck, Loader2, Plus, Unlock, Activity,
 } from 'lucide-react';
 import {
   archiveLocationService,
@@ -19,6 +19,8 @@ import { collateralService, CollateralRecord } from '@/lib/supabase/collateralSe
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import SlotTimelineLog from './SlotTimelineLog';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
 
@@ -27,10 +29,6 @@ const LOCATION_TYPE_COLORS: Record<LocationType, { bg: string; text: string; bor
   room:    { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
   cabinet: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
   slot:    { bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD' },
-};
-
-const LEVEL_EMOJIS: Record<LocationType, string> = {
-  vault: '🏛️', room: '🚪', cabinet: '📚', slot: '📂',
 };
 
 const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
@@ -161,9 +159,9 @@ function MoveToSlotModal({ placement, currentSlotId, allLocations, onClose, onMo
                       cursor: isFull ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0"
-                      style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD' }}>
-                      📂
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
+                      {LEVEL_ICONS.slot}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: '#1E3A8A' }}>{slot.name}</p>
@@ -363,9 +361,9 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
                           cursor: isFull ? 'not-allowed' : 'pointer',
                         }}
                       >
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm shrink-0"
-                          style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD' }}>
-                          📂
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
+                          {LEVEL_ICONS.slot}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate" style={{ color: '#1E3A8A' }}>{slot.name}</p>
@@ -487,9 +485,9 @@ function FileCollateralModal({ slotId, slotName, userId, onClose, onSaved }: Fil
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#E5E7EB' }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              📂
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#0369A1' }}>
+              {React.cloneElement(LEVEL_ICONS.slot as React.ReactElement<{ size?: number }>, { size: 18 })}
             </div>
             <div>
               <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>File Collateral</h3>
@@ -874,7 +872,7 @@ export default function VaultSlotDetailContent() {
                   style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
                   onClick={!isLast ? () => router.push('/archive/vault-management') : undefined}
                 >
-                  <span>{LEVEL_EMOJIS[loc.locationType]}</span>
+                  {React.cloneElement(LEVEL_ICONS[loc.locationType] as React.ReactElement<{ size?: number }>, { size: 12 })}
                   <span>{loc.name}</span>
                   <span className="opacity-60 font-mono text-[10px]">{loc.code}</span>
                 </div>
@@ -888,9 +886,9 @@ export default function VaultSlotDetailContent() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0"
-            style={{ backgroundColor: '#F0F9FF', border: '2px solid #BAE6FD' }}>
-            📂
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: '#F0F9FF', border: '2px solid #BAE6FD', color: '#0369A1' }}>
+            {React.cloneElement(LEVEL_ICONS.slot as React.ReactElement<{ size?: number }>, { size: 28 })}
           </div>
           <div>
             <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
@@ -919,20 +917,10 @@ export default function VaultSlotDetailContent() {
       {/* Slot stats */}
       {slot && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          {[
-            { label: 'Total Capacity', value: slot.capacity, icon: '📦', color: '#1D4ED8' },
-            { label: 'Current Items', value: slot.currentOccupancy, icon: '📄', color: '#15803D' },
-            { label: 'Available Space', value: Math.max(0, slot.capacity - slot.currentOccupancy), icon: '🔓', color: '#0369A1' },
-            { label: 'Occupancy', value: `${occupancyPct}%`, icon: '📊', color: occupancyColor },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-base">{stat.icon}</span>
-                <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{stat.label}</span>
-              </div>
-              <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
-            </div>
-          ))}
+          <StatCard label="Total Capacity" value={slot.capacity} icon={<Package size={16} />} color="#1D4ED8" />
+          <StatCard label="Current Items" value={slot.currentOccupancy} icon={<FileText size={16} />} color="#15803D" />
+          <StatCard label="Available Space" value={Math.max(0, slot.capacity - slot.currentOccupancy)} icon={<Unlock size={16} />} color="#0369A1" />
+          <StatCard label="Occupancy" value={`${occupancyPct}%`} icon={<Activity size={16} />} color={occupancyColor} />
         </div>
       )}
 
@@ -1014,10 +1002,7 @@ export default function VaultSlotDetailContent() {
                 {allFilteredSelected ? 'Deselect all' : `Select all (${filtered.length})`}
               </button>
               {someSelected && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                  style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
-                  {selectedIds.size} selected
-                </span>
+                <StatusBadge label={`${selectedIds.size} selected`} bg="#DBEAFE" text="#1D4ED8" />
               )}
             </div>
           )}
@@ -1163,10 +1148,7 @@ export default function VaultSlotDetailContent() {
                       {p.collateral?.description ?? 'Unnamed Collateral'}
                     </button>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
-                        {p.collateral?.collateral_type ?? '—'}
-                      </span>
+                      <StatusBadge label={p.collateral?.collateral_type ?? '—'} bg="#DBEAFE" text="#1D4ED8" />
                       <span className="text-xs" style={{ color: '#6B7280' }}>
                         {p.collateral?.obligor ?? '—'}
                       </span>

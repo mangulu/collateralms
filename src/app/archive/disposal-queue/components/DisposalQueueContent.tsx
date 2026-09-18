@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Trash2, RefreshCw, AlertCircle, Search, Clock, Package, ShieldAlert } from 'lucide-react';
 import { archivePlacementService, archiveAuditService, ArchivePlacement } from '@/lib/supabase/archiveService';
 import { useAuth } from '@/contexts/AuthContext';
+import StatCard from '@/components/ui/StatCard';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -150,18 +151,9 @@ export default function DisposalQueueContent() {
 
       {/* KPI summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
-        <div className="rounded-xl p-4" style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA' }}>
-          <p className="text-xs font-medium mb-1" style={{ color: '#9A3412' }}>Eligible Now</p>
-          <p className="text-2xl font-bold" style={{ color: '#C2410C' }}>{queue.length}</p>
-        </div>
-        <div className="rounded-xl p-4" style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3' }}>
-          <p className="text-xs font-medium mb-1" style={{ color: '#9F1239' }}>Disposed This Month</p>
-          <p className="text-2xl font-bold" style={{ color: '#BE123C' }}>{disposedThisMonth}</p>
-        </div>
-        <div className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-          <p className="text-xs font-medium mb-1" style={{ color: '#1D4ED8' }}>Oldest Eligible</p>
-          <p className="text-2xl font-bold" style={{ color: '#1D4ED8' }}>{oldestEligibleDays}d</p>
-        </div>
+        <StatCard label="Eligible Now" value={queue.length} color="#C2410C" labelColor="#9A3412" bg="#FFF7ED" border="#FED7AA" />
+        <StatCard label="Disposed This Month" value={disposedThisMonth} color="#BE123C" labelColor="#9F1239" bg="#FFF1F2" border="#FECDD3" />
+        <StatCard label="Oldest Eligible" value={`${oldestEligibleDays}d`} color="#1D4ED8" />
       </div>
 
       {/* Search */}
@@ -205,8 +197,8 @@ export default function DisposalQueueContent() {
                   {p.collateral?.collateral_type ?? 'Unknown'} — {p.collateral?.obligor ?? '—'}
                 </p>
                 <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>
-                    📂 {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
+                  <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                    <Package size={11} /> {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
                   </span>
                   {p.physicalRef && (
                     <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#FFEDD5', color: '#9A3412' }}>

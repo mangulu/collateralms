@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Package, Grid3X3, Clock } from 'lucide-react';
 import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
+import StatusBadge from '@/components/ui/StatusBadge';
 import { ArchiveLocation } from '@/lib/supabase/archiveService';
 import { archiveReconciliationService } from '@/lib/supabase/archiveReconciliationService';
 
@@ -60,9 +61,7 @@ export default function LocationDetailDrawer({ stack, onClose, onDrillInto, onBr
           {/* Stats */}
           <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
-                {TYPE_LABELS[current.locationType] ?? current.locationType}
-              </span>
+              <StatusBadge label={TYPE_LABELS[current.locationType] ?? current.locationType} bg="#DBEAFE" text="#1D4ED8" />
               <span className="text-xs font-bold" style={{ color: '#1D4ED8' }}>{current.currentOccupancy}/{current.capacity}</span>
             </div>
             <div className="w-full h-2 rounded-full" style={{ backgroundColor: '#E5E7EB' }}>

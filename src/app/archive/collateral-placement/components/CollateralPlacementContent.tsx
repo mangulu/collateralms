@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FolderCheck, Plus, Search, RefreshCw, AlertCircle, Link2, Package, Edit2,
   Upload, FileText, X, Loader2, Paperclip, CheckCircle2, CheckSquare, Square,
-  Layers, MoveRight, ShieldAlert,
+  Layers, MoveRight, ShieldAlert, FolderOpen,
 } from 'lucide-react';
 import {
   archivePlacementService, archiveLocationService, archiveAuditService,
@@ -14,6 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
 import { fetchConfigByKey } from '@/lib/supabase/systemConfigService';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 const ACCEPTED_TYPES = [
   'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
@@ -558,17 +560,10 @@ export default function CollateralFilingContent() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        {[
-          { label: 'Total Filed', value: placements.length, color: '#1D4ED8' },
-          { label: 'Awaiting Filing', value: unfiledCollaterals.length, color: '#B45309' },
-          { label: 'With Electronic Record', value: placements.filter((p) => p.electronicRecordUrl).length, color: '#15803D' },
-          { label: 'High-Value Missing Backup', value: highValueMissingBackupCount, color: highValueMissingBackupCount > 0 ? '#BE123C' : '#7E22CE' },
-        ].map((s) => (
-          <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-            <p className="text-xs font-medium mb-1" style={{ color: '#6B7280' }}>{s.label}</p>
-            <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-          </div>
-        ))}
+        <StatCard label="Total Filed" value={placements.length} color="#1D4ED8" />
+        <StatCard label="Awaiting Filing" value={unfiledCollaterals.length} color="#B45309" />
+        <StatCard label="With Electronic Record" value={placements.filter((p) => p.electronicRecordUrl).length} color="#15803D" />
+        <StatCard label="High-Value Missing Backup" value={highValueMissingBackupCount} color={highValueMissingBackupCount > 0 ? '#BE123C' : '#7E22CE'} />
       </div>
 
       {/* Toggle + Search */}
@@ -757,7 +752,7 @@ export default function CollateralFilingContent() {
                   </p>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                     <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
-                      📂 {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
+                      <FolderOpen size={11} /> {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
                     </span>
                     {p.physicalRef && (
                       <span className="text-xs font-mono px-1.5 py-0.5 rounded"
@@ -771,15 +766,9 @@ export default function CollateralFilingContent() {
                         <Paperclip size={11} /> Document attached
                       </a>
                     ) : isHighValueMissingBackup(p) ? (
-                      <span className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full"
-                        style={{ backgroundColor: '#FFF1F2', color: '#BE123C' }}>
-                        <ShieldAlert size={11} /> No Backup — High Value
-                      </span>
+                      <StatusBadge label="No Backup — High Value" bg="#FFF1F2" text="#BE123C" icon={ShieldAlert} />
                     ) : (
-                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full"
-                        style={{ backgroundColor: '#FFFBEB', color: '#B45309' }}>
-                        <ShieldAlert size={11} /> No Backup
-                      </span>
+                      <StatusBadge label="No Backup" bg="#FFFBEB" text="#B45309" icon={ShieldAlert} />
                     )}
                   </div>
                 </div>

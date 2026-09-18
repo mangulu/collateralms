@@ -8,6 +8,7 @@ import {
 } from '@/lib/supabase/archiveService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useAuth } from '@/contexts/AuthContext';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
@@ -258,12 +259,9 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
 
         <div className="p-5 space-y-5 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-              style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
-              {sc.label}
-            </span>
+            <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} large />
             {isOverdue && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700">Overdue</span>
+              <StatusBadge label="Overdue" bg="#FFF1F2" text="#BE123C" />
             )}
           </div>
 
@@ -329,10 +327,7 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
                   return (
                     <div key={log.id} className="flex items-center gap-2 p-2.5 rounded-lg"
                       style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-                      <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
-                        style={{ backgroundColor: newSc.bg, color: newSc.text }}>
-                        {newSc.label}
-                      </span>
+                      <StatusBadge label={newSc.label} bg={newSc.bg} text={newSc.text} />
                       <span className="text-xs ml-auto" style={{ color: '#9CA3AF' }}>
                         {formatDateTime(log.createdAt)}
                       </span>
@@ -596,15 +591,9 @@ export default function AccessRequestsContent() {
                       <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
                         {req.collateral?.collateral_type ?? 'Unknown'} — {req.collateral?.obligor ?? '—'}
                       </p>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
-                        {sc.label}
-                      </span>
+                      <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} />
                       {isOverdue && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                          style={{ backgroundColor: '#FFF1F2', color: '#BE123C', border: '1px solid #FECDD3' }}>
-                          OVERDUE
-                        </span>
+                        <StatusBadge label="OVERDUE" bg="#FFF1F2" text="#BE123C" border="#FECDD3" />
                       )}
                     </div>
                     <p className="text-xs mt-0.5 line-clamp-1" style={{ color: '#6B7280' }}>{req.purpose}</p>
@@ -670,10 +659,7 @@ export default function AccessRequestsContent() {
                           <React.Fragment key={log.id}>
                             {i > 0 && <ArrowRight size={10} style={{ color: '#9CA3AF' }} />}
                             <div className="flex flex-col items-center">
-                              <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-                                style={{ backgroundColor: newSc.bg, color: newSc.text }}>
-                                {newSc.label}
-                              </span>
+                              <StatusBadge label={newSc.label} bg={newSc.bg} text={newSc.text} />
                               <span className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
                                 {formatDate(log.createdAt)}
                               </span>

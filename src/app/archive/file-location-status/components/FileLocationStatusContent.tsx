@@ -10,6 +10,7 @@ import {
   ArchiveCustody, ArchiveRequest, ArchivePlacement, CustodyStatus,
 } from '@/lib/supabase/archiveService';
 import Icon from '@/components/ui/AppIcon';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -168,12 +169,7 @@ function DrillDownDrawer({ row, onClose }: DrillDownDrawerProps) {
                             {req.requestedByProfile?.full_name ?? 'Unknown'}
                           </span>
                         </div>
-                        <span
-                          className="text-xs px-2 py-0.5 rounded-full font-medium"
-                          style={{ backgroundColor: rs.bg, color: rs.text }}
-                        >
-                          {rs.label}
-                        </span>
+                        <StatusBadge label={rs.label} bg={rs.bg} text={rs.text} />
                       </div>
                       <p className="text-xs" style={{ color: '#374151' }}>{req.purpose}</p>
                       {req.expectedReturnDate && (
@@ -407,19 +403,12 @@ export default function FileLocationStatusContent() {
                       <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>
                         {custody.collateral?.collateral_type ?? 'Unknown'} — {custody.collateral?.obligor ?? '—'}
                       </p>
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                        style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}
-                      >
-                        {sc.label}
-                      </span>
+                      <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} />
                       {hasActiveReqs && (
-                        <span
-                          className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                          style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}
-                        >
-                          {activeRequests.length} active request{activeRequests.length > 1 ? 's' : ''}
-                        </span>
+                        <StatusBadge
+                          label={`${activeRequests.length} active request${activeRequests.length > 1 ? 's' : ''}`}
+                          bg="#EFF6FF" text="#1D4ED8" border="#BFDBFE"
+                        />
                       )}
                     </div>
 
@@ -513,12 +502,7 @@ export default function FileLocationStatusContent() {
                               <span className="text-xs font-medium" style={{ color: '#1E3A8A' }}>
                                 {req.requestedByProfile?.full_name ?? 'Unknown'}
                               </span>
-                              <span
-                                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                                style={{ backgroundColor: rs.bg, color: rs.text }}
-                              >
-                                {rs.label}
-                              </span>
+                              <StatusBadge label={rs.label} bg={rs.bg} text={rs.text} />
                             </div>
                             <p className="text-xs truncate" style={{ color: '#6B7280' }}>{req.purpose}</p>
                           </div>

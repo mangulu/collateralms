@@ -10,6 +10,8 @@ import {
 } from '@/lib/supabase/archiveReconciliationService';
 import { archiveLocationService, ArchiveLocation, LocationType } from '@/lib/supabase/archiveService';
 import { useAuth } from '@/contexts/AuthContext';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -148,7 +150,7 @@ function SessionRow({ session, onClick }: { session: ReconciliationSession; onCl
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>{session.location?.name ?? 'Unknown location'}</p>
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: sc.bg, color: sc.text }}>{sc.label}</span>
+          <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} />
         </div>
         <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
           Started by {session.startedByProfile?.full_name ?? '—'} · {formatDateTime(session.startedAt)}
@@ -219,18 +221,9 @@ export default function ReconciliationSessionsContent() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-        <div className="rounded-xl p-4" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-          <p className="text-xs font-medium mb-1" style={{ color: '#1D4ED8' }}>Active Sessions</p>
-          <p className="text-2xl font-bold" style={{ color: '#1D4ED8' }}>{active.length}</p>
-        </div>
-        <div className="rounded-xl p-4" style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-          <p className="text-xs font-medium mb-1" style={{ color: '#15803D' }}>Completed This Month</p>
-          <p className="text-2xl font-bold" style={{ color: '#15803D' }}>{completedThisMonth}</p>
-        </div>
-        <div className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-          <p className="text-xs font-medium mb-1" style={{ color: '#1D4ED8' }}>Total Sessions</p>
-          <p className="text-2xl font-bold" style={{ color: '#1D4ED8' }}>{active.length + history.length}</p>
-        </div>
+        <StatCard label="Active Sessions" value={active.length} color="#1D4ED8" bg="#EFF6FF" border="#BFDBFE" />
+        <StatCard label="Completed This Month" value={completedThisMonth} color="#15803D" bg="#F0FDF4" border="#BBF7D0" />
+        <StatCard label="Total Sessions" value={active.length + history.length} color="#1D4ED8" />
       </div>
 
       {error && (

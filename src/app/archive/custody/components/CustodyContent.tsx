@@ -12,6 +12,8 @@ import {
 } from '@/lib/supabase/archiveService';
 import { archiveAuditService } from '@/lib/supabase/archiveService';
 import { useAuth } from '@/contexts/AuthContext';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 // ─── Custody Tracker types ────────────────────────────────────────────────────
 
@@ -97,10 +99,7 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
         <div className="flex items-center gap-2">
           <Package size={15} style={{ color: '#1D4ED8' }} />
           <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>{collateralLabel}</p>
-          <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-            style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
-            {entries.length} event{entries.length !== 1 ? 's' : ''}
-          </span>
+          <StatusBadge label={`${entries.length} event${entries.length !== 1 ? 's' : ''}`} bg="#DBEAFE" text="#1D4ED8" />
         </div>
         <button onClick={() => setExpanded(!expanded)}
           className="p-1 rounded hover:bg-blue-100 transition-colors"
@@ -131,14 +130,8 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
               <div className="flex-1 min-w-0 pb-2">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: cfg.bg, color: cfg.text }}>
-                      {cfg.label}
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: confirmCfg.bg, color: confirmCfg.text }}>
-                      {confirmCfg.label}
-                    </span>
+                    <StatusBadge label={cfg.label} bg={cfg.bg} text={cfg.text} />
+                    <StatusBadge label={confirmCfg.label} bg={confirmCfg.bg} text={confirmCfg.text} />
                   </div>
                   <span className="text-xs shrink-0" style={{ color: '#9CA3AF' }}>
                     {formatDateTime(entry.createdAt)}
@@ -469,9 +462,7 @@ export default function CustodyContent() {
                         <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
                           {c.collateral?.collateral_type ?? 'Unknown'} — {c.collateral?.obligor ?? '—'}
                         </p>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
-                          {sc.label}
-                        </span>
+                        <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} />
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {c.checkedOutByProfile && (
@@ -517,18 +508,10 @@ export default function CustodyContent() {
       {activeTab === 'history' && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            {[
-              { label: 'Total Events', value: entries.length, color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-              { label: 'Pending Confirmation', value: pendingCount, color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
-              { label: 'Confirmed', value: confirmedCount, color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
-              { label: 'Collaterals Tracked', value: Object.keys(grouped).length, color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
-            ].map((stat) => (
-              <div key={stat.label} className="rounded-xl p-4"
-                style={{ backgroundColor: stat.bg, border: `1px solid ${stat.border}` }}>
-                <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
-                <p className="text-xs font-medium mt-0.5" style={{ color: '#6B7280' }}>{stat.label}</p>
-              </div>
-            ))}
+            <StatCard label="Total Events" value={entries.length} color="#1D4ED8" bg="#EFF6FF" border="#BFDBFE" />
+            <StatCard label="Pending Confirmation" value={pendingCount} color="#B45309" bg="#FFFBEB" border="#FDE68A" />
+            <StatCard label="Confirmed" value={confirmedCount} color="#15803D" bg="#F0FDF4" border="#BBF7D0" />
+            <StatCard label="Collaterals Tracked" value={Object.keys(grouped).length} color="#7C3AED" bg="#F5F3FF" border="#DDD6FE" />
           </div>
 
           <div className="flex items-center gap-3 mb-4 flex-wrap">

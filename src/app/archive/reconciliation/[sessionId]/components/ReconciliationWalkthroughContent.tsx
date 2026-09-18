@@ -9,6 +9,7 @@ import {
   archiveReconciliationService, ReconciliationItem, ReconciliationSession,
 } from '@/lib/supabase/archiveReconciliationService';
 import { useAuth } from '@/contexts/AuthContext';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -123,7 +124,6 @@ function ItemCard({ item, canReview, onConfirm, onReportDiscrepancy, confirming 
   confirming: boolean;
 }) {
   const rc = RESULT_CONFIG[item.result];
-  const ResultIcon = rc.icon;
 
   return (
     <div className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: `1px solid ${item.result === 'discrepancy' ? '#FECDD3' : '#DBEAFE'}` }}>
@@ -132,9 +132,7 @@ function ItemCard({ item, canReview, onConfirm, onReportDiscrepancy, confirming 
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>{item.location?.name ?? 'Unknown slot'}</p>
             <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>{item.location?.code}</span>
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: rc.bg, color: rc.text }}>
-              <ResultIcon size={11} /> {rc.label}
-            </span>
+            <StatusBadge label={rc.label} bg={rc.bg} text={rc.text} icon={rc.icon} />
           </div>
           <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
             Expected {item.expectedCount} item{item.expectedCount !== 1 ? 's' : ''}

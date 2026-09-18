@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { RefreshCw, AlertTriangle, TrendingUp, Layers, Building2, DoorOpen, BookOpen, Grid3X3, ChevronRight, Activity, BarChart2, Zap, Info } from 'lucide-react';
 import { archiveLocationService, archiveAuditService, ArchiveLocation, ArchiveAuditEntry, LocationType } from '@/lib/supabase/archiveService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,10 +33,6 @@ const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
   room:    <DoorOpen size={14} />,
   cabinet: <BookOpen size={14} />,
   slot:    <Grid3X3 size={14} />,
-};
-
-const LEVEL_EMOJI: Record<LocationType, string> = {
-  vault: '🏛️', room: '🚪', cabinet: '📚', slot: '📂',
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -121,10 +118,10 @@ function CabinetGrid({ cabinet, onSlotClick }: CabinetGridProps) {
   return (
     <div className="rounded-xl border p-3" style={{ borderColor: colors.border, backgroundColor: colors.bg }}>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-sm">📚</span>
+        <span style={{ color: colors.text }}>{LEVEL_ICONS.cabinet}</span>
         <span className="text-xs font-semibold" style={{ color: colors.text }}>{cabinet.name}</span>
-        <span className="text-xs ml-auto px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: colors.border, color: colors.text }}>
-          {pct}% full
+        <span className="ml-auto">
+          <StatusBadge label={`${pct}% full`} bg={colors.border} text={colors.text} />
         </span>
       </div>
       {slots.length > 0 ? (
@@ -160,13 +157,11 @@ function RoomPanel({ room, onSlotClick }: RoomPanelProps) {
         className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
         style={{ backgroundColor: colors.bg }}
       >
-        <span className="text-lg">🚪</span>
+        <span style={{ color: '#1E3A8A' }}>{React.cloneElement(LEVEL_ICONS.room as React.ReactElement<{ size?: number }>, { size: 18 })}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold" style={{ color: '#1E3A8A' }}>{room.name}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: colors.border, color: colors.text }}>
-              {colors.label}
-            </span>
+            <StatusBadge label={colors.label} bg={colors.border} text={colors.text} />
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             <span className="text-xs" style={{ color: '#6B7280' }}>
@@ -210,8 +205,8 @@ function SlotDetailPanel({ slot, onClose }: SlotDetailPanelProps) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 m-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}` }}>
-            📂
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}>
+            {React.cloneElement(LEVEL_ICONS.slot as React.ReactElement<{ size?: number }>, { size: 18 })}
           </div>
           <div>
             <h3 className="text-sm font-bold" style={{ color: '#1E3A8A' }}>{slot.name}</h3>
@@ -467,10 +462,10 @@ export default function OccupancyHeatmapContent() {
             <button
               key={v.id}
               onClick={() => setSelectedVaultId(v.id)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
               style={selectedVaultId === v.id ? { backgroundColor: '#1E3A8A', color: '#fff' } : { backgroundColor: '#F3F4F6', color: '#374151' }}
             >
-              🏛️ {v.name}
+              <Building2 size={12} /> {v.name}
             </button>
           ))}
         </div>
@@ -523,7 +518,7 @@ export default function OccupancyHeatmapContent() {
                     <div key={vault.id} className="rounded-2xl border overflow-hidden" style={{ borderColor: '#BFDBFE' }}>
                       {/* Vault header */}
                       <div className="flex items-center gap-3 px-5 py-4" style={{ backgroundColor: '#EFF6FF' }}>
-                        <span className="text-2xl">🏛️</span>
+                        <span style={{ color: '#1D4ED8' }}>{React.cloneElement(LEVEL_ICONS.vault as React.ReactElement<{ size?: number }>, { size: 24 })}</span>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-base font-bold" style={{ color: '#1E3A8A' }}>{vault.name}</span>
@@ -661,8 +656,8 @@ export default function OccupancyHeatmapContent() {
                       return (
                         <div key={item.id} className="grid grid-cols-12 px-4 py-3 items-center hover:bg-gray-50 transition-colors">
                           <div className="col-span-1 text-xs font-bold" style={{ color: '#9CA3AF' }}>{idx + 1}</div>
-                          <div className="col-span-1">
-                            <span className="text-base" title={item.type}>{LEVEL_EMOJI[item.type]}</span>
+                          <div className="col-span-1 text-gray-500" title={item.type}>
+                            {LEVEL_ICONS[item.type]}
                           </div>
                           <div className="col-span-3">
                             <p className="text-xs font-semibold truncate" style={{ color: '#1E3A8A' }}>{item.name}</p>
@@ -673,9 +668,9 @@ export default function OccupancyHeatmapContent() {
                           </div>
                           <div className="col-span-2">
                             <p className="text-xs font-semibold" style={{ color: colors.text }}>{item.occupancy}/{item.capacity}</p>
-                            <p className="text-xs px-1.5 py-0.5 rounded-full inline-block mt-0.5" style={{ backgroundColor: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}>
-                              {colors.label}
-                            </p>
+                            <div className="mt-0.5">
+                              <StatusBadge label={colors.label} bg={colors.bg} text={colors.text} border={colors.border} />
+                            </div>
                           </div>
                           <div className="col-span-2">
                             <div className="flex items-center gap-2">

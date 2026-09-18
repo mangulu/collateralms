@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, ChevronRight, ChevronDown, Trash2, RefreshCw, AlertCircle, X, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3 } from 'lucide-react';
+import { Plus, ChevronRight, ChevronDown, Trash2, RefreshCw, AlertCircle, X, FolderOpen, Building2, DoorOpen, BookOpen, Grid3X3, MapPin, CheckCircle2 } from 'lucide-react';
 import {
   archiveLocationService, archivePlacementService,
   ArchiveLocation, LocationType,
@@ -9,6 +9,8 @@ import {
 import { archiveReconciliationService } from '@/lib/supabase/archiveReconciliationService';
 import { useAuth } from '@/contexts/AuthContext';
 import LocationDetailDrawer from './LocationDetailDrawer';
+import StatCard from '@/components/ui/StatCard';
+import StatusBadge from '@/components/ui/StatusBadge';
 
 // ─── Hierarchy: vault → room → cabinet → slot ───────────────────────────────────
 // Strict 4-level hierarchy: Vault → Room → Cabinet → Slot
@@ -36,11 +38,11 @@ const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
   slot:    <Grid3X3 size={20} />,
 };
 
-const LEVEL_ILLUSTRATIONS: Record<LocationType, { emoji: string; desc: string }> = {
-  vault:   { emoji: '🏛️', desc: 'Physical vault building' },
-  room:    { emoji: '🚪', desc: 'Room inside vault' },
-  cabinet: { emoji: '📚', desc: 'Cabinet in room' },
-  slot:    { emoji: '📂', desc: 'Filing slot in cabinet' },
+const LEVEL_DESCRIPTIONS: Record<LocationType, string> = {
+  vault:   'Physical vault building',
+  room:    'Room inside vault',
+  cabinet: 'Cabinet in room',
+  slot:    'Filing slot in cabinet',
 };
 
 // ─── Add Location Modal ───────────────────────────────────────────────────────
@@ -125,22 +127,21 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
   };
 
   const colors = LOCATION_TYPE_COLORS[nextType];
-  const illustration = LEVEL_ILLUSTRATIONS[nextType];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        {/* Header with illustration */}
+        {/* Header with icon */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
-            style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}` }}>
-            {illustration.emoji}
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+            style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}>
+            {LEVEL_ICONS[nextType]}
           </div>
           <div>
             <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>
               Add {LOCATION_TYPE_LABELS[nextType]}
             </h3>
-            <p className="text-xs" style={{ color: '#6B7280' }}>{illustration.desc}</p>
+            <p className="text-xs" style={{ color: '#6B7280' }}>{LEVEL_DESCRIPTIONS[nextType]}</p>
           </div>
         </div>
 
@@ -266,7 +267,6 @@ function LocationNode({ node, depth, onAddChild, onDelete, onSelectDetail, lastR
   const isSlot = node.locationType === 'slot';
   const isDetailable = node.locationType === 'room' || node.locationType === 'cabinet';
   const occupancyPct = node.capacity > 0 ? Math.round((node.currentOccupancy / node.capacity) * 100) : 0;
-  const illustration = LEVEL_ILLUSTRATIONS[node.locationType];
 
   const handleRowClick = () => {
     if (isSlot) {
@@ -296,26 +296,20 @@ function LocationNode({ node, depth, onAddChild, onDelete, onSelectDetail, lastR
             : <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors.text, opacity: 0.4 }} />}
         </button>
 
-        {/* Level icon/illustration */}
-        <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-base"
-          style={{ backgroundColor: 'white', border: `1px solid ${colors.border}` }}
-          title={illustration.desc}>
-          {illustration.emoji}
+        {/* Level icon */}
+        <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ backgroundColor: 'white', border: `1px solid ${colors.border}`, color: colors.text }}
+          title={LEVEL_DESCRIPTIONS[node.locationType]}>
+          {LEVEL_ICONS[node.locationType]}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold" style={{ color: colors.text }}>{node.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-              style={{ backgroundColor: colors.border, color: colors.text }}>
-              {LOCATION_TYPE_LABELS[node.locationType]}
-            </span>
+            <StatusBadge label={LOCATION_TYPE_LABELS[node.locationType]} bg={colors.border} text={colors.text} />
             <span className="text-xs font-mono" style={{ color: '#6B7280' }}>{node.code}</span>
             {isSlot && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full"
-                style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
-                {node.currentOccupancy} item{node.currentOccupancy !== 1 ? 's' : ''}
-              </span>
+              <StatusBadge label={`${node.currentOccupancy} item${node.currentOccupancy !== 1 ? 's' : ''}`} bg="#DBEAFE" text="#1D4ED8" />
             )}
           </div>
           {node.description && (
@@ -391,13 +385,12 @@ function HierarchyLegend() {
     <div className="flex items-center gap-1 flex-wrap mb-4">
       {levels.map((l, i) => {
         const colors = LOCATION_TYPE_COLORS[l.type];
-        const ill = LEVEL_ILLUSTRATIONS[l.type];
         return (
           <React.Fragment key={l.type}>
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium"
               style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}`, color: colors.text }}
               title={l.desc}>
-              <span>{ill.emoji}</span>
+              {React.cloneElement(LEVEL_ICONS[l.type] as React.ReactElement<{ size?: number }>, { size: 13 })}
               <span>{l.label}</span>
             </div>
             {i < levels.length - 1 && (
@@ -506,27 +499,17 @@ export default function VaultManagementContent() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: 'Vaults', value: totalVaults, icon: '🏛️', color: '#1D4ED8' },
-          { label: 'Total Locations', value: totalLocations, icon: '📍', color: '#15803D' },
-          { label: 'Active', value: activeLocations, icon: '✅', color: '#0369A1' },
-          { label: 'Filing Slots', value: totalSlots, icon: '📂', color: '#7E22CE' },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-base">{stat.icon}</span>
-              <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{stat.label}</span>
-            </div>
-            <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
-          </div>
-        ))}
+        <StatCard label="Vaults" value={totalVaults} icon={<Building2 size={16} />} color="#1D4ED8" />
+        <StatCard label="Total Locations" value={totalLocations} icon={<MapPin size={16} />} color="#15803D" />
+        <StatCard label="Active" value={activeLocations} icon={<CheckCircle2 size={16} />} color="#0369A1" />
+        <StatCard label="Filing Slots" value={totalSlots} icon={<Grid3X3 size={16} />} color="#7E22CE" />
       </div>
 
       {/* Slot hint */}
       <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs"
         style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
         <FolderOpen size={13} />
-        <span>Click on any <strong>📂 Slot</strong> to open its detail page — view contents, move files to another slot, or remove them.</span>
+        <span>Click on any <strong>Slot</strong> to open its detail page — view contents, move files to another slot, or remove them.</span>
       </div>
 
       {/* Tree */}
@@ -543,7 +526,7 @@ export default function VaultManagementContent() {
         </div>
       ) : tree.length === 0 ? (
         <div className="text-center py-16">
-          <div className="text-5xl mb-3">🏛️</div>
+          <Building2 size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
           <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No vaults defined yet</p>
           <p className="text-xs mt-1 mb-4" style={{ color: '#3B82F6' }}>
             Start by adding your first vault, then add rooms, cabinets, and slots
