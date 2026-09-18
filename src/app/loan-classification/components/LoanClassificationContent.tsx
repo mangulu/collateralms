@@ -101,8 +101,9 @@ function ClassifyModal({ open, onClose, onSaved, loans, obligors, editItem, user
     if (useOverride && !overrideReason.trim()) { setError('Override reason is required.'); return; }
     setSaving(true); setError(null);
     try {
+      let result;
       if (editItem) {
-        await loanClassificationService.update(editItem.id, {
+        result = await loanClassificationService.update(editItem.id, {
           daysPastDue: parseInt(dpd) || 0,
           outstandingBalance: parseFloat(balance),
           qualitativeFlags: flags,
@@ -110,7 +111,7 @@ function ClassifyModal({ open, onClose, onSaved, loans, obligors, editItem, user
           notes,
         });
       } else {
-        await loanClassificationService.classify({
+        result = await loanClassificationService.classify({
           loanId,
           obligorId: selectedLoan?.obligorId ?? '',
           daysPastDue: parseInt(dpd) || 0,
@@ -122,6 +123,11 @@ function ClassifyModal({ open, onClose, onSaved, loans, obligors, editItem, user
           notes,
           classifiedBy: userId,
         });
+      }
+      if (!result) {
+        setError('Failed to save classification.');
+        setSaving(false);
+        return;
       }
       onSaved();
       onClose();

@@ -258,11 +258,18 @@ export const loanClassificationService = {
     const quarter = getCurrentQuarter();
 
     // Deactivate previous active classification for this loan
-    await supabase
+    const { error: deactivateErr } = await supabase
       .from('loan_classifications')
       .update({ is_active: false })
       .eq('loan_id', input.loanId)
       .eq('is_active', true);
+    if (deactivateErr) {
+      // Don't insert a new active row on top of one we failed to deactivate —
+      // that would leave two 'is_active' rows for the same loan and corrupt
+      // BOT provisioning calculations that assume exactly one.
+      console.error('loanClassificationService.classify: failed to deactivate previous classification:', deactivateErr.message);
+      return null;
+    }
 
     const row = {
       loan_id: input.loanId,
