@@ -51,7 +51,7 @@ export const deadlineReminderRulesService = {
       .order('days_before_deadline', { ascending: false });
 
     if (error) {
-      console.log('deadlineReminderRulesService.listRules:', error.message);
+      console.error('deadlineReminderRulesService.listRules:', error.message);
       return [];
     }
     return (data ?? []).map(rowToRule);
@@ -73,7 +73,7 @@ export const deadlineReminderRulesService = {
       .single();
 
     if (error) {
-      console.log('deadlineReminderRulesService.create:', error.message);
+      console.error('deadlineReminderRulesService.create:', error.message);
       return null;
     }
     return rowToRule(data);
@@ -102,9 +102,10 @@ export const deadlineReminderRulesService = {
       .eq('id', id)
       .maybeSingle();
     const newCount = (data?.sent_count ?? 0) + sentDelta;
-    await supabase
+    const { error } = await supabase
       .from('deadline_reminder_rules')
       .update({ last_run_at: new Date().toISOString(), sent_count: newCount })
       .eq('id', id);
+    if (error) console.error('deadlineReminderRulesService.recordRun failed:', error);
   },
 };

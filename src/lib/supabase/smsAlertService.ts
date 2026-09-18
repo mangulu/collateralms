@@ -71,7 +71,7 @@ export const smsAlertService = {
       .single();
 
     if (logError) {
-      console.log('Failed to log SMS alert:', logError.message);
+      console.error('Failed to log SMS alert:', logError.message);
     }
 
     // Invoke Edge Function
@@ -92,20 +92,22 @@ export const smsAlertService = {
       const errMsg = error?.message || data?.error || 'Unknown error';
       // Update log to FAILED
       if (alertId) {
-        await supabase
+        const { error: updateErr } = await supabase
           .from('sms_alerts')
           .update({ status: 'FAILED', error_message: errMsg })
           .eq('id', alertId);
+        if (updateErr) console.error('Failed to mark SMS alert as FAILED:', updateErr.message);
       }
       return { success: false, error: errMsg };
     }
 
     // Update log to SENT
     if (alertId) {
-      await supabase
+      const { error: updateErr } = await supabase
         .from('sms_alerts')
         .update({ status: 'SENT', twilio_message_sid: data.messageSid })
         .eq('id', alertId);
+      if (updateErr) console.error('Failed to mark SMS alert as SENT:', updateErr.message);
     }
 
     return { success: true, messageSid: data.messageSid };
@@ -151,7 +153,7 @@ export const smsAlertService = {
       .limit(limit);
 
     if (error) {
-      console.log('Failed to fetch SMS alerts:', error.message);
+      console.error('Failed to fetch SMS alerts:', error.message);
       return [];
     }
     return (data || []).map(rowToSmsAlert);
