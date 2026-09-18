@@ -96,7 +96,7 @@ export default function CollateralActivityTimeline({ collateral }: CollateralAct
         .from('archive_audit_log')
         .select(`
           id, event_type, description, performed_by, created_at,
-          archive_locations(name, code),
+          archive_locations!location_id(name, code),
           user_profiles:performed_by(full_name)
         `)
         .eq('collateral_id', collateral.id)
