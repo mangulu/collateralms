@@ -263,6 +263,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Access Requests', icon: ClipboardCheck, href: '/archive/access-requests', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'File Location Status', icon: MapPin, href: '/archive/file-location-status', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Custody', icon: Eye, href: '/archive/custody', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Vault Reconciliation', icon: ClipboardSignature, href: '/archive/reconciliation', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
@@ -312,6 +313,7 @@ const SECONDARY_PATH_MODULE_MAP: Record<string, string> = {
   '/workflows-admin': 'workflows',
   '/archive/occupancy-heatmap': 'archive',
   '/archive/vault-slot': 'archive',
+  '/archive/reconciliation': 'archive',
   '/audit-log': 'audit',
   '/glossary': 'administration',
   '/my-tasks': 'workflows',

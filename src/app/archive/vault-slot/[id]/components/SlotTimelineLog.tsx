@@ -24,6 +24,7 @@ const EVENT_CONFIG: Partial<Record<ArchiveEventType, { label: string; color: str
   disposal_flagged:    { label: 'Disposal Flagged',  color: '#B45309', bg: '#FFFBEB', icon: Clock },
   disposal_approved:   { label: 'Disposal Approved', color: '#C2410C', bg: '#FFF7ED', icon: FileText },
   disposed:            { label: 'Disposed',          color: '#DC2626', bg: '#FEF2F2', icon: X },
+  reconciliation_discrepancy: { label: 'Reconciliation Discrepancy', color: '#DC2626', bg: '#FEF2F2', icon: AlertCircle },
 };
 
 function getEventConfig(eventType: ArchiveEventType) {

@@ -27,6 +27,9 @@ const EVENT_CONFIG: Record<ArchiveEventType, { label: string; color: string; bg:
   disposal_flagged:    { label: 'Disposal Flagged',    color: '#B45309', bg: '#FFFBEB' },
   disposal_approved:   { label: 'Disposal Approved',   color: '#C2410C', bg: '#FFF7ED' },
   disposed:            { label: 'Disposed',            color: '#BE123C', bg: '#FFF1F2' },
+  reconciliation_started:      { label: 'Reconciliation Started',    color: '#0369A1', bg: '#F0F9FF' },
+  reconciliation_completed:    { label: 'Reconciliation Completed',  color: '#15803D', bg: '#F0FDF4' },
+  reconciliation_discrepancy:  { label: 'Reconciliation Discrepancy', color: '#BE123C', bg: '#FFF1F2' },
 };
 
 function formatDateTime(iso: string): string {

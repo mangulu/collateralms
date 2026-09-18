@@ -12,7 +12,8 @@ export type ArchiveEventType =
   | 'vault_created' | 'vault_updated' |'placement_assigned'| 'placement_updated' | 'placement_removed' | 'collateral_moved' |'request_raised'| 'request_approved' | 'request_rejected' |'checked_out' | 'returned' | 'overdue_flagged' | 'sms_sent'
   | 'document_added' | 'document_removed'
   | 'custody_handoff' | 'custody_received' | 'officer_assigned'
-  | 'disposal_flagged' | 'disposal_approved' | 'disposed';
+  | 'disposal_flagged' | 'disposal_approved' | 'disposed'
+  | 'reconciliation_started' | 'reconciliation_completed' | 'reconciliation_discrepancy';
 
 export interface ArchiveLocation {
   id: string;

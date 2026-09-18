@@ -6,6 +6,7 @@ import {
   archiveLocationService, archivePlacementService,
   ArchiveLocation, LocationType,
 } from '@/lib/supabase/archiveService';
+import { archiveReconciliationService } from '@/lib/supabase/archiveReconciliationService';
 import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Hierarchy: vault → room → cabinet → slot ───────────────────────────────────
@@ -255,9 +256,10 @@ interface LocationNodeProps {
   depth: number;
   onAddChild: (parentId: string, parentType: LocationType) => void;
   onDelete: (id: string) => void;
+  lastReconciledAt?: string | null;
 }
 
-function LocationNode({ node, depth, onAddChild, onDelete }: LocationNodeProps) {
+function LocationNode({ node, depth, onAddChild, onDelete, lastReconciledAt }: LocationNodeProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(depth < 2);
   const colors = LOCATION_TYPE_COLORS[node.locationType];
@@ -318,6 +320,13 @@ function LocationNode({ node, depth, onAddChild, onDelete }: LocationNodeProps) 
           </div>
           {node.description && (
             <p className="text-xs mt-0.5 truncate" style={{ color: '#6B7280' }}>{node.description}</p>
+          )}
+          {node.locationType === 'vault' && (
+            <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
+              {lastReconciledAt
+                ? `Last reconciled ${new Date(lastReconciledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                : 'Never reconciled'}
+            </p>
           )}
           {isSlot && (
             <p className="text-xs mt-0.5" style={{ color: colors.text, opacity: 0.7 }}>
@@ -401,6 +410,7 @@ function HierarchyLegend() {
 export default function VaultManagementContent() {
   const { user } = useAuth();
   const [tree, setTree] = useState<ArchiveLocation[]>([]);
+  const [lastReconciledByVault, setLastReconciledByVault] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [addModal, setAddModal] = useState<{ parentId: string | null; parentType: LocationType | null } | null>(null);
@@ -410,6 +420,13 @@ export default function VaultManagementContent() {
     try {
       const data = await archiveLocationService.getTreeWithCounts();
       setTree(data);
+      const entries = await Promise.all(
+        data.map(async (vault) => {
+          const session = await archiveReconciliationService.getLastCompletedForLocation(vault.id).catch(() => null);
+          return [vault.id, session?.completedAt ?? null] as const;
+        })
+      );
+      setLastReconciledByVault(Object.fromEntries(entries));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally { setLoading(false); }
@@ -526,7 +543,8 @@ export default function VaultManagementContent() {
           {tree.map((node) => (
             <LocationNode key={node.id} node={node} depth={0}
               onAddChild={(pid, pt) => setAddModal({ parentId: pid, parentType: pt })}
-              onDelete={handleDelete} />
+              onDelete={handleDelete}
+              lastReconciledAt={lastReconciledByVault[node.id] ?? null} />
           ))}
         </div>
       )}
