@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { saveFraudAlert, fetchFraudAlerts, updateFraudAlertStatus, type FraudAlertRow } from '@/lib/supabase/fraudAlertService';
 import { smsAlertService } from '@/lib/supabase/smsAlertService';
 import Icon from '@/components/ui/AppIcon';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -653,6 +654,8 @@ Rules:
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FraudPreventionContent() {
+  const { userProfile } = useAuth();
+  const reviewerName = userProfile?.full_name || 'Unknown';
   const [alerts, setAlerts] = useState<FraudAlert[]>([]);
   const [dbAlerts, setDbAlerts] = useState<FraudAlert[]>([]);
   const [search, setSearch] = useState('');
@@ -683,13 +686,17 @@ export default function FraudPreventionContent() {
   const handleAction = async (id: string, action: 'FALSE_POSITIVE' | 'ESCALATED', dbId?: string) => {
     // Update local state immediately
     const updateList = (list: FraudAlert[]) =>
-      list.map((a) => a.id === id ? { ...a, status: action, reviewedBy: 'Current User', reviewedAt: new Date().toISOString() } : a);
+      list.map((a) => a.id === id ? { ...a, status: action, reviewedBy: reviewerName, reviewedAt: new Date().toISOString() } : a);
     setAlerts((prev) => updateList(prev));
     setDbAlerts((prev) => updateList(prev));
 
     // Persist to Supabase if it's a DB alert
     if (dbId) {
-      await updateFraudAlertStatus(dbId, action, 'Current User');
+      const ok = await updateFraudAlertStatus(dbId, action, reviewerName);
+      if (!ok) {
+        toast.error('Failed to save — reverting');
+        await loadDbAlerts();
+      }
     }
   };
 
