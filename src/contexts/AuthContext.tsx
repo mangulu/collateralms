@@ -289,6 +289,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     session,
     loading,
     userProfile,
+    // Alias: several components destructure `profile` instead of `userProfile` —
+    // keep both working rather than silently leaving `profile` undefined (which
+    // broke every profile?.role role-check in those components).
+    profile: userProfile,
     userRole,
     hasRole,
     signUp,
