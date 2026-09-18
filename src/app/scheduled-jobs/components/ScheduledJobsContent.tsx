@@ -22,6 +22,7 @@ import {
   type TriggerProcessorResult,
 } from '@/lib/supabase/workflowTriggerProcessorService';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
+import { useAuth } from '@/contexts/AuthContext';
 import AccessDenied from '@/components/AccessDenied';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -51,8 +52,6 @@ function statusPill(status: JobStatus) {
   const map: Record<JobStatus, { bg: string; text: string; dot: string }> = {
     ACTIVE: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
     PAUSED: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
-    COMPLETED: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-    FAILED: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
   };
   const s = map[status];
   return (
@@ -198,12 +197,11 @@ function SummaryPanel({ summary, onClose }: { summary: JobRunSummary; onClose: (
 
         <div className="px-6 py-5 space-y-5">
           {/* KPI strip */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {[
               { label: 'Processed', value: summary.totalProcessed, color: 'text-slate-700', bg: 'bg-slate-50' },
               { label: 'Released', value: summary.released, color: 'text-green-700', bg: 'bg-green-50' },
               { label: 'Failed', value: summary.failed, color: 'text-red-700', bg: 'bg-red-50' },
-              { label: 'Skipped', value: summary.skipped, color: 'text-amber-700', bg: 'bg-amber-50' },
             ].map((k) => (
               <div key={k.label} className={`${k.bg} rounded-xl p-3 text-center`}>
                 <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
@@ -286,7 +284,6 @@ interface JobFormState {
   runTime: string;
   dayOfWeek: DayOfWeek;
   registryFilter: string[];
-  minDaysSinceClosure: number;
   requireDischargeNumber: boolean;
 }
 
@@ -297,7 +294,6 @@ const DEFAULT_FORM: JobFormState = {
   runTime: '06:00',
   dayOfWeek: 'MON',
   registryFilter: ['BRELA'],
-  minDaysSinceClosure: 3,
   requireDischargeNumber: true,
 };
 
@@ -315,7 +311,6 @@ function JobFormModal({ initial, onSave, onClose }: {
           runTime: initial.runTime,
           dayOfWeek: initial.dayOfWeek ?? 'MON',
           registryFilter: initial.registryFilter,
-          minDaysSinceClosure: initial.minDaysSinceClosure,
           requireDischargeNumber: initial.requireDischargeNumber,
         }
       : DEFAULT_FORM
@@ -432,29 +427,11 @@ function JobFormModal({ initial, onSave, onClose }: {
             </div>
           </div>
 
-          {/* Min days since closure */}
-          <div>
-            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
-              Minimum Days Since Loan Closure
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={90}
-              value={form.minDaysSinceClosure}
-              onChange={(e) => setForm((p) => ({ ...p, minDaysSinceClosure: parseInt(e.target.value) || 1 }))}
-              className="w-full border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            {form.minDaysSinceClosure < 3 && (
-              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Under 3 days — verify compliance policy</p>
-            )}
-          </div>
-
           {/* Require discharge number */}
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-border">
             <div>
               <p className="text-sm font-medium text-foreground">Require Discharge Number</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Only release items that have a discharge number on file</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Only release items the registry has already confirmed discharged. Turning this off releases items with no registry confirmation on file — not recommended.</p>
             </div>
             <button
               type="button"
@@ -495,6 +472,7 @@ function JobCard({
   onEdit,
   onDelete,
   onViewSummary,
+  validating,
 }: {
   job: ScheduledJob;
   onToggle: () => void;
@@ -502,6 +480,7 @@ function JobCard({
   onEdit: () => void;
   onDelete: () => void;
   onViewSummary: (s: JobRunSummary) => void;
+  validating: boolean;
 }) {
   const successRate = job.totalRuns > 0 ? Math.round((job.successRuns / job.totalRuns) * 100) : null;
 
@@ -553,7 +532,7 @@ function JobCard({
             <CheckCircle2 className="w-3.5 h-3.5" /> {successRate}% success
           </span>
         )}
-        <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5" /> {job.minDaysSinceClosure}d closure window</span>
+        <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5" /> {job.requireDischargeNumber ? 'Discharge required' : 'No discharge check'}</span>
       </div>
 
       {/* Last summary quick view */}
@@ -576,9 +555,10 @@ function JobCard({
       <div className="flex gap-2">
         <button
           onClick={onRunNow}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
+          disabled={validating}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 disabled:opacity-60 transition-colors"
         >
-          <Play className="w-3.5 h-3.5" /> Run Now
+          {validating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Run Now
         </button>
         <button
           onClick={onToggle}
@@ -846,15 +826,29 @@ function TriggerProcessorPanel() {
 
 export default function ScheduledJobsContent() {
   const { hasPermission, loading: permsLoading } = usePermissions();
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingJob, setEditingJob] = useState<ScheduledJob | undefined>();
   const [validationResult, setValidationResult] = useState<{ result: ValidationResult; job: ScheduledJob } | null>(null);
+  const [validating, setValidating] = useState<string | null>(null);
   const [runningJobId, setRunningJobId] = useState<string | null>(null);
   const [activeSummary, setActiveSummary] = useState<JobRunSummary | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const reload = useCallback(() => setJobs(scheduledJobService.getAll()), []);
+  const reload = useCallback(async () => {
+    setJobsError(null);
+    try {
+      const data = await scheduledJobService.getAll();
+      setJobs(data);
+    } catch (err: any) {
+      setJobsError(err.message ?? 'Failed to load scheduled jobs.');
+    } finally {
+      setJobsLoading(false);
+    }
+  }, []);
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -876,25 +870,43 @@ export default function ScheduledJobsContent() {
   const totalSuccess = jobs.reduce((s, j) => s + j.successRuns, 0);
   const overallRate = totalRuns > 0 ? Math.round((totalSuccess / totalRuns) * 100) : 0;
 
-  function handleSaveForm(form: JobFormState) {
-    if (editingJob) {
-      scheduledJobService.update(editingJob.id, { ...form });
-    } else {
-      scheduledJobService.create({ ...form, status: 'ACTIVE' });
+  async function handleSaveForm(form: JobFormState) {
+    setJobsError(null);
+    try {
+      if (editingJob) {
+        await scheduledJobService.update(editingJob.id, { ...form });
+      } else {
+        await scheduledJobService.create({ ...form, createdBy: user?.id });
+      }
+      await reload();
+      setShowForm(false);
+      setEditingJob(undefined);
+    } catch (err: any) {
+      setJobsError(err.message ?? 'Failed to save the schedule.');
     }
-    reload();
-    setShowForm(false);
-    setEditingJob(undefined);
   }
 
-  function handleToggle(job: ScheduledJob) {
-    scheduledJobService.update(job.id, { status: job.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' });
-    reload();
+  async function handleToggle(job: ScheduledJob) {
+    setJobsError(null);
+    try {
+      await scheduledJobService.update(job.id, { status: job.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' });
+      await reload();
+    } catch (err: any) {
+      setJobsError(err.message ?? 'Failed to update the schedule.');
+    }
   }
 
-  function handleRunNow(job: ScheduledJob) {
-    const result = runPreExecutionValidation(job);
-    setValidationResult({ result, job });
+  async function handleRunNow(job: ScheduledJob) {
+    setValidating(job.id);
+    setJobsError(null);
+    try {
+      const result = await runPreExecutionValidation(job);
+      setValidationResult({ result, job });
+    } catch (err: any) {
+      setJobsError(err.message ?? 'Failed to validate the schedule.');
+    } finally {
+      setValidating(null);
+    }
   }
 
   async function handleProceedRun() {
@@ -902,19 +914,27 @@ export default function ScheduledJobsContent() {
     const { job } = validationResult;
     setRunningJobId(job.id);
     try {
-      const summary = await scheduledJobService.simulateRun(job);
-      reload();
+      const summary = await scheduledJobService.runNow(job, user?.id ?? null);
+      await reload();
       setValidationResult(null);
       setActiveSummary(summary);
+    } catch (err: any) {
+      setJobsError(err.message ?? 'Failed to run the schedule.');
     } finally {
       setRunningJobId(null);
     }
   }
 
-  function handleDelete(id: string) {
-    scheduledJobService.delete(id);
-    reload();
-    setDeleteConfirm(null);
+  async function handleDelete(id: string) {
+    setJobsError(null);
+    try {
+      await scheduledJobService.delete(id);
+      await reload();
+    } catch (err: any) {
+      setJobsError(err.message ?? 'Failed to delete the schedule.');
+    } finally {
+      setDeleteConfirm(null);
+    }
   }
 
   return (
@@ -926,7 +946,7 @@ export default function ScheduledJobsContent() {
             <CalendarClock className="w-5 h-5 text-primary" /> Scheduled Batch Release Jobs
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Configure automated daily/weekly schedules for batch collateral releases with pre-execution validation
+            Configure automated daily/weekly schedules that release collateral once its registry charge is already confirmed discharged
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -941,6 +961,12 @@ export default function ScheduledJobsContent() {
           </button>
         </div>
       </div>
+
+      {jobsError && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+          <AlertTriangle className="w-4 h-4 shrink-0" /> {jobsError}
+        </div>
+      )}
 
       {/* ── Workflow Trigger Processor ── */}
       <TriggerProcessorPanel />
@@ -964,7 +990,11 @@ export default function ScheduledJobsContent() {
       </div>
 
       {/* Jobs grid */}
-      {jobs.length === 0 ? (
+      {jobsLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <div key={i} className="h-56 bg-slate-100 rounded-2xl animate-pulse" />)}
+        </div>
+      ) : jobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
             <CalendarClock className="w-7 h-7 text-slate-400" />
@@ -989,6 +1019,7 @@ export default function ScheduledJobsContent() {
               onEdit={() => { setEditingJob(job); setShowForm(true); }}
               onDelete={() => setDeleteConfirm(job.id)}
               onViewSummary={(s) => setActiveSummary(s)}
+              validating={validating === job.id}
             />
           ))}
         </div>

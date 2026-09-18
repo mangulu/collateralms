@@ -1,11 +1,21 @@
 'use client';
 
+import { createClient } from '@/lib/supabase/client';
+import { collateralLinkService } from '@/lib/supabase/collateralLinkService';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type ScheduleFrequency = 'DAILY' | 'WEEKLY';
-export type JobStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'FAILED';
-export type RunStatus = 'RUNNING' | 'SUCCESS' | 'FAILED' | 'PARTIAL';
+export type JobStatus = 'ACTIVE' | 'PAUSED';
+export type RunStatus = 'SUCCESS' | 'FAILED' | 'PARTIAL';
 export type DayOfWeek = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
+
+export interface ValidationCheck {
+  id: string;
+  label: string;
+  status: 'PASS' | 'FAIL' | 'WARN';
+  detail: string;
+}
 
 export interface ValidationResult {
   passed: boolean;
@@ -16,11 +26,14 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-export interface ValidationCheck {
-  id: string;
-  label: string;
-  status: 'PASS' | 'FAIL' | 'WARN';
-  detail: string;
+export interface ReleasedItem {
+  loanAccountId: string;
+  beneficiaryName: string;
+  collateralId: string;
+  allocatedAmount: number;
+  registry: string;
+  status: 'RELEASED' | 'FAILED';
+  reason?: string;
 }
 
 export interface JobRunSummary {
@@ -31,21 +44,10 @@ export interface JobRunSummary {
   totalProcessed: number;
   released: number;
   failed: number;
-  skipped: number;
   equityReleased: number;
   durationSeconds: number;
   errors: string[];
   releasedItems: ReleasedItem[];
-}
-
-export interface ReleasedItem {
-  loanAccountId: string;
-  beneficiaryName: string;
-  collateralId: string;
-  allocatedAmount: number;
-  registry: string;
-  status: 'RELEASED' | 'FAILED' | 'SKIPPED';
-  reason?: string;
 }
 
 export interface ScheduledJob {
@@ -54,10 +56,9 @@ export interface ScheduledJob {
   description: string;
   frequency: ScheduleFrequency;
   runTime: string; // HH:MM
-  dayOfWeek?: DayOfWeek; // only for WEEKLY
+  dayOfWeek: DayOfWeek | null; // only for WEEKLY
   status: JobStatus;
-  registryFilter: string[]; // ['BRELA','LANDS','TRA','ALL']
-  minDaysSinceClosure: number;
+  registryFilter: string[];
   requireDischargeNumber: boolean;
   createdAt: string;
   lastRunAt: string | null;
@@ -67,9 +68,20 @@ export interface ScheduledJob {
   lastSummary?: JobRunSummary;
 }
 
+interface EligibleItem {
+  linkId: string;
+  loanAccountId: string;
+  beneficiaryName: string;
+  collateralId: string;
+  collateralRecordId: string;
+  allocatedAmount: number;
+  registry: string;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function nextRunDate(freq: ScheduleFrequency, runTime: string, dayOfWeek?: DayOfWeek): string {
+/** Next occurrence purely for display -- there's no server-side scheduler that reads this; the actual cron job (see supabase/migrations) runs on a fixed daily check and evaluates every active job's frequency/day itself. */
+export function nextRunDate(freq: ScheduleFrequency, runTime: string, dayOfWeek?: DayOfWeek | null): string {
   const now = new Date();
   const [h, m] = runTime.split(':').map(Number);
   const candidate = new Date(now);
@@ -80,7 +92,6 @@ function nextRunDate(freq: ScheduleFrequency, runTime: string, dayOfWeek?: DayOf
     return candidate.toISOString();
   }
 
-  // WEEKLY
   const dayMap: Record<DayOfWeek, number> = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 };
   const targetDay = dayMap[dayOfWeek ?? 'MON'];
   const currentDay = now.getDay();
@@ -90,143 +101,113 @@ function nextRunDate(freq: ScheduleFrequency, runTime: string, dayOfWeek?: DayOf
   return candidate.toISOString();
 }
 
-// ─── Mock persistent store (in-memory for client-side) ───────────────────────
+function rowToJob(row: any, lastSummary?: JobRunSummary): ScheduledJob {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? '',
+    frequency: row.frequency,
+    runTime: row.run_time,
+    dayOfWeek: row.day_of_week ?? null,
+    status: row.status,
+    registryFilter: row.registry_filter ?? [],
+    requireDischargeNumber: row.require_discharge_number,
+    createdAt: row.created_at,
+    lastRunAt: row.last_run_at,
+    nextRunAt: row.status === 'ACTIVE' ? nextRunDate(row.frequency, row.run_time, row.day_of_week) : null,
+    totalRuns: row.total_runs,
+    successRuns: row.success_runs,
+    lastSummary,
+  };
+}
 
-const STORAGE_KEY = 'cms_scheduled_jobs';
+function rowToSummary(row: any): JobRunSummary {
+  return {
+    id: row.id,
+    jobId: row.job_id,
+    runAt: row.run_at,
+    status: row.status,
+    totalProcessed: row.total_processed,
+    released: row.released,
+    failed: row.failed,
+    equityReleased: (row.released_items ?? []).reduce((s: number, i: ReleasedItem) => s + (i.status === 'RELEASED' ? i.allocatedAmount : 0), 0),
+    durationSeconds: row.duration_seconds,
+    errors: row.errors ?? [],
+    releasedItems: row.released_items ?? [],
+  };
+}
 
-function loadJobs(): ScheduledJob[] {
-  if (typeof window === 'undefined') return getDefaultJobs();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as ScheduledJob[];
-  } catch {
-    // ignore
+/**
+ * Real eligibility: an ACTIVE collateral_loan_links row whose matching
+ * charge_registry entry (same collateral + loan + charge rank) is in one of
+ * the target registries. There's no reliable "days since loan closure"
+ * signal in this schema -- collateral_loan_links.end_date is only ever set
+ * BY the release itself -- so the only safe automated criterion is whether
+ * the registry has already confirmed the charge discharged.
+ */
+async function getEligibleItems(
+  registryFilter: string[],
+  requireDischargeNumber: boolean
+): Promise<{ eligible: EligibleItem[]; totalCandidates: number }> {
+  const supabase = createClient();
+
+  const { data: links, error: linksErr } = await supabase
+    .from('collateral_loan_links')
+    .select('id, collateral_id, loan_account_id, beneficiary_name, allocated_amount, charge_rank')
+    .eq('status', 'ACTIVE');
+  if (linksErr) throw linksErr;
+  if (!links || links.length === 0) return { eligible: [], totalCandidates: 0 };
+
+  const { data: charges, error: chargesErr } = await supabase
+    .from('charge_registry')
+    .select('collateral_id, loan_account_id, charge_rank, registry_name, discharge_number, status')
+    .in('registry_name', registryFilter.length > 0 ? registryFilter : ['__none__']);
+  if (chargesErr) throw chargesErr;
+
+  const chargeMap = new Map<string, { registryName: string; dischargeNumber: string | null; status: string }>();
+  (charges ?? []).forEach((c: any) => {
+    chargeMap.set(`${c.collateral_id}:${c.loan_account_id}:${c.charge_rank}`, {
+      registryName: c.registry_name,
+      dischargeNumber: c.discharge_number,
+      status: c.status,
+    });
+  });
+
+  const collateralIds = [...new Set(links.map((l: any) => l.collateral_id))];
+  const { data: collaterals } = await supabase
+    .from('collateral_records')
+    .select('id, collateral_id')
+    .in('id', collateralIds.length > 0 ? collateralIds : ['00000000-0000-0000-0000-000000000000']);
+  const colMap = new Map((collaterals ?? []).map((c: any) => [c.id, c.collateral_id]));
+
+  let totalCandidates = 0;
+  const eligible: EligibleItem[] = [];
+  for (const link of links) {
+    const charge = chargeMap.get(`${link.collateral_id}:${link.loan_account_id}:${link.charge_rank}`);
+    if (!charge) continue; // not tracked against any of the target registries
+    totalCandidates++;
+    if (requireDischargeNumber && (!charge.dischargeNumber || charge.status !== 'DISCHARGED')) continue;
+
+    eligible.push({
+      linkId: link.id,
+      loanAccountId: link.loan_account_id,
+      beneficiaryName: link.beneficiary_name ?? 'Unknown',
+      collateralId: colMap.get(link.collateral_id) ?? link.collateral_id,
+      collateralRecordId: link.collateral_id,
+      allocatedAmount: parseFloat(link.allocated_amount) || 0,
+      registry: charge.registryName,
+    });
   }
-  const defaults = getDefaultJobs();
-  saveJobs(defaults);
-  return defaults;
+
+  return { eligible, totalCandidates };
 }
 
-function saveJobs(jobs: ScheduledJob[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
-  } catch {
-    // ignore
-  }
-}
+// ─── Validation ───────────────────────────────────────────────────────────────
 
-function getDefaultJobs(): ScheduledJob[] {
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  return [
-    {
-      id: 'job-001',
-      name: 'Daily BRELA Batch Release',
-      description: 'Automatically releases BRELA-registered collateral for loans closed at least 3 days ago',
-      frequency: 'DAILY',
-      runTime: '06:00',
-      status: 'ACTIVE',
-      registryFilter: ['BRELA'],
-      minDaysSinceClosure: 3,
-      requireDischargeNumber: true,
-      createdAt: new Date(now.getTime() - 7 * 86400000).toISOString(),
-      lastRunAt: yesterday.toISOString(),
-      nextRunAt: nextRunDate('DAILY', '06:00'),
-      totalRuns: 7,
-      successRuns: 6,
-      lastSummary: {
-        id: 'run-001-7',
-        jobId: 'job-001',
-        runAt: yesterday.toISOString(),
-        status: 'SUCCESS',
-        totalProcessed: 4,
-        released: 4,
-        failed: 0,
-        skipped: 0,
-        equityReleased: 320000000,
-        durationSeconds: 12,
-        errors: [],
-        releasedItems: [
-          { loanAccountId: 'LN-2024-0041', beneficiaryName: 'Tanzanian Steel Industries Ltd', collateralId: 'COL-BRE-001', allocatedAmount: 120000000, registry: 'BRELA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0055', beneficiaryName: 'Kilimanjaro Coffee Exporters', collateralId: 'COL-BRE-002', allocatedAmount: 85000000, registry: 'BRELA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0062', beneficiaryName: 'Dar es Salaam Logistics Co.', collateralId: 'COL-BRE-003', allocatedAmount: 65000000, registry: 'BRELA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0071', beneficiaryName: 'Mwanza Fisheries Ltd', collateralId: 'COL-BRE-004', allocatedAmount: 50000000, registry: 'BRELA', status: 'RELEASED' },
-        ],
-      },
-    },
-    {
-      id: 'job-002',
-      name: 'Weekly Full Registry Sweep',
-      description: 'Weekly sweep across all registries — releases all eligible closed-loan collateral',
-      frequency: 'WEEKLY',
-      runTime: '02:00',
-      dayOfWeek: 'MON',
-      status: 'ACTIVE',
-      registryFilter: ['BRELA', 'LANDS', 'TRA'],
-      minDaysSinceClosure: 7,
-      requireDischargeNumber: false,
-      createdAt: new Date(now.getTime() - 30 * 86400000).toISOString(),
-      lastRunAt: new Date(now.getTime() - 7 * 86400000).toISOString(),
-      nextRunAt: nextRunDate('WEEKLY', '02:00', 'MON'),
-      totalRuns: 4,
-      successRuns: 3,
-      lastSummary: {
-        id: 'run-002-4',
-        jobId: 'job-002',
-        runAt: new Date(now.getTime() - 7 * 86400000).toISOString(),
-        status: 'PARTIAL',
-        totalProcessed: 11,
-        released: 9,
-        failed: 2,
-        skipped: 0,
-        equityReleased: 875000000,
-        durationSeconds: 38,
-        errors: ['LN-2024-0033: Discharge number missing', 'LN-2024-0047: Registry API timeout'],
-        releasedItems: [
-          { loanAccountId: 'LN-2024-0033', beneficiaryName: 'Arusha Agro Processors', collateralId: 'COL-LND-001', allocatedAmount: 200000000, registry: 'LANDS', status: 'FAILED', reason: 'Discharge number missing' },
-          { loanAccountId: 'LN-2024-0047', beneficiaryName: 'Tanga Port Services', collateralId: 'COL-TRA-001', allocatedAmount: 95000000, registry: 'TRA', status: 'FAILED', reason: 'Registry API timeout' },
-          { loanAccountId: 'LN-2024-0051', beneficiaryName: 'Morogoro Textile Mills', collateralId: 'COL-BRE-005', allocatedAmount: 110000000, registry: 'BRELA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0058', beneficiaryName: 'Dodoma Grain Traders', collateralId: 'COL-LND-002', allocatedAmount: 180000000, registry: 'LANDS', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0063', beneficiaryName: 'Zanzibar Spice Exports', collateralId: 'COL-BRE-006', allocatedAmount: 75000000, registry: 'BRELA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0068', beneficiaryName: 'Iringa Timber Co.', collateralId: 'COL-LND-003', allocatedAmount: 90000000, registry: 'LANDS', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0072', beneficiaryName: 'Mbeya Mining Supplies', collateralId: 'COL-TRA-002', allocatedAmount: 45000000, registry: 'TRA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0075', beneficiaryName: 'Lindi Cashew Processors', collateralId: 'COL-BRE-007', allocatedAmount: 60000000, registry: 'BRELA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0079', beneficiaryName: 'Tabora Tobacco Growers', collateralId: 'COL-LND-004', allocatedAmount: 55000000, registry: 'LANDS', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0082', beneficiaryName: 'Kigoma Lake Fisheries', collateralId: 'COL-TRA-003', allocatedAmount: 35000000, registry: 'TRA', status: 'RELEASED' },
-          { loanAccountId: 'LN-2024-0085', beneficiaryName: 'Singida Solar Energy Ltd', collateralId: 'COL-BRE-008', allocatedAmount: 25000000, registry: 'BRELA', status: 'RELEASED' },
-        ],
-      },
-    },
-    {
-      id: 'job-003',
-      name: 'Lands Registry Weekly Release',
-      description: 'Weekly release of Lands Registry mortgages for closed loans',
-      frequency: 'WEEKLY',
-      runTime: '08:00',
-      dayOfWeek: 'WED',
-      status: 'PAUSED',
-      registryFilter: ['LANDS'],
-      minDaysSinceClosure: 5,
-      requireDischargeNumber: true,
-      createdAt: new Date(now.getTime() - 14 * 86400000).toISOString(),
-      lastRunAt: null,
-      nextRunAt: null,
-      totalRuns: 0,
-      successRuns: 0,
-    },
-  ];
-}
-
-// ─── Validation logic ─────────────────────────────────────────────────────────
-
-export function runPreExecutionValidation(job: ScheduledJob): ValidationResult {
+export async function runPreExecutionValidation(job: ScheduledJob): Promise<ValidationResult> {
   const checks: ValidationCheck[] = [];
   const warnings: string[] = [];
 
-  // Check 1: Schedule configuration
   checks.push({
     id: 'schedule-config',
     label: 'Schedule Configuration',
@@ -234,7 +215,6 @@ export function runPreExecutionValidation(job: ScheduledJob): ValidationResult {
     detail: `${job.frequency} at ${job.runTime}${job.frequency === 'WEEKLY' ? ` on ${job.dayOfWeek}` : ''}`,
   });
 
-  // Check 2: Registry filter
   const registryOk = job.registryFilter.length > 0;
   checks.push({
     id: 'registry-filter',
@@ -243,151 +223,193 @@ export function runPreExecutionValidation(job: ScheduledJob): ValidationResult {
     detail: registryOk ? `Targeting: ${job.registryFilter.join(', ')}` : 'No registries selected',
   });
 
-  // Check 3: Closure window
-  const closureOk = job.minDaysSinceClosure >= 1;
-  checks.push({
-    id: 'closure-window',
-    label: 'Minimum Closure Window',
-    status: closureOk ? 'PASS' : 'WARN',
-    detail: closureOk ? `${job.minDaysSinceClosure} day(s) minimum since loan closure` : 'Closure window too short — risk of premature release',
-  });
-  if (job.minDaysSinceClosure < 3) warnings.push('Closure window under 3 days — verify compliance policy');
-
-  // Check 4: Discharge number requirement
   checks.push({
     id: 'discharge-req',
     label: 'Discharge Number Requirement',
     status: job.requireDischargeNumber ? 'PASS' : 'WARN',
-    detail: job.requireDischargeNumber ? 'Discharge number required before release' : 'Discharge number not required — items may release without registry confirmation',
+    detail: job.requireDischargeNumber
+      ? 'Only releases items the registry has already confirmed discharged'
+      : 'Discharge confirmation not required — this will release items with no registry confirmation on file',
   });
-  if (!job.requireDischargeNumber) warnings.push('Discharge number not enforced — ensure manual review is in place');
+  if (!job.requireDischargeNumber) warnings.push('Discharge confirmation not enforced — this can release collateral the registry never confirmed as discharged. Strongly recommended to keep this on.');
 
-  // Check 5: Simulate eligible items
-  const simulatedEligible = Math.floor(Math.random() * 8) + 2;
-  const simulatedTotal = simulatedEligible + Math.floor(Math.random() * 4);
-  const simulatedEquity = simulatedEligible * (Math.floor(Math.random() * 80) + 20) * 1000000;
-
-  checks.push({
-    id: 'eligible-items',
-    label: 'Eligible Items Found',
-    status: simulatedEligible > 0 ? 'PASS' : 'WARN',
-    detail: `${simulatedEligible} of ${simulatedTotal} candidates meet all release criteria`,
-  });
+  let eligibleCount = 0;
+  let totalCandidates = 0;
+  let estimatedEquityRelease = 0;
+  if (registryOk) {
+    try {
+      const result = await getEligibleItems(job.registryFilter, job.requireDischargeNumber);
+      eligibleCount = result.eligible.length;
+      totalCandidates = result.totalCandidates;
+      estimatedEquityRelease = result.eligible.reduce((s, i) => s + i.allocatedAmount, 0);
+      checks.push({
+        id: 'eligible-items',
+        label: 'Eligible Items Found',
+        status: eligibleCount > 0 ? 'PASS' : 'WARN',
+        detail: `${eligibleCount} of ${totalCandidates} candidate(s) tracked in these registries meet the release criteria`,
+      });
+    } catch (err: any) {
+      checks.push({ id: 'eligible-items', label: 'Eligible Items Found', status: 'FAIL', detail: `Failed to query eligible items: ${err.message}` });
+    }
+  }
 
   const allPassed = checks.every((c) => c.status !== 'FAIL');
 
-  return {
-    passed: allPassed,
-    checks,
-    eligibleCount: simulatedEligible,
-    totalCandidates: simulatedTotal,
-    estimatedEquityRelease: simulatedEquity,
-    warnings,
-  };
+  return { passed: allPassed, checks, eligibleCount, totalCandidates, estimatedEquityRelease, warnings };
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export const scheduledJobService = {
-  getAll(): ScheduledJob[] {
-    return loadJobs();
-  },
+  async getAll(): Promise<ScheduledJob[]> {
+    const supabase = createClient();
+    const { data: jobs, error } = await supabase
+      .from('scheduled_release_jobs')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (!jobs || jobs.length === 0) return [];
 
-  getById(id: string): ScheduledJob | undefined {
-    return loadJobs().find((j) => j.id === id);
-  },
+    const { data: runs } = await supabase
+      .from('scheduled_release_job_runs')
+      .select('*')
+      .in('job_id', jobs.map((j: any) => j.id))
+      .order('run_at', { ascending: false });
 
-  create(payload: Omit<ScheduledJob, 'id' | 'createdAt' | 'lastRunAt' | 'nextRunAt' | 'totalRuns' | 'successRuns'>): ScheduledJob {
-    const jobs = loadJobs();
-    const newJob: ScheduledJob = {
-      ...payload,
-      id: `job-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      lastRunAt: null,
-      nextRunAt: payload.status === 'ACTIVE' ? nextRunDate(payload.frequency, payload.runTime, payload.dayOfWeek) : null,
-      totalRuns: 0,
-      successRuns: 0,
-    };
-    jobs.push(newJob);
-    saveJobs(jobs);
-    return newJob;
-  },
-
-  update(id: string, updates: Partial<ScheduledJob>): ScheduledJob | null {
-    const jobs = loadJobs();
-    const idx = jobs.findIndex((j) => j.id === id);
-    if (idx === -1) return null;
-    const updated = { ...jobs[idx], ...updates };
-    if (updates.status === 'ACTIVE' && jobs[idx].status !== 'ACTIVE') {
-      updated.nextRunAt = nextRunDate(updated.frequency, updated.runTime, updated.dayOfWeek);
-    }
-    if (updates.status === 'PAUSED') updated.nextRunAt = null;
-    jobs[idx] = updated;
-    saveJobs(jobs);
-    return updated;
-  },
-
-  delete(id: string): boolean {
-    const jobs = loadJobs();
-    const filtered = jobs.filter((j) => j.id !== id);
-    if (filtered.length === jobs.length) return false;
-    saveJobs(filtered);
-    return true;
-  },
-
-  async simulateRun(job: ScheduledJob): Promise<JobRunSummary> {
-    // Simulate async execution with a short delay
-    await new Promise((r) => setTimeout(r, 1800));
-
-    const validation = runPreExecutionValidation(job);
-    const eligible = validation.eligibleCount;
-    const failed = Math.random() > 0.7 ? Math.floor(Math.random() * 2) + 1 : 0;
-    const released = eligible - failed;
-    const equityReleased = released * (Math.floor(Math.random() * 60) + 30) * 1000000;
-
-    const registries = job.registryFilter.includes('ALL') ? ['BRELA', 'LANDS', 'TRA'] : job.registryFilter;
-
-    const items: ReleasedItem[] = Array.from({ length: eligible }, (_, i) => {
-      const reg = registries[i % registries.length];
-      const isFailed = i < failed;
-      return {
-        loanAccountId: `LN-2024-${String(Math.floor(Math.random() * 900) + 100).padStart(4, '0')}`,
-        beneficiaryName: ['Tanzanian Steel Industries Ltd', 'Kilimanjaro Coffee Exporters', 'Dar es Salaam Logistics Co.', 'Arusha Agro Processors', 'Mwanza Fisheries Ltd'][i % 5],
-        collateralId: `COL-${reg}-${String(i + 1).padStart(3, '0')}`,
-        allocatedAmount: (Math.floor(Math.random() * 150) + 20) * 1000000,
-        registry: reg,
-        status: isFailed ? 'FAILED' : 'RELEASED',
-        reason: isFailed ? ['Discharge number missing', 'Registry API timeout', 'Duplicate release attempt'][i % 3] : undefined,
-      };
+    const lastRunByJob = new Map<string, any>();
+    (runs ?? []).forEach((r: any) => {
+      if (!lastRunByJob.has(r.job_id)) lastRunByJob.set(r.job_id, r);
     });
 
-    const summary: JobRunSummary = {
-      id: `run-${job.id}-${Date.now()}`,
-      jobId: job.id,
-      runAt: new Date().toISOString(),
-      status: failed === 0 ? 'SUCCESS' : failed === eligible ? 'FAILED' : 'PARTIAL',
-      totalProcessed: eligible,
-      released,
-      failed,
-      skipped: 0,
-      equityReleased,
-      durationSeconds: Math.floor(Math.random() * 40) + 8,
-      errors: items.filter((i) => i.status === 'FAILED').map((i) => `${i.loanAccountId}: ${i.reason}`),
-      releasedItems: items,
-    };
+    return jobs.map((j: any) => {
+      const lastRun = lastRunByJob.get(j.id);
+      return rowToJob(j, lastRun ? rowToSummary(lastRun) : undefined);
+    });
+  },
 
-    // Persist updated job
-    const jobs = loadJobs();
-    const idx = jobs.findIndex((j) => j.id === job.id);
-    if (idx !== -1) {
-      jobs[idx].lastRunAt = summary.runAt;
-      jobs[idx].totalRuns += 1;
-      if (summary.status === 'SUCCESS') jobs[idx].successRuns += 1;
-      jobs[idx].nextRunAt = nextRunDate(job.frequency, job.runTime, job.dayOfWeek);
-      jobs[idx].lastSummary = summary;
-      saveJobs(jobs);
+  async create(payload: {
+    name: string;
+    description: string;
+    frequency: ScheduleFrequency;
+    runTime: string;
+    dayOfWeek: DayOfWeek | null;
+    registryFilter: string[];
+    requireDischargeNumber: boolean;
+    createdBy?: string;
+  }): Promise<ScheduledJob> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('scheduled_release_jobs')
+      .insert({
+        name: payload.name,
+        description: payload.description,
+        frequency: payload.frequency,
+        run_time: payload.runTime,
+        day_of_week: payload.frequency === 'WEEKLY' ? payload.dayOfWeek : null,
+        status: 'ACTIVE',
+        registry_filter: payload.registryFilter,
+        require_discharge_number: payload.requireDischargeNumber,
+        created_by: payload.createdBy ?? null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return rowToJob(data);
+  },
+
+  async update(id: string, updates: Partial<{
+    name: string;
+    description: string;
+    frequency: ScheduleFrequency;
+    runTime: string;
+    dayOfWeek: DayOfWeek | null;
+    status: JobStatus;
+    registryFilter: string[];
+    requireDischargeNumber: boolean;
+  }>): Promise<ScheduledJob> {
+    const supabase = createClient();
+    const row: any = {};
+    if (updates.name !== undefined) row.name = updates.name;
+    if (updates.description !== undefined) row.description = updates.description;
+    if (updates.frequency !== undefined) row.frequency = updates.frequency;
+    if (updates.runTime !== undefined) row.run_time = updates.runTime;
+    if (updates.dayOfWeek !== undefined) row.day_of_week = updates.dayOfWeek;
+    if (updates.status !== undefined) row.status = updates.status;
+    if (updates.registryFilter !== undefined) row.registry_filter = updates.registryFilter;
+    if (updates.requireDischargeNumber !== undefined) row.require_discharge_number = updates.requireDischargeNumber;
+    row.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('scheduled_release_jobs')
+      .update(row)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return rowToJob(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('scheduled_release_jobs').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  /** Runs a job right now, on behalf of the given user, and records the outcome. */
+  async runNow(job: ScheduledJob, userId: string | null): Promise<JobRunSummary> {
+    const start = Date.now();
+    const supabase = createClient();
+    const { eligible } = await getEligibleItems(job.registryFilter, job.requireDischargeNumber);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const items: ReleasedItem[] = [];
+    let released = 0;
+    let failed = 0;
+
+    for (const item of eligible) {
+      const result = await collateralLinkService.releaseLink(item.linkId, {
+        releaseReason: 'LOAN_FULLY_REPAID',
+        releaseDate: today,
+      });
+      if (result.success) {
+        released++;
+        items.push({ loanAccountId: item.loanAccountId, beneficiaryName: item.beneficiaryName, collateralId: item.collateralId, allocatedAmount: item.allocatedAmount, registry: item.registry, status: 'RELEASED' });
+      } else {
+        failed++;
+        items.push({ loanAccountId: item.loanAccountId, beneficiaryName: item.beneficiaryName, collateralId: item.collateralId, allocatedAmount: item.allocatedAmount, registry: item.registry, status: 'FAILED', reason: result.error });
+      }
     }
 
-    return summary;
+    const status: RunStatus = failed === 0 ? (released > 0 ? 'SUCCESS' : 'SUCCESS') : released === 0 ? 'FAILED' : 'PARTIAL';
+    const durationSeconds = Math.round((Date.now() - start) / 1000);
+
+    const { data: runRow, error: runErr } = await supabase
+      .from('scheduled_release_job_runs')
+      .insert({
+        job_id: job.id,
+        status,
+        total_processed: eligible.length,
+        released,
+        failed,
+        duration_seconds: durationSeconds,
+        errors: items.filter((i) => i.status === 'FAILED').map((i) => `${i.loanAccountId}: ${i.reason}`),
+        released_items: items,
+        triggered_by: userId,
+      })
+      .select()
+      .single();
+    if (runErr) throw runErr;
+
+    const { error: updateErr } = await supabase
+      .from('scheduled_release_jobs')
+      .update({
+        last_run_at: runRow.run_at,
+        total_runs: job.totalRuns + 1,
+        success_runs: status === 'SUCCESS' ? job.successRuns + 1 : job.successRuns,
+      })
+      .eq('id', job.id);
+    if (updateErr) console.error('scheduledJobService.runNow: failed to update job stats:', updateErr);
+
+    return rowToSummary(runRow);
   },
 };
