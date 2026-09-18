@@ -161,7 +161,8 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
     { label: 'Archive — Vault Management', href: '/archive/vault-management', icon: Building2, why: 'Manage physical vault locations and document placements.' },
     { label: 'Archive — Custody', href: '/archive/custody', icon: Eye, why: 'Track the physical custody status of every original document.' },
     { label: 'Archive — Access Requests', href: '/archive/access-requests', icon: ClipboardCheck, why: 'Handle requests to retrieve or loan out archived documents.' },
-    { label: 'AI Risk & Fraud', href: '/ai-risk-fraud', icon: ShieldAlert, why: 'Review AI fraud and risk flags on collateral submissions before approving. Both fraud prevention and risk assessment are available as tabs on this page.' },
+    { label: 'AI Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert, why: 'Review AI fraud flags on collateral submissions before approving.' },
+    { label: 'AI Risk Assessment', href: '/risk-assessment', icon: ShieldAlert, why: 'Review the AI risk score and analysis for a collateral submission before approving.' },
     { label: 'Obligors', href: '/obligors', icon: Users, why: 'Review borrower risk profiles when assessing perfection submissions.' },
     { label: 'My Tasks', href: '/my-tasks', icon: CheckSquare, why: 'Tasks assigned to you across all workflows.' },
   ],
@@ -172,7 +173,8 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
       steps: [
         { action: 'Open the Approval Inbox and locate the pending perfection item', where: 'Approval Inbox', href: '/approval-inbox' },
         { action: 'Open the submission in the Perfection Workflow drawer', where: 'Perfection Workflow', href: '/perfection-workflow' },
-        { action: 'Review all attached documents and check AI fraud and risk flags', where: 'AI Risk & Fraud', href: '/ai-risk-fraud' },
+        { action: 'Review all attached documents and check the AI fraud flags', where: 'AI Fraud Prevention', href: '/fraud-prevention' },
+        { action: 'Check the AI risk assessment for the submission', where: 'AI Risk Assessment', href: '/risk-assessment' },
         { action: 'Check the obligor risk profile for any red flags', where: 'Obligors', href: '/obligors' },
         { action: 'Approve, return with notes, or escalate to your manager', where: 'Perfection Workflow', href: '/perfection-workflow' },
       ],
@@ -231,7 +233,7 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
     },
   ],
   tips: [
-    { type: 'tip', text: 'The AI Risk & Fraud page combines both fraud prevention and risk assessment in two tabs — check both before approving any perfection submission.' },
+    { type: 'tip', text: 'Check both AI Fraud Prevention and AI Risk Assessment before approving any perfection submission.' },
     { type: 'warning', text: 'Perfection submissions older than 5 business days without action are automatically escalated to your manager.' },
     { type: 'tip', text: 'Use the countdown badge in the workflow drawer to prioritise items closest to their SLA deadline.' },
     { type: 'info', text: 'Covenant breaches must be escalated within 24 hours per regulatory requirements. The system logs the timestamp of your action.' },
@@ -260,7 +262,8 @@ export const MANAGER_GUIDE: RoleGuide = {
     { label: 'Release Approvals', href: '/release-approval', icon: Unlock, why: 'Final authorisation for collateral releases escalated from Legal Officers.' },
     { label: 'Registry Submissions', href: '/workflows/registry-submissions', icon: BookText, why: 'Monitor all registry filing submissions and their current status.' },
     { label: 'Cohort Analytics', href: '/cohort-analytics', icon: LineChart, why: 'Segment and compare collateral cohorts for portfolio analysis. Includes Portfolio Heatmap as a second tab.' },
-    { label: 'Analytics & Intelligence', href: '/ai-risk-fraud', icon: ShieldAlert, why: 'AI-powered risk and fraud analysis — both dimensions combined in a single tabbed view.' },
+    { label: 'AI Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert, why: 'AI-powered fraud detection on collateral submissions.' },
+    { label: 'AI Risk Assessment', href: '/risk-assessment', icon: ShieldAlert, why: 'AI-powered risk scoring and analysis for collateral records.' },
     { label: 'Reports Hub', href: '/reports', icon: BarChart, why: 'Regulatory, utilisation, and collateral reports for board and regulator submissions.' },
     { label: 'Custom Reports', href: '/custom-reports', icon: ScrollText, why: 'Build and save custom report templates with your own filters.' },
     { label: 'Compliance Audit', href: '/compliance-audit', icon: ShieldCheck, why: 'Run compliance audits against active rules and review findings.' },
@@ -342,7 +345,6 @@ export const MANAGER_GUIDE: RoleGuide = {
     { type: 'tip', text: 'The Cohort Analytics page now includes a Portfolio Heatmap tab — switch between cohort analysis and geographic concentration in one place.' },
     { type: 'info', text: 'Regulatory reports must be generated from the Reports Hub, not exported from individual screens — only the hub applies the correct regulatory formatting.' },
     { type: 'tip', text: 'The Deadline Predictions screen uses AI to surface assets likely to breach their perfection deadline in the next 30 days — review it weekly.' },
-    { type: 'info', text: 'The Analytics & Intelligence module (formerly "Intelligence") now combines AI Risk Assessment and AI Fraud Prevention in a single tabbed page at /ai-risk-fraud.' },
   ],
 };
 

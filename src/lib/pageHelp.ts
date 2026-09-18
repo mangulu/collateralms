@@ -131,18 +131,9 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Click Refresh to rescore against the latest collateral data',
     ],
   },
-  '/ai-risk-fraud': {
-    title: 'AI Risk & Fraud',
-    narrative: 'AI Risk & Fraud combines two AI-driven tools in one place: Fraud Prevention, which detects suspicious submission patterns and tracks fraud alerts through to resolution, and Risk Assessment, which runs a full AI risk analysis on any collateral record. Both are also reachable as their own standalone pages (via alert links, SMS, and other pages) — this page just tabs between them.',
-    steps: [
-      'Use the tab bar to switch between AI Fraud Prevention and AI Risk Assessment — see each one\'s own help for details',
-      'Fraud Prevention: click "Run AI Analysis" to screen a submission, then Mark False Positive or Escalate for Investigation on any resulting alert',
-      'Risk Assessment: pick a live collateral record or enter details manually, then click Run Assessment for a scored, multi-dimension AI risk analysis',
-    ],
-  },
   '/fraud-prevention': {
     title: 'AI Fraud Prevention',
-    narrative: "AI Fraud Prevention screens collateral submissions for suspicious patterns — duplicate titles, identity mismatches, valuation anomalies, and more — and tracks every resulting alert through to a resolution (false positive, escalated, or resolved). It's also reachable as the Fraud tab inside AI Risk & Fraud.",
+    narrative: "AI Fraud Prevention screens collateral submissions for suspicious patterns — duplicate titles, identity mismatches, valuation anomalies, and more — and tracks every resulting alert through to a resolution (false positive, escalated, or resolved).",
     steps: [
       'Click "Run AI Analysis" and fill in the submission details to screen it before it\'s accepted',
       'Review flagged alerts in the list below — expand one for the full detail behind the flag',
@@ -152,7 +143,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
   },
   '/risk-assessment': {
     title: 'AI Risk Assessment',
-    narrative: "AI Risk Assessment runs a full AI-driven risk analysis on a collateral record — legal, financial, and operational dimensions, an overall score and level, and a plain-language narrative for each — using either a live record from the registry or details you enter manually. It's also reachable as the Risk tab inside AI Risk & Fraud.",
+    narrative: "AI Risk Assessment runs a full AI-driven risk analysis on a collateral record — legal, financial, and operational dimensions, an overall score and level, and a plain-language narrative for each — using either a live record from the registry or details you enter manually.",
     steps: [
       'Select an existing collateral record from the dropdown, or switch to manual entry and fill in the details yourself',
       'Click "Run Assessment" to get an overall risk score/level plus a breakdown across each risk dimension',
