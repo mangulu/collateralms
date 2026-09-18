@@ -149,38 +149,42 @@ export const notificationsService = {
 
   async markRead(userId: string, sourceKey: string): Promise<void> {
     const supabase = createClient();
-    await supabase.from('notification_states').upsert(
+    const { error } = await supabase.from('notification_states').upsert(
       { user_id: userId, source_key: sourceKey, is_read: true, read_at: new Date().toISOString() },
       { onConflict: 'user_id,source_key' }
     );
+    if (error) console.error('notificationsService.markRead failed:', error);
   },
 
   async markManyRead(userId: string, sourceKeys: string[]): Promise<void> {
     if (sourceKeys.length === 0) return;
     const supabase = createClient();
     const now = new Date().toISOString();
-    await supabase.from('notification_states').upsert(
+    const { error } = await supabase.from('notification_states').upsert(
       sourceKeys.map((sourceKey) => ({ user_id: userId, source_key: sourceKey, is_read: true, read_at: now })),
       { onConflict: 'user_id,source_key' }
     );
+    if (error) console.error('notificationsService.markManyRead failed:', error);
   },
 
   async dismiss(userId: string, sourceKey: string): Promise<void> {
     const supabase = createClient();
     const now = new Date().toISOString();
-    await supabase.from('notification_states').upsert(
+    const { error } = await supabase.from('notification_states').upsert(
       { user_id: userId, source_key: sourceKey, is_read: true, read_at: now, is_dismissed: true, dismissed_at: now },
       { onConflict: 'user_id,source_key' }
     );
+    if (error) console.error('notificationsService.dismiss failed:', error);
   },
 
   async dismissMany(userId: string, sourceKeys: string[]): Promise<void> {
     if (sourceKeys.length === 0) return;
     const supabase = createClient();
     const now = new Date().toISOString();
-    await supabase.from('notification_states').upsert(
+    const { error } = await supabase.from('notification_states').upsert(
       sourceKeys.map((sourceKey) => ({ user_id: userId, source_key: sourceKey, is_read: true, read_at: now, is_dismissed: true, dismissed_at: now })),
       { onConflict: 'user_id,source_key' }
     );
+    if (error) console.error('notificationsService.dismissMany failed:', error);
   },
 };
