@@ -55,7 +55,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Use the type tabs, the read/unread filter, or search to find specific alerts',
       'Click an alert row to expand it and read the full message',
       'Use the eye icon to mark a single alert read/unread, or select several and use the bulk "Mark Read"/"Mark Unread" buttons',
-      'Delete an alert once you\'re done with it — select multiple and use the bulk Delete button to clear several at once',
+      "Delete an alert once you're done with it — this only clears it from your own inbox, it doesn't affect the alert's delivery record in Alert Delivery Log",
       'Sort by Newest, Oldest, or Priority to change how the list is ordered',
     ],
   },
@@ -68,6 +68,26 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       "Click Retry on a Failed alert to resend it; the list refreshes with the new attempt once it's done",
       "Switch to the Recipient History tab to see each recipient's total sent/failed counts and success rate",
       'Search by recipient, message text, or collateral ID, and use Refresh to pull the latest state',
+    ],
+  },
+  '/deadline-reminders': {
+    title: 'Deadline Reminders',
+    narrative: 'Deadline Reminders lets you configure automated SMS reminder rules for approaching (or overdue) perfection deadlines — each rule scans collateral records within its deadline window and texts every officer with the matching role who has a phone number on file.',
+    steps: [
+      'Click "Add Rule" to define how many days before deadline it triggers, who receives it (by role), and the message template — use {collateralId}, {registry}, and {url} placeholders',
+      'Click the play icon to run a rule immediately; it reports how many reminders actually sent versus failed, not just how many were attempted',
+      'Use the pause/resume icon to disable a rule without deleting it, or the trash icon to remove it entirely',
+      'Each rule card shows when it last ran and its total sent count so you can confirm it\'s actually firing',
+    ],
+  },
+  '/sms-notification-rules': {
+    title: 'SMS Notification Rules',
+    narrative: 'SMS Notification Rules controls who gets an automatic SMS when a covenant breach, an overdue action, or a collateral status change happens — separate from Deadline Reminders, which you trigger yourself for approaching perfection deadlines. Twilio sends these the moment the event occurs, with no manual step.',
+    steps: [
+      'Expand an event rule (Covenant Breach, Overdue Action, Status Change) to edit it',
+      'Add recipients with name, phone number, and an optional role label — remove one with its trash icon',
+      'Choose a minimum severity so low-priority events don\'t page everyone — "All Events", "High & Critical", or "Critical Only"',
+      'Toggle the rule on or off, then click "Save Rule" — a rule with no recipients or left disabled sends nothing',
     ],
   },
   '/archive/disposal-queue': {
