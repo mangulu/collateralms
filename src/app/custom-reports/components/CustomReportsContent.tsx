@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Save, Trash2, Calendar, FileText, Download, RefreshCw, Clock, Filter, ChevronDown, ChevronUp, Edit2, CheckCircle2, AlertCircle, FileSpreadsheet, X, Play,  } from 'lucide-react';
+import { Plus, Save, Trash2, Calendar, FileText, Download, RefreshCw, Filter, ChevronDown, ChevronUp, Edit2, CheckCircle2, AlertCircle, FileSpreadsheet, X, Play,  } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
   customReportsService,
@@ -25,12 +25,6 @@ const EXPORT_FORMATS: { value: ExportFormat; label: string; icon: React.ElementT
   { value: 'csv', label: 'CSV', icon: FileText, color: 'text-green-600 bg-green-50 border-green-200' },
   { value: 'pdf', label: 'PDF', icon: FileText, color: 'text-red-600 bg-red-50 border-red-200' },
   { value: 'excel', label: 'Excel', icon: FileSpreadsheet, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-];
-const FREQUENCIES: { value: ScheduleFrequency; label: string }[] = [
-  { value: 'once', label: 'One-time' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'monthly', label: 'Monthly' },
 ];
 
 const EMPTY_FILTERS: ReportFilters = {
@@ -285,50 +279,6 @@ function ReportForm({
         </div>
       </div>
 
-      {/* Schedule */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Clock size={14} className="text-muted-foreground" />
-          <span className="text-xs font-600 text-foreground uppercase tracking-wider">Schedule</span>
-        </div>
-        <div className="flex items-center gap-3 mb-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.isScheduled}
-              onChange={(e) => set('isScheduled', e.target.checked)}
-              className="rounded border-border accent-primary w-4 h-4"
-            />
-            <span className="text-sm text-foreground font-500">Enable scheduled delivery</span>
-          </label>
-        </div>
-        {form.isScheduled && (
-          <div className="grid grid-cols-2 gap-4 pl-6 border-l-2 border-primary/20">
-            <div>
-              <label className="block text-xs font-500 text-muted-foreground mb-1">Frequency</label>
-              <select
-                value={form.scheduleFrequency}
-                onChange={(e) => set('scheduleFrequency', e.target.value as ScheduleFrequency)}
-                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {FREQUENCIES.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-500 text-muted-foreground mb-1">Next Run</label>
-              <input
-                type="datetime-local"
-                value={form.nextRunAt}
-                onChange={(e) => set('nextRunAt', e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
         <button
@@ -367,7 +317,6 @@ function ReportCard({
 }) {
   const filterCount = activeFilterCount(report.filters);
   const fmtObj = EXPORT_FORMATS.find((f) => f.value === report.exportFormat);
-  const freqObj = FREQUENCIES.find((f) => f.value === report.scheduleFrequency);
 
   return (
     <div className="bg-white rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow p-5">
@@ -379,12 +328,6 @@ function ReportCard({
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {report.isScheduled && (
-            <span className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-500">
-              <Clock size={10} />
-              {freqObj?.label}
-            </span>
-          )}
           <span className={`text-xs px-2 py-0.5 rounded-full border font-500 ${fmtObj?.color ?? ''}`}>
             {fmtObj?.label}
           </span>
@@ -417,13 +360,6 @@ function ReportCard({
         </div>
       )}
 
-      {/* Schedule info */}
-      {report.isScheduled && report.nextRunAt && (
-        <div className="flex items-center gap-1.5 text-xs text-blue-600 mb-3">
-          <Clock size={11} />
-          <span>Next run: {fmtDateTime(report.nextRunAt)}</span>
-        </div>
-      )}
       {report.lastRunAt && (
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
           <CheckCircle2 size={11} />
@@ -618,9 +554,6 @@ export default function CustomReportsContent() {
       }
     : EMPTY_FORM;
 
-  const scheduledReports = reports.filter((r) => r.isScheduled);
-  const unscheduledReports = reports.filter((r) => !r.isScheduled);
-
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Toast */}
@@ -641,7 +574,7 @@ export default function CustomReportsContent() {
         <div>
           <h1 className="text-lg sm:text-xl font-black text-foreground">Custom Reports</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Build, save, and schedule tailored collateral reports with custom filters and export formats
+            Build and save tailored collateral reports with custom filters and export formats, and run them on demand
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -701,42 +634,18 @@ export default function CustomReportsContent() {
         </div>
       )}
 
-      {/* Scheduled Reports */}
-      {!loading && scheduledReports.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock size={15} className="text-blue-600" />
-            <h2 className="text-sm font-bold text-foreground">Scheduled Reports</h2>
-            <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-600">
-              {scheduledReports.length}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {scheduledReports.map((r) => (
-              <ReportCard
-                key={r.id}
-                report={r}
-                onEdit={() => { setEditingReport(r); setShowForm(true); }}
-                onDelete={() => handleDelete(r.id)}
-                onRun={() => handleRun(r)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Saved Reports */}
-      {!loading && unscheduledReports.length > 0 && (
+      {!loading && reports.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <FileText size={15} className="text-muted-foreground" />
             <h2 className="text-sm font-bold text-foreground">Saved Reports</h2>
             <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-600">
-              {unscheduledReports.length}
+              {reports.length}
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {unscheduledReports.map((r) => (
+            {reports.map((r) => (
               <ReportCard
                 key={r.id}
                 report={r}
