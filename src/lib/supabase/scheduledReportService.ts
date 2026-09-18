@@ -146,10 +146,11 @@ export const scheduledReportService = {
     if (error) throw error;
 
     // Update last_sent_at on config
-    await supabase
+    const { error: updateErr } = await supabase
       .from('scheduled_report_configs')
       .update({ last_sent_at: new Date().toISOString() })
       .eq('id', payload.configId);
+    if (updateErr) console.error('scheduledReportService.logDelivery last_sent_at update failed:', updateErr);
   },
 
   async sendReportEmail(payload: {
