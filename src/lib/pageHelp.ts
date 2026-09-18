@@ -96,7 +96,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
     steps: [
       'The KPI strip covers portfolio value, perfection rate, item counts, average LTV (with a risk badge), overdue actions, and items approaching deadline',
       'The Perfection Trend chart shows perfected/submitted/overdue counts over the last 6 months; the pie chart breaks the portfolio down by collateral type',
-      'Click Refresh to recompute every KPI and chart from the latest data',
+      'Click Refresh to recompute every KPI and chart from the latest data, or Export for a PDF summary covering the same 6-month window',
     ],
   },
   '/cohort-analytics': {

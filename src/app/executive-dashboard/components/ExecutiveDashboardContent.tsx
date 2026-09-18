@@ -120,6 +120,7 @@ export default function ExecutiveDashboardContent() {
   const [typeDist, setTypeDist] = useState<TypeDist[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [lastUpdated, setLastUpdated] = useState('');
 
   const loadData = useCallback(async (silent = false) => {
@@ -152,6 +153,46 @@ export default function ExecutiveDashboardContent() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const dateTo = new Date();
+      const dateFrom = new Date(dateTo.getFullYear(), dateTo.getMonth() - 5, 1);
+      const response = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportType: 'perfection_rate',
+          dateFrom: dateFrom.toISOString().slice(0, 10),
+          dateTo: dateTo.toISOString().slice(0, 10),
+          registries: [],
+          statuses: [],
+          collateralTypes: [],
+          includeCharts: false,
+          includeSummary: true,
+          includeDetails: false,
+          stakeholderMode: false,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(err.error ?? `HTTP ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `executive_dashboard_${dateTo.toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Dashboard exported');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export dashboard');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -207,11 +248,12 @@ export default function ExecutiveDashboardContent() {
             <span className="hidden sm:inline">Refresh</span>
           </button>
           <button
-            onClick={() => toast.info('PDF export queued')}
-            aria-label="Export dashboard as PDF"
-            className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+            onClick={handleExport}
+            disabled={exporting}
+            aria-label={exporting ? 'Exporting dashboard as PDF' : 'Export dashboard as PDF'}
+            className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] bg-primary text-white rounded-md text-sm font-medium hover:bg-primary/90 transition-all disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
           >
-            <Download size={14} aria-hidden="true" />
+            {exporting ? <RefreshCw size={14} className="animate-spin" aria-hidden="true" /> : <Download size={14} aria-hidden="true" />}
             <span className="hidden sm:inline">Export</span>
           </button>
         </div>
