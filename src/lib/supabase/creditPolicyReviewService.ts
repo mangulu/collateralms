@@ -239,7 +239,8 @@ export const creditPolicyReviewService = {
       status: idx === 0 ? 'In Progress' : 'Pending',
       order_index: idx + 1,
     }));
-    await supabase.from('credit_policy_review_stages').insert(stages);
+    const { error: stagesErr } = await supabase.from('credit_policy_review_stages').insert(stages);
+    if (stagesErr) throw new Error(`Review created but failed to create its approval stages: ${stagesErr.message}`);
 
     return rowToReview(data);
   },
@@ -262,7 +263,7 @@ export const creditPolicyReviewService = {
   async advanceStage(input: AdvanceStageInput): Promise<void> {
     const supabase = createClient();
     // Mark current stage as Approved
-    await supabase
+    const { error: approveErr } = await supabase
       .from('credit_policy_review_stages')
       .update({
         status: 'Approved',
@@ -271,6 +272,7 @@ export const creditPolicyReviewService = {
         comments: input.comments ?? null,
       })
       .eq('id', input.stageId);
+    if (approveErr) throw approveErr;
 
     // Get review to find next stage
     const review = await this.getReview(input.reviewId);
@@ -285,14 +287,16 @@ export const creditPolicyReviewService = {
     if (nextStage === 'Approved') {
       updatePayload.completed_date = new Date().toISOString().split('T')[0];
     }
-    await supabase.from('credit_policy_reviews').update(updatePayload).eq('id', input.reviewId);
+    const { error: reviewErr } = await supabase.from('credit_policy_reviews').update(updatePayload).eq('id', input.reviewId);
+    if (reviewErr) throw reviewErr;
 
     // Mark next stage as In Progress
-    await supabase
+    const { error: nextStageErr } = await supabase
       .from('credit_policy_review_stages')
       .update({ status: 'In Progress' })
       .eq('review_id', input.reviewId)
       .eq('stage', nextStage);
+    if (nextStageErr) throw nextStageErr;
   },
 
   async updateBotStatus(input: UpdateBotStatusInput): Promise<void> {
