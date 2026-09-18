@@ -246,7 +246,7 @@ export const pledgeDocumentService = {
   ): Promise<void> {
     const supabase = createClient();
     try {
-      await supabase.from('pledge_document_access_log').insert({
+      const { error } = await supabase.from('pledge_document_access_log').insert({
         document_id:       documentId,
         obligor_id:        obligorId,
         action,
@@ -254,8 +254,9 @@ export const pledgeDocumentService = {
         performed_by_name: performedByName,
         notes:             notes ?? null,
       });
-    } catch {
-      // Non-critical — don't throw
+      if (error) console.error('pledgeDocumentService.logAccess failed:', error);
+    } catch (err) {
+      console.error('pledgeDocumentService.logAccess failed:', err);
     }
   },
 
