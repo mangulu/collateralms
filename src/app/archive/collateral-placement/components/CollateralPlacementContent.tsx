@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FolderCheck, Plus, Search, RefreshCw, AlertCircle, Link2, Package, Edit2,
   Upload, FileText, X, Loader2, Paperclip, CheckCircle2, CheckSquare, Square,
-  Layers, MoveRight,
+  Layers, MoveRight, ShieldAlert,
 } from 'lucide-react';
 import {
   archivePlacementService, archiveLocationService, archiveAuditService,
@@ -13,6 +13,7 @@ import { collateralService, CollateralRecord } from '@/lib/supabase/collateralSe
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import { fetchConfigByKey } from '@/lib/supabase/systemConfigService';
 
 const ACCEPTED_TYPES = [
   'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
@@ -432,6 +433,8 @@ export default function CollateralFilingContent() {
   const [showModal, setShowModal] = useState(false);
   const [editPlacement, setEditPlacement] = useState<ArchivePlacement | undefined>();
   const [showFiledOnly, setShowFiledOnly] = useState(false);
+  const [highValueThreshold, setHighValueThreshold] = useState<number | null>(null);
+  const [missingBackupOnly, setMissingBackupOnly] = useState(false);
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -454,6 +457,9 @@ export default function CollateralFilingContent() {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally { setLoading(false); }
+    fetchConfigByKey('default_thresholds')
+      .then((cfg) => setHighValueThreshold(typeof cfg?.archive_dual_custody_threshold_tsh === 'number' ? cfg.archive_dual_custody_threshold_tsh : null))
+      .catch(() => setHighValueThreshold(null));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -476,15 +482,22 @@ export default function CollateralFilingContent() {
   // Collaterals available for filing (not yet filed)
   const unfiledCollaterals = collaterals.filter((c) => !filedCollateralIds.has(c.id));
 
-  const filtered = placements.filter((p) => {
-    const q = search.toLowerCase();
-    return (
-      p.collateral?.description?.toLowerCase().includes(q) ||
-      p.collateral?.obligor?.toLowerCase().includes(q) ||
-      p.location?.name?.toLowerCase().includes(q) ||
-      p.physicalRef?.toLowerCase().includes(q)
-    );
-  });
+  const isHighValueMissingBackup = (p: ArchivePlacement) =>
+    !p.electronicRecordUrl && highValueThreshold != null && (p.collateral?.value_tsh ?? 0) >= highValueThreshold;
+  const highValueMissingBackupCount = placements.filter(isHighValueMissingBackup).length;
+
+  const filtered = placements
+    .filter((p) => {
+      const q = search.toLowerCase();
+      return (
+        p.collateral?.description?.toLowerCase().includes(q) ||
+        p.collateral?.obligor?.toLowerCase().includes(q) ||
+        p.location?.name?.toLowerCase().includes(q) ||
+        p.physicalRef?.toLowerCase().includes(q)
+      );
+    })
+    .filter((p) => !missingBackupOnly || !p.electronicRecordUrl)
+    .sort((a, b) => (missingBackupOnly ? (b.collateral?.value_tsh ?? 0) - (a.collateral?.value_tsh ?? 0) : 0));
 
   // For the "unfiled collaterals" panel
   const filteredUnfiled = unfiledCollaterals.filter((c) => {
@@ -549,7 +562,7 @@ export default function CollateralFilingContent() {
           { label: 'Total Filed', value: placements.length, color: '#1D4ED8' },
           { label: 'Awaiting Filing', value: unfiledCollaterals.length, color: '#B45309' },
           { label: 'With Electronic Record', value: placements.filter((p) => p.electronicRecordUrl).length, color: '#15803D' },
-          { label: 'With Physical Ref', value: placements.filter((p) => p.physicalRef).length, color: '#7E22CE' },
+          { label: 'High-Value Missing Backup', value: highValueMissingBackupCount, color: highValueMissingBackupCount > 0 ? '#BE123C' : '#7E22CE' },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-4" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
             <p className="text-xs font-medium mb-1" style={{ color: '#6B7280' }}>{s.label}</p>
@@ -585,6 +598,15 @@ export default function CollateralFilingContent() {
             Awaiting ({unfiledCollaterals.length})
           </button>
         </div>
+        {!showFiledOnly && (
+          <button onClick={() => setMissingBackupOnly((v) => !v)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors"
+            style={missingBackupOnly
+              ? { backgroundColor: '#FFF1F2', borderColor: '#FECDD3', color: '#BE123C' }
+              : { backgroundColor: '#F8FAFF', borderColor: '#DBEAFE', color: '#6B7280' }}>
+            <ShieldAlert size={13} /> Missing Backup Only
+          </button>
+        )}
       </div>
 
       {error && (
@@ -743,11 +765,21 @@ export default function CollateralFilingContent() {
                         {p.physicalRef}
                       </span>
                     )}
-                    {p.electronicRecordUrl && (
+                    {p.electronicRecordUrl ? (
                       <a href={p.electronicRecordUrl} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-1 text-xs hover:underline" style={{ color: '#15803D' }}>
                         <Paperclip size={11} /> Document attached
                       </a>
+                    ) : isHighValueMissingBackup(p) ? (
+                      <span className="flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#FFF1F2', color: '#BE123C' }}>
+                        <ShieldAlert size={11} /> No Backup — High Value
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#FFFBEB', color: '#B45309' }}>
+                        <ShieldAlert size={11} /> No Backup
+                      </span>
                     )}
                   </div>
                 </div>

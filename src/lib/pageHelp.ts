@@ -104,7 +104,8 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
     steps: [
       'Switch between the "Filed" and "Awaiting Filing" tabs to see what still needs a slot',
       'Click "File Collateral" for a single item, or select several in "Awaiting Filing" and use "Bulk File to Slot"',
-      'Attach a scanned document (PDF, JPG, PNG, DOCX) while filing — optional, but recommended',
+      'Attach a scanned document (PDF, JPG, PNG, DOCX) while filing — a physical-only filing above the bank\'s high-value threshold shows a red "No Backup — High Value" badge',
+      'Use "Missing Backup Only" in the Filed tab to find and prioritize the highest-value gaps first',
       'A physical reference (PHY-YYYYMMDD-XXXX) is auto-generated for each filing but can be edited',
     ],
   },

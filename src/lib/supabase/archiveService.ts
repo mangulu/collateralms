@@ -45,7 +45,7 @@ export interface ArchivePlacement {
   disposedAt: string | null;
   disposedBy: string | null;
   disposalReason: string | null;
-  collateral?: { id: string; collateral_type: string; description: string; obligor: string };
+  collateral?: { id: string; collateral_type: string; description: string; obligor: string; value_tsh: number };
   location?: ArchiveLocation;
   placedByProfile?: { full_name: string };
   disposedByProfile?: { full_name: string };
@@ -351,7 +351,7 @@ export const archivePlacementService = {
       .from('archive_placements')
       .select(`
         *,
-        collateral_records(id, collateral_type, description, obligor),
+        collateral_records(id, collateral_type, description, obligor, value_tsh),
         archive_locations(id, name, code, location_type)
       `)
       .order('placed_at', { ascending: false });
@@ -364,7 +364,7 @@ export const archivePlacementService = {
       .from('archive_placements')
       .select(`
         *,
-        collateral_records(id, collateral_type, description, obligor),
+        collateral_records(id, collateral_type, description, obligor, value_tsh),
         archive_locations(id, name, code, location_type)
       `)
       .eq('location_id', locationId)
@@ -413,7 +413,7 @@ export const archivePlacementService = {
       .from('archive_placements')
       .select(`
         *,
-        collateral_records(id, collateral_type, description, obligor),
+        collateral_records(id, collateral_type, description, obligor, value_tsh),
         archive_locations(id, name, code, location_type)
       `)
       .lte('retention_eligible_at', now)
