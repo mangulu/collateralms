@@ -57,18 +57,28 @@ const URGENCY_STYLES = {
 export default function DeadlinePredictionsPanel() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState<'all' | 'critical' | 'high'>('all');
 
   const load = async () => {
     setLoading(true);
+    setLoadError(false);
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('collateral_records')
       .select('*')
       .not('status', 'eq', 'Perfected')
       .not('status', 'eq', 'Released')
       .order('days_to_deadline', { ascending: true })
       .limit(50);
+
+    if (error) {
+      console.error('Failed to load deadline predictions:', error);
+      setLoadError(true);
+      setPredictions([]);
+      setLoading(false);
+      return;
+    }
 
     const records: CollateralRecord[] = (data ?? []).map((r: any) => ({
       id: r.id,
@@ -155,6 +165,12 @@ export default function DeadlinePredictionsPanel() {
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-20 bg-muted/30 rounded-xl animate-pulse" />
           ))}
+        </div>
+      ) : loadError ? (
+        <div className="text-center py-12">
+          <AlertTriangle size={32} className="text-red-500 mx-auto mb-3" />
+          <p className="text-sm font-medium text-foreground">Couldn't load deadline predictions</p>
+          <p className="text-xs text-muted-foreground mt-1">This isn't a clean bill of health — try refreshing.</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
