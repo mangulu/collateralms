@@ -161,6 +161,56 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Risk Zones tab: view collateral grouped by risk zone (Low/Medium/High)',
     ],
   },
+  '/obligors': {
+    title: 'Obligors',
+    narrative: 'Obligors is the borrower registry — search and filter by type and risk level, then open a profile for the full picture: identification, contacts, credit risk score, exposure metrics, linked collaterals, and pledge documents for that obligor.',
+    steps: [
+      'Search by name or filter by type (Individual/Company) and risk level (Low/Medium/High)',
+      'Click an obligor to open their full profile — risk score, exposure metrics, approval trend, and linked collaterals',
+      'Use Add/Edit to create or update an obligor record',
+      'Deleting an obligor first shows how many loans, pledge documents, and collaterals are linked, so you know the impact before confirming',
+      'On a profile, scroll to Pledge Documents to upload, view, or remove that obligor\'s pledge instruments',
+    ],
+  },
+  '/loan-registry': {
+    title: 'Loan Registry',
+    narrative: 'Loan Registry is the facility-level ledger — every loan/facility with its status, obligor, and outstanding balance, with drill-down into the collaterals securing it and a facility-wide obligor summary.',
+    steps: [
+      'Search by loan number or obligor, or filter by status and facility type',
+      'Click New Loan to register a facility, or Edit/Delete on an existing one',
+      'Open a loan to see its Linked Collaterals and the Facility Obligor Summary',
+      'Outstanding balance and facility amount here are what LTV Monitoring and Loan Classification use as loan exposure',
+    ],
+  },
+  '/loan-classification': {
+    title: 'Loan Classification',
+    narrative: 'Loan Classification applies the BOT 5-tier engine (Current / Especially Mentioned / Substandard / Doubtful / Loss) to each loan, driven by days-past-due and qualitative flags (insurance expired, perfection overdue, covenant breach, etc.), with manual override support. Provisioning Reports below apply the matching BOT rate schedule.',
+    steps: [
+      'Click Classify on a loan, enter days past due and any qualitative flags — the tier and provision amount preview live as you edit',
+      'Use the override toggle only when the automatic tier needs a documented manual correction; a reason is required',
+      'Classifying a loan retires its previous classification record and creates a new active one — only one is ever active per loan',
+      'Switch to Provisioning Reports to generate a quarterly report applying the BOT rate schedule across all classified loans',
+    ],
+  },
+  '/haircut-schedule': {
+    title: 'Haircut Schedule Engine',
+    narrative: 'Haircut Schedule Engine sets the BOT-aligned haircut rate (0–30%) applied to each asset class before it counts toward LTV, with a live preview of the effect on a sample value.',
+    steps: [
+      'Haircut Schedule tab: edit a class\'s rate — saving retires the previous active rate for that class and activates the new one',
+      'LTV Calculator tab: enter a loan exposure and gross collateral value to see the haircut-adjusted LTV for a given class',
+      'Application Log tab: review every time a haircut was actually applied to a real valuation, with the rate and resulting net value used',
+    ],
+  },
+  '/credit-policy-review': {
+    title: 'Credit Policy Review Workflow',
+    narrative: 'Credit Policy Review Workflow runs each policy through a 6-stage approval pipeline (Draft → Credit Committee Review → Risk Management Review → Board Audit Committee → Full Board Approval → Approved), with BOT submission status tracked alongside it.',
+    steps: [
+      'Create a policy review, then use Advance Stage to approve the current stage and move it to the next — add comments if needed',
+      'Track BOT Submission Status (Pending/Submitted/Acknowledged) with submission date, acknowledgement date, and BOT reference number',
+      'Overdue reviews (past their due date) are flagged automatically',
+      'Filter by year, stage, BOT status, or priority to find a specific review',
+    ],
+  },
   '/archive/disposal-queue': {
     title: 'Disposal Queue',
     narrative: "Disposal Queue lists physical collateral documents whose retention period has elapsed since their collateral was released — each document type's retention period is set in Settings, and the clock starts once a Release Request is approved. Items appear here automatically; nothing is ever deleted without an explicit, reasoned approval.",
