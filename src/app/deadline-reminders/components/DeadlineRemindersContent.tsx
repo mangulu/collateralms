@@ -69,13 +69,20 @@ export default function DeadlineRemindersContent() {
       }
 
       const supabase = createClient();
-      const { data: officers } = await supabase
+      const { data: officers, error: officersErr } = await supabase
         .from('user_profiles')
         .select('id, full_name, phone')
         .eq('role', rule.recipientRole)
         .not('phone', 'is', null);
 
+      if (officersErr) {
+        toast.error(`Failed to look up ${rule.recipientRole.replace(/_/g, ' ')} recipients: ${officersErr.message}`);
+        setRunning(null);
+        return;
+      }
+
       let sentCount = 0;
+      let failedCount = 0;
       for (const col of collaterals) {
         for (const officer of (officers ?? [])) {
           if (!officer.phone) continue;
@@ -85,14 +92,14 @@ export default function DeadlineRemindersContent() {
             .replace('{registry}', col.registry ?? 'Registry')
             .replace('{url}', `${appUrl}/collateral-management`);
 
-          await smsAlertService.sendAlertViaApi({
+          const result = await smsAlertService.sendAlertViaApi({
             to: officer.phone,
             message: msg,
             alertType: rule.alertType as SmsAlertType,
             collateralId: col.collateralId,
             recipientName: officer.full_name,
           });
-          sentCount++;
+          if (result.success) sentCount++; else failedCount++;
         }
       }
 
@@ -104,7 +111,11 @@ export default function DeadlineRemindersContent() {
             : r
         )
       );
-      toast.success(`Sent ${sentCount} reminder${sentCount !== 1 ? 's' : ''} for "${rule.name}"`);
+      if (failedCount > 0) {
+        toast.error(`Sent ${sentCount}, failed ${failedCount} reminder${failedCount !== 1 ? 's' : ''} for "${rule.name}"`);
+      } else {
+        toast.success(`Sent ${sentCount} reminder${sentCount !== 1 ? 's' : ''} for "${rule.name}"`);
+      }
     } catch (err: any) {
       toast.error('Failed to run reminder: ' + err?.message);
     } finally {
