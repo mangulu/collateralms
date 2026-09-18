@@ -157,11 +157,14 @@ export const haircutService = {
     const supabase = createClient();
 
     // Deactivate existing active record for this class
-    await supabase
+    const { error: deactivateErr } = await supabase
       .from('haircut_schedules')
       .update({ is_active: false })
       .eq('collateral_class', payload.collateralClass)
       .eq('is_active', true);
+    if (deactivateErr) {
+      throw new Error(`Failed to deactivate previous haircut schedule: ${deactivateErr.message}`);
+    }
 
     const { data, error } = await supabase
       .from('haircut_schedules')
