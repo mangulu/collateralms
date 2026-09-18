@@ -1,7 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
-import RegistrySettingsContent from './components/RegistrySettingsContent';
 import RegistriesSettingsContent from './components/RegistriesSettingsContent';
 import DocumentTypesSettingsContent from './components/DocumentTypesSettingsContent';
 import CollateralTypesSettingsContent from './components/CollateralTypesSettingsContent';
@@ -340,7 +339,7 @@ function ConfigSection({ tab, values, onChange, onSave, saving, saved, error, la
 
 type SettingsSection =
   | 'document-types'
-  | 'collateral-type-documents' |'registries' |'collateral-types' |'email-provider' |'registry-integrations' |'notifications' |'email-templates' |'bank' |'registry' |'thresholds' |'retention';
+  | 'collateral-type-documents' |'registries' |'collateral-types' |'email-provider' |'notifications' |'email-templates' |'bank' |'registry' |'thresholds' |'retention';
 
 interface NavItem {
   id: SettingsSection;
@@ -468,7 +467,6 @@ export default function SettingsPage() {
       icon: <Link2 size={15} />,
       items: [
         { id: 'email-provider', label: 'Email Provider', icon: <Mail size={14} />, adminOnly: true },
-        { id: 'registry-integrations', label: 'Registry Integrations', icon: <Link2 size={14} /> },
       ],
     },
     {
@@ -535,8 +533,6 @@ export default function SettingsPage() {
             </p>
           </div>
         );
-      case 'registry-integrations':
-        return <RegistrySettingsContent />;
       case 'email-templates': {
         if (!canManage) return (
           <div className="flex flex-col items-center justify-center py-16 text-center">
