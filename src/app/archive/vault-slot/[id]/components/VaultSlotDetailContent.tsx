@@ -26,19 +26,17 @@ const LOCATION_TYPE_COLORS: Record<LocationType, { bg: string; text: string; bor
   vault:   { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
   room:    { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
   cabinet: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-  shelf:   { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
   slot:    { bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD' },
 };
 
 const LEVEL_EMOJIS: Record<LocationType, string> = {
-  vault: '🏛️', room: '🚪', cabinet: '📚', shelf: '📚', slot: '📂',
+  vault: '🏛️', room: '🚪', cabinet: '📚', slot: '📂',
 };
 
 const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
   vault:   <Building2 size={14} />,
   room:    <DoorOpen size={14} />,
   cabinet: <BookOpen size={14} />,
-  shelf:   <BookOpen size={14} />,
   slot:    <Grid3X3 size={14} />,
 };
 

@@ -150,7 +150,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
   },
   '/archive/occupancy-heatmap': {
     title: 'Vault Occupancy Heatmap',
-    narrative: 'Occupancy Heatmap shows real-time room, shelf, and slot occupancy across every vault, with capacity alerts and filing/retrieval trends drawn from the archive audit log.',
+    narrative: 'Occupancy Heatmap shows real-time room, cabinet, and slot occupancy across every vault, with capacity alerts and filing/retrieval trends drawn from the archive audit log.',
     steps: [
       'Switch between the Heatmap, Filing Trends, and Bottlenecks tabs',
       'Click any slot cell to see its exact fill count and a recommendation (redistribute, monitor, or fine)',

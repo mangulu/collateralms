@@ -16,7 +16,7 @@ function formatDateTime(iso: string): string {
 }
 
 const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
-  vault: <Building2 size={13} />, room: <DoorOpen size={13} />, cabinet: <BookOpen size={13} />, shelf: <BookOpen size={13} />, slot: <BookOpen size={13} />,
+  vault: <Building2 size={13} />, room: <DoorOpen size={13} />, cabinet: <BookOpen size={13} />, slot: <BookOpen size={13} />,
 };
 
 // ─── Start Session Modal ──────────────────────────────────────────────────────

@@ -8,17 +8,16 @@ import {
 } from '@/lib/supabase/archiveService';
 import { archiveReconciliationService } from '@/lib/supabase/archiveReconciliationService';
 import { useAuth } from '@/contexts/AuthContext';
+import LocationDetailDrawer from './LocationDetailDrawer';
 
 // ─── Hierarchy: vault → room → cabinet → slot ───────────────────────────────────
 // Strict 4-level hierarchy: Vault → Room → Cabinet → Slot
-// 'shelf' is treated as an alias for 'cabinet' — no distinct shelf level
 const LOCATION_TYPE_ORDER: LocationType[] = ['vault', 'room', 'cabinet', 'slot'];
 
 const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
   vault: 'Vault',
   room: 'Room',
   cabinet: 'Cabinet',
-  shelf: 'Cabinet',
   slot: 'Slot',
 };
 
@@ -26,7 +25,6 @@ const LOCATION_TYPE_COLORS: Record<LocationType, { bg: string; text: string; bor
   vault:   { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
   room:    { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
   cabinet: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-  shelf:   { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
   slot:    { bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD' },
 };
 
@@ -35,7 +33,6 @@ const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
   vault:   <Building2 size={20} />,
   room:    <DoorOpen size={20} />,
   cabinet: <BookOpen size={20} />,
-  shelf:   <BookOpen size={20} />,
   slot:    <Grid3X3 size={20} />,
 };
 
@@ -43,7 +40,6 @@ const LEVEL_ILLUSTRATIONS: Record<LocationType, { emoji: string; desc: string }>
   vault:   { emoji: '🏛️', desc: 'Physical vault building' },
   room:    { emoji: '🚪', desc: 'Room inside vault' },
   cabinet: { emoji: '📚', desc: 'Cabinet in room' },
-  shelf:   { emoji: '📚', desc: 'Cabinet in room' },
   slot:    { emoji: '📂', desc: 'Filing slot in cabinet' },
 };
 
@@ -66,7 +62,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
   const [description, setDescription] = useState('');
   const [capacity, setCapacity] = useState(10);
   // Room-specific: max cabinets
-  const [maxShelves, setMaxShelves] = useState(10);
+  const [maxCabinets, setMaxCabinets] = useState(10);
   // Cabinet-specific: rows, columns, max slot capacity
   const [rows, setRows] = useState(3);
   const [columns, setColumns] = useState(4);
@@ -75,7 +71,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
   const [error, setError] = useState('');
 
   const isRoom = nextType === 'room';
-  const isShelf = nextType === 'cabinet';
+  const isCabinet = nextType === 'cabinet';
   const isSlot = nextType === 'slot';
 
   const totalSlots = rows * columns;
@@ -84,7 +80,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
     if (!name.trim() || !code.trim()) { setError('Name and code are required.'); return; }
     setSaving(true);
     try {
-      if (isShelf) {
+      if (isCabinet) {
         // Create the cabinet
         const cabinet = await archiveLocationService.create({
           name: name.trim(),
@@ -111,7 +107,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
           }
         }
       } else {
-        const cap = isRoom ? maxShelves : isSlot ? capacity : capacity;
+        const cap = isRoom ? maxCabinets : isSlot ? capacity : capacity;
         await archiveLocationService.create({
           name: name.trim(),
           code: code.trim(),
@@ -181,7 +177,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
               <label className="block text-xs font-semibold mb-1" style={{ color: '#15803D' }}>
                 Room Capacity (Max Cabinets)
               </label>
-              <input type="number" value={maxShelves} onChange={(e) => setMaxShelves(Number(e.target.value))}
+              <input type="number" value={maxCabinets} onChange={(e) => setMaxCabinets(Number(e.target.value))}
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 style={{ borderColor: '#BBF7D0' }} min={1} />
               <p className="text-xs mt-1" style={{ color: '#6B7280' }}>Maximum number of cabinets this room can hold</p>
@@ -189,7 +185,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
           )}
 
           {/* Cabinet: rows, columns, slot capacity */}
-          {isShelf && (
+          {isCabinet && (
             <div className="p-3 rounded-xl space-y-3" style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA' }}>
               <p className="text-xs font-semibold" style={{ color: '#C2410C' }}>
                 📐 Cabinet Layout — Slots are auto-generated from rows × columns
@@ -223,7 +219,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
           )}
 
           {/* Vault or Slot: simple capacity */}
-          {!isRoom && !isShelf && (
+          {!isRoom && !isCabinet && (
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>
                 {isSlot ? 'Max Files per Slot' : 'Capacity'}
@@ -241,7 +237,7 @@ function AddLocationModal({ parentId, parentType, onClose, onSaved, userId }: Ad
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-opacity"
             style={{ backgroundColor: '#2563EB', opacity: saving ? 0.6 : 1 }}>
-            {saving ? (isShelf ? 'Creating Slots…' : 'Saving…') : (isShelf ? `Create Cabinet + ${totalSlots} Slots` : 'Save')}
+            {saving ? (isCabinet ? 'Creating Slots…' : 'Saving…') : (isCabinet ? `Create Cabinet + ${totalSlots} Slots` : 'Save')}
           </button>
         </div>
       </div>
@@ -256,35 +252,39 @@ interface LocationNodeProps {
   depth: number;
   onAddChild: (parentId: string, parentType: LocationType) => void;
   onDelete: (id: string) => void;
+  onSelectDetail: (node: ArchiveLocation) => void;
   lastReconciledAt?: string | null;
 }
 
-function LocationNode({ node, depth, onAddChild, onDelete, lastReconciledAt }: LocationNodeProps) {
+function LocationNode({ node, depth, onAddChild, onDelete, onSelectDetail, lastReconciledAt }: LocationNodeProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(depth < 2);
   const colors = LOCATION_TYPE_COLORS[node.locationType];
   const hasChildren = (node.children?.length ?? 0) > 0;
-  // vault → add room; room → add shelf/cabinet; cabinet/shelf → no add (slots auto-generated)
+  // vault → add room; room → add cabinet; cabinet → no add (slots auto-generated)
   const canAdd = node.locationType === 'vault' || node.locationType === 'room';
   const isSlot = node.locationType === 'slot';
+  const isDetailable = node.locationType === 'room' || node.locationType === 'cabinet';
   const occupancyPct = node.capacity > 0 ? Math.round((node.currentOccupancy / node.capacity) * 100) : 0;
   const illustration = LEVEL_ILLUSTRATIONS[node.locationType];
 
-  const handleSlotClick = () => {
+  const handleRowClick = () => {
     if (isSlot) {
       router.push(`/archive/vault-slot/${node.id}`);
+    } else if (isDetailable) {
+      onSelectDetail(node);
     }
   };
 
   return (
     <div style={{ marginLeft: depth > 0 ? '20px' : '0' }}>
       <div
-        className={`flex items-center gap-2 p-3 rounded-xl mb-1.5 group transition-all ${isSlot ? 'cursor-pointer' : ''}`}
+        className={`flex items-center gap-2 p-3 rounded-xl mb-1.5 group transition-all ${isSlot || isDetailable ? 'cursor-pointer' : ''}`}
         style={{
           backgroundColor: colors.bg,
           border: `1px solid ${colors.border}`,
         }}
-        onClick={handleSlotClick}
+        onClick={handleRowClick}
       >
         {/* Expand toggle */}
         <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
@@ -333,6 +333,11 @@ function LocationNode({ node, depth, onAddChild, onDelete, lastReconciledAt }: L
               Click to view contents, move &amp; remove files
             </p>
           )}
+          {isDetailable && (
+            <p className="text-xs mt-0.5" style={{ color: colors.text, opacity: 0.7 }}>
+              Click to view details &amp; contents
+            </p>
+          )}
         </div>
 
         <div className="hidden sm:flex items-center gap-3 shrink-0">
@@ -348,7 +353,7 @@ function LocationNode({ node, depth, onAddChild, onDelete, lastReconciledAt }: L
               onClick={(e) => { e.stopPropagation(); onAddChild(node.id, node.locationType); }}
               className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all"
               style={{ backgroundColor: colors.border }}
-              title={`Add ${node.locationType === 'vault' ? 'Room' : 'Shelf/Cabinet'}`}>
+              title={`Add ${node.locationType === 'vault' ? 'Room' : 'Cabinet'}`}>
               <Plus size={12} style={{ color: colors.text }} />
             </button>
           )}
@@ -365,7 +370,7 @@ function LocationNode({ node, depth, onAddChild, onDelete, lastReconciledAt }: L
         <div>
           {node.children!.map((child) => (
             <LocationNode key={child.id} node={child} depth={depth + 1}
-              onAddChild={onAddChild} onDelete={onDelete} />
+              onAddChild={onAddChild} onDelete={onDelete} onSelectDetail={onSelectDetail} />
           ))}
         </div>
       )}
@@ -379,7 +384,7 @@ function HierarchyLegend() {
   const levels = [
     { type: 'vault' as LocationType, label: 'Vault', desc: 'Top-level physical building/safe' },
     { type: 'room' as LocationType, label: 'Room', desc: 'Room inside the vault' },
-    { type: 'cabinet' as LocationType, label: 'Shelf/Cabinet', desc: 'Shelf with rows & columns' },
+    { type: 'cabinet' as LocationType, label: 'Cabinet', desc: 'Cabinet with rows & columns' },
     { type: 'slot' as LocationType, label: 'Slot', desc: 'Filing slot (row × column intersection)' },
   ];
   return (
@@ -409,11 +414,13 @@ function HierarchyLegend() {
 
 export default function VaultManagementContent() {
   const { user } = useAuth();
+  const router = useRouter();
   const [tree, setTree] = useState<ArchiveLocation[]>([]);
   const [lastReconciledByVault, setLastReconciledByVault] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [addModal, setAddModal] = useState<{ parentId: string | null; parentType: LocationType | null } | null>(null);
+  const [drawerStack, setDrawerStack] = useState<ArchiveLocation[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -448,6 +455,14 @@ export default function VaultManagementContent() {
     if (!confirm('Delete this location and all its children?')) return;
     try { await archiveLocationService.delete(id); load(); }
     catch (e: unknown) { alert(e instanceof Error ? e.message : 'Delete failed'); }
+  };
+
+  const handleCloseDrawer = () => setDrawerStack([]);
+  const handleDrillInto = (child: ArchiveLocation) => setDrawerStack((prev) => [...prev, child]);
+  const handleBreadcrumbClick = (index: number) => setDrawerStack((prev) => prev.slice(0, index + 1));
+  const handleSlotClickInDrawer = (slot: ArchiveLocation) => {
+    setDrawerStack([]);
+    router.push(`/archive/vault-slot/${slot.id}`);
   };
 
   const totalVaults = tree.length;
@@ -531,7 +546,7 @@ export default function VaultManagementContent() {
           <div className="text-5xl mb-3">🏛️</div>
           <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No vaults defined yet</p>
           <p className="text-xs mt-1 mb-4" style={{ color: '#3B82F6' }}>
-            Start by adding your first vault, then add rooms, shelves, and slots
+            Start by adding your first vault, then add rooms, cabinets, and slots
           </p>
           <button onClick={() => setAddModal({ parentId: null, parentType: null })}
             className="px-4 py-2 rounded-xl text-sm font-medium text-white" style={{ backgroundColor: '#2563EB' }}>
@@ -544,6 +559,7 @@ export default function VaultManagementContent() {
             <LocationNode key={node.id} node={node} depth={0}
               onAddChild={(pid, pt) => setAddModal({ parentId: pid, parentType: pt })}
               onDelete={handleDelete}
+              onSelectDetail={(loc) => setDrawerStack([loc])}
               lastReconciledAt={lastReconciledByVault[node.id] ?? null} />
           ))}
         </div>
@@ -556,6 +572,16 @@ export default function VaultManagementContent() {
           userId={user?.id ?? ''}
           onClose={() => setAddModal(null)}
           onSaved={() => { setAddModal(null); load(); }}
+        />
+      )}
+
+      {drawerStack.length > 0 && (
+        <LocationDetailDrawer
+          stack={drawerStack}
+          onClose={handleCloseDrawer}
+          onDrillInto={handleDrillInto}
+          onBreadcrumbClick={handleBreadcrumbClick}
+          onSlotClick={handleSlotClickInDrawer}
         />
       )}
     </div>

@@ -31,12 +31,11 @@ const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
   vault:   <Building2 size={14} />,
   room:    <DoorOpen size={14} />,
   cabinet: <BookOpen size={14} />,
-  shelf:   <BookOpen size={14} />,
   slot:    <Grid3X3 size={14} />,
 };
 
 const LEVEL_EMOJI: Record<LocationType, string> = {
-  vault: '🏛️', room: '🚪', cabinet: '📚', shelf: '📚', slot: '📂',
+  vault: '🏛️', room: '🚪', cabinet: '📚', slot: '📂',
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -107,23 +106,23 @@ function SlotCell({ slot, onClick }: SlotCellProps) {
   );
 }
 
-// ─── Shelf Heatmap Grid ───────────────────────────────────────────────────────
+// ─── Cabinet Heatmap Grid ───────────────────────────────────────────────────────
 
-interface ShelfGridProps {
-  shelf: ArchiveLocation;
+interface CabinetGridProps {
+  cabinet: ArchiveLocation;
   onSlotClick: (slot: ArchiveLocation) => void;
 }
 
-function ShelfGrid({ shelf, onSlotClick }: ShelfGridProps) {
-  const slots = shelf.children ?? [];
-  const pct = getOccupancyPct(shelf);
+function CabinetGrid({ cabinet, onSlotClick }: CabinetGridProps) {
+  const slots = cabinet.children ?? [];
+  const pct = getOccupancyPct(cabinet);
   const colors = getHeatColor(pct);
 
   return (
     <div className="rounded-xl border p-3" style={{ borderColor: colors.border, backgroundColor: colors.bg }}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-sm">📚</span>
-        <span className="text-xs font-semibold" style={{ color: colors.text }}>{shelf.name}</span>
+        <span className="text-xs font-semibold" style={{ color: colors.text }}>{cabinet.name}</span>
         <span className="text-xs ml-auto px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: colors.border, color: colors.text }}>
           {pct}% full
         </span>
@@ -150,7 +149,7 @@ interface RoomPanelProps {
 
 function RoomPanel({ room, onSlotClick }: RoomPanelProps) {
   const [expanded, setExpanded] = useState(true);
-  const shelves = room.children ?? [];
+  const cabinets = room.children ?? [];
   const pct = getOccupancyPct(room);
   const colors = getHeatColor(pct);
 
@@ -171,7 +170,7 @@ function RoomPanel({ room, onSlotClick }: RoomPanelProps) {
           </div>
           <div className="flex items-center gap-3 mt-0.5">
             <span className="text-xs" style={{ color: '#6B7280' }}>
-              {room.currentOccupancy}/{room.capacity} items · {shelves.length} shelf/cabinets
+              {room.currentOccupancy}/{room.capacity} items · {cabinets.length} cabinets
             </span>
           </div>
         </div>
@@ -186,10 +185,10 @@ function RoomPanel({ room, onSlotClick }: RoomPanelProps) {
       </button>
       {expanded && (
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" style={{ backgroundColor: '#FAFAFA' }}>
-          {shelves.length > 0 ? shelves.map((shelf) => (
-            <ShelfGrid key={shelf.id} shelf={shelf} onSlotClick={onSlotClick} />
+          {cabinets.length > 0 ? cabinets.map((cabinet) => (
+            <CabinetGrid key={cabinet.id} cabinet={cabinet} onSlotClick={onSlotClick} />
           )) : (
-            <p className="text-xs col-span-full text-center py-4" style={{ color: '#9CA3AF' }}>No shelves in this room</p>
+            <p className="text-xs col-span-full text-center py-4" style={{ color: '#9CA3AF' }}>No cabinets in this room</p>
           )}
         </div>
       )}
@@ -384,7 +383,7 @@ export default function OccupancyHeatmapContent() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: '#1E3A8A' }}>Vault Occupancy Heatmap</h1>
           <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>
-            Real-time room, shelf, and slot occupancy with capacity alerts and filing trends
+            Real-time room, cabinet, and slot occupancy with capacity alerts and filing trends
           </p>
         </div>
         <div className="flex items-center gap-3">

@@ -224,7 +224,7 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
       description: 'Record the physical placement of an original collateral document in the archive vault.',
       steps: [
         { action: 'Open Vault Management and select the target vault location', where: 'Archive — Vault Management', href: '/archive/vault-management' },
-        { action: 'Record the document placement with shelf and slot details', where: 'Archive — Vault Management', href: '/archive/vault-management' },
+        { action: 'Record the document placement with cabinet and slot details', where: 'Archive — Vault Management', href: '/archive/vault-management' },
         { action: 'Update the custody status in the Archive Custody screen', where: 'Archive — Custody', href: '/archive/custody' },
         { action: 'Verify the document appears in the Documents Library', where: 'Archive — Documents Library', href: '/archive/documents-library' },
       ],

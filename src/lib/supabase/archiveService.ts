@@ -5,7 +5,7 @@ const supabase = createClient();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type LocationType = 'vault' | 'room' | 'cabinet' | 'shelf' | 'slot';
+export type LocationType = 'vault' | 'room' | 'cabinet' | 'slot';
 export type CustodyStatus = 'in_vault' | 'on_loan' | 'overdue' | 'returned' | 'missing';
 export type RequestStatus = 'pending' | 'pending_second_approval' | 'approved' | 'rejected' | 'checked_out' | 'returned';
 export type ArchiveEventType =
