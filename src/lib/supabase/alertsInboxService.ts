@@ -69,14 +69,18 @@ function buildSubjectFromSms(alertType: string, message: string, collateralId?: 
   }
 }
 
-function rowToInboxAlert(row: any): InboxAlert {
+function sourceKeyFor(id: string): string {
+  return `sms_alert:${id}`;
+}
+
+function rowToInboxAlert(row: any, isRead: boolean): InboxAlert {
   return {
     id: row.id,
     type: smsAlertTypeToInboxType(row.alert_type),
     subject: buildSubjectFromSms(row.alert_type, row.message, row.collateral_id),
     body: row.message,
     recipient: row.recipient_phone,
-    isRead: row.status === 'DELIVERED' || row.status === 'SENT',
+    isRead,
     priority: smsAlertTypeToPriority(row.alert_type),
     receivedAt: row.created_at,
     collateralId: row.collateral_id ?? undefined,
@@ -85,33 +89,83 @@ function rowToInboxAlert(row: any): InboxAlert {
   };
 }
 
+interface ReadState {
+  isRead: boolean;
+  isDismissed: boolean;
+}
+
+async function loadReadStates(userId: string): Promise<Map<string, ReadState>> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('notification_states')
+    .select('source_key, is_read, is_dismissed')
+    .eq('user_id', userId);
+  const map = new Map<string, ReadState>();
+  if (error) {
+    console.error('alertsInboxService.loadReadStates:', error.message);
+    return map;
+  }
+  (data ?? []).forEach((r: any) => map.set(r.source_key, { isRead: r.is_read, isDismissed: r.is_dismissed }));
+  return map;
+}
+
 export const alertsInboxService = {
   /**
    * Triage view over real SMS alerts (sms_alerts). This used to also
    * synthesize a fake "email" channel from audit_logs rows — no email
    * was ever actually sent for those, so that channel was dropped.
+   *
+   * Read/dismissed state is tracked per-user in notification_states,
+   * not on sms_alerts.status itself -- that column tracks actual SMS
+   * delivery (pending/sent/failed/delivered) and must stay accurate
+   * for the Alert Delivery Log, so opening an alert in this inbox
+   * can't be allowed to overwrite it.
    */
-  async fetchAlerts(limit = 100): Promise<InboxAlert[]> {
+  async fetchAlerts(userId: string, limit = 100): Promise<InboxAlert[]> {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from('sms_alerts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const [{ data, error }, readStates] = await Promise.all([
+      supabase.from('sms_alerts').select('*').order('created_at', { ascending: false }).limit(limit),
+      loadReadStates(userId),
+    ]);
     if (error) {
       console.error('alertsInboxService.fetchAlerts:', error.message);
       return [];
     }
-    return (data ?? []).map(rowToInboxAlert);
+    return (data ?? [])
+      .map((row: any) => {
+        const state = readStates.get(sourceKeyFor(row.id));
+        return { row, state };
+      })
+      .filter(({ state }) => !state?.isDismissed)
+      .map(({ row, state }) => rowToInboxAlert(row, state?.isRead ?? false));
   },
 
-  async markRead(id: string): Promise<void> {
+  async markRead(userId: string, id: string): Promise<void> {
     const supabase = createClient();
-    await supabase.from('sms_alerts').update({ status: 'DELIVERED' }).eq('id', id);
+    const { error } = await supabase.from('notification_states').upsert(
+      { user_id: userId, source_key: sourceKeyFor(id), is_read: true, read_at: new Date().toISOString() },
+      { onConflict: 'user_id,source_key' }
+    );
+    if (error) console.error('alertsInboxService.markRead failed:', error);
   },
 
-  async deleteAlert(id: string): Promise<void> {
+  async markUnread(userId: string, id: string): Promise<void> {
     const supabase = createClient();
-    await supabase.from('sms_alerts').delete().eq('id', id);
+    const { error } = await supabase.from('notification_states').upsert(
+      { user_id: userId, source_key: sourceKeyFor(id), is_read: false, read_at: null },
+      { onConflict: 'user_id,source_key' }
+    );
+    if (error) console.error('alertsInboxService.markUnread failed:', error);
+  },
+
+  /** Removes the alert from this user's inbox only -- the underlying sms_alerts row (and Alert Delivery Log) is untouched. */
+  async dismissAlert(userId: string, id: string): Promise<void> {
+    const supabase = createClient();
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('notification_states').upsert(
+      { user_id: userId, source_key: sourceKeyFor(id), is_read: true, read_at: now, is_dismissed: true, dismissed_at: now },
+      { onConflict: 'user_id,source_key' }
+    );
+    if (error) console.error('alertsInboxService.dismissAlert failed:', error);
   },
 };

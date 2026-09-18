@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Inbox, MessageSquare, AlertTriangle, Search, RefreshCw, CheckCheck, Trash2, X, Filter, ChevronDown, Shield, GitBranch, Building2, FileText, Activity, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
 import { alertsInboxService, type InboxAlert } from '@/lib/supabase/alertsInboxService';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -233,6 +234,7 @@ const TYPE_FILTER_TABS: { key: TypeFilter; label: string }[] = [
 ];
 
 export default function AlertsInboxContent() {
+  const { user } = useAuth();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -243,9 +245,10 @@ export default function AlertsInboxContent() {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const loadAlerts = useCallback(async () => {
+    if (!user?.id) return;
     setIsLoading(true);
     try {
-      const data = await alertsInboxService.fetchAlerts(200);
+      const data = await alertsInboxService.fetchAlerts(user.id, 200);
       setAlerts(data);
     } catch (err) {
       console.error('Failed to load alerts:', err);
@@ -253,7 +256,7 @@ export default function AlertsInboxContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadAlerts();
@@ -265,19 +268,23 @@ export default function AlertsInboxContent() {
   }, [loadAlerts]);
 
   const handleMarkRead = useCallback(async (id: string) => {
+    if (!user?.id) return;
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: true } : a)));
-    await alertsInboxService.markRead(id);
-  }, []);
+    await alertsInboxService.markRead(user.id, id);
+  }, [user?.id]);
 
-  const handleMarkUnread = useCallback((id: string) => {
+  const handleMarkUnread = useCallback(async (id: string) => {
+    if (!user?.id) return;
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: false } : a)));
-  }, []);
+    await alertsInboxService.markUnread(user.id, id);
+  }, [user?.id]);
 
   const handleDelete = useCallback(async (id: string) => {
+    if (!user?.id) return;
     setAlerts((prev) => prev.filter((a) => a.id !== id));
     setSelectedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
-    await alertsInboxService.deleteAlert(id);
-  }, []);
+    await alertsInboxService.dismissAlert(user.id, id);
+  }, [user?.id]);
 
   const handleToggleExpand = useCallback((id: string) => {
     setExpandedIds((prev) => {
@@ -335,22 +342,34 @@ export default function AlertsInboxContent() {
   };
 
   const handleBulkMarkRead = async () => {
+    if (!user?.id) return;
     const ids = Array.from(selectedIds);
     setAlerts((prev) => prev.map((a) => selectedIds.has(a.id) ? { ...a, isRead: true } : a));
     setSelectedIds(new Set());
-    await Promise.all(ids.map((id) => alertsInboxService.markRead(id)));
+    await Promise.all(ids.map((id) => alertsInboxService.markRead(user.id, id)));
   };
 
-  const handleBulkMarkUnread = () => {
+  const handleBulkMarkUnread = async () => {
+    if (!user?.id) return;
+    const ids = Array.from(selectedIds);
     setAlerts((prev) => prev.map((a) => selectedIds.has(a.id) ? { ...a, isRead: false } : a));
     setSelectedIds(new Set());
+    await Promise.all(ids.map((id) => alertsInboxService.markUnread(user.id, id)));
   };
 
   const handleBulkDelete = async () => {
+    if (!user?.id) return;
     const ids = Array.from(selectedIds);
     setAlerts((prev) => prev.filter((a) => !selectedIds.has(a.id)));
     setSelectedIds(new Set());
-    await Promise.all(ids.map((id) => alertsInboxService.deleteAlert(id)));
+    await Promise.all(ids.map((id) => alertsInboxService.dismissAlert(user.id, id)));
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!user?.id) return;
+    const ids = alerts.filter((a) => !a.isRead).map((a) => a.id);
+    setAlerts((prev) => prev.map((a) => ({ ...a, isRead: true })));
+    await Promise.all(ids.map((id) => alertsInboxService.markRead(user.id, id)));
   };
 
   return (
@@ -531,7 +550,7 @@ export default function AlertsInboxContent() {
             <span className="text-xs text-muted-foreground">Select all {filtered.length} alerts</span>
             {unreadCount > 0 && (
               <button
-                onClick={() => setAlerts((prev) => prev.map((a) => ({ ...a, isRead: true })))}
+                onClick={handleMarkAllRead}
                 className="ml-auto inline-flex items-center gap-1.5 text-xs font-500 text-primary hover:underline"
               >
                 <CheckCheck size={12} />
