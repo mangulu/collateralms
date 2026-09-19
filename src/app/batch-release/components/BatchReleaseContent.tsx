@@ -367,32 +367,41 @@ export default function BatchReleaseContent() {
     try {
       const supabase = createClient();
 
-      // Fetch all ACTIVE collateral_loan_links where the loan has been closed
-      // We simulate "closed loans" by fetching ACTIVE links that have an end_date set
-      // or by fetching all ACTIVE links (in production these would be filtered by core banking)
-      const { data: links, error } = await supabase
-        .from('collateral_loan_links')
-        .select(`
-          id,
-          collateral_id,
-          loan_account_id,
-          beneficiary_id,
-          beneficiary_name,
-          charge_rank,
-          allocated_amount,
-          start_date,
-          end_date,
-          status,
-          release_date
-        `)
-        .eq('status', 'ACTIVE')
-        .order('charge_rank', { ascending: true });
+      // Fetch ACTIVE collateral_loan_links whose linked loan is actually
+      // Closed in the loans table -- only those are real release candidates.
+      // Links created before loan_id existed (or created without picking a
+      // loan) have loan_id = null and are excluded, since there's no
+      // reliable way to verify their loan is closed.
+      const [{ data: links, error }, { data: closedLoans }] = await Promise.all([
+        supabase
+          .from('collateral_loan_links')
+          .select(`
+            id,
+            collateral_id,
+            loan_id,
+            loan_account_id,
+            beneficiary_id,
+            beneficiary_name,
+            charge_rank,
+            allocated_amount,
+            start_date,
+            end_date,
+            status,
+            release_date
+          `)
+          .eq('status', 'ACTIVE')
+          .order('charge_rank', { ascending: true }),
+        supabase.from('loans').select('id').eq('loan_status', 'Closed'),
+      ]);
 
       if (error || !links) {
         setItems([]);
         setLoading(false);
         return;
       }
+
+      const closedLoanIds = new Set((closedLoans ?? []).map((l: any) => l.id));
+      const closedLinks = links.filter((l: any) => l.loan_id && closedLoanIds.has(l.loan_id));
 
       // Fetch charge registry entries
       const { data: chargeRegs } = await supabase
@@ -406,7 +415,7 @@ export default function BatchReleaseContent() {
       });
 
       // Fetch collateral records for descriptions
-      const collateralIds = [...new Set(links.map((l: any) => l.collateral_id))];
+      const collateralIds = [...new Set(closedLinks.map((l: any) => l.collateral_id))];
       const { data: collaterals } = await supabase
         .from('collateral_records')
         .select('id, collateral_id, collateral_type, description')
@@ -417,7 +426,7 @@ export default function BatchReleaseContent() {
 
       const today = new Date().toISOString().slice(0, 10);
 
-      const mapped: ClosedLoanItem[] = links.map((l: any) => {
+      const mapped: ClosedLoanItem[] = closedLinks.map((l: any) => {
         const col = colMap.get(l.collateral_id);
         const cr = chargeMap.get(`${l.collateral_id}:${l.loan_account_id}`);
         return {
