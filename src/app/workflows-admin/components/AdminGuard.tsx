@@ -1,28 +1,15 @@
 'use client';
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { usePermissions } from '@/lib/rbac';
+import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import AccessDenied from '@/components/AccessDenied';
-
-const ADMIN_ROLES = [
-  'system_admin',
-  'legal_officer',
-  'credit_officer',
-  'credit_manager',
-  'legal_manager',
-  'risk_officer',
-  'compliance_officer',
-  'operations_officer',
-  'senior_manager',
-  'admin',
-];
 
 interface AdminGuardProps {
   children: React.ReactNode;
 }
 
 export default function AdminGuard({ children }: AdminGuardProps) {
-  const { role, loading } = usePermissions();
+  const { hasPermission, loading } = usePermissions();
 
   if (loading) {
     return (
@@ -32,7 +19,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
     );
   }
 
-  if (!ADMIN_ROLES.includes(role ?? '')) {
+  if (!hasPermission(PERMISSIONS.SETTINGS_MANAGE)) {
     return <AccessDenied />;
   }
 
