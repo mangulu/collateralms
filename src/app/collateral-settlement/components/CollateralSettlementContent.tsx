@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { Search, RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle, ChevronDown, ChevronUp, Loader2, DollarSign, FileText, TrendingDown, Landmark, X, BadgeCheck } from 'lucide-react';
+import { Search, RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle, ChevronDown, ChevronUp, Loader2, FileText, Landmark, X, BadgeCheck } from 'lucide-react';
 import { loanService, Loan } from '@/lib/supabase/loanService';
 
 
@@ -8,17 +8,6 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-interface PayoffEvent {
-  id: string;
-  date: string;
-  amount: number;
-  currency: string;
-  type: 'Principal' | 'Interest' | 'Penalty' | 'Full Settlement' | 'Partial Payment';
-  reference: string;
-  performedBy: string;
-  notes?: string;
-}
 
 interface CollateralLink {
   id: string;
@@ -41,7 +30,6 @@ interface LoanSettlementRecord {
   outstandingBalance: number;
   payoffPercentage: number;
   collaterals: CollateralLink[];
-  payoffHistory: PayoffEvent[];
   releasesPending: number;
   releasesCompleted: number;
 }
@@ -69,46 +57,6 @@ const settlementStatusConfig: Record<string, { bg: string; text: string; border:
   Restructured: { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   icon: AlertTriangle, label: 'Restructured' },
 };
 
-const payoffTypeConfig: Record<string, { bg: string; text: string }> = {
-  'Full Settlement': { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  'Partial Payment': { bg: 'bg-blue-100',    text: 'text-blue-700' },
-  'Principal':       { bg: 'bg-indigo-100',  text: 'text-indigo-700' },
-  'Interest':        { bg: 'bg-amber-100',   text: 'text-amber-700' },
-  'Penalty':         { bg: 'bg-red-100',     text: 'text-red-700' },
-};
-
-// ── Mock payoff history generator (derived from loan data) ────────────────────
-function generatePayoffHistory(loan: Loan): PayoffEvent[] {
-  if (!loan.disbursementDate) return [];
-  const events: PayoffEvent[] = [];
-  const start = new Date(loan.disbursementDate);
-  const amount = loan.facilityAmount;
-  const outstanding = loan.outstandingBalance ?? amount;
-  const paid = amount - outstanding;
-
-  if (paid > 0) {
-    // Generate representative payment events
-    const numPayments = Math.min(Math.floor(paid / (amount / 12)) + 1, 8);
-    for (let i = 0; i < numPayments; i++) {
-      const payDate = new Date(start);
-      payDate.setMonth(payDate.getMonth() + (i + 1));
-      if (payDate > new Date()) break;
-      const isLast = i === numPayments - 1 && outstanding <= 0;
-      events.push({
-        id: `${loan.id}-pay-${i}`,
-        date: payDate.toISOString().split('T')[0],
-        amount: isLast ? paid : Math.round(paid / numPayments),
-        currency: loan.currency,
-        type: isLast && outstanding <= 0 ? 'Full Settlement' : 'Partial Payment',
-        reference: `PMT-${loan.loanNumber}-${String(i + 1).padStart(3, '0')}`,
-        performedBy: 'System',
-        notes: isLast && outstanding <= 0 ? 'Final settlement — loan closed' : undefined,
-      });
-    }
-  }
-  return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-}
-
 function mapLoanToSettlement(loan: Loan, collaterals: CollateralLink[]): LoanSettlementRecord {
   const outstanding = loan.outstandingBalance ?? loan.facilityAmount;
   const paid = loan.facilityAmount - outstanding;
@@ -132,7 +80,6 @@ function mapLoanToSettlement(loan: Loan, collaterals: CollateralLink[]): LoanSet
     outstandingBalance: outstanding,
     payoffPercentage: pct,
     collaterals,
-    payoffHistory: generatePayoffHistory(loan),
     releasesPending,
     releasesCompleted,
   };
@@ -160,28 +107,6 @@ function CollateralReleaseChip({ c }: { c: CollateralLink }) {
       {released && c.dischargeDate && (
         <span className="text-slate-400 ml-1">{fmtDate(c.dischargeDate)}</span>
       )}
-    </div>
-  );
-}
-
-function PayoffHistoryRow({ event }: { event: PayoffEvent }) {
-  const cfg = payoffTypeConfig[event.type] ?? { bg: 'bg-slate-100', text: 'text-slate-600' };
-  return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0">
-      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-        <DollarSign className="w-4 h-4 text-slate-500" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>{event.type}</span>
-          <span className="text-xs text-slate-400">{event.reference}</span>
-        </div>
-        {event.notes && <p className="text-xs text-slate-500 mt-0.5 truncate">{event.notes}</p>}
-      </div>
-      <div className="text-right flex-shrink-0">
-        <p className="text-sm font-semibold text-slate-800">{fmt(event.amount, event.currency)}</p>
-        <p className="text-xs text-slate-400">{fmtDate(event.date)}</p>
-      </div>
     </div>
   );
 }
@@ -260,25 +185,13 @@ function LoanSettlementCard({ record }: { record: LoanSettlementRecord }) {
         )}
       </div>
 
-      {/* Expanded: Payoff History */}
+      {/* Expanded: Collateral Release Detail */}
       {expanded && (
         <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-4">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingDown className="w-4 h-4 text-slate-400" />
-            <h4 className="text-sm font-semibold text-slate-700">Payoff History</h4>
-            <span className="text-xs text-slate-400">({record.payoffHistory.length} events)</span>
-          </div>
-          {record.payoffHistory.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">No payment events recorded yet.</p>
+          {record.collaterals.length === 0 ? (
+            <p className="text-sm text-slate-400 py-4 text-center">No linked collateral for this loan.</p>
           ) : (
-            <div className="bg-white rounded-lg border border-slate-100 px-4 divide-y divide-slate-50">
-              {record.payoffHistory.map(ev => <PayoffHistoryRow key={ev.id} event={ev} />)}
-            </div>
-          )}
-
-          {/* Collateral detail table */}
-          {record.collaterals.length > 0 && (
-            <div className="mt-4">
+            <div>
               <div className="flex items-center gap-2 mb-3">
                 <Landmark className="w-4 h-4 text-slate-400" />
                 <h4 className="text-sm font-semibold text-slate-700">Collateral Release Detail</h4>
