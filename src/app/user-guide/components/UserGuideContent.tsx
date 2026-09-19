@@ -327,7 +327,7 @@ const ROLE_GUIDES: RoleGuide[] = [
       'Before deactivating a user, check if they have any pending workflow items that need reassignment.',
       'Use the Scheduled Jobs screen to verify that automated alerts and reports are running correctly.',
       'Export the Compliance Trail monthly as a compliance record — store it in a secure location.',
-      'Test email provider settings using the "Send Test Email" button before saving changes.',
+      'Only Resend is actually wired to send email right now — selecting SendGrid or Brevo saves the credentials but nothing sends through them yet.',
       'Use Alert Thresholds to proactively trigger notifications before collateral reaches critical risk levels.',
       'The Audit Trail tracks all user activity by date range — use it for periodic reviews.',
     ],

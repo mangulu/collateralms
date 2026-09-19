@@ -237,7 +237,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
     narrative: 'System Settings is organized into four groups: Reference Data (document types, required documents, collateral types, registries), Integrations (email provider), Notifications (preferences and templates), and Advanced (bank details, BRELA API config, thresholds, retention policies) — most of Advanced requires Settings Manage permission.',
     steps: [
       'Reference Data controls the dropdown options and requirements used throughout the app — e.g. which documents are mandatory per collateral type',
-      'Email Provider lets you configure and test-send via your SMTP/API provider before saving',
+      'Email Provider stores API credentials for Resend, SendGrid, or Brevo — only Resend is actually wired to send right now, so switching the active provider alone won\'t change what sends email',
       'Notification Preferences and Email Templates control what automated emails say and who gets them',
       'Advanced holds bank identity details, BRELA API endpoint configuration, system-wide alert thresholds, and document retention periods — changes here affect the whole platform',
     ],
