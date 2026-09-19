@@ -237,7 +237,7 @@ export const perfectionService = {
     // Fetch current record for audit trail + workflow instance linking
     const { data: current } = await supabase
       .from('perfection_requests')
-      .select('request_status, collateral_id, collateral_record_id, title')
+      .select('request_status, collateral_id, collateral_record_id')
       .eq('id', id)
       .maybeSingle();
 
@@ -280,7 +280,7 @@ export const perfectionService = {
       collateral_id: current?.collateral_id ?? null,
       entity_type: 'perfection_request',
       action: 'approved',
-      message: `Perfection request approved: ${current?.title ?? id}`,
+      message: `Perfection request approved: ${current?.collateral_id ?? id}`,
       detail: `Status changed from ${current?.request_status ?? 'Under Review'} to Approved. ${decisionNotes ? `Notes: ${decisionNotes}` : ''}`,
       reason: decisionNotes || null,
       performed_by: userId,
@@ -308,7 +308,7 @@ export const perfectionService = {
 
     const { data: current } = await supabase
       .from('perfection_requests')
-      .select('request_status, collateral_id, collateral_record_id, title')
+      .select('request_status, collateral_id, collateral_record_id')
       .eq('id', id)
       .maybeSingle();
 
@@ -360,7 +360,7 @@ export const perfectionService = {
       collateral_id: current?.collateral_id ?? null,
       entity_type: 'perfection_request',
       action: 'rejected',
-      message: `Perfection request rejected: ${current?.title ?? id}`,
+      message: `Perfection request rejected: ${current?.collateral_id ?? id}`,
       detail: `Status changed from ${current?.request_status ?? 'Under Review'} to Rejected. Reason: ${decisionNotes}`,
       reason: decisionNotes || null,
       performed_by: userId,
@@ -470,7 +470,7 @@ export const perfectionService = {
 
     const { data: current } = await supabase
       .from('perfection_requests')
-      .select('request_status, collateral_id, collateral_record_id, title')
+      .select('request_status, collateral_id, collateral_record_id')
       .eq('id', id)
       .maybeSingle();
 
@@ -522,7 +522,7 @@ export const perfectionService = {
       collateral_id: current?.collateral_id ?? null,
       entity_type: 'perfection_request',
       action: 'perfected',
-      message: `Collateral perfected: ${current?.title ?? id}`,
+      message: `Collateral perfected: ${current?.collateral_id ?? id}`,
       detail: `Status changed from ${current?.request_status ?? 'Under Review'} to Perfected. ${decisionNotes ? `Notes: ${decisionNotes}` : ''}`,
       reason: decisionNotes || null,
       performed_by: userId,
