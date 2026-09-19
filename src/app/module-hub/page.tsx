@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
 import CollateralLifecycleMap from './components/CollateralLifecycleMap';
-import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, ArrowRight, Calendar, Activity, Zap, FileText, Search, ChevronDown, FlaskConical,  } from 'lucide-react';
+import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, ArrowRight, Calendar, Activity, Zap, Search, ChevronDown, FlaskConical } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -203,108 +203,6 @@ const ModuleSkeleton = () => (
     </div>
   </div>
 );
-
-// ─── System Overview Left Panel ───────────────────────────────────────────────
-
-const SYSTEM_FEATURES = [
-  { icon: FolderOpen,   color: '#007CB3', label: 'Collateral registration, valuation & LTV monitoring' },
-  { icon: CheckSquare,  color: '#D97706', label: 'Perfection, release & substitution workflows' },
-  { icon: FileText,     color: '#059669', label: 'Document library with version control & approvals' },
-  { icon: ShieldCheck,  color: '#9D174D', label: 'Compliance rules engine & deadline tracking' },
-  { icon: Brain,        color: '#7C3AED', label: 'AI risk scoring & fraud detection' },
-  { icon: Activity,     color: '#065F46', label: 'Full audit trail with field-level change history' },
-  { icon: Users,        color: '#374151', label: 'Role-based access with 2FA security' },
-  { icon: Archive,      color: '#059669', label: 'Physical vault & archive custody management' },
-];
-
-const MODULE_CATEGORIES = [
-  { label: 'Collaterals',            color: CATEGORY_BORDER.collateral,   count: 2 },
-  { label: 'Workflows',              color: CATEGORY_BORDER.workflow,      count: 1 },
-  { label: 'Analytics & Intelligence', color: CATEGORY_BORDER.intelligence, count: 1 },
-  { label: 'Alerts & Reports',       color: CATEGORY_BORDER.alerts,        count: 2 },
-  { label: 'Audit & Compliance',     color: CATEGORY_BORDER.audit,         count: 1 },
-  { label: 'Archive',                color: CATEGORY_BORDER.archive,       count: 1 },
-  { label: 'Administration',         color: CATEGORY_BORDER.admin,         count: 1 },
-];
-
-interface SystemOverviewPanelProps {
-  displayName: string;
-  displayRole: string;
-  initials: string;
-  greeting: string;
-  todayStr: string;
-  onSignOut: () => void;
-}
-
-function SystemOverviewPanel({ displayName, displayRole, initials, greeting, todayStr, onSignOut }: SystemOverviewPanelProps) {
-  return (
-    <div
-      className="flex flex-col h-full overflow-y-auto"
-      style={{
-        background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)',
-      }}
-    >
-      {/* Decorative blobs */}
-      <div className="pointer-events-none absolute -left-10 top-0 h-56 w-56 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.07)' }} aria-hidden="true" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.18)' }} aria-hidden="true" />
-      {/* Decorative lines */}
-      <svg className="pointer-events-none absolute bottom-0 left-0 h-[40%] w-[80%] text-white/20" viewBox="0 0 300 200" fill="none" preserveAspectRatio="xMinYMax slice" aria-hidden="true">
-        <path d="M-20 180 C 60 140, 120 160, 180 130 C 240 100, 260 120, 320 90" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M-30 200 C 50 165, 110 180, 170 150 C 230 120, 250 140, 310 110" stroke="currentColor" strokeWidth="1" opacity="0.5" />
-      </svg>
-
-      <div className="relative z-10 flex flex-col flex-1 px-6 py-8">
-
-        {/* System summary */}
-        <div
-          className="rounded-xl p-4 mb-5"
-          style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(6px)' }}
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            About this system
-          </p>
-          <p className="text-[12.5px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
-            A full-cycle collateral management platform built for banks — covering registration, valuation, perfection workflows, document management, compliance tracking, AI-powered risk assessment, and real-time audit trails.
-          </p>
-        </div>
-
-        {/* Feature list */}
-        <div className="mb-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            What's included
-          </p>
-          <ul className="space-y-2">
-            {SYSTEM_FEATURES.map((f) => {
-              const FIcon = f.icon;
-              return (
-                <li key={f.label} className="flex items-start gap-2.5">
-                  <span
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
-                  >
-                    <FIcon size={10} color="white" aria-hidden="true" />
-                  </span>
-                  <span className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                    {f.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-
-        {/* Footer credit */}
-        <p className="text-center text-[11px] mt-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          A product by{' '}
-          <a href="https://www.contentpro.co.tz" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            Contentpro
-          </a>
-        </p>
-      </div>
-    </div>
-  );
-}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -690,31 +588,9 @@ export default function ModuleHubPage() {
         </div>
       </header>
 
-      {/* ── Two-Column Body ──────────────────────────────────────────────────── */}
+      {/* ── Body ──────────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 relative" style={{ zIndex: 1 }}>
 
-        {/* ── LEFT PANEL: System Overview (hidden on mobile) ─────────────────── */}
-        <aside
-          className="hidden lg:flex flex-col relative shrink-0 overflow-hidden"
-          style={{
-            width: '300px',
-            minHeight: 'calc(100vh - 57px)',
-            position: 'sticky',
-            top: '57px',
-            height: 'calc(100vh - 57px)',
-          }}
-        >
-          <SystemOverviewPanel
-            displayName={displayName}
-            displayRole={displayRole}
-            initials={initials}
-            greeting={greeting}
-            todayStr={todayStr}
-            onSignOut={() => signOut?.()}
-          />
-        </aside>
-
-        {/* ── RIGHT PANEL: Main Content ──────────────────────────────────────── */}
         <main className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
 
           {/* ── Hero / Welcome Section ─────────────────────────────────────── */}
@@ -722,7 +598,7 @@ export default function ModuleHubPage() {
             className="px-6 pt-8 pb-6 relative"
             style={{ borderBottom: '1px solid rgba(0,0,0,0.07)' }}
           >
-            <div className="max-w-[1000px] mx-auto">
+            <div className="max-w-[1400px] mx-auto">
               {/* Welcome row */}
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
                 <div>
@@ -834,7 +710,7 @@ export default function ModuleHubPage() {
               className="px-6 py-4"
               style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEF9F9 100%)', borderBottom: '2px solid rgba(220,38,38,0.1)' }}
             >
-              <div className="max-w-[1000px] mx-auto">
+              <div className="max-w-[1400px] mx-auto">
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
                     <div className="p-1 rounded-full bg-red-100 animate-pulse">
@@ -893,7 +769,7 @@ export default function ModuleHubPage() {
 
           {/* ── Collateral Lifecycle Map ──────────────────────────────────── */}
           <div className="flex-1 px-6 py-8">
-            <div className="max-w-[1000px] mx-auto">
+            <div className="max-w-[1400px] mx-auto">
               {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {Array.from({ length: 3 }).map((_, i) => <ModuleSkeleton key={i} />)}
