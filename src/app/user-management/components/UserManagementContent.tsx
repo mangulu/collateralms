@@ -18,7 +18,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { fetchRoles, RoleDefinition } from '@/lib/rbac';
+import { fetchRoles, RoleDefinition, usePermissions, PERMISSIONS } from '@/lib/rbac';
+import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,9 @@ interface ToastState {
 
 export default function UserManagementContent() {
   const supabase = createClient();
+  const { hasPermission } = usePermissions();
+  const { user: currentUser } = useAuth();
+  const canManage = hasPermission(PERMISSIONS.USER_MANAGEMENT_MANAGE);
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
@@ -185,6 +189,10 @@ export default function UserManagementContent() {
   async function handleSave() {
     setFormError(null);
 
+    if (!canManage) {
+      setFormError('You do not have permission to manage users.');
+      return;
+    }
     if (!formData.fullName.trim()) {
       setFormError('Full name is required.');
       return;
@@ -265,6 +273,14 @@ export default function UserManagementContent() {
   // ─── Toggle Status ──────────────────────────────────────────────────────────
 
   async function handleToggleStatus(user: UserProfile) {
+    if (!canManage) {
+      showToast('You do not have permission to manage users.', 'error');
+      return;
+    }
+    if (user.id === currentUser?.id) {
+      showToast('You cannot activate or deactivate your own account.', 'error');
+      return;
+    }
     const newStatus = !user.isActive;
     try {
       const { error } = await supabase
@@ -347,13 +363,15 @@ export default function UserManagementContent() {
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             Refresh
           </button>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={16} />
-            Add User
-          </button>
+          {canManage && (
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={16} />
+              Add User
+            </button>
+          )}
         </div>
       </div>
 
@@ -508,26 +526,30 @@ export default function UserManagementContent() {
                       </td>
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => openEditModal(user)}
-                            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                            title="Edit user"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleToggleStatus(user)}
-                            className={`p-1.5 rounded-md transition-colors ${
-                              user.isActive
-                                ? 'hover:bg-red-50 text-muted-foreground hover:text-red-600'
-                                : 'hover:bg-green-50 text-muted-foreground hover:text-green-600'
-                            }`}
-                            title={user.isActive ? 'Deactivate user' : 'Activate user'}
-                          >
-                            {user.isActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-                          </button>
-                        </div>
+                        {canManage && (
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => openEditModal(user)}
+                              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                              title="Edit user"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            {user.id !== currentUser?.id && (
+                              <button
+                                onClick={() => handleToggleStatus(user)}
+                                className={`p-1.5 rounded-md transition-colors ${
+                                  user.isActive
+                                    ? 'hover:bg-red-50 text-muted-foreground hover:text-red-600'
+                                    : 'hover:bg-green-50 text-muted-foreground hover:text-green-600'
+                                }`}
+                                title={user.isActive ? 'Deactivate user' : 'Activate user'}
+                              >
+                                {user.isActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -606,7 +628,8 @@ export default function UserManagementContent() {
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value }))}
-                    className="w-full appearance-none pl-3 pr-8 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+                    disabled={editingUser?.id === currentUser?.id}
+                    className="w-full appearance-none pl-3 pr-8 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white disabled:opacity-60 disabled:bg-muted"
                   >
                     {roles.map((r) => (
                       <option key={r.name} value={r.name}>{r.label}</option>
@@ -614,6 +637,9 @@ export default function UserManagementContent() {
                   </select>
                   <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
+                {editingUser?.id === currentUser?.id && (
+                  <p className="text-xs text-muted-foreground mt-1">You cannot change your own role. Ask another administrator to do this.</p>
+                )}
               </div>
 
               {/* Password (create only) */}
