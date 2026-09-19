@@ -128,14 +128,14 @@ export default function CollateralLifecycleMap({ visibleModules, searchQuery = '
       {!noStageMatches && (
         <div
           className="rounded-2xl p-6 sm:p-8"
-          style={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(13,28,46,0.06)' }}
+          style={{ backgroundColor: 'var(--izou-card)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(13,28,46,0.06)' }}
         >
           <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
             <div className="flex items-center gap-2.5">
-              <span style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: '#00A9E0', display: 'inline-block' }} />
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#007CB3' }}>The Collateral Lifecycle</span>
+              <span style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: 'var(--izou-primary)', display: 'inline-block' }} />
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--izou-primary)' }}>The Collateral Lifecycle</span>
             </div>
-            <span className="text-xs" style={{ color: '#6B7280' }}>6 stages, registration through release</span>
+            <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>6 stages, registration through release</span>
           </div>
 
           <div className="flex items-start overflow-x-auto pb-1">
@@ -151,32 +151,32 @@ export default function CollateralLifecycleMap({ visibleModules, searchQuery = '
                     className="group flex flex-col items-center text-center gap-2.5 shrink-0"
                     style={{ flex: '1 1 0', minWidth: 140, opacity: dim ? 0.35 : 1, transition: 'opacity 0.15s ease' }}
                   >
-                    <span className="text-[11px] font-bold font-mono" style={{ color: '#A7B1BF' }}>{stage.step}</span>
+                    <span className="text-[11px] font-bold font-mono" style={{ color: 'var(--izou-muted)', opacity: 0.7 }}>{stage.step}</span>
                     <div
                       className="w-16 h-16 rounded-full flex items-center justify-center transition-all duration-150 group-hover:-translate-y-0.5"
                       style={{
-                        backgroundColor: '#D6F0FB',
-                        border: '1px solid #A9DFF2',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                        backgroundColor: 'var(--izou-primary)',
+                        border: '1px solid var(--izou-primary-dark)',
+                        boxShadow: '0 4px 10px var(--izou-primary-tint)',
                       }}
-                      onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 22px rgba(0,124,179,0.22)'; (e.currentTarget as HTMLElement).style.borderColor = '#00A9E0'; }}
-                      onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; (e.currentTarget as HTMLElement).style.borderColor = '#A9DFF2'; }}
+                      onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 22px var(--izou-primary-shadow)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--izou-primary-dark)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-dark)'; }}
+                      onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 10px var(--izou-primary-tint)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--izou-primary-dark)'; (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary)'; }}
                     >
-                      <StageIcon size={26} style={{ color: '#007CB3' }} strokeWidth={1.8} />
+                      <StageIcon size={26} style={{ color: '#ffffff' }} strokeWidth={1.8} />
                     </div>
-                    <span className="text-sm font-bold" style={{ color: '#0D1C2E' }}>{stage.title}</span>
-                    <span className="text-xs leading-snug" style={{ color: '#4B5A6E' }}>{stage.description}</span>
+                    <span className="text-sm font-bold" style={{ color: 'var(--izou-text)' }}>{stage.title}</span>
+                    <span className="text-xs leading-snug" style={{ color: 'var(--izou-muted)' }}>{stage.description}</span>
                     <span
                       className="text-[11px] font-semibold font-mono px-2.5 py-0.5 rounded-full"
-                      style={{ color: '#007CB3', backgroundColor: '#D6F0FB', border: '1px solid #A9DFF2' }}
+                      style={{ color: 'var(--izou-primary-dark)', backgroundColor: 'var(--izou-primary-light)', border: '1px solid var(--izou-primary-tint)' }}
                     >
                       {loading ? '···' : `${count} ${stage.countLabel}`}
                     </span>
                   </Link>
 
                   {i < STAGES.length - 1 && (
-                    <div className="relative shrink-0" style={{ flex: '0 0 32px', height: 2, marginTop: 44, backgroundColor: '#B9C2CE' }}>
-                      <ChevronRight size={14} strokeWidth={2.4} style={{ position: 'absolute', top: -6, right: -2, color: '#8B96A5' }} />
+                    <div className="relative shrink-0" style={{ flex: '0 0 32px', height: 3, marginTop: 44, backgroundColor: 'var(--izou-secondary)', borderRadius: 2 }}>
+                      <ChevronRight size={20} strokeWidth={3.2} style={{ position: 'absolute', top: -9, right: -4, color: 'var(--izou-secondary)' }} />
                     </div>
                   )}
                 </React.Fragment>
@@ -190,14 +190,14 @@ export default function CollateralLifecycleMap({ visibleModules, searchQuery = '
       {!noToolMatches && supportingTools.length > 0 && (
         <div
           className="rounded-2xl p-6 sm:p-8"
-          style={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(13,28,46,0.06)' }}
+          style={{ backgroundColor: 'var(--izou-card)', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 1px 4px rgba(13,28,46,0.06)' }}
         >
           <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
             <div className="flex items-center gap-2.5">
-              <span style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: '#94A3B8', display: 'inline-block' }} />
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#4B5A6E' }}>Supporting Tools</span>
+              <span style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: 'var(--izou-muted)', display: 'inline-block' }} />
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--izou-muted)' }}>Supporting Tools</span>
             </div>
-            <span className="text-xs" style={{ color: '#6B7280' }}>Cross-cutting — not tied to one lifecycle stage</span>
+            <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>Cross-cutting — not tied to one lifecycle stage</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
@@ -209,21 +209,21 @@ export default function CollateralLifecycleMap({ visibleModules, searchQuery = '
                   key={mod.id}
                   href={mod.href}
                   className="group flex items-center gap-3 p-4 rounded-xl transition-all"
-                  style={{ backgroundColor: '#F7F8FA', border: '1px solid #DFE3E9', opacity: dim ? 0.35 : 1 }}
-                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#ffffff'; (e.currentTarget as HTMLElement).style.borderColor = mod.iconBg; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(13,28,46,0.08)'; }}
-                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#F7F8FA'; (e.currentTarget as HTMLElement).style.borderColor = '#DFE3E9'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
+                  style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)', opacity: dim ? 0.35 : 1 }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-card)'; (e.currentTarget as HTMLElement).style.borderColor = mod.iconBg; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 16px rgba(13,28,46,0.08)'; }}
+                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-bg)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--izou-border)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
                 >
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${mod.iconBg}18`, border: `1px solid ${mod.iconBg}30` }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${mod.iconBg} 15%, white)`, border: `1px solid color-mix(in srgb, ${mod.iconBg} 30%, white)` }}
                   >
                     <ModIcon size={18} style={{ color: mod.iconBg }} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold truncate" style={{ color: '#0D1C2E' }}>{mod.title}</p>
-                    <p className="text-xs truncate" style={{ color: '#6B7280' }}>{mod.description}</p>
+                    <p className="text-sm font-bold truncate" style={{ color: 'var(--izou-text)' }}>{mod.title}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--izou-muted)' }}>{mod.description}</p>
                   </div>
-                  <ChevronRight size={14} className="shrink-0 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" style={{ color: '#94A3B8' }} />
+                  <ChevronRight size={14} className="shrink-0 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" style={{ color: 'var(--izou-muted)' }} />
                 </Link>
               );
             })}
@@ -232,7 +232,7 @@ export default function CollateralLifecycleMap({ visibleModules, searchQuery = '
       )}
 
       {noStageMatches && noToolMatches && (
-        <div className="text-center py-16 text-sm" style={{ color: '#9CA3AF' }}>
+        <div className="text-center py-16 text-sm" style={{ color: 'var(--izou-muted)' }}>
           No stages or tools match "{searchQuery}"
         </div>
       )}

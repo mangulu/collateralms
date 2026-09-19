@@ -17,7 +17,6 @@ export interface ModuleCard {
   description: string;
   icon: React.ElementType;
   href: string;
-  borderColor: string;
   iconBg: string;
   category:
     | 'collateral' |'workflow' |'archive' |'intelligence' |'alerts' |'reports' |'audit' |'admin';
@@ -40,30 +39,6 @@ interface SummaryStats {
   overdueItems: number;
 }
 
-// ─── Category colour map ──────────────────────────────────────────────────────
-
-const CATEGORY_BORDER: Record<string, string> = {
-  collateral: '#007CB3',
-  workflow: '#D97706',
-  archive: '#059669',
-  intelligence: '#7C3AED',
-  alerts: '#DC2626',
-  reports: '#065F46',
-  audit: '#9D174D',
-  admin: '#374151',
-};
-
-const CATEGORY_BG: Record<string, string> = {
-  collateral: 'rgba(0,124,179,0.06)',
-  workflow: 'rgba(217,119,6,0.06)',
-  archive: 'rgba(5,150,105,0.06)',
-  intelligence: 'rgba(124,58,237,0.06)',
-  alerts: 'rgba(220,38,38,0.06)',
-  reports: 'rgba(6,95,70,0.06)',
-  audit: 'rgba(157,23,77,0.06)',
-  admin: 'rgba(55,65,81,0.06)',
-};
-
 // ─── Module definitions ───────────────────────────────────────────────────────
 
 const modules: ModuleCard[] = [
@@ -73,8 +48,7 @@ const modules: ModuleCard[] = [
     description: 'Manage collateral registry, documents, batch operations, and scheduled jobs.',
     icon: FolderOpen,
     href: '/collateral-management',
-    borderColor: CATEGORY_BORDER.collateral,
-    iconBg: '#007CB3',
+    iconBg: 'var(--izou-secondary)',
     category: 'collateral',
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
@@ -85,8 +59,7 @@ const modules: ModuleCard[] = [
       'Manage obligor profiles, credit risk scores, exposure metrics, and approval trends.',
     icon: Users,
     href: '/obligors',
-    borderColor: CATEGORY_BORDER.collateral,
-    iconBg: '#0F766E',
+    iconBg: 'var(--izou-secondary-mid)',
     category: 'collateral',
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
@@ -97,8 +70,7 @@ const modules: ModuleCard[] = [
       'Centralised approval inbox for perfection, document, release, and archive request workflows. Design templates, configure auto-triggers, manage escalations, and monitor workflow KPIs.',
     icon: CheckSquare,
     href: '/approval-inbox',
-    borderColor: CATEGORY_BORDER.workflow,
-    iconBg: '#D97706',
+    iconBg: 'var(--izou-warning)',
     category: 'workflow',
     requiredPermission: PERMISSIONS.PERFECTION_VIEW,
   },
@@ -109,8 +81,7 @@ const modules: ModuleCard[] = [
       'AI-powered risk assessment, fraud prevention, deadline predictions, and analytics.',
     icon: Brain,
     href: '/executive-dashboard',
-    borderColor: CATEGORY_BORDER.intelligence,
-    iconBg: '#7C3AED',
+    iconBg: 'var(--izou-highlight)',
     category: 'intelligence',
     requiredPermission: PERMISSIONS.COMPLIANCE_VIEW,
   },
@@ -120,8 +91,7 @@ const modules: ModuleCard[] = [
     description: 'Monitor deadline reminders, notification delivery logs, and alerts inbox.',
     icon: Bell,
     href: '/notifications-hub',
-    borderColor: CATEGORY_BORDER.alerts,
-    iconBg: '#DC2626',
+    iconBg: 'var(--izou-primary)',
     category: 'alerts',
     requiredPermission: PERMISSIONS.DASHBOARD_VIEW,
   },
@@ -132,8 +102,7 @@ const modules: ModuleCard[] = [
       'Reports Hub with regulatory and utilization views, custom reports, and unified export.',
     icon: BarChart2,
     href: '/reports',
-    borderColor: CATEGORY_BORDER.reports,
-    iconBg: '#059669',
+    iconBg: 'var(--izou-success)',
     category: 'reports',
     requiredPermission: PERMISSIONS.REPORTS_VIEW,
   },
@@ -144,8 +113,7 @@ const modules: ModuleCard[] = [
       'Full audit trails, archive audit log, compliance rules, live activity streams, and audit reports.',
     icon: ShieldCheck,
     href: '/audit-trail',
-    borderColor: CATEGORY_BORDER.audit,
-    iconBg: '#9D174D',
+    iconBg: 'var(--izou-neutral)',
     category: 'audit',
     requiredPermission: PERMISSIONS.AUDIT_LOG_VIEW,
   },
@@ -156,8 +124,7 @@ const modules: ModuleCard[] = [
       'User management, officer permissions, system settings, alert thresholds, and client bank accounts.',
     icon: Settings,
     href: '/user-management',
-    borderColor: CATEGORY_BORDER.admin,
-    iconBg: '#4B5563',
+    iconBg: 'var(--izou-danger)',
     category: 'admin',
     adminOnly: true,
     requiredPermission: PERMISSIONS.USER_MANAGEMENT_VIEW,
@@ -169,8 +136,7 @@ const modules: ModuleCard[] = [
       'Physical vault management, collateral placement, document management, file loan workflow, and custody tracking.',
     icon: Archive,
     href: '/archive/vault-management',
-    borderColor: CATEGORY_BORDER.archive,
-    iconBg: '#059669',
+    iconBg: 'var(--izou-success)',
     category: 'archive',
     requiredPermission: PERMISSIONS.COLLATERAL_VIEW,
   },
@@ -401,15 +367,17 @@ export default function ModuleHubPage() {
 
   // ─── Helper functions ──────────────────────────────────────────────────────
 
+  // Note: `color` stays a literal hex (not a CSS var) because it's alpha-suffixed
+  // below (`${cfg.color}25`) to derive a translucent border — var(--x)25 isn't valid CSS.
   const priorityTypeConfig = {
     overdue: {
-      color: '#DC2626',
-      bg: 'rgba(220,38,38,0.08)',
+      color: '#B91C1C',
+      bg: 'var(--izou-danger-light)',
       label: 'OVERDUE',
       icon: AlertTriangle,
     },
-    escalated: { color: '#D97706', bg: 'rgba(217,119,6,0.08)', label: 'ESCALATED', icon: Zap },
-    'due-today': { color: '#007CB3', bg: 'rgba(0,124,179,0.08)', label: 'DUE TODAY', icon: Clock },
+    escalated: { color: '#B45309', bg: 'var(--izou-warning-light)', label: 'ESCALATED', icon: Zap },
+    'due-today': { color: '#12213C', bg: 'var(--izou-secondary-light)', label: 'DUE TODAY', icon: Clock },
   };
 
   const handleDismissPriority = (id: string) => {
@@ -441,14 +409,14 @@ export default function ModuleHubPage() {
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', inset: 0 }}>
           <defs>
             <pattern id="mesh-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#007CB3" strokeWidth="0.5" opacity="0.12" />
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="var(--izou-secondary)" strokeWidth="0.5" opacity="0.12" />
             </pattern>
             <pattern id="mesh-dots" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-              <circle cx="0" cy="0" r="1.2" fill="#007CB3" opacity="0.1" />
-              <circle cx="48" cy="0" r="1.2" fill="#007CB3" opacity="0.1" />
-              <circle cx="0" cy="48" r="1.2" fill="#007CB3" opacity="0.1" />
-              <circle cx="48" cy="48" r="1.2" fill="#007CB3" opacity="0.1" />
-              <circle cx="24" cy="24" r="1" fill="#00A9E0" opacity="0.08" />
+              <circle cx="0" cy="0" r="1.2" fill="var(--izou-secondary)" opacity="0.1" />
+              <circle cx="48" cy="0" r="1.2" fill="var(--izou-secondary)" opacity="0.1" />
+              <circle cx="0" cy="48" r="1.2" fill="var(--izou-secondary)" opacity="0.1" />
+              <circle cx="48" cy="48" r="1.2" fill="var(--izou-secondary)" opacity="0.1" />
+              <circle cx="24" cy="24" r="1" fill="var(--izou-primary)" opacity="0.08" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#mesh-grid)" />
@@ -465,18 +433,17 @@ export default function ModuleHubPage() {
         <div
           style={{
             width: 560, height: 560, borderRadius: '50%',
-            border: '2px solid rgba(0,124,179,0.08)',
-            boxShadow: '0 0 0 12px rgba(0,124,179,0.03), 0 0 80px 20px rgba(0,169,224,0.04)',
+            border: '2px solid rgba(18,33,60,0.08)',
+            boxShadow: '0 0 0 12px rgba(18,33,60,0.03), 0 0 80px 20px rgba(236,30,39,0.04)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,124,179,0.01)',
+            background: 'rgba(18,33,60,0.01)',
           }}
         >
           <img
             src="/assets/app_logo_shield.svg"
             alt=""
             style={{
-              width: '340px', height: '340px', objectFit: 'contain', opacity: 0.04,
-              filter: 'invert(27%) sepia(80%) saturate(600%) hue-rotate(175deg) brightness(85%) contrast(90%)',
+              width: '340px', height: '340px', objectFit: 'contain', opacity: 0.05,
               userSelect: 'none',
             }}
           />
@@ -498,8 +465,8 @@ export default function ModuleHubPage() {
         <div className="flex items-center gap-4">
           <AppLogo size={32} />
           <div>
-            <p className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>CollateralMS</p>
-            <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>Module Hub</p>
+            <p className="text-sm font-bold leading-tight" style={{ color: 'var(--izou-text)' }}>CollateralMS</p>
+            <p className="text-xs leading-tight" style={{ color: 'var(--izou-muted)' }}>Module Hub</p>
           </div>
         </div>
 
@@ -512,12 +479,12 @@ export default function ModuleHubPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2 pl-10 rounded-lg text-sm transition-all"
-              style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)', color: '#111827' }}
-              onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#007CB3'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,124,179,0.1)'; }}
+              style={{ backgroundColor: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.06)', color: 'var(--izou-text)' }}
+              onFocus={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = 'var(--izou-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--izou-primary-tint)'; }}
               onBlur={(e) => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.06)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
-            <Search size={16} className="absolute left-3 top-2.5" style={{ color: '#9CA3AF' }} />
-            <kbd className="absolute right-3 top-2.5 text-xs px-1.5 py-0.5 rounded" style={{ color: '#9CA3AF', backgroundColor: 'rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.08)' }}>⌘K</kbd>
+            <Search size={16} className="absolute left-3 top-2.5" style={{ color: 'var(--izou-muted)' }} />
+            <kbd className="absolute right-3 top-2.5 text-xs px-1.5 py-0.5 rounded" style={{ color: 'var(--izou-muted)', backgroundColor: 'rgba(0,0,0,0.06)', border: '1px solid rgba(0,0,0,0.08)' }}>⌘K</kbd>
           </div>
         </div>
 
@@ -525,7 +492,7 @@ export default function ModuleHubPage() {
           {/* Notification Bell */}
           <button
             className="relative p-2 rounded-lg transition-colors"
-            style={{ color: '#6B7280' }}
+            style={{ color: 'var(--izou-muted)' }}
             onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.06)')}
             onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             onClick={() => router.push('/notifications')}
@@ -533,7 +500,7 @@ export default function ModuleHubPage() {
           >
             <Bell size={18} />
             {taskCount !== null && taskCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white text-[10px] font-bold leading-none min-w-[18px] h-[18px] px-1" style={{ backgroundColor: '#EF4444' }}>
+              <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white text-[10px] font-bold leading-none min-w-[18px] h-[18px] px-1" style={{ backgroundColor: 'var(--izou-danger)' }}>
                 {taskCount > 9 ? '9+' : taskCount}
               </span>
             )}
@@ -542,7 +509,7 @@ export default function ModuleHubPage() {
           <button
             onClick={() => router.push('/onboarding-guide')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{ color: '#374151', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' }}
+            style={{ color: 'var(--izou-muted)', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' }}
             onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)'; }}
             onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)'; }}
           >
@@ -553,7 +520,7 @@ export default function ModuleHubPage() {
           <button
             onClick={() => router.push('/guides/testing')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{ color: '#374151', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' }}
+            style={{ color: 'var(--izou-muted)', border: '1px solid rgba(0,0,0,0.12)', backgroundColor: 'rgba(0,0,0,0.04)' }}
             onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.08)'; }}
             onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)'; }}
           >
@@ -568,19 +535,19 @@ export default function ModuleHubPage() {
                 <span className="text-white text-xs font-bold">{initials}</span>
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-semibold leading-tight" style={{ color: '#111827' }}>{displayName}</p>
-                <p className="text-xs leading-tight" style={{ color: '#6B7280' }}>{displayRole}</p>
+                <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--izou-text)' }}>{displayName}</p>
+                <p className="text-xs leading-tight" style={{ color: 'var(--izou-muted)' }}>{displayRole}</p>
               </div>
-              <ChevronDown size={14} className="hidden sm:block" style={{ color: '#9CA3AF' }} />
+              <ChevronDown size={14} className="hidden sm:block" style={{ color: 'var(--izou-muted)' }} />
             </button>
           </div>
 
           <button
             onClick={() => signOut?.()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ml-1"
-            style={{ color: '#6B7280' }}
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#FEE2E2'; (e.currentTarget as HTMLElement).style.color = '#DC2626'; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = '#6B7280'; }}
+            style={{ color: 'var(--izou-muted)' }}
+            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-danger-light)'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-danger)'; }}
+            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-muted)'; }}
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">Sign out</span>
@@ -602,10 +569,10 @@ export default function ModuleHubPage() {
               {/* Welcome row */}
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
                 <div>
-                  <h1 className="text-2xl font-bold leading-tight" style={{ color: '#007CB3' }}>
+                  <h1 className="text-2xl font-bold leading-tight" style={{ color: 'var(--izou-secondary)' }}>
                     Good {greeting || '—'}, {firstName}
                   </h1>
-                  <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: '#6B7280' }}>
+                  <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--izou-muted)' }}>
                     <Calendar size={13} />
                     {todayStr || '—'}
                   </p>
@@ -613,14 +580,14 @@ export default function ModuleHubPage() {
                 <button
                   onClick={() => router.push('/workflows/tasks')}
                   className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all shrink-0"
-                  style={{ backgroundColor: 'var(--izou-primary)', color: '#fff', boxShadow: '0 4px 14px rgba(0,124,179,0.3)' }}
+                  style={{ backgroundColor: 'var(--izou-primary)', color: '#fff', boxShadow: '0 4px 14px var(--izou-primary-shadow)' }}
                   onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.9'; }}
                   onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
                 >
                   <Activity size={14} />
                   My Tasks
                   {taskCount !== null && taskCount > 0 && (
-                    <span className="inline-flex items-center justify-center rounded-full text-xs font-bold leading-none" style={{ minWidth: '18px', height: '18px', padding: '0 5px', backgroundColor: '#EF4444', color: '#fff', fontSize: '10px' }}>
+                    <span className="inline-flex items-center justify-center rounded-full text-xs font-bold leading-none" style={{ minWidth: '18px', height: '18px', padding: '0 5px', backgroundColor: 'var(--izou-danger)', color: '#fff', fontSize: '10px' }}>
                       {taskCount > 99 ? '99+' : taskCount}
                     </span>
                   )}
@@ -633,50 +600,50 @@ export default function ModuleHubPage() {
                 <div className="bg-white rounded-xl p-4 transition-all hover:shadow-md" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs" style={{ color: '#6B7280' }}>Total Collateral</p>
-                      <p className="text-2xl font-bold" style={{ color: '#111827' }}>{summaryStats.totalCollateral}</p>
+                      <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>Total Collateral</p>
+                      <p className="text-2xl font-bold" style={{ color: 'var(--izou-text)' }}>{summaryStats.totalCollateral}</p>
                       {!statsLoading && (
-                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                          <span style={{ color: '#10B981' }}>{subStats.perfectedCount} Perfected</span>
+                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--izou-muted)' }}>
+                          <span style={{ color: 'var(--izou-success)' }}>{subStats.perfectedCount} Perfected</span>
                           {' · '}
-                          <span style={{ color: subStats.collateralOverdueCount > 0 ? '#DC2626' : '#9CA3AF' }}>{subStats.collateralOverdueCount} Overdue</span>
+                          <span style={{ color: subStats.collateralOverdueCount > 0 ? 'var(--izou-danger)' : 'var(--izou-muted)' }}>{subStats.collateralOverdueCount} Overdue</span>
                         </p>
                       )}
                     </div>
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(0,124,179,0.08)' }}>
-                      <FolderOpen size={16} style={{ color: '#007CB3' }} />
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+                      <FolderOpen size={16} style={{ color: 'var(--izou-secondary)' }} />
                     </div>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl p-4 transition-all hover:shadow-md" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs" style={{ color: '#6B7280' }}>Active Workflows</p>
-                      <p className="text-2xl font-bold" style={{ color: '#111827' }}>{summaryStats.activeWorkflows}</p>
+                      <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>Active Workflows</p>
+                      <p className="text-2xl font-bold" style={{ color: 'var(--izou-text)' }}>{summaryStats.activeWorkflows}</p>
                       {!statsLoading && (
-                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                          <span style={{ color: subStats.escalatedCount > 0 ? '#D97706' : '#9CA3AF' }}>{subStats.escalatedCount} Escalated</span>
+                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--izou-muted)' }}>
+                          <span style={{ color: subStats.escalatedCount > 0 ? 'var(--izou-warning)' : 'var(--izou-muted)' }}>{subStats.escalatedCount} Escalated</span>
                         </p>
                       )}
                     </div>
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(217,119,6,0.08)' }}>
-                      <Activity size={16} style={{ color: '#D97706' }} />
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--izou-warning-light)' }}>
+                      <Activity size={16} style={{ color: 'var(--izou-warning)' }} />
                     </div>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl p-4 transition-all hover:shadow-md" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs" style={{ color: '#6B7280' }}>Pending Actions</p>
-                      <p className="text-2xl font-bold" style={{ color: '#111827' }}>{summaryStats.pendingActions}</p>
+                      <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>Pending Actions</p>
+                      <p className="text-2xl font-bold" style={{ color: 'var(--izou-text)' }}>{summaryStats.pendingActions}</p>
                       {!statsLoading && (
-                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                          <span style={{ color: subStats.dueTodayCount > 0 ? '#007CB3' : '#9CA3AF' }}>{subStats.dueTodayCount} Due Today</span>
+                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--izou-muted)' }}>
+                          <span style={{ color: subStats.dueTodayCount > 0 ? 'var(--izou-secondary)' : 'var(--izou-muted)' }}>{subStats.dueTodayCount} Due Today</span>
                         </p>
                       )}
                     </div>
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(124,58,237,0.08)' }}>
-                      <CheckSquare size={16} style={{ color: '#7C3AED' }} />
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--izou-highlight-light)' }}>
+                      <CheckSquare size={16} style={{ color: 'var(--izou-highlight)' }} />
                     </div>
                   </div>
                 </div>
@@ -687,16 +654,16 @@ export default function ModuleHubPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs" style={{ color: '#6B7280' }}>Overdue</p>
-                      <p className="text-2xl font-bold" style={{ color: summaryStats.overdueItems > 0 ? '#DC2626' : '#111827' }}>{summaryStats.overdueItems}</p>
+                      <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>Overdue</p>
+                      <p className="text-2xl font-bold" style={{ color: summaryStats.overdueItems > 0 ? 'var(--izou-danger)' : 'var(--izou-text)' }}>{summaryStats.overdueItems}</p>
                       {!statsLoading && (
-                        <p className="text-[11px] mt-0.5" style={{ color: '#9CA3AF' }}>
-                          <span style={{ color: subStats.highPriorityCount > 0 ? '#DC2626' : '#9CA3AF' }}>{subStats.highPriorityCount} High Priority</span>
+                        <p className="text-[11px] mt-0.5" style={{ color: 'var(--izou-muted)' }}>
+                          <span style={{ color: subStats.highPriorityCount > 0 ? 'var(--izou-danger)' : 'var(--izou-muted)' }}>{subStats.highPriorityCount} High Priority</span>
                         </p>
                       )}
                     </div>
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(220,38,38,0.08)' }}>
-                      <AlertTriangle size={16} style={{ color: '#DC2626' }} />
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--izou-danger-light)' }}>
+                      <AlertTriangle size={16} style={{ color: 'var(--izou-danger)' }} />
                     </div>
                   </div>
                 </div>
@@ -708,19 +675,19 @@ export default function ModuleHubPage() {
           {!statsLoading && priorityItems.length > 0 && !showDismissed && (
             <div
               className="px-6 py-4"
-              style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEF9F9 100%)', borderBottom: '2px solid rgba(220,38,38,0.1)' }}
+              style={{ background: 'linear-gradient(135deg, var(--izou-danger-light) 0%, var(--izou-card) 100%)', borderBottom: '2px solid rgba(185,28,28,0.15)' }}
             >
               <div className="max-w-[1400px] mx-auto">
                 <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
                     <div className="p-1 rounded-full bg-red-100 animate-pulse">
-                      <AlertTriangle size={14} style={{ color: '#DC2626' }} />
+                      <AlertTriangle size={14} style={{ color: 'var(--izou-danger)' }} />
                     </div>
-                    <span className="text-sm font-semibold" style={{ color: '#DC2626' }}>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--izou-danger)' }}>
                       {priorityItems.length} {priorityItems.length === 1 ? 'item' : 'items'} need your attention
                     </span>
                   </div>
-                  <button onClick={handleDismissAll} className="text-xs hover:underline transition-colors" style={{ color: '#9CA3AF' }}>
+                  <button onClick={handleDismissAll} className="text-xs hover:underline transition-colors" style={{ color: 'var(--izou-muted)' }}>
                     Dismiss all
                   </button>
                 </div>
@@ -755,7 +722,7 @@ export default function ModuleHubPage() {
                     <button
                       onClick={() => router.push('/priority-center')}
                       className="px-3.5 py-2 rounded-xl text-xs font-medium transition-colors"
-                      style={{ color: '#6B7280', backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}
+                      style={{ color: 'var(--izou-muted)', backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)' }}
                       onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.06)'; }}
                       onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.03)'; }}
                     >
@@ -781,23 +748,23 @@ export default function ModuleHubPage() {
               {/* Onboarding Guide Section */}
               <div
                 className="mt-8 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 transition-all hover:shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', border: '1px solid rgba(37,99,235,0.2)', boxShadow: '0 2px 8px rgba(37,99,235,0.08)' }}
+                style={{ background: 'linear-gradient(135deg, var(--izou-primary-light) 0%, var(--izou-card) 100%)', border: '1px solid var(--izou-primary-tint)', boxShadow: '0 2px 8px var(--izou-primary-tint)' }}
               >
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#2563EB', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' }}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--izou-primary)', boxShadow: '0 4px 12px var(--izou-primary-shadow)' }}>
                   <BookOpen size={18} color="#fff" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-bold mb-0.5" style={{ color: '#1E3A8A' }}>New to CollateralMS? Start with the Onboarding Guide</h3>
-                  <p className="text-xs leading-relaxed" style={{ color: '#3B82F6' }}>
+                  <h3 className="text-sm font-bold mb-0.5" style={{ color: 'var(--izou-primary-dark)' }}>New to CollateralMS? Start with the Onboarding Guide</h3>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
                     Step-by-step walkthroughs for all modules — from registering collateral to running compliance audits.
                   </p>
                 </div>
                 <button
                   onClick={() => router.push('/onboarding-guide')}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold shrink-0 transition-all"
-                  style={{ backgroundColor: '#2563EB', color: '#fff', boxShadow: '0 4px 12px rgba(37,99,235,0.3)' }}
-                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#1D4ED8'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
-                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#2563EB'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+                  style={{ backgroundColor: 'var(--izou-primary)', color: '#fff', boxShadow: '0 4px 12px var(--izou-primary-shadow)' }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-dark)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
+                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary)'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
                 >
                   <BookOpen size={13} />
                   Open Guide
@@ -830,22 +797,22 @@ export default function ModuleHubPage() {
       {/* ── Mobile Bottom Navigation ──────────────────────────────────────── */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50">
         <div className="flex justify-around">
-          <button className="flex flex-col items-center gap-1 text-xs" style={{ color: '#007CB3' }} onClick={() => router.push('/module-hub')}>
+          <button className="flex flex-col items-center gap-1 text-xs" style={{ color: 'var(--izou-primary)' }} onClick={() => router.push('/module-hub')}>
             <Layers size={20} />
             <span>Modules</span>
           </button>
           <button
             className="flex flex-col items-center gap-1 text-xs"
-            style={{ color: '#9CA3AF' }}
+            style={{ color: 'var(--izou-muted)' }}
             onClick={() => { const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement; if (searchInput) searchInput.focus(); }}
           >
             <Search size={20} />
             <span>Search</span>
           </button>
-          <button className="flex flex-col items-center gap-1 text-xs relative" style={{ color: '#9CA3AF' }} onClick={() => router.push('/notifications')}>
+          <button className="flex flex-col items-center gap-1 text-xs relative" style={{ color: 'var(--izou-muted)' }} onClick={() => router.push('/notifications')}>
             <Bell size={20} />
             {taskCount !== null && taskCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center" style={{ backgroundColor: '#EF4444' }}>
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center" style={{ backgroundColor: 'var(--izou-danger)' }}>
                 {taskCount > 9 ? '9+' : taskCount}
               </span>
             )}
