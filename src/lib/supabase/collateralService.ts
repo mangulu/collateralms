@@ -800,6 +800,67 @@ export const dashboardService = {
       throw err;
     }
   },
+
+  /** Real per-stage counts for the Module Hub's Collateral Lifecycle map. */
+  async getLifecycleStageCounts() {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('id, status, valuation_amount, value_tsh, loan_id, ltv_ratio');
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return null;
+      }
+
+      const rows = data ?? [];
+
+      const origination = rows.filter((r) => r.status === 'Draft').length;
+
+      const pendingValuation = rows.filter((r: any) => {
+        const dedicated = parseFloat(r.valuation_amount) || 0;
+        const legacy = typeof r.value_tsh === 'string' ? parseFloat(r.value_tsh.replace(/,/g, '')) || 0 : parseFloat(r.value_tsh) || 0;
+        return dedicated <= 0 && legacy <= 0;
+      }).length;
+
+      const overdue = rows.filter((r) => r.status === 'Overdue').length;
+
+      const atRisk = rows.filter((r: any) => {
+        if (r.ltv_ratio == null) return false;
+        return (parseFloat(r.ltv_ratio) || 0) * 100 > 75;
+      }).length;
+
+      // Release-ready: an ACTIVE collateral_loan_links row whose collateral's
+      // linked loan has actually closed (same real check as Batch Release).
+      const loanIds = [...new Set(rows.map((r: any) => r.loan_id).filter(Boolean))];
+      let releaseReady = 0;
+      if (loanIds.length > 0) {
+        const [{ data: closedLoans }, { data: activeLinks }] = await Promise.all([
+          supabase.from('loans').select('id').eq('loan_status', 'Closed').in('id', loanIds),
+          supabase.from('collateral_loan_links').select('collateral_id').eq('status', 'ACTIVE'),
+        ]);
+        const closedIds = new Set((closedLoans ?? []).map((l: any) => l.id));
+        const activeLinkedIds = new Set((activeLinks ?? []).map((l: any) => l.collateral_id));
+        releaseReady = rows.filter((r: any) => r.loan_id && closedIds.has(r.loan_id) && activeLinkedIds.has(r.id)).length;
+      }
+
+      const { count: archived } = await supabase
+        .from('archive_placements')
+        .select('id', { count: 'exact', head: true });
+
+      return {
+        origination,
+        pendingValuation,
+        overdue,
+        atRisk,
+        releaseReady,
+        archived: archived ?? 0,
+      };
+    } catch (err: any) {
+      throw err;
+    }
+  },
 };
 
 export { createClient };

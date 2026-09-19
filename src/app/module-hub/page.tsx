@@ -5,12 +5,13 @@ import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
+import CollateralLifecycleMap from './components/CollateralLifecycleMap';
 import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, ArrowRight, Calendar, Activity, Zap, FileText, Search, ChevronDown, FlaskConical,  } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface ModuleCard {
+export interface ModuleCard {
   id: string;
   title: string;
   description: string;
@@ -175,14 +176,6 @@ const modules: ModuleCard[] = [
   },
 ];
 
-// ─── KPI data per module ──────────────────────────────────────────────────────
-
-interface ModuleKPI {
-  primary: string;
-  secondary: string;
-  status: 'ok' | 'warn' | 'critical';
-}
-
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 
 const ModuleSkeleton = () => (
@@ -329,10 +322,8 @@ export default function ModuleHubPage() {
     overdueItems: 0,
   });
   const [priorityItems, setPriorityItems] = useState<PriorityItem[]>([]);
-  const [moduleKPIs, setModuleKPIs] = useState<Record<string, ModuleKPI>>({});
   const [statsLoading, setStatsLoading] = useState(true);
   const [taskCount, setTaskCount] = useState<number | null>(null);
-  const [recentModules, setRecentModules] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDismissed, setShowDismissed] = useState(false);
 
@@ -370,16 +361,6 @@ export default function ModuleHubPage() {
     });
   }, [loading, isSystemAdmin, hasPermission]);
 
-  // Filter modules based on search
-  const filteredModules = useMemo(() => {
-    if (!searchQuery) return visibleModules;
-    return visibleModules.filter(
-      (m) =>
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [visibleModules, searchQuery]);
-
   // ─── Effects ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -396,27 +377,16 @@ export default function ModuleHubPage() {
   }, []);
 
   useEffect(() => {
-    const recent = JSON.parse(localStorage.getItem('recentModules') || '[]');
-    setRecentModules(recent);
-  }, []);
-
-  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
         if (searchInput) searchInput.focus();
       }
-      if ((e.metaKey || e.ctrlKey) && /^[1-9]$/.test(e.key)) {
-        const index = parseInt(e.key) - 1;
-        if (filteredModules[index]) {
-          handleModuleClick(filteredModules[index].id, filteredModules[index].href);
-        }
-      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredModules]);
+  }, []);
 
   useEffect(() => {
     async function fetchStats() {
@@ -497,9 +467,6 @@ export default function ModuleHubPage() {
         const collateralData = collateralDataRes.data ?? [];
         const perfectedCount = collateralData.filter((c) => c.status === 'Perfected').length;
         const overdueCount = collateralData.filter((c) => c.status === 'Overdue').length;
-        const pendingReviewCount = collateralData.filter(
-          (c) => c.status === 'Submitted' || c.status === 'Under Review'
-        ).length;
 
         const escalatedCount = escalatedRes.data?.length ?? 0;
         const highPriorityCount = tasks.filter((t) => t.priority === 'high').length;
@@ -512,59 +479,6 @@ export default function ModuleHubPage() {
           highPriorityCount,
         });
 
-        const kpis: Record<string, ModuleKPI> = {
-          collaterals: {
-            primary: `${totalCollateral} Total`,
-            secondary: `${perfectedCount} Perfected · ${overdueCount} Overdue`,
-            status: overdueCount > 5 ? 'critical' : pendingReviewCount > 5 ? 'warn' : 'ok',
-          },
-          obligors: {
-            primary: `${totalCollateral} Linked`,
-            secondary: 'Obligor portfolios',
-            status: 'ok',
-          },
-          approvals: {
-            primary: `${activeWorkflows} Active`,
-            secondary: `${tasks.length} Awaiting Action`,
-            status: tasks.length > 10 ? 'warn' : 'ok',
-          },
-          archive: {
-            primary: 'Vault Active',
-            secondary: 'Physical custody tracked',
-            status: 'ok',
-          },
-          intelligence: {
-            primary: 'AI Ready',
-            secondary: 'Risk models active',
-            status: 'ok',
-          },
-          alerts: {
-            primary: `${overdueTasks.length} Overdue`,
-            secondary: `${dueTodayTasks.length} Due Today`,
-            status: overdueTasks.length > 0 ? 'critical' : 'ok',
-          },
-          reports: {
-            primary: 'Reports Ready',
-            secondary: 'All exports available',
-            status: 'ok',
-          },
-          audit: {
-            primary: 'Compliant',
-            secondary: 'Audit trails active',
-            status: 'ok',
-          },
-          administration: {
-            primary: 'System Healthy',
-            secondary: 'All services running',
-            status: 'ok',
-          },
-          'workflows-admin': {
-            primary: `${activeWorkflows} Running`,
-            secondary: 'Templates configured',
-            status: 'ok',
-          },
-        };
-        setModuleKPIs(kpis);
       } catch {
         // Silently fail
       } finally {
@@ -598,19 +512,6 @@ export default function ModuleHubPage() {
     },
     escalated: { color: '#D97706', bg: 'rgba(217,119,6,0.08)', label: 'ESCALATED', icon: Zap },
     'due-today': { color: '#007CB3', bg: 'rgba(0,124,179,0.08)', label: 'DUE TODAY', icon: Clock },
-  };
-
-  const statusDot = (status: 'ok' | 'warn' | 'critical') => {
-    const map = { ok: '#10B981', warn: '#F59E0B', critical: '#EF4444' };
-    return map[status];
-  };
-
-  const handleModuleClick = (modId: string, href: string) => {
-    const recent = JSON.parse(localStorage.getItem('recentModules') || '[]');
-    const updated = [modId, ...recent.filter((id: string) => id !== modId)].slice(0, 4);
-    localStorage.setItem('recentModules', JSON.stringify(updated));
-    setRecentModules(updated);
-    router.push(href);
   };
 
   const handleDismissPriority = (id: string) => {
@@ -990,142 +891,15 @@ export default function ModuleHubPage() {
             </div>
           )}
 
-          {/* ── Module Grid ────────────────────────────────────────────────── */}
+          {/* ── Collateral Lifecycle Map ──────────────────────────────────── */}
           <div className="flex-1 px-6 py-8">
             <div className="max-w-[1000px] mx-auto">
-              {/* Recently Used Modules */}
-              {recentModules.length > 0 && !searchQuery && (
-                <div className="mb-6">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#9CA3AF' }}>
-                    Recently Used
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {recentModules.map((id) => {
-                      const mod = modules.find((m) => m.id === id);
-                      if (!mod) return null;
-                      const ModIcon = mod.icon;
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => handleModuleClick(id, mod.href)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all"
-                          style={{ backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', color: '#111827' }}
-                          onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = mod.iconBg; (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.9)'; }}
-                          onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,0,0,0.06)'; (e.currentTarget as HTMLElement).style.backgroundColor = '#ffffff'; }}
-                        >
-                          <ModIcon size={14} style={{ color: mod.iconBg }} />
-                          {mod.title}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {Array.from({ length: 3 }).map((_, i) => <ModuleSkeleton key={i} />)}
                 </div>
-              )}
-
-              {/* Search Results Info */}
-              {searchQuery && (
-                <div className="mb-4 text-sm" style={{ color: '#6B7280' }}>
-                  Found {filteredModules.length} {filteredModules.length === 1 ? 'module' : 'modules'} for "{searchQuery}"
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {loading ? (
-                  Array.from({ length: 6 }).map((_, i) => <ModuleSkeleton key={i} />)
-                ) : (
-                  filteredModules.map((mod) => {
-                    const ModIcon = mod.icon;
-                    const kpi = moduleKPIs[mod.id];
-                    const borderColor = CATEGORY_BORDER[mod.category];
-
-                    return (
-                      <div
-                        key={mod.id}
-                        className="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer"
-                        style={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid rgba(0,0,0,0.05)',
-                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
-                          minHeight: '160px',
-                        }}
-                        onClick={() => handleModuleClick(mod.id, mod.href)}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0,0,0,0.08), 0 10px 10px -5px rgba(0,0,0,0.04)';
-                          e.currentTarget.style.transform = 'translateY(-4px) scale(1.01)';
-                          e.currentTarget.style.borderColor = `${borderColor}40`;
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)';
-                          e.currentTarget.style.transform = 'none';
-                          e.currentTarget.style.borderColor = 'rgba(0,0,0,0.05)';
-                        }}
-                      >
-                        {/* Gradient border top */}
-                        <div
-                          className="absolute top-0 left-0 right-0 h-0.5"
-                          style={{ background: `linear-gradient(90deg, ${borderColor}80, ${borderColor}20)`, opacity: 0.6 }}
-                        />
-
-                        {/* Row 1: Icon + Title + Status */}
-                        <div className="p-4 pb-1">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
-                              style={{ backgroundColor: mod.iconBg, boxShadow: `0 4px 12px ${mod.iconBg}40` }}
-                            >
-                              <ModIcon size={16} color="#fff" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <h2 className="text-sm font-bold leading-tight" style={{ color: '#111827' }}>{mod.title}</h2>
-                                {kpi && (
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusDot(kpi.status) }} />
-                                    <span className="text-[10px] whitespace-nowrap" style={{ color: '#9CA3AF' }}>
-                                      {kpi.status === 'ok' ? 'All clear' : kpi.status === 'warn' ? 'Attention' : 'Critical'}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Row 2: Description + KPI */}
-                        <div className="px-4 py-1 flex-1 flex flex-col justify-between">
-                          <p className="text-xs leading-relaxed line-clamp-2" style={{ color: '#6B7280' }}>{mod.description}</p>
-                          <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t" style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
-                            <div className="flex items-center gap-2 min-w-0">
-                              {kpi && (
-                                <>
-                                  <span className="text-xs font-semibold" style={{ color: borderColor }}>{kpi.primary}</span>
-                                  <span className="text-[10px] truncate" style={{ color: '#9CA3AF' }}>{kpi.secondary}</span>
-                                </>
-                              )}
-                            </div>
-                            <ArrowRight
-                              size={14}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2"
-                              style={{ color: borderColor }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Empty state */}
-              {!loading && filteredModules.length === 0 && (
-                <div className="text-center py-20">
-                  <ShieldCheck size={40} className="mx-auto mb-3 opacity-20" style={{ color: '#6B7280' }} />
-                  <p className="text-sm" style={{ color: '#9CA3AF' }}>
-                    {searchQuery
-                      ? `No modules found for "${searchQuery}"`
-                      : 'No modules are available for your current role. Contact your administrator.'}
-                  </p>
-                </div>
+              ) : (
+                <CollateralLifecycleMap visibleModules={visibleModules} searchQuery={searchQuery} />
               )}
 
               {/* Onboarding Guide Section */}
