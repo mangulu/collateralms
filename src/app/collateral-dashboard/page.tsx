@@ -5,6 +5,7 @@ import AppLayout from '@/components/AppLayout';
 import { KPICardSkeleton, ChartSkeleton, Skeleton } from '@/components/ui/LoadingSkeleton';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { Lock, LayoutDashboard, Activity } from 'lucide-react';
+import { DashboardRefreshProvider } from './DashboardRefreshContext';
 
 const DashboardHeader = dynamic(() => import('./components/DashboardHeader'), { ssr: false });
 const KPIBentoGrid = dynamic(() => import('./components/KPIBentoGrid'), { ssr: false });
@@ -74,7 +75,7 @@ export default function CollateralDashboardPage() {
 
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
-            <>
+            <DashboardRefreshProvider>
               {/* Header */}
               <Suspense fallback={<Skeleton className="h-16 w-full" />}>
                 <DashboardHeader />
@@ -126,7 +127,7 @@ export default function CollateralDashboardPage() {
                   </Suspense>
                 </div>
               </div>
-            </>
+            </DashboardRefreshProvider>
           )}
 
           {/* Portfolio Monitoring Tab */}

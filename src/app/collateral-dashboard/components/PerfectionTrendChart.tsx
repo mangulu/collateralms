@@ -13,6 +13,7 @@ import {
 import { dashboardService } from '@/lib/supabase/collateralService';
 import { AlertCircle } from 'lucide-react';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import { useDashboardRefresh } from '../DashboardRefreshContext';
 
 interface TrendPoint {
   month: string;
@@ -47,6 +48,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function PerfectionTrendChart() {
+  const { refreshKey } = useDashboardRefresh();
   const [trendData, setTrendData] = useState<TrendPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function PerfectionTrendChart() {
         setError('Failed to load trend data.');
         setIsLoading(false);
       });
-  }, []);
+  }, [refreshKey]);
 
   // Real-time: refresh trend chart whenever collateral records change
   useCollateralRealtime({

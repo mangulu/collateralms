@@ -4,6 +4,7 @@ import { AlertTriangle, Clock, ChevronRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { dashboardService, CollateralRecord } from '@/lib/supabase/collateralService';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import { useDashboardRefresh } from '../DashboardRefreshContext';
 
 const registryBadgeStyles: Record<string, React.CSSProperties> = {
   BRELA: { backgroundColor: 'rgba(0,169,224,0.1)', color: '#007CB3' },
@@ -14,6 +15,7 @@ const registryBadgeStyles: Record<string, React.CSSProperties> = {
 };
 
 export default function OverdueAlertsPanel() {
+  const { refreshKey } = useDashboardRefresh();
   const [overdueItems, setOverdueItems] = useState<CollateralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export default function OverdueAlertsPanel() {
 
   useEffect(() => {
     loadOverdue();
-  }, []);
+  }, [refreshKey]);
 
   useCollateralRealtime({
     onCollateralChange: () => {

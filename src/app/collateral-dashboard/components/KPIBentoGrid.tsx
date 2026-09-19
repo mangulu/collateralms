@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { dashboardService } from '@/lib/supabase/collateralService';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import { useDashboardRefresh } from '../DashboardRefreshContext';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -105,6 +106,7 @@ function KPICard({
 }
 
 export default function KPIBentoGrid() {
+  const { refreshKey } = useDashboardRefresh();
   const [stats, setStats] = useState<{
     total: number;
     perfected: number;
@@ -128,7 +130,7 @@ export default function KPIBentoGrid() {
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [refreshKey]);
 
   useCollateralRealtime({
     onCollateralChange: () => {

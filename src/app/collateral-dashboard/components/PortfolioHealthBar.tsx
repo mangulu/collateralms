@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { dashboardService } from '@/lib/supabase/collateralService';
+import { useDashboardRefresh } from '../DashboardRefreshContext';
 import { TrendingUp, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
 
 
@@ -14,6 +15,7 @@ interface HealthSegment {
 }
 
 export default function PortfolioHealthBar() {
+  const { refreshKey } = useDashboardRefresh();
   const [stats, setStats] = useState<{
     total: number;
     perfected: number;
@@ -31,7 +33,7 @@ export default function PortfolioHealthBar() {
     }).catch(() => {
       setIsLoading(false);
     });
-  }, []);
+  }, [refreshKey]);
 
   const total = stats?.total ?? 0;
   const perfected = stats?.perfected ?? 0;

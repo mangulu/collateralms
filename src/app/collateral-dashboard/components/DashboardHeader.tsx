@@ -1,13 +1,16 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Download, Calendar, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Download, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEscalationRealtime } from '@/lib/hooks/useEscalationRealtime';
+import { useDashboardRefresh } from '../DashboardRefreshContext';
 import Link from 'next/link';
 
 export default function DashboardHeader() {
+  const { triggerRefresh } = useDashboardRefresh();
   const [lastUpdated, setLastUpdated] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [escalationBadge, setEscalationBadge] = useState(0);
 
   useEffect(() => {
@@ -45,13 +48,54 @@ export default function DashboardHeader() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 1200));
+    triggerRefresh();
+    await new Promise((r) => setTimeout(r, 600));
     setRefreshing(false);
     setLastUpdated(new Date()?.toLocaleString('en-TZ', {
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     }));
     toast?.success('Dashboard refreshed');
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const dateTo = new Date();
+      const dateFrom = new Date(dateTo.getFullYear(), dateTo.getMonth() - 5, 1);
+      const response = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportType: 'perfection_rate',
+          dateFrom: dateFrom.toISOString().slice(0, 10),
+          dateTo: dateTo.toISOString().slice(0, 10),
+          registries: [],
+          statuses: [],
+          collateralTypes: [],
+          includeCharts: false,
+          includeSummary: true,
+          includeDetails: false,
+          stakeholderMode: false,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(err.error ?? `HTTP ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `collateral_dashboard_${dateTo.toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Dashboard exported');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export dashboard');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -86,17 +130,6 @@ export default function DashboardHeader() {
         </p>
       </div>
       <div className="flex items-center gap-2 shrink-0 flex-wrap">
-        <div
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm cursor-pointer transition-colors"
-          style={{
-            backgroundColor: 'var(--izou-card)',
-            border: '1px solid var(--izou-border)',
-            color: 'var(--izou-muted)',
-          }}
-        >
-          <Calendar size={13} />
-          <span>Apr 2026</span>
-        </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
@@ -113,11 +146,12 @@ export default function DashboardHeader() {
           <span className="hidden xs:inline">Refresh</span>
         </button>
         <button
-          onClick={() => toast?.info('Export report — PDF generation queued')}
-          className="izou-btn-primary flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold"
+          onClick={handleExport}
+          disabled={exporting}
+          className="izou-btn-primary flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold disabled:opacity-60"
         >
-          <Download size={13} />
-          <span>Export</span>
+          <Download size={13} className={exporting ? 'animate-pulse' : ''} />
+          <span>{exporting ? 'Exporting…' : 'Export'}</span>
         </button>
       </div>
     </div>

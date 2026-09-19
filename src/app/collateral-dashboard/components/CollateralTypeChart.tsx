@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { dashboardService } from '@/lib/supabase/collateralService';
 import { AlertCircle } from 'lucide-react';
+import { useDashboardRefresh } from '../DashboardRefreshContext';
 
 // IZOU-inspired color palette
 const colors = [
@@ -41,6 +42,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function CollateralTypeChart() {
+  const { refreshKey } = useDashboardRefresh();
   const [typeData, setTypeData] = useState<{ type: string; count: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function CollateralTypeChart() {
         setError('Failed to load collateral type data.');
         setIsLoading(false);
       });
-  }, []);
+  }, [refreshKey]);
 
   return (
     <div

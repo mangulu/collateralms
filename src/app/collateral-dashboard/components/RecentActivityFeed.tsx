@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { FileCheck, FilePlus, AlertCircle, CheckCircle2, ArrowUpRight } from 'lucide-react';
 import { auditLogService, type AuditLogEntry } from '@/lib/supabase/auditLogService';
 import { useCollateralRealtime } from '@/lib/hooks/useCollateralRealtime';
+import { useDashboardRefresh } from '../DashboardRefreshContext';
 
 
 const activityConfig: Record<
@@ -31,6 +32,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function RecentActivityFeed() {
+  const { refreshKey } = useDashboardRefresh();
   const [activities, setActivities] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export default function RecentActivityFeed() {
 
   useEffect(() => {
     loadActivities();
-  }, []);
+  }, [refreshKey]);
 
   useCollateralRealtime({
     onAuditChange: () => {
