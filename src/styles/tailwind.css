@@ -6,41 +6,61 @@
 
 @layer base {
   :root {
-    /* IZOU Design Tokens */
-    --izou-primary: #00a9e0;
-    --izou-primary-dark: #007cb3;
-    --izou-primary-light: #d6f0fb;
-    --izou-cyan: #35c8f3;
-    --izou-teal: #00c2a8;
-    --izou-bg: #eef1f6;
+    /* IZOU Design Tokens — Contentpro palette (red / navy / grey / orange / green / pink) */
+    --izou-primary: #ec1e27;
+    --izou-primary-dark: #c0161e;
+    --izou-primary-light: #fbdbdc;
+    --izou-primary-tint: rgba(236,30,39,0.12);
+    --izou-primary-tint-strong: rgba(236,30,39,0.28);
+    --izou-primary-shadow: rgba(236,30,39,0.25);
+
+    --izou-secondary: #12213c;
+    --izou-secondary-mid: #1e3a66;
+    --izou-secondary-end: #28497d;
+    --izou-secondary-light: #e9eef6;
+
+    --izou-neutral: #4b4b4e;
+    --izou-cyan: #1e3a66;
+    --izou-teal: #15803d;
+
+    --izou-bg: #f2f3f6;
     --izou-card: #fff;
-    --izou-text: #0d1c2e;
-    --izou-muted: #4b5a6e;
-    --izou-border: #c8cdd6;
-    --izou-success: #16a34a;
-    --izou-warning: #f59e0b;
-    --izou-danger: #dc2626;
+    --izou-text: #232326;
+    --izou-muted: #4b4b4e;
+    --izou-border: #d9dbe0;
+    --izou-field-bg: #f0f1f4;
+    --izou-skeleton: rgba(18,33,60,0.06);
+    --izou-hover-tint: rgba(18,33,60,0.03);
+
+    --izou-success: #15803d;
+    --izou-success-light: #e7f6ec;
+    --izou-warning: #b45309;
+    --izou-warning-light: #fdf1e0;
+    --izou-danger: #b91c1c;
+    --izou-danger-light: #fbeaea;
+    --izou-highlight: #db2777;
+    --izou-highlight-light: #fbe6f0;
     --izou-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
     /* Tailwind CSS variable mappings */
-    --primary: 196 100% 44%;
+    --primary: 357 83% 52%;
     --primary-foreground: 0 0% 100%;
-    --accent: 172 100% 38%;
+    --accent: 142 69% 29%;
     --accent-foreground: 0 0% 100%;
-    --background: 214 18% 92%;
+    --background: 220 12% 95%;
     --card: 0 0% 100%;
-    --card-foreground: 210 60% 11%;
-    --border: 216 12% 78%;
-    --muted: 214 18% 90%;
-    --muted-foreground: 215 16% 35%;
-    --destructive: 0 72% 51%;
-    --warning: 38 92% 50%;
-    --success: 142 71% 45%;
-    --foreground: 210 60% 11%;
-    --ring: 196 100% 44%;
-    --field-bg: 196 60% 94%;
-    --sidebar-bg: #007CB3;
-    --sidebar-fg: #FFFFFF;
+    --card-foreground: 240 5% 14%;
+    --border: 220 10% 86%;
+    --muted: 220 12% 92%;
+    --muted-foreground: 240 2% 30%;
+    --destructive: 0 68% 42%;
+    --warning: 29 87% 37%;
+    --success: 142 69% 29%;
+    --foreground: 240 5% 14%;
+    --ring: 357 83% 52%;
+    --field-bg: 220 14% 95%;
+    --sidebar-bg: #12213c;
+    --sidebar-fg: #ffffff;
   }
 
   * {
@@ -59,20 +79,20 @@
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,
   select {
-    background-color: var(--izou-primary-light);
+    background-color: var(--izou-field-bg);
   }
 
   input:disabled,
   textarea:disabled,
   select:disabled,
   [disabled] {
-    background-color: #cdf0fb !important;
+    background-color: #e7e8ec !important;
     opacity: 0.6;
   }
 
   button:disabled,
   button[disabled] {
-    color: #0d4f7a !important;
+    color: #6b6b70 !important;
   }
 
   .font-mono {
@@ -81,38 +101,10 @@
 }
 
 @layer components {
-  /* IZOU Sidebar Gradient */
+  /* IZOU Sidebar — flat, no gradient */
   .izou-sidebar-gradient {
-    background: radial-gradient(circle at 12% 8%, rgba(255,255,255,0.18), rgba(0,0,0,0) 26%),
-                radial-gradient(circle at 88% 18%, rgba(255,255,255,0.08), rgba(0,0,0,0) 35%),
-                radial-gradient(circle at 50% 120%, rgba(0,0,0,0.1), rgba(0,0,0,0) 60%),
-                linear-gradient(rgb(23,185,237), rgb(8,171,227) 22%, rgb(0,155,213) 48%, rgb(0,136,197) 72%, rgb(0,115,174));
-    box-shadow: rgba(255,255,255,0.22) -1px 0px inset, rgba(255,255,255,0.08) 0px 1px inset;
+    background: var(--izou-secondary);
     position: relative;
-  }
-
-  .izou-sidebar-gradient::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.14) 1px, rgba(0,0,0,0) 0px),
-      radial-gradient(rgba(255,255,255,0.06) 1px, rgba(0,0,0,0) 0px);
-    background-position: 0px 0px, 9px 9px;
-    background-size: 18px 18px, 18px 18px;
-    mix-blend-mode: soft-light;
-    opacity: 0.55;
-  }
-
-  .izou-sidebar-gradient::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background: linear-gradient(rgba(255,255,255,0.06), rgba(0,0,0,0) 18%, rgba(0,0,0,0) 78%, rgba(0,40,70,0.12));
   }
 
   .izou-sidebar-gradient > * {
@@ -149,13 +141,10 @@
 
   /* IZOU Active Nav Item */
   .izou-nav-active {
-    backdrop-filter: blur(10px) saturate(1.2);
-    background: linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.1));
-    border: 1px solid rgba(255,255,255,0.16);
-    box-shadow: rgba(255,255,255,0.22) 0px 1px 0px inset, rgba(255,255,255,0.08) 0px 0px 20px;
+    background: var(--izou-primary-tint-strong);
+    border: 1px solid transparent;
     color: rgb(255,255,255);
     font-weight: 600;
-    text-shadow: rgba(255,255,255,0.25) 0px 0px 18px;
   }
 
   .izou-nav-active .izou-nav-icon {
@@ -164,10 +153,9 @@
 
   .izou-nav-active::before {
     animation: izouNavIndicator 0.24s var(--izou-ease) forwards;
-    background: rgb(255,255,255);
+    background: var(--izou-primary);
     border-radius: 0px 3px 3px 0px;
     bottom: 18%;
-    box-shadow: rgba(255,255,255,0.55) 0px 0px 10px;
     content: '';
     left: 0px;
     position: absolute;
@@ -218,19 +206,19 @@
   .izou-btn-primary {
     background-color: var(--izou-primary);
     color: #ffffff;
-    box-shadow: 0 8px 24px rgba(0,169,224,0.25);
+    box-shadow: 0 8px 24px var(--izou-primary-shadow);
     transition: background-color 0.22s var(--izou-ease), box-shadow 0.22s var(--izou-ease), transform 0.15s var(--izou-ease);
   }
 
   .izou-btn-primary:hover {
     background-color: var(--izou-primary-dark);
-    box-shadow: 0 10px 28px rgba(0,169,224,0.32);
+    box-shadow: 0 10px 28px var(--izou-primary-shadow);
     color: #ffffff;
   }
 
   .izou-btn-primary:active {
-    background-color: #005f8a;
-    box-shadow: 0 4px 12px rgba(0,169,224,0.2);
+    background-color: var(--izou-primary-dark);
+    box-shadow: 0 4px 12px var(--izou-primary-shadow);
     color: #ffffff;
     transform: scale(0.98);
   }
@@ -260,12 +248,12 @@
 
   .izou-card:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.07);
-    border-color: rgba(0,169,224,0.35);
+    border-color: var(--izou-primary-tint);
   }
 
   /* IZOU Badge */
   .izou-badge-primary {
-    background-color: rgba(0,169,224,0.12);
+    background-color: var(--izou-primary-tint);
     color: var(--izou-primary-dark);
     border-radius: 9999px;
     font-size: 0.7rem;
@@ -274,8 +262,8 @@
   }
 
   .izou-badge-success {
-    background-color: #f0fdf4;
-    color: #16a34a;
+    background-color: var(--izou-success-light);
+    color: var(--izou-success);
     border-radius: 9999px;
     font-size: 0.7rem;
     font-weight: 600;
@@ -283,8 +271,8 @@
   }
 
   .izou-badge-warning {
-    background-color: #fffbeb;
-    color: #d97706;
+    background-color: var(--izou-warning-light);
+    color: var(--izou-warning);
     border-radius: 9999px;
     font-size: 0.7rem;
     font-weight: 600;
@@ -292,8 +280,8 @@
   }
 
   .izou-badge-danger {
-    background-color: #fef2f2;
-    color: #dc2626;
+    background-color: var(--izou-danger-light);
+    color: var(--izou-danger);
     border-radius: 9999px;
     font-size: 0.7rem;
     font-weight: 600;
@@ -353,7 +341,7 @@
 
   @keyframes pulseHighlight {
     0% { background-color: transparent; }
-    30% { background-color: rgba(0,169,224,0.12); }
+    30% { background-color: var(--izou-primary-tint); }
     100% { background-color: transparent; }
   }
 

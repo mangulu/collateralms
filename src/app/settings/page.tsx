@@ -76,7 +76,7 @@ const CONFIG_TABS: TabDef[] = [
     label: 'Brand Kit',
     icon: <Palette size={15} />,
     configKey: 'brand_kit',
-    description: 'Primary and accent brand colors, applied globally via CSS variables.',
+    description: 'Full brand palette — primary, secondary, neutral, success, warning, highlight, and danger colors — applied globally via CSS variables.',
   },
 ];
 
@@ -129,8 +129,13 @@ const FIELD_DEFS: Record<ConfigCategory, FieldDef[]> = {
     { key: 'retention_review_months', label: 'Retention Review Interval (months)', type: 'number', hint: 'How often retention policies should be reviewed' },
   ],
   brand: [
-    { key: 'primary_color', label: 'Primary Color', type: 'color', hint: 'Main brand color used for buttons, links, and highlights' },
-    { key: 'accent_color', label: 'Accent Color', type: 'color', hint: 'Secondary color used for success states and accents' },
+    { key: 'primary_color', label: 'Primary Color', type: 'color', hint: 'Brand color for buttons, active states, and links' },
+    { key: 'secondary_color', label: 'Secondary Color', type: 'color', hint: 'Institutional color for the sidebar and headings' },
+    { key: 'neutral_color', label: 'Neutral / Text Color', type: 'color', hint: 'Base color for body text and borders' },
+    { key: 'accent_color', label: 'Success Color', type: 'color', hint: 'Used for healthy, perfected, and approved states' },
+    { key: 'warning_color', label: 'Warning Color', type: 'color', hint: 'Used for approaching-deadline and at-risk states' },
+    { key: 'highlight_color', label: 'Highlight Color', type: 'color', hint: 'Sparing accent for tags, callouts, and special highlights' },
+    { key: 'danger_color', label: 'Danger Color', type: 'color', hint: 'Used for overdue/critical states — kept distinct from Primary so alerts never look like a brand action' },
   ],
 };
 

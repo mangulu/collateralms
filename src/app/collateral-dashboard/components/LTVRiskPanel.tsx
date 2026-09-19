@@ -45,33 +45,33 @@ export default function LTVRiskPanel() {
     {
       label: 'Healthy (<60%)',
       count: healthy,
-      barColor: '#16a34a',
-      bgStyle: { backgroundColor: '#f0fdf4' },
-      textStyle: { color: '#15803d' },
+      barColor: 'var(--izou-success)',
+      bgStyle: { backgroundColor: 'var(--izou-success-light)' },
+      textStyle: { color: 'var(--izou-success)' },
       icon: CheckCircle2,
     },
     {
       label: 'Elevated (60–75%)',
       count: elevated,
-      barColor: 'var(--izou-primary)',
-      bgStyle: { backgroundColor: 'var(--izou-primary-light)' },
-      textStyle: { color: 'var(--izou-primary-dark)' },
+      barColor: 'var(--izou-secondary)',
+      bgStyle: { backgroundColor: 'var(--izou-secondary-light)' },
+      textStyle: { color: 'var(--izou-secondary)' },
       icon: TrendingUp,
     },
     {
       label: 'High (75–90%)',
       count: high,
-      barColor: '#d97706',
-      bgStyle: { backgroundColor: '#fffbeb' },
-      textStyle: { color: '#b45309' },
+      barColor: 'var(--izou-warning)',
+      bgStyle: { backgroundColor: 'var(--izou-warning-light)' },
+      textStyle: { color: 'var(--izou-warning)' },
       icon: AlertTriangle,
     },
     {
       label: 'Critical (>90%)',
       count: critical,
-      barColor: '#dc2626',
-      bgStyle: { backgroundColor: '#fef2f2' },
-      textStyle: { color: '#b91c1c' },
+      barColor: 'var(--izou-danger)',
+      bgStyle: { backgroundColor: 'var(--izou-danger-light)' },
+      textStyle: { color: 'var(--izou-danger)' },
       icon: ShieldAlert,
     },
   ];
@@ -80,7 +80,7 @@ export default function LTVRiskPanel() {
     critical > 0 ? 'Critical exposure' :
     high > 0 ? 'Elevated exposure' :
     'Under control';
-  const riskColor = critical > 0 ? '#dc2626' : high > 0 ? '#d97706' : '#16a34a';
+  const riskColor = critical > 0 ? 'var(--izou-danger)' : high > 0 ? 'var(--izou-warning)' : 'var(--izou-success)';
 
   return (
     <div
@@ -106,10 +106,10 @@ export default function LTVRiskPanel() {
 
       {isLoading ? (
         <div className="space-y-3">
-          <div className="h-5 animate-pulse rounded-full" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
+          <div className="h-5 animate-pulse rounded-full" style={{ backgroundColor: 'var(--izou-skeleton)' }} />
           <div className="grid grid-cols-4 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-14 animate-pulse rounded-xl" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
+              <div key={i} className="h-14 animate-pulse rounded-xl" style={{ backgroundColor: 'var(--izou-skeleton)' }} />
             ))}
           </div>
         </div>

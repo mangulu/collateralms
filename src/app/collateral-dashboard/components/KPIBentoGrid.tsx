@@ -23,7 +23,7 @@ interface KPICardProps {
   subtext: string;
   trend?: { direction: 'up' | 'down' | 'neutral'; label: string };
   icon: React.ElementType;
-  variant?: 'default' | 'alert' | 'warning' | 'success';
+  variant?: 'default' | 'alert' | 'warning' | 'success' | 'highlight';
 }
 
 function KPICard({
@@ -36,21 +36,24 @@ function KPICard({
 }: KPICardProps) {
   const variantStyles: Record<string, React.CSSProperties> = {
     default: { backgroundColor: '#ffffff', border: '1px solid var(--izou-border)' },
-    alert: { backgroundColor: '#fef2f2', border: '1px solid #fecaca' },
-    warning: { backgroundColor: '#fffbeb', border: '1px solid #fde68a' },
-    success: { backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' },
+    alert: { backgroundColor: 'var(--izou-danger-light)', border: '1px solid var(--izou-danger-light)' },
+    warning: { backgroundColor: 'var(--izou-warning-light)', border: '1px solid var(--izou-warning-light)' },
+    success: { backgroundColor: 'var(--izou-success-light)', border: '1px solid var(--izou-success-light)' },
+    highlight: { backgroundColor: 'var(--izou-highlight-light)', border: '1px solid var(--izou-highlight-light)' },
   };
   const iconBg: Record<string, React.CSSProperties> = {
-    default: { backgroundColor: 'var(--izou-primary-light)', color: 'var(--izou-primary)' },
-    alert: { backgroundColor: '#fee2e2', color: '#dc2626' },
-    warning: { backgroundColor: '#fef3c7', color: '#d97706' },
-    success: { backgroundColor: '#dcfce7', color: '#16a34a' },
+    default: { backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' },
+    alert: { backgroundColor: 'var(--izou-danger-light)', color: 'var(--izou-danger)' },
+    warning: { backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' },
+    success: { backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)' },
+    highlight: { backgroundColor: 'var(--izou-highlight-light)', color: 'var(--izou-highlight)' },
   };
   const valueColor: Record<string, string> = {
     default: 'var(--izou-text)',
-    alert: '#b91c1c',
-    warning: '#b45309',
-    success: '#15803d',
+    alert: 'var(--izou-danger)',
+    warning: 'var(--izou-warning)',
+    success: 'var(--izou-success)',
+    highlight: 'var(--izou-highlight)',
   };
 
   return (
@@ -88,8 +91,8 @@ function KPICard({
           <span
             className="inline-flex items-center gap-0.5 text-xs font-semibold"
             style={{
-              color: trend.direction === 'up' ? '#16a34a'
-                : trend.direction === 'down'? '#dc2626' :'var(--izou-muted)'
+              color: trend.direction === 'up' ? 'var(--izou-success)'
+                : trend.direction === 'down'? 'var(--izou-danger)' :'var(--izou-muted)'
             }}
           >
             {trend.direction === 'up' ? (
@@ -145,7 +148,7 @@ export default function KPIBentoGrid() {
           <div
             key={`kpi-skel-${i}`}
             className="rounded-2xl p-5 animate-pulse h-28"
-            style={{ backgroundColor: 'rgba(0,169,224,0.06)', border: '1px solid var(--izou-border)' }}
+            style={{ backgroundColor: 'var(--izou-skeleton)', border: '1px solid var(--izou-border)' }}
           />
         ))}
       </div>
@@ -224,7 +227,7 @@ export default function KPIBentoGrid() {
         subtext="Awaiting Legal Officer"
         trend={{ direction: 'neutral', label: 'Under review' }}
         icon={FileCheck}
-        variant="warning"
+        variant="highlight"
       />
     </div>
   );

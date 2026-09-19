@@ -105,7 +105,7 @@ export default function DashboardHeader() {
           <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--izou-text)' }}>Collateral Dashboard</h1>
           <span
             className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full shrink-0"
-            style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}
+            style={{ backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)' }}
           >
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
             Live
@@ -115,7 +115,7 @@ export default function DashboardHeader() {
               href="/workflows/instances"
               onClick={() => setEscalationBadge(0)}
               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full shrink-0 transition-opacity hover:opacity-80"
-              style={{ backgroundColor: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }}
+              style={{ backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)', border: '1px solid var(--izou-warning-light)' }}
             >
               <AlertTriangle size={11} className="animate-pulse" />
               {escalationBadge} new escalation{escalationBadge > 1 ? 's' : ''}

@@ -14,10 +14,10 @@ import { dashboardService } from '@/lib/supabase/collateralService';
 import { AlertCircle } from 'lucide-react';
 import { useDashboardRefresh } from '../DashboardRefreshContext';
 
-// IZOU-inspired color palette
+// Contentpro categorical palette
 const colors = [
-  '#00A9E0', '#007CB3', '#00C2A8', '#009E88',
-  '#35C8F3', '#1AB8E6', '#7C3AED', '#D97706',
+  'var(--izou-secondary)', 'var(--izou-primary)', 'var(--izou-success)', 'var(--izou-warning)',
+  'var(--izou-highlight)', 'var(--izou-secondary-mid)', 'var(--izou-neutral)', 'var(--izou-danger)',
 ];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -80,7 +80,7 @@ export default function CollateralTypeChart() {
       {isLoading ? (
         <div className="space-y-2 pt-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-7 animate-pulse rounded-lg" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
+            <div key={i} className="h-7 animate-pulse rounded-lg" style={{ backgroundColor: 'var(--izou-skeleton)' }} />
           ))}
         </div>
       ) : error ? (
@@ -103,14 +103,14 @@ export default function CollateralTypeChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" horizontal={false} />
             <XAxis
               type="number"
-              tick={{ fontSize: 11, fill: '#667085', fontFamily: 'Plus Jakarta Sans' }}
+              tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'Plus Jakarta Sans' }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               type="category"
               dataKey="type"
-              tick={{ fontSize: 11, fill: '#102033', fontFamily: 'Plus Jakarta Sans' }}
+              tick={{ fontSize: 11, fill: 'var(--izou-text)', fontFamily: 'Plus Jakarta Sans' }}
               axisLine={false}
               tickLine={false}
               width={58}

@@ -808,16 +808,16 @@ export default function ModuleHubPage() {
           </div>
 
           {/* ── Footer ──────────────────────────────────────────────────────── */}
-          <footer className="text-center py-4 text-xs" style={{ color: '#9CA3AF' }}>
+          <footer className="text-center py-4 text-xs" style={{ color: 'var(--izou-muted)' }}>
             Powered by{' '}
             <a
               href="https://contentpro.co.tz"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold hover:underline transition-colors"
-              style={{ color: '#6B7280' }}
-              onMouseOver={(e) => (e.currentTarget.style.color = '#007CB3')}
-              onMouseOut={(e) => (e.currentTarget.style.color = '#6B7280')}
+              style={{ color: 'var(--izou-muted)' }}
+              onMouseOver={(e) => (e.currentTarget.style.color = 'var(--izou-primary)')}
+              onMouseOut={(e) => (e.currentTarget.style.color = 'var(--izou-muted)')}
             >
               Contentpro
             </a>

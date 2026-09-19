@@ -10,14 +10,14 @@ const activityConfig: Record<
   string,
   { icon: React.ElementType; iconStyle: React.CSSProperties; dotClass: string }
 > = {
-  perfected: { icon: CheckCircle2, iconStyle: { color: '#16a34a' }, dotClass: 'bg-green-500' },
-  created: { icon: FilePlus, iconStyle: { color: 'var(--izou-primary)' }, dotClass: 'bg-blue-500' },
-  overdue: { icon: AlertCircle, iconStyle: { color: '#dc2626' }, dotClass: 'bg-red-500' },
-  submitted: { icon: FileCheck, iconStyle: { color: '#6366f1' }, dotClass: 'bg-indigo-500' },
+  perfected: { icon: CheckCircle2, iconStyle: { color: 'var(--izou-success)' }, dotClass: 'bg-green-500' },
+  created: { icon: FilePlus, iconStyle: { color: 'var(--izou-secondary)' }, dotClass: 'bg-blue-500' },
+  overdue: { icon: AlertCircle, iconStyle: { color: 'var(--izou-danger)' }, dotClass: 'bg-red-500' },
+  submitted: { icon: FileCheck, iconStyle: { color: 'var(--izou-secondary-mid)' }, dotClass: 'bg-indigo-500' },
   released: { icon: ArrowUpRight, iconStyle: { color: 'var(--izou-teal)' }, dotClass: 'bg-teal-500' },
-  updated: { icon: FileCheck, iconStyle: { color: 'var(--izou-primary)' }, dotClass: 'bg-blue-500' },
-  status_changed: { icon: FileCheck, iconStyle: { color: '#7c3aed' }, dotClass: 'bg-purple-500' },
-  deleted: { icon: AlertCircle, iconStyle: { color: '#6b7280' }, dotClass: 'bg-gray-500' },
+  updated: { icon: FileCheck, iconStyle: { color: 'var(--izou-secondary)' }, dotClass: 'bg-blue-500' },
+  status_changed: { icon: FileCheck, iconStyle: { color: 'var(--izou-highlight)' }, dotClass: 'bg-purple-500' },
+  deleted: { icon: AlertCircle, iconStyle: { color: 'var(--izou-neutral)' }, dotClass: 'bg-gray-500' },
 };
 
 function timeAgo(dateStr: string): string {
@@ -81,19 +81,19 @@ export default function RecentActivityFeed() {
             <div key={`skel-${i}`} className="flex gap-3 items-start">
               <div
                 className="w-7 h-7 rounded-xl animate-pulse shrink-0"
-                style={{ backgroundColor: 'rgba(0,169,224,0.08)' }}
+                style={{ backgroundColor: 'var(--izou-skeleton)' }}
               />
               <div className="flex-1 space-y-1.5">
-                <div className="h-3 animate-pulse rounded-lg w-3/4" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
-                <div className="h-2.5 animate-pulse rounded-lg w-1/2" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
+                <div className="h-3 animate-pulse rounded-lg w-3/4" style={{ backgroundColor: 'var(--izou-skeleton)' }} />
+                <div className="h-2.5 animate-pulse rounded-lg w-1/2" style={{ backgroundColor: 'var(--izou-skeleton)' }} />
               </div>
             </div>
           ))}
         </div>
       ) : error ? (
         <div className="px-5 py-8 flex flex-col items-center gap-2 text-center">
-          <AlertCircle size={24} className="text-red-400" />
-          <p className="text-sm font-semibold text-red-600">Could not load activity</p>
+          <AlertCircle size={24} style={{ color: 'var(--izou-danger)' }} />
+          <p className="text-sm font-semibold" style={{ color: 'var(--izou-danger)' }}>Could not load activity</p>
           <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{error}</p>
         </div>
       ) : (

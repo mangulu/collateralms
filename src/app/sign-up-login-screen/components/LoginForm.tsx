@@ -247,7 +247,7 @@ export default function LoginForm() {
         <div
           className="hidden lg:relative lg:flex lg:min-h-screen lg:flex-col lg:overflow-hidden"
           style={{
-            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+            background: 'linear-gradient(155deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 55%, var(--izou-secondary-end) 100%)'
           }}
         >
           <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
@@ -281,7 +281,7 @@ export default function LoginForm() {
         <div
           className="lg:hidden flex flex-col items-center justify-center py-8 px-6"
           style={{
-            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+            background: 'linear-gradient(155deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 55%, var(--izou-secondary-end) 100%)'
           }}
         >
           <AppLogo size={64} />
@@ -323,7 +323,7 @@ export default function LoginForm() {
                   className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest rounded-xl focus:outline-none focus:ring-2"
                   style={{
                     border: '1px solid var(--izou-border)',
-                    backgroundColor: 'var(--izou-primary-light)',
+                    backgroundColor: 'var(--izou-field-bg)',
                     color: 'var(--izou-text)'
                   }}
                 />
@@ -370,7 +370,7 @@ export default function LoginForm() {
         <div
           className="hidden lg:relative lg:flex lg:min-h-screen lg:flex-col lg:overflow-hidden"
           style={{
-            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+            background: 'linear-gradient(155deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 55%, var(--izou-secondary-end) 100%)'
           }}
         >
           {/* Decorative blobs */}
@@ -442,7 +442,7 @@ export default function LoginForm() {
         <div
           className="lg:hidden flex flex-col items-center justify-center py-8 px-6"
           style={{
-            background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+            background: 'linear-gradient(155deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 55%, var(--izou-secondary-end) 100%)'
           }}
         >
           <div
@@ -509,8 +509,8 @@ export default function LoginForm() {
                       placeholder="yourname@bank.co.tz"
                       className="w-full rounded-xl px-3.5 text-sm outline-none transition h-12 focus:ring-2"
                       style={{
-                        border: errors.email ? '1px solid #dc2626' : '1px solid var(--izou-border)',
-                        backgroundColor: 'var(--izou-primary-light)',
+                        border: errors.email ? '1px solid var(--izou-danger)' : '1px solid var(--izou-border)',
+                        backgroundColor: 'var(--izou-field-bg)',
                         color: 'var(--izou-text)',
                       }}
                       {...register('email', {
@@ -546,8 +546,8 @@ export default function LoginForm() {
                       placeholder="Enter your password"
                       className="w-full rounded-xl px-3.5 pr-10 text-sm outline-none transition h-12 focus:ring-2"
                       style={{
-                        border: errors.password ? '1px solid #dc2626' : '1px solid var(--izou-border)',
-                        backgroundColor: 'var(--izou-primary-light)',
+                        border: errors.password ? '1px solid var(--izou-danger)' : '1px solid var(--izou-border)',
+                        backgroundColor: 'var(--izou-field-bg)',
                         color: 'var(--izou-text)',
                       }}
                       {...register('password', {
@@ -683,8 +683,8 @@ export default function LoginForm() {
                       placeholder="yourname@bank.co.tz"
                       className="w-full rounded-xl px-3.5 text-sm outline-none transition h-12 focus:ring-2"
                       style={{
-                        border: resetErrors.resetEmail ? '1px solid #dc2626' : '1px solid var(--izou-border)',
-                        backgroundColor: 'var(--izou-primary-light)',
+                        border: resetErrors.resetEmail ? '1px solid var(--izou-danger)' : '1px solid var(--izou-border)',
+                        backgroundColor: 'var(--izou-field-bg)',
                         color: 'var(--izou-text)',
                       }}
                       {...registerReset('resetEmail', {

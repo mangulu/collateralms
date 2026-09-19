@@ -51,13 +51,13 @@ interface ConcentrationItem {
 }
 
 const CONCENTRATION_COLORS: Record<string, string> = {
-  'Mortgage': '#2563eb',
-  'Motor Vehicle': '#7c3aed',
-  'Shares (DSE)': '#0891b2',
-  'Debenture': '#059669',
-  'FDR': '#d97706',
-  'Guarantee': '#db2777',
-  'Ship/Vessel': '#64748b',
+  'Mortgage': 'var(--izou-secondary)',
+  'Motor Vehicle': 'var(--izou-primary)',
+  'Shares (DSE)': 'var(--izou-secondary-mid)',
+  'Debenture': 'var(--izou-success)',
+  'FDR': 'var(--izou-warning)',
+  'Guarantee': 'var(--izou-highlight)',
+  'Ship/Vessel': 'var(--izou-neutral)',
 };
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -256,7 +256,7 @@ export default function PortfolioMonitoringContent() {
         .map(([name, count]) => ({
           name,
           value: Math.round((count / total) * 100),
-          color: CONCENTRATION_COLORS[name] ?? '#94a3b8',
+          color: CONCENTRATION_COLORS[name] ?? 'var(--izou-neutral)',
         }));
 
       setConcentrationData(items);
@@ -430,14 +430,14 @@ export default function PortfolioMonitoringContent() {
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={volumeData} barGap={4}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                     <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="created" name="Created" fill="#2563eb" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="perfected" name="Perfected" fill="#059669" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="overdue" name="Overdue" fill="#dc2626" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="created" name="Created" fill="var(--izou-secondary)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="perfected" name="Perfected" fill="var(--izou-success)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="overdue" name="Overdue" fill="var(--izou-danger)" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -455,13 +455,13 @@ export default function PortfolioMonitoringContent() {
               ) : (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={turnaroundData.map((r) => ({ ...r, avgDays: r.avgDays ?? 0 }))} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                     <XAxis type="number" tick={{ fontSize: 12 }} unit=" days" />
                     <YAxis dataKey="registry" type="category" tick={{ fontSize: 12 }} width={80} />
                     <Tooltip formatter={(v, name, props: any) => props.dataKey === 'avgDays' && props.payload.avgDays === 0 ? ['No decided requests yet', 'Avg Days'] : [v, name]} />
                     <Legend />
-                    <Bar dataKey="avgDays" name="Avg Days" fill="#7c3aed" radius={[0, 3, 3, 0]} />
-                    <Bar dataKey="target" name="Target" fill="#d1d5db" radius={[0, 3, 3, 0]} />
+                    <Bar dataKey="avgDays" name="Avg Days" fill="var(--izou-secondary)" radius={[0, 3, 3, 0]} />
+                    <Bar dataKey="target" name="Target" fill="var(--izou-border)" radius={[0, 3, 3, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

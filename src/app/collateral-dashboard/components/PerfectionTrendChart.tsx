@@ -104,7 +104,7 @@ export default function PerfectionTrendChart() {
 
       <div className="mt-4">
         {isLoading ? (
-          <div className="h-[280px] animate-pulse rounded-xl" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
+          <div className="h-[280px] animate-pulse rounded-xl" style={{ backgroundColor: 'var(--izou-skeleton)' }} />
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-[280px] gap-2 text-center">
             <AlertCircle size={24} className="text-red-400" />
@@ -116,27 +116,27 @@ export default function PerfectionTrendChart() {
             <AreaChart data={trendData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
               <defs>
                 <linearGradient id="gradPerfected" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#16a34a" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#16a34a" stopOpacity={0.02} />
+                  <stop offset="5%" stopColor="var(--izou-success)" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="var(--izou-success)" stopOpacity={0.02} />
                 </linearGradient>
                 <linearGradient id="gradSubmitted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00A9E0" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#00A9E0" stopOpacity={0.02} />
+                  <stop offset="5%" stopColor="var(--izou-secondary)" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="var(--izou-secondary)" stopOpacity={0.02} />
                 </linearGradient>
                 <linearGradient id="gradOverdue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#dc2626" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#dc2626" stopOpacity={0.02} />
+                  <stop offset="5%" stopColor="var(--izou-danger)" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="var(--izou-danger)" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 11, fill: '#667085', fontFamily: 'Plus Jakarta Sans' }}
+                tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'Plus Jakarta Sans' }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: '#667085', fontFamily: 'Plus Jakarta Sans' }}
+                tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'Plus Jakarta Sans' }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -148,7 +148,7 @@ export default function PerfectionTrendChart() {
                 type="monotone"
                 dataKey="perfected"
                 name="Perfected"
-                stroke="#16a34a"
+                stroke="var(--izou-success)"
                 strokeWidth={2}
                 fill="url(#gradPerfected)"
               />
@@ -156,7 +156,7 @@ export default function PerfectionTrendChart() {
                 type="monotone"
                 dataKey="submitted"
                 name="Submitted"
-                stroke="#00A9E0"
+                stroke="var(--izou-secondary)"
                 strokeWidth={2}
                 fill="url(#gradSubmitted)"
               />
@@ -164,7 +164,7 @@ export default function PerfectionTrendChart() {
                 type="monotone"
                 dataKey="overdue"
                 name="Overdue"
-                stroke="#dc2626"
+                stroke="var(--izou-danger)"
                 strokeWidth={2}
                 fill="url(#gradOverdue)"
               />

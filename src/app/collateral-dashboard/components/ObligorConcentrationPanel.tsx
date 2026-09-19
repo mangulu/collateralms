@@ -11,7 +11,7 @@ function formatTZS(n: number): string {
   return n.toLocaleString();
 }
 
-const BAR_COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706'];
+const BAR_COLORS = ['var(--izou-secondary)', 'var(--izou-highlight)', 'var(--izou-success)', 'var(--izou-warning)', 'var(--izou-primary)'];
 
 export default function ObligorConcentrationPanel() {
   const { refreshKey } = useDashboardRefresh();
@@ -39,7 +39,7 @@ export default function ObligorConcentrationPanel() {
     concentrationPct >= 60 ? 'High concentration' :
     concentrationPct >= 35 ? 'Moderate concentration' :
     'Well diversified';
-  const concentrationColor = concentrationPct >= 60 ? '#dc2626' : concentrationPct >= 35 ? '#d97706' : '#16a34a';
+  const concentrationColor = concentrationPct >= 60 ? 'var(--izou-danger)' : concentrationPct >= 35 ? 'var(--izou-warning)' : 'var(--izou-success)';
 
   return (
     <div
@@ -72,7 +72,7 @@ export default function ObligorConcentrationPanel() {
       {isLoading ? (
         <div className="p-4 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-9 animate-pulse rounded-lg" style={{ backgroundColor: 'rgba(0,169,224,0.08)' }} />
+            <div key={i} className="h-9 animate-pulse rounded-lg" style={{ backgroundColor: 'var(--izou-skeleton)' }} />
           ))}
         </div>
       ) : obligors.length === 0 ? (
@@ -82,7 +82,7 @@ export default function ObligorConcentrationPanel() {
       ) : (
         <div className="p-4 space-y-4">
           {/* Concentration summary */}
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ backgroundColor: 'rgba(0,169,224,0.06)' }}>
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
             <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>Top 5 hold</span>
             <span className="text-sm font-bold font-mono" style={{ color: concentrationColor }}>
               {concentrationPct.toFixed(1)}% · {concentrationLabel}

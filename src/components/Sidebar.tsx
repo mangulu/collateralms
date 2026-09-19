@@ -259,6 +259,22 @@ export default function Sidebar({ collapsed, onToggle, currentPath }: SidebarPro
         )}
       </nav>
 
+      {/* Footer credit */}
+      {!collapsed && (
+        <div
+          className="px-4 py-3.5 shrink-0"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}
+        >
+          <p className="text-[9px] uppercase tracking-wider mb-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            A product by
+          </p>
+          <p className="text-sm font-extrabold leading-none">
+            <span style={{ color: 'var(--izou-primary)' }}>Content</span>
+            <span style={{ color: 'rgba(255,255,255,0.85)' }}>pro</span>
+          </p>
+        </div>
+      )}
+
       {/* Collapse Toggle */}
       <button
         onClick={onToggle}
