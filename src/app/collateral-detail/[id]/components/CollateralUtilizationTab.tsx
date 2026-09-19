@@ -4,6 +4,7 @@ import { Plus, AlertTriangle, CheckCircle2, Link2, Unlink, FileCheck, ChevronDow
 import { toast } from 'sonner';
 import { collateralLinkService, CollateralLoanLink, ChargeRegistry, CollateralUtilization, LinkLoanPayload, ReleaseLinkPayload, DischargeChargePayload } from '@/lib/supabase/collateralLinkService';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
+import { loanService, Loan } from '@/lib/supabase/loanService';
 import { useAuth } from '@/contexts/AuthContext';
 
 // ─── Utilization Gauge ────────────────────────────────────────────────────────
@@ -89,16 +90,34 @@ function LinkLoanModal({
 }) {
   const { user } = useAuth();
   const [form, setForm] = useState<LinkLoanPayload>({
+    loanId: '',
     loanAccountId: '',
     beneficiaryId: '',
     beneficiaryName: '',
     allocatedAmount: 0,
     startDate: new Date().toISOString().slice(0, 10),
   });
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loadingLoans, setLoadingLoans] = useState(true);
   const [warning, setWarning] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    loanService.getAll().then(all => { setLoans(all); setLoadingLoans(false); });
+  }, []);
+
+  const handleLoanSelect = (loanId: string) => {
+    const loan = loans.find(l => l.id === loanId);
+    setForm(f => ({
+      ...f,
+      loanId,
+      loanAccountId: loan?.loanNumber ?? '',
+      beneficiaryId: loan?.obligorCode ?? '',
+      beneficiaryName: loan?.obligorName ?? '',
+    }));
+  };
 
   const newTotal = form.allocatedAmount;
   const newPct = maxSecurable > 0 ? ((collateral as any).total_secured_amount + newTotal) / maxSecurable * 100 : 0;
@@ -156,37 +175,42 @@ function LinkLoanModal({
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-3">
+          <div>
+            <label className="text-xs font-600 text-muted-foreground uppercase tracking-wide block mb-1">Loan *</label>
+            <select
+              required
+              value={form.loanId}
+              onChange={e => handleLoanSelect(e.target.value)}
+              disabled={loadingLoans}
+              className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white disabled:opacity-60"
+            >
+              <option value="">{loadingLoans ? 'Loading loans…' : 'Select a loan'}</option>
+              {loans.map(loan => (
+                <option key={loan.id} value={loan.id}>
+                  {loan.loanNumber} — {loan.obligorName ?? 'Unknown obligor'}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-600 text-muted-foreground uppercase tracking-wide block mb-1">Loan Account ID *</label>
+              <label className="text-xs font-600 text-muted-foreground uppercase tracking-wide block mb-1">Beneficiary ID</label>
               <input
-                required
-                value={form.loanAccountId}
-                onChange={e => setForm(f => ({ ...f, loanAccountId: e.target.value }))}
-                placeholder="LN-2024-XXXXXX"
-                className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                readOnly
+                value={form.beneficiaryId}
+                placeholder="Derived from selected loan"
+                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-muted/30 text-muted-foreground"
               />
             </div>
             <div>
-              <label className="text-xs font-600 text-muted-foreground uppercase tracking-wide block mb-1">Beneficiary ID *</label>
+              <label className="text-xs font-600 text-muted-foreground uppercase tracking-wide block mb-1">Beneficiary Name</label>
               <input
-                required
-                value={form.beneficiaryId}
-                onChange={e => setForm(f => ({ ...f, beneficiaryId: e.target.value }))}
-                placeholder="CUST-XXXXX"
-                className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                readOnly
+                value={form.beneficiaryName}
+                placeholder="Derived from selected loan"
+                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-muted/30 text-muted-foreground"
               />
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-600 text-muted-foreground uppercase tracking-wide block mb-1">Beneficiary Name *</label>
-            <input
-              required
-              value={form.beneficiaryName}
-              onChange={e => setForm(f => ({ ...f, beneficiaryName: e.target.value }))}
-              placeholder="Full name of borrower"
-              className="w-full text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -258,7 +282,7 @@ function LinkLoanModal({
             </button>
             <button
               type="submit"
-              disabled={saving || wouldExceed || (wouldWarn && !acknowledged)}
+              disabled={saving || !form.loanId || wouldExceed || (wouldWarn && !acknowledged)}
               className="px-4 py-2 text-sm font-600 text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {saving ? 'Linking…' : 'Link Loan'}

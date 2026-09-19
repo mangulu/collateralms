@@ -11,6 +11,7 @@ export type UtilizationStatus = 'GREEN' | 'YELLOW' | 'RED';
 export interface CollateralLoanLink {
   id: string;
   collateralId: string;
+  loanId: string | null;
   loanAccountId: string;
   beneficiaryId: string;
   beneficiaryName: string;
@@ -30,6 +31,7 @@ export interface ChargeRegistry {
   id: string;
   collateralId: string;
   collateralLoanLinkId: string | null;
+  loanId: string | null;
   loanAccountId: string;
   chargeRank: number;
   registryName: string;
@@ -59,6 +61,7 @@ export interface CollateralUtilization {
 }
 
 export interface LinkLoanPayload {
+  loanId: string;
   loanAccountId: string;
   beneficiaryId: string;
   beneficiaryName: string;
@@ -85,6 +88,7 @@ function rowToLink(row: any): CollateralLoanLink {
   return {
     id: row.id,
     collateralId: row.collateral_id,
+    loanId: row.loan_id ?? null,
     loanAccountId: row.loan_account_id,
     beneficiaryId: row.beneficiary_id,
     beneficiaryName: row.beneficiary_name ?? '',
@@ -106,6 +110,7 @@ function rowToChargeRegistry(row: any): ChargeRegistry {
     id: row.id,
     collateralId: row.collateral_id,
     collateralLoanLinkId: row.collateral_loan_link_id ?? null,
+    loanId: row.loan_id ?? null,
     loanAccountId: row.loan_account_id ?? '',
     chargeRank: row.charge_rank,
     registryName: row.registry_name ?? '',
@@ -233,6 +238,7 @@ export const collateralLinkService = {
         .from('collateral_loan_links')
         .insert({
           collateral_id: collateralRecordId,
+          loan_id: payload.loanId,
           loan_account_id: payload.loanAccountId,
           beneficiary_id: payload.beneficiaryId,
           beneficiary_name: payload.beneficiaryName,
