@@ -590,6 +590,116 @@ export const dashboardService = {
       throw err;
     }
   },
+
+  /** Real portfolio-wide stats for Portfolio Monitoring's KPI strip (was previously Math.random()). */
+  async getPortfolioMonitoringMetrics() {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('id, status, days_to_deadline, value_tsh, valuation_amount, max_securable_amount, loan_id');
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return null;
+      }
+
+      const records = data ?? [];
+      const total = records.length;
+
+      const totalValue = records.reduce((sum, r: any) => {
+        const dedicated = parseFloat(r.valuation_amount) || 0;
+        const legacy = typeof r.value_tsh === 'string' ? parseFloat(r.value_tsh.replace(/,/g, '')) || 0 : parseFloat(r.value_tsh) || 0;
+        return sum + (dedicated > 0 ? dedicated : legacy);
+      }, 0);
+
+      const perfected = records.filter((r) => r.status === 'Perfected').length;
+      const perfectionRate = total > 0 ? ((perfected / total) * 100).toFixed(1) : '0.0';
+      const overdueFilings = records.filter((r) => r.status === 'Overdue').length;
+      const pendingPerfection = records.filter((r) => r.status === 'Under Review' || r.status === 'Submitted').length;
+
+      // Utilization = total currently secured / total max securable, across
+      // collaterals with a securable-amount ceiling set. Recomputed from
+      // collateral_loan_links (not the cached total_secured_amount column)
+      // for the same reason collateralLinkService.getUtilization() does.
+      const withCeiling = records.filter((r: any) => (parseFloat(r.max_securable_amount) || 0) > 0);
+      let utilizationPercentage = 0;
+      if (withCeiling.length > 0) {
+        const { data: links } = await supabase
+          .from('collateral_loan_links')
+          .select('collateral_id, allocated_amount')
+          .eq('status', 'ACTIVE')
+          .in('collateral_id', withCeiling.map((r) => r.id));
+        const securedByCollateral = new Map<string, number>();
+        (links ?? []).forEach((l: any) => {
+          securedByCollateral.set(l.collateral_id, (securedByCollateral.get(l.collateral_id) ?? 0) + (parseFloat(l.allocated_amount) || 0));
+        });
+        const totalSecured = withCeiling.reduce((sum, r: any) => sum + (securedByCollateral.get(r.id) ?? 0), 0);
+        const totalMaxSecurable = withCeiling.reduce((sum, r: any) => sum + (parseFloat(r.max_securable_amount) || 0), 0);
+        utilizationPercentage = totalMaxSecurable > 0 ? (totalSecured / totalMaxSecurable) * 100 : 0;
+      }
+
+      // Delinquency = share of collaterals whose linked loan is Defaulted.
+      const loanIds = [...new Set(records.map((r: any) => r.loan_id).filter(Boolean))];
+      let delinquencyRate = 0;
+      if (loanIds.length > 0) {
+        const { data: loans } = await supabase.from('loans').select('id, loan_status').in('id', loanIds);
+        const defaultedIds = new Set((loans ?? []).filter((l: any) => l.loan_status === 'Defaulted').map((l: any) => l.id));
+        const linkedCount = records.filter((r: any) => r.loan_id).length;
+        const delinquentCount = records.filter((r: any) => r.loan_id && defaultedIds.has(r.loan_id)).length;
+        delinquencyRate = linkedCount > 0 ? (delinquentCount / linkedCount) * 100 : 0;
+      }
+
+      return {
+        total,
+        totalValue,
+        utilizationPercentage,
+        perfectionRate,
+        overdueFilings,
+        pendingPerfection,
+        delinquencyRate,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (err: any) {
+      throw err;
+    }
+  },
+
+  /** Average days from submission to decision per registry, for Portfolio Monitoring's Turnaround Time tab. */
+  async getRegistryTurnaround() {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('perfection_requests')
+        .select('registry, submitted_at, reviewed_at')
+        .not('submitted_at', 'is', null)
+        .not('reviewed_at', 'is', null);
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return {};
+      }
+
+      const totalsByRegistry: Record<string, { sumDays: number; count: number }> = {};
+      (data ?? []).forEach((r: any) => {
+        if (!r.registry) return;
+        const days = (new Date(r.reviewed_at).getTime() - new Date(r.submitted_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (days < 0) return;
+        const bucket = totalsByRegistry[r.registry] ?? { sumDays: 0, count: 0 };
+        bucket.sumDays += days;
+        bucket.count += 1;
+        totalsByRegistry[r.registry] = bucket;
+      });
+
+      const avgByRegistry: Record<string, number | null> = {};
+      Object.entries(totalsByRegistry).forEach(([registry, { sumDays, count }]) => {
+        avgByRegistry[registry] = count > 0 ? Math.round((sumDays / count) * 10) / 10 : null;
+      });
+      return avgByRegistry;
+    } catch (err: any) {
+      throw err;
+    }
+  },
 };
 
 export { createClient };

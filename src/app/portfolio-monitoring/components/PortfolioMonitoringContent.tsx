@@ -2,8 +2,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Activity, TrendingUp, TrendingDown, Wifi, WifiOff, BarChart2, Clock, AlertTriangle, Shield, Layers, Download,  } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   XAxis,
@@ -16,18 +14,20 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import Icon from '@/components/ui/AppIcon';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { dashboardService } from '@/lib/supabase/collateralService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PortfolioMetrics {
-  totalCollateral: number;
+  total: number;
   totalValue: number;
   utilizationPercentage: number;
-  perfectionRate: number;
+  perfectionRate: string;
   overdueFilings: number;
   pendingPerfection: number;
+  delinquencyRate: number;
   timestamp: string;
 }
 
@@ -40,7 +40,7 @@ interface VolumePoint {
 
 interface RegistryTurnaround {
   registry: string;
-  avgDays: number;
+  avgDays: number | null;
   target: number;
 }
 
@@ -48,20 +48,6 @@ interface ConcentrationItem {
   name: string;
   value: number;
   color: string;
-}
-
-// ─── Mock Data Generators ─────────────────────────────────────────────────────
-
-function generateMetrics(): PortfolioMetrics {
-  return {
-    totalCollateral: 342 + Math.floor(Math.random() * 5),
-    totalValue: 25000000000 + Math.floor(Math.random() * 500000000),
-    utilizationPercentage: 72 + Math.random() * 5,
-    perfectionRate: 79 + Math.random() * 4,
-    overdueFilings: 10 + Math.floor(Math.random() * 5),
-    pendingPerfection: 28 + Math.floor(Math.random() * 8),
-    timestamp: new Date().toISOString(),
-  };
 }
 
 const CONCENTRATION_COLORS: Record<string, string> = {
@@ -76,22 +62,15 @@ const CONCENTRATION_COLORS: Record<string, string> = {
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const registryTurnaround: RegistryTurnaround[] = [
-  { registry: 'BRELA', avgDays: 18, target: 14 },
-  { registry: 'Lands', avgDays: 32, target: 28 },
-  { registry: 'TRA', avgDays: 12, target: 10 },
-  { registry: 'DSE', avgDays: 7, target: 7 },
-  { registry: 'TASAC', avgDays: 21, target: 18 },
-];
-
-const delinquencyTrend = [
-  { month: 'Jan', rate: 4.2 },
-  { month: 'Feb', rate: 3.8 },
-  { month: 'Mar', rate: 5.1 },
-  { month: 'Apr', rate: 4.7 },
-  { month: 'May', rate: 3.9 },
-  { month: 'Jun', rate: 4.3 },
-];
+// Target days are policy SLAs, not measured data -- avgDays (the actual
+// figure) is computed live from perfection_requests in fetchTurnaroundData.
+const REGISTRY_TARGETS: Record<string, number> = {
+  BRELA: 14,
+  'Lands Registry': 28,
+  TRA: 10,
+  DSE: 7,
+  TASAC: 18,
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -136,10 +115,12 @@ function MetricCard({ label, value, sub, icon: Icon, trend, variant = 'default',
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PortfolioMonitoringContent() {
-  const [metrics, setMetrics] = useState<PortfolioMetrics>(generateMetrics());
+  const [metrics, setMetrics] = useState<PortfolioMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
   const [wsConnected, setWsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'volumes' | 'turnaround' | 'concentration' | 'delinquency'>('volumes');
+  const [exporting, setExporting] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Live chart data state
@@ -151,9 +132,49 @@ export default function PortfolioMonitoringContent() {
   const [concentrationLoading, setConcentrationLoading] = useState(true);
   const [concentrationError, setConcentrationError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLastUpdate(new Date().toLocaleTimeString('en-GB'));
+  const [turnaroundData, setTurnaroundData] = useState<RegistryTurnaround[]>([]);
+  const [turnaroundLoading, setTurnaroundLoading] = useState(true);
+  const [turnaroundError, setTurnaroundError] = useState<string | null>(null);
+
+  // ── Fetch real portfolio-wide KPI metrics ─────────────────────────────────
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const data = await dashboardService.getPortfolioMonitoringMetrics();
+      if (data) setMetrics(data);
+      setLastUpdate(new Date().toLocaleTimeString('en-GB'));
+    } catch {
+      // keep showing the last good metrics rather than clearing them
+    } finally {
+      setMetricsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics]);
+
+  // ── Fetch registry turnaround (real avg days, merged with SLA targets) ────
+  const fetchTurnaroundData = useCallback(async () => {
+    setTurnaroundLoading(true);
+    setTurnaroundError(null);
+    try {
+      const avgByRegistry = await dashboardService.getRegistryTurnaround();
+      const rows: RegistryTurnaround[] = Object.entries(REGISTRY_TARGETS).map(([registry, target]) => ({
+        registry,
+        avgDays: avgByRegistry[registry] ?? null,
+        target,
+      }));
+      setTurnaroundData(rows);
+    } catch (err: unknown) {
+      setTurnaroundError(err instanceof Error ? err.message : 'Failed to load turnaround data');
+    } finally {
+      setTurnaroundLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTurnaroundData();
+  }, [fetchTurnaroundData]);
 
   // ── Fetch daily collateral volumes (last 7 days) ──────────────────────────
   const fetchVolumeData = useCallback(async () => {
@@ -251,15 +272,18 @@ export default function PortfolioMonitoringContent() {
     fetchConcentrationData();
   }, [fetchVolumeData, fetchConcentrationData]);
 
-  const startWebSocket = useCallback(() => {
+  // "Live" polls all real data sources on an interval -- there is no actual
+  // push/WebSocket connection, just a periodic refetch while enabled.
+  const startPolling = useCallback(() => {
     setWsConnected(true);
     intervalRef.current = setInterval(() => {
-      setMetrics(generateMetrics());
-      setLastUpdate(new Date().toLocaleTimeString('en-GB'));
-    }, 5000);
-  }, []);
+      fetchMetrics();
+      fetchVolumeData();
+      fetchConcentrationData();
+    }, 30000);
+  }, [fetchMetrics, fetchVolumeData, fetchConcentrationData]);
 
-  const stopWebSocket = useCallback(() => {
+  const stopPolling = useCallback(() => {
     setWsConnected(false);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -268,9 +292,49 @@ export default function PortfolioMonitoringContent() {
   }, []);
 
   useEffect(() => {
-    startWebSocket();
-    return () => stopWebSocket();
-  }, [startWebSocket, stopWebSocket]);
+    startPolling();
+    return () => stopPolling();
+  }, [startPolling, stopPolling]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const dateTo = new Date();
+      const dateFrom = new Date(dateTo.getFullYear(), dateTo.getMonth() - 5, 1);
+      const response = await fetch('/api/export/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportType: 'perfection_rate',
+          dateFrom: dateFrom.toISOString().slice(0, 10),
+          dateTo: dateTo.toISOString().slice(0, 10),
+          registries: [],
+          statuses: [],
+          collateralTypes: [],
+          includeCharts: false,
+          includeSummary: true,
+          includeDetails: false,
+          stakeholderMode: false,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(err.error ?? `HTTP ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portfolio_monitoring_${dateTo.toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Report exported');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to export report');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const tabs = [
     { key: 'volumes' as const, label: 'Volumes', icon: BarChart2 },
@@ -291,34 +355,46 @@ export default function PortfolioMonitoringContent() {
             <h1 className="text-xl font-700 text-foreground">Real-Time Portfolio Monitoring</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Live portfolio metrics with WebSocket updates · Last updated: {lastUpdate}
+            Portfolio metrics, auto-refreshed every 30s while Live is on · Last updated: {lastUpdate}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={wsConnected ? stopWebSocket : startWebSocket}
+            onClick={wsConnected ? stopPolling : startPolling}
             className={`flex items-center gap-1.5 px-3 py-2 text-sm font-500 rounded-lg border transition-colors ${
               wsConnected
                 ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' :'bg-white border-border text-muted-foreground hover:bg-muted'
             }`}
           >
             {wsConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
-            {wsConnected ? 'Live' : 'Connect'}
+            {wsConnected ? 'Live' : 'Paused'}
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 text-sm font-500 text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors">
-            <Download size={14} /> Export PDF
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-500 text-muted-foreground bg-white border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-60"
+          >
+            <Download size={14} className={exporting ? 'animate-pulse' : ''} /> {exporting ? 'Exporting…' : 'Export PDF'}
           </button>
         </div>
       </div>
 
       {/* Live KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <MetricCard label="Total Collateral" value={String(metrics.totalCollateral)} sub="Active items" icon={Shield} live={wsConnected} variant="default" />
-        <MetricCard label="Portfolio Value" value={`TZS ${formatTZS(metrics.totalValue)}`} sub="Total registered value" icon={TrendingUp} live={wsConnected} variant="success" />
-        <MetricCard label="Utilization" value={`${metrics.utilizationPercentage.toFixed(1)}%`} sub="Collateral utilization" icon={Activity} live={wsConnected} variant={metrics.utilizationPercentage > 80 ? 'warning' : 'default'} />
-        <MetricCard label="Perfection Rate" value={`${metrics.perfectionRate.toFixed(1)}%`} sub="vs 80% target" icon={Shield} live={wsConnected} variant={metrics.perfectionRate >= 80 ? 'success' : 'warning'} trend={{ dir: 'up', label: '+2.1%' }} />
-        <MetricCard label="Overdue Filings" value={String(metrics.overdueFilings)} sub="Past deadline" icon={AlertTriangle} live={wsConnected} variant="danger" />
-        <MetricCard label="Pending Perfection" value={String(metrics.pendingPerfection)} sub="In progress" icon={Clock} live={wsConnected} variant="warning" />
+        {metricsLoading || !metrics ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-28 rounded-xl bg-muted/40 animate-pulse" />
+          ))
+        ) : (
+          <>
+            <MetricCard label="Total Collateral" value={String(metrics.total)} sub="Active items" icon={Shield} live={wsConnected} variant="default" />
+            <MetricCard label="Portfolio Value" value={`TZS ${formatTZS(metrics.totalValue)}`} sub="Total registered value" icon={TrendingUp} live={wsConnected} variant="success" />
+            <MetricCard label="Utilization" value={`${metrics.utilizationPercentage.toFixed(1)}%`} sub="Secured / max securable" icon={Activity} live={wsConnected} variant={metrics.utilizationPercentage > 80 ? 'warning' : 'default'} />
+            <MetricCard label="Perfection Rate" value={`${metrics.perfectionRate}%`} sub="vs 80% target" icon={Shield} live={wsConnected} variant={Number(metrics.perfectionRate) >= 80 ? 'success' : 'warning'} />
+            <MetricCard label="Overdue Filings" value={String(metrics.overdueFilings)} sub="Past deadline" icon={AlertTriangle} live={wsConnected} variant="danger" />
+            <MetricCard label="Pending Perfection" value={String(metrics.pendingPerfection)} sub="In progress" icon={Clock} live={wsConnected} variant="warning" />
+          </>
+        )}
       </div>
 
       {/* Chart Tabs */}
@@ -371,18 +447,24 @@ export default function PortfolioMonitoringContent() {
           {activeTab === 'turnaround' && (
             <div>
               <h3 className="text-sm font-700 text-foreground mb-1">Average Turnaround Time by Registry</h3>
-              <p className="text-xs text-muted-foreground mb-4">Average days per registry vs target (hourly refresh)</p>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={registryTurnaround} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} unit=" days" />
-                  <YAxis dataKey="registry" type="category" tick={{ fontSize: 12 }} width={60} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="avgDays" name="Avg Days" fill="#7c3aed" radius={[0, 3, 3, 0]} />
-                  <Bar dataKey="target" name="Target" fill="#d1d5db" radius={[0, 3, 3, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <p className="text-xs text-muted-foreground mb-4">Actual avg days from submission to decision (perfection_requests) vs SLA target</p>
+              {turnaroundLoading ? (
+                <div className="flex items-center justify-center h-[280px] text-sm text-muted-foreground">Loading turnaround data…</div>
+              ) : turnaroundError ? (
+                <div className="flex items-center justify-center h-[280px] text-sm text-red-500">{turnaroundError}</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={turnaroundData.map((r) => ({ ...r, avgDays: r.avgDays ?? 0 }))} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} unit=" days" />
+                    <YAxis dataKey="registry" type="category" tick={{ fontSize: 12 }} width={80} />
+                    <Tooltip formatter={(v, name, props: any) => props.dataKey === 'avgDays' && props.payload.avgDays === 0 ? ['No decided requests yet', 'Avg Days'] : [v, name]} />
+                    <Legend />
+                    <Bar dataKey="avgDays" name="Avg Days" fill="#7c3aed" radius={[0, 3, 3, 0]} />
+                    <Bar dataKey="target" name="Target" fill="#d1d5db" radius={[0, 3, 3, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           )}
 
@@ -414,23 +496,23 @@ export default function PortfolioMonitoringContent() {
 
           {activeTab === 'delinquency' && (
             <div>
-              <h3 className="text-sm font-700 text-foreground mb-1">Delinquency Rate Trend</h3>
-              <p className="text-xs text-muted-foreground mb-4">Collateral linked to delinquent loans (monthly)</p>
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={delinquencyTrend}>
-                  <defs>
-                    <linearGradient id="delinqGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#dc2626" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} unit="%" />
-                  <Tooltip formatter={(v) => `${v}%`} />
-                  <Area type="monotone" dataKey="rate" name="Delinquency Rate" stroke="#dc2626" fill="url(#delinqGrad)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <h3 className="text-sm font-700 text-foreground mb-1">Delinquency Rate</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Share of collateral-linked loans currently marked Defaulted. Only a current snapshot is shown — there's
+                no historical snapshot data to build a real trend from, so this no longer fabricates one.
+              </p>
+              {metricsLoading || !metrics ? (
+                <div className="flex items-center justify-center h-[200px] text-sm text-muted-foreground">Loading…</div>
+              ) : (
+                <div className="flex items-center justify-center h-[200px]">
+                  <div className={`rounded-2xl px-10 py-8 text-center border ${metrics.delinquencyRate > 10 ? 'bg-red-50 border-red-200' : metrics.delinquencyRate > 5 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+                    <p className={`text-4xl font-700 font-mono ${metrics.delinquencyRate > 10 ? 'text-red-700' : metrics.delinquencyRate > 5 ? 'text-amber-700' : 'text-green-700'}`}>
+                      {metrics.delinquencyRate.toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">of loan-linked collateral, as of {lastUpdate || 'now'}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -441,9 +523,10 @@ export default function PortfolioMonitoringContent() {
         <div className="flex items-start gap-3">
           <Wifi size={16} className="text-blue-600 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-600 text-blue-800">WebSocket Real-Time Updates</p>
+            <p className="text-sm font-600 text-blue-800">Auto-Refresh</p>
             <p className="text-xs text-blue-700 mt-0.5">
-              Dashboard metrics refresh every 5 seconds via simulated WebSocket connection. In production, this connects to <code className="bg-blue-100 px-1 rounded">GET /reports/portfolio/real-time</code> WebSocket endpoint. Materialized views pre-aggregate metrics for sub-second response times.
+              While "Live" is on, the KPI grid, Volumes, and Concentration data are re-queried every 30 seconds. This is
+              periodic polling, not a push-based connection — toggle to "Paused" to stop it.
             </p>
           </div>
         </div>
