@@ -688,7 +688,7 @@ export const workflowInstanceService = {
       if (currentInstanceStepId) {
         await supabase.from('user_tasks')
           .update({ task_status: 'completed', completed_at: new Date().toISOString() })
-          .eq('collateral_record_id', payload.instanceId)
+          .eq('instance_id', payload.instanceId)
           .eq('task_status', 'pending');
       }
     } else if (payload.action === 'reject') {
@@ -897,7 +897,7 @@ async function _createTasksForStepActors(
         // No specific user found — create a generic task with no assignee (will appear in role-based views)
         taskRows.push({
           assigned_to: null,
-          collateral_record_id: opts.instanceId, // store instance ID for linking
+          instance_id: opts.instanceId,
           collateral_id: opts.referenceId,
           task_type: 'workflow_step',
           title: `${opts.step.name} — ${opts.referenceLabel}`,
@@ -913,7 +913,7 @@ async function _createTasksForStepActors(
         for (const u of matchingUsers) {
           taskRows.push({
             assigned_to: u.id,
-            collateral_record_id: opts.instanceId,
+            instance_id: opts.instanceId,
             collateral_id: opts.referenceId,
             task_type: 'workflow_step',
             title: `${opts.step.name} — ${opts.referenceLabel}`,

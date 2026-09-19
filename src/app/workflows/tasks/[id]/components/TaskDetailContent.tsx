@@ -247,11 +247,11 @@ export default function TaskDetailContent() {
         if (profile) setAssignedUserName(`${profile.full_name} (${profile.role})`);
       }
 
-      // Load workflow instance if linked (collateral_record_id stores instance ID for workflow_step tasks)
-      if (t.collateralRecordId && t.taskType === 'workflow_step') {
+      // Load workflow instance if linked
+      if (t.instanceId && t.taskType === 'workflow_step') {
         const [inst, log] = await Promise.all([
-          workflowInstanceService.getById(t.collateralRecordId),
-          workflowInstanceService.getTransitionLog(t.collateralRecordId),
+          workflowInstanceService.getById(t.instanceId),
+          workflowInstanceService.getTransitionLog(t.instanceId),
         ]);
         if (inst) {
           setInstance(inst);
