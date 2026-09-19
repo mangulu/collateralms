@@ -27,6 +27,7 @@ import {
   ChevronUp,
   Info,
   ChevronRight,
+  Palette,
 } from 'lucide-react';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import {
@@ -38,7 +39,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // ─── System Config Types & Definitions ───────────────────────────────────────
 
-type ConfigCategory = 'bank' | 'registry' | 'notifications' | 'thresholds' | 'retention';
+type ConfigCategory = 'notifications' | 'thresholds' | 'retention' | 'brand';
 
 interface TabDef {
   id: ConfigCategory;
@@ -49,20 +50,6 @@ interface TabDef {
 }
 
 const CONFIG_TABS: TabDef[] = [
-  {
-    id: 'bank',
-    label: 'Bank Details',
-    icon: <Building2 size={15} />,
-    configKey: 'bank_details',
-    description: 'Bank identification and contact information used in reports and correspondence.',
-  },
-  {
-    id: 'registry',
-    label: 'BRELA Registry URLs',
-    icon: <Link2 size={15} />,
-    configKey: 'brela_registry_urls',
-    description: 'BRELA API endpoints and connection settings for company and charge registry lookups.',
-  },
   {
     id: 'notifications',
     label: 'Email Templates',
@@ -84,37 +71,24 @@ const CONFIG_TABS: TabDef[] = [
     configKey: 'document_retention',
     description: 'Data retention periods (in years) for different document categories per regulatory requirements.',
   },
+  {
+    id: 'brand',
+    label: 'Brand Kit',
+    icon: <Palette size={15} />,
+    configKey: 'brand_kit',
+    description: 'Primary and accent brand colors, applied globally via CSS variables.',
+  },
 ];
 
 interface FieldDef {
   key: string;
   label: string;
-  type: 'text' | 'email' | 'url' | 'number' | 'textarea' | 'boolean';
+  type: 'text' | 'email' | 'url' | 'number' | 'textarea' | 'boolean' | 'color';
   placeholder?: string;
   hint?: string;
 }
 
 const FIELD_DEFS: Record<ConfigCategory, FieldDef[]> = {
-  bank: [
-    { key: 'bank_name', label: 'Bank Name', type: 'text', placeholder: 'e.g. EXIM Bank Tanzania' },
-    { key: 'branch_name', label: 'Branch Name', type: 'text', placeholder: 'e.g. Head Office' },
-    { key: 'branch_code', label: 'Branch Code', type: 'text', placeholder: 'e.g. 001' },
-    { key: 'swift_code', label: 'SWIFT / BIC Code', type: 'text', placeholder: 'e.g. EXTNTZTZ' },
-    { key: 'account_number', label: 'Account Number', type: 'text', placeholder: 'Bank account number' },
-    { key: 'sort_code', label: 'Sort Code', type: 'text', placeholder: 'Sort / routing code' },
-    { key: 'contact_email', label: 'Contact Email', type: 'email', placeholder: 'collateral@bank.co.tz' },
-    { key: 'contact_phone', label: 'Contact Phone', type: 'text', placeholder: '+255 22 211 0000' },
-    { key: 'physical_address', label: 'Physical Address', type: 'textarea', placeholder: 'Street, City, Country' },
-  ],
-  registry: [
-    { key: 'base_url', label: 'Base URL', type: 'url', placeholder: 'https://api.brela.go.tz/v1' },
-    { key: 'company_search_url', label: 'Company Search URL', type: 'url', placeholder: 'https://api.brela.go.tz/v1/companies/search' },
-    { key: 'certificate_verify_url', label: 'Certificate Verify URL', type: 'url', placeholder: 'https://api.brela.go.tz/v1/certificates/verify' },
-    { key: 'charges_registry_url', label: 'Charges Registry URL', type: 'url', placeholder: 'https://api.brela.go.tz/v1/charges' },
-    { key: 'api_timeout_seconds', label: 'API Timeout (seconds)', type: 'number', placeholder: '30', hint: 'Maximum seconds to wait for BRELA API response' },
-    { key: 'retry_attempts', label: 'Retry Attempts', type: 'number', placeholder: '3', hint: 'Number of retries on failed API calls' },
-    { key: 'webhook_url', label: 'Webhook URL', type: 'url', placeholder: 'https://your-domain.com/webhooks/brela', hint: 'Optional: URL to receive BRELA push notifications' },
-  ],
   notifications: [
     { key: 'sender_name', label: 'Sender Name', type: 'text', placeholder: 'CollateralMS – EXIM Bank' },
     { key: 'sender_email', label: 'Sender Email', type: 'email', placeholder: 'noreply@bank.co.tz' },
@@ -153,6 +127,10 @@ const FIELD_DEFS: Record<ConfigCategory, FieldDef[]> = {
     { key: 'auto_delete_enabled', label: 'Auto-Delete Enabled', type: 'boolean', hint: 'Automatically delete archived documents after retention period' },
     { key: 'archive_storage_path', label: 'Archive Storage Path', type: 'text', placeholder: 'archive/', hint: 'Storage bucket path prefix for archived documents' },
     { key: 'retention_review_months', label: 'Retention Review Interval (months)', type: 'number', hint: 'How often retention policies should be reviewed' },
+  ],
+  brand: [
+    { key: 'primary_color', label: 'Primary Color', type: 'color', hint: 'Main brand color used for buttons, links, and highlights' },
+    { key: 'accent_color', label: 'Accent Color', type: 'color', hint: 'Secondary color used for success states and accents' },
   ],
 };
 
@@ -198,6 +176,28 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
         placeholder={field.placeholder}
         className={`${baseInput} resize-y min-h-[80px] font-mono text-xs`}
       />
+    );
+  }
+
+  if (field.type === 'color') {
+    const colorVal = String(value ?? '#2563EB');
+    return (
+      <div className="flex items-center gap-3">
+        <input
+          type="color"
+          value={colorVal}
+          onChange={(e) => onChange(field.key, e.target.value)}
+          className="w-10 h-10 rounded-lg border border-border cursor-pointer p-0.5 bg-white"
+        />
+        <input
+          type="text"
+          value={colorVal}
+          onChange={(e) => onChange(field.key, e.target.value)}
+          placeholder="#2563EB"
+          className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-md text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        />
+        <div className="w-8 h-8 rounded-md border border-border shrink-0" style={{ backgroundColor: colorVal }} title="Color preview" />
+      </div>
     );
   }
 
@@ -340,7 +340,7 @@ function ConfigSection({ tab, values, onChange, onSave, saving, saved, error, la
 
 type SettingsSection =
   | 'document-types'
-  | 'collateral-type-documents' |'registries' |'collateral-types' |'email-provider' |'notifications' |'email-templates' |'bank' |'registry' |'thresholds' |'retention';
+  | 'collateral-type-documents' |'registries' |'collateral-types' |'email-provider' |'notifications' |'email-templates' |'thresholds' |'retention' |'brand';
 
 interface NavItem {
   id: SettingsSection;
@@ -366,6 +366,7 @@ export default function SettingsPage() {
     'Integrations': false,
     'Notifications': false,
     'Advanced': false,
+    'Branding': false,
   });
   const { hasPermission, loading, permissions } = usePermissions();
   const { userProfile } = useAuth();
@@ -373,21 +374,19 @@ export default function SettingsPage() {
   // System config state
   const [configs, setConfigs] = useState<Record<string, SystemConfigRecord>>({});
   const [localValues, setLocalValues] = useState<Record<ConfigCategory, Record<string, unknown>>>({
-    bank: {},
-    registry: {},
     notifications: {},
     thresholds: {},
     retention: {},
+    brand: {},
   });
   const [configLoading, setConfigLoading] = useState(false);
   const [saving, setSaving] = useState<ConfigCategory | null>(null);
   const [saved, setSaved] = useState<ConfigCategory | null>(null);
   const [errors, setErrors] = useState<Record<ConfigCategory, string | null>>({
-    bank: null,
-    registry: null,
     notifications: null,
     thresholds: null,
     retention: null,
+    brand: null,
   });
 
   const loadConfigs = useCallback(async () => {
@@ -396,11 +395,10 @@ export default function SettingsPage() {
       const records = await fetchSystemConfig();
       const configMap: Record<string, SystemConfigRecord> = {};
       const valuesMap: Record<ConfigCategory, Record<string, unknown>> = {
-        bank: {},
-        registry: {},
         notifications: {},
         thresholds: {},
         retention: {},
+        brand: {},
       };
       records.forEach((rec) => {
         configMap[rec.configKey] = rec;
@@ -483,10 +481,16 @@ export default function SettingsPage() {
       icon: <Settings size={15} />,
       adminOnly: true,
       items: [
-        { id: 'bank', label: 'Bank Details', icon: <Building2 size={14} /> },
-        { id: 'registry', label: 'BRELA Registry URLs', icon: <Link2 size={14} /> },
         { id: 'thresholds', label: 'Threshold Values', icon: <Sliders size={14} /> },
         { id: 'retention', label: 'Retention Policies', icon: <Archive size={14} /> },
+      ],
+    },
+    {
+      label: 'Branding',
+      icon: <Palette size={15} />,
+      adminOnly: true,
+      items: [
+        { id: 'brand', label: 'Brand Kit', icon: <Palette size={14} /> },
       ],
     },
   ];
@@ -557,7 +561,7 @@ export default function SettingsPage() {
           />
         );
       }
-      case 'bank': case'registry': case'thresholds': case'retention': {
+      case 'thresholds': case 'retention': case 'brand': {
         if (!canManage) return (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Lock size={20} className="text-muted-foreground mb-2" />
