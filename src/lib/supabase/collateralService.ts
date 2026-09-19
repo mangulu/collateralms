@@ -700,6 +700,106 @@ export const dashboardService = {
       throw err;
     }
   },
+
+  /** LTV risk-band distribution across the portfolio, for the Dashboard's LTV/Risk Exposure widget. */
+  async getLTVExposure() {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('ltv_ratio')
+        .not('ltv_ratio', 'is', null);
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return null;
+      }
+
+      const rows = data ?? [];
+      const total = rows.length;
+      let critical = 0, high = 0, elevated = 0, healthy = 0, sum = 0;
+      rows.forEach((r: any) => {
+        const pct = (parseFloat(r.ltv_ratio) || 0) * 100;
+        sum += pct;
+        if (pct > 90) critical++;
+        else if (pct > 75) high++;
+        else if (pct > 60) elevated++;
+        else healthy++;
+      });
+
+      return {
+        total,
+        critical,
+        high,
+        elevated,
+        healthy,
+        avgLtv: total > 0 ? sum / total : 0,
+      };
+    } catch (err: any) {
+      throw err;
+    }
+  },
+
+  /** Top obligors by pledged collateral value, for the Dashboard's Obligor Concentration widget. */
+  async getObligorConcentration(limit = 5) {
+    const supabase = createClient();
+    try {
+      const { data, error } = await supabase
+        .from('collateral_records')
+        .select('obligor_ref_id, obligor, value_tsh, valuation_amount');
+
+      if (error) {
+        if (isSchemaError(error)) throw error;
+        return null;
+      }
+
+      const rows = data ?? [];
+      const byObligor = new Map<string, { name: string; value: number }>();
+      let portfolioTotal = 0;
+
+      rows.forEach((r: any) => {
+        const dedicated = parseFloat(r.valuation_amount) || 0;
+        const legacy = typeof r.value_tsh === 'string' ? parseFloat(r.value_tsh.replace(/,/g, '')) || 0 : parseFloat(r.value_tsh) || 0;
+        const value = dedicated > 0 ? dedicated : legacy;
+        portfolioTotal += value;
+
+        // Group by the real obligor FK when set; fall back to the free-text
+        // name for older records that predate obligor_ref_id.
+        const key = r.obligor_ref_id ?? `name:${r.obligor ?? 'Unknown'}`;
+        const existing = byObligor.get(key);
+        if (existing) existing.value += value;
+        else byObligor.set(key, { name: r.obligor ?? 'Unknown', value });
+      });
+
+      // Resolve real names for FK-linked obligors (in case the free-text
+      // `obligor` column has drifted from the canonical obligors row).
+      const realIds = [...byObligor.keys()].filter((k) => !k.startsWith('name:'));
+      if (realIds.length > 0) {
+        const { data: obligorRows } = await supabase.from('obligors').select('id, full_name').in('id', realIds);
+        (obligorRows ?? []).forEach((o: any) => {
+          const entry = byObligor.get(o.id);
+          if (entry) entry.name = o.full_name;
+        });
+      }
+
+      const sorted = [...byObligor.values()]
+        .map((v) => ({ name: v.name, value: v.value, pct: portfolioTotal > 0 ? (v.value / portfolioTotal) * 100 : 0 }))
+        .sort((a, b) => b.value - a.value);
+
+      const top = sorted.slice(0, limit);
+      const top5Value = sorted.slice(0, 5).reduce((s, o) => s + o.value, 0);
+      const top5ConcentrationPct = portfolioTotal > 0 ? (top5Value / portfolioTotal) * 100 : 0;
+
+      return {
+        obligors: top,
+        portfolioTotal,
+        top5ConcentrationPct,
+        obligorCount: byObligor.size,
+      };
+    } catch (err: any) {
+      throw err;
+    }
+  },
 };
 
 export { createClient };

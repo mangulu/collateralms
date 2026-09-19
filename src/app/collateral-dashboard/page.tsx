@@ -15,6 +15,8 @@ const OverdueAlertsPanel = dynamic(() => import('./components/OverdueAlertsPanel
 const RecentActivityFeed = dynamic(() => import('./components/RecentActivityFeed'), { ssr: false });
 const PortfolioHealthBar = dynamic(() => import('./components/PortfolioHealthBar'), { ssr: false });
 const QuickActionsPanel = dynamic(() => import('./components/QuickActionsPanel'), { ssr: false });
+const LTVRiskPanel = dynamic(() => import('./components/LTVRiskPanel'), { ssr: false });
+const ObligorConcentrationPanel = dynamic(() => import('./components/ObligorConcentrationPanel'), { ssr: false });
 const PortfolioMonitoringContent = dynamic(
   () => import('@/app/portfolio-monitoring/components/PortfolioMonitoringContent'),
   { ssr: false }
@@ -96,6 +98,20 @@ export default function CollateralDashboardPage() {
                 <div className="xl:col-span-1">
                   <Suspense fallback={<Skeleton className="h-32 w-full rounded-xl" />}>
                     <QuickActionsPanel />
+                  </Suspense>
+                </div>
+              </div>
+
+              {/* Row 2.5: LTV/Risk Exposure + Obligor Concentration */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                <div className="xl:col-span-2">
+                  <Suspense fallback={<ChartSkeleton height={200} />}>
+                    <LTVRiskPanel />
+                  </Suspense>
+                </div>
+                <div className="xl:col-span-1">
+                  <Suspense fallback={<ChartSkeleton height={200} />}>
+                    <ObligorConcentrationPanel />
                   </Suspense>
                 </div>
               </div>
