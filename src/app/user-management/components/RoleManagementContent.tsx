@@ -29,6 +29,8 @@ import {
   ROLE_COLOR_OPTIONS,
   RoleDefinition,
   PermissionDefinition,
+  usePermissions,
+  PERMISSIONS,
 } from '@/lib/rbac';
 import { createClient } from '@/lib/supabase/client';
 
@@ -53,12 +55,13 @@ interface UserProfile {
 interface AssignUsersPanelProps {
   role: RoleDefinition;
   allUsers: UserProfile[];
+  canManage: boolean;
   onClose: () => void;
   onAssigned: () => void;
   showToast: (msg: string, type: 'success' | 'error') => void;
 }
 
-function AssignUsersPanel({ role, allUsers, onClose, onAssigned, showToast }: AssignUsersPanelProps) {
+function AssignUsersPanel({ role, allUsers, canManage, onClose, onAssigned, showToast }: AssignUsersPanelProps) {
   const supabase = createClient();
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
@@ -74,6 +77,7 @@ function AssignUsersPanel({ role, allUsers, onClose, onAssigned, showToast }: As
   );
 
   async function assignRole(user: UserProfile) {
+    if (!canManage) { showToast('You do not have permission to manage roles.', 'error'); return; }
     setSaving(user.id);
     try {
       const { error } = await supabase
@@ -91,6 +95,7 @@ function AssignUsersPanel({ role, allUsers, onClose, onAssigned, showToast }: As
   }
 
   async function removeRole(user: UserProfile) {
+    if (!canManage) { showToast('You do not have permission to manage roles.', 'error'); return; }
     setSaving(user.id);
     try {
       const { error } = await supabase
@@ -153,7 +158,7 @@ function AssignUsersPanel({ role, allUsers, onClose, onAssigned, showToast }: As
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                       </div>
                     </div>
-                    {!role.isSystem && (
+                    {!role.isSystem && canManage && (
                       <button
                         onClick={() => removeRole(user)}
                         disabled={saving === user.id}
@@ -210,7 +215,7 @@ function AssignUsersPanel({ role, allUsers, onClose, onAssigned, showToast }: As
                     </div>
                     <button
                       onClick={() => assignRole(user)}
-                      disabled={saving === user.id}
+                      disabled={saving === user.id || !canManage}
                       className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors disabled:opacity-50"
                     >
                       {saving === user.id ? (
@@ -244,6 +249,8 @@ function AssignUsersPanel({ role, allUsers, onClose, onAssigned, showToast }: As
 
 export default function RoleManagementContent() {
   const supabase = createClient();
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission(PERMISSIONS.ROLES_MANAGE);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [permissions, setPermissions] = useState<PermissionDefinition[]>([]);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
@@ -384,6 +391,10 @@ export default function RoleManagementContent() {
   async function handleSave() {
     setFormError(null);
 
+    if (!canManage) {
+      setFormError('You do not have permission to manage roles.');
+      return;
+    }
     if (!formLabel.trim()) {
       setFormError('Role label is required.');
       return;
@@ -431,6 +442,10 @@ export default function RoleManagementContent() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
+    if (!canManage) {
+      showToast('You do not have permission to manage roles.', 'error');
+      return;
+    }
     setDeleting(true);
     try {
       await deleteRole(deleteTarget.name);
@@ -492,13 +507,15 @@ export default function RoleManagementContent() {
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
             Refresh
           </button>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={16} />
-            New Role
-          </button>
+          {canManage && (
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={16} />
+              New Role
+            </button>
+          )}
         </div>
       </div>
 
@@ -564,14 +581,16 @@ export default function RoleManagementContent() {
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
                       {/* Assign Users button */}
-                      <button
-                        onClick={() => setAssignTarget(role)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors"
-                        title="Assign users to this role"
-                      >
-                        <UserPlus size={12} />
-                        <span className="hidden sm:inline">Users</span>
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={() => setAssignTarget(role)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-md hover:bg-primary/10 transition-colors"
+                          title="Assign users to this role"
+                        >
+                          <UserPlus size={12} />
+                          <span className="hidden sm:inline">Users</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => toggleExpand(role.name)}
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"
@@ -579,14 +598,16 @@ export default function RoleManagementContent() {
                         Permissions
                         {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                       </button>
-                      <button
-                        onClick={() => openEditModal(role)}
-                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title="Edit permissions"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      {!role.isSystem && (
+                      {canManage && (
+                        <button
+                          onClick={() => openEditModal(role)}
+                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Edit permissions"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      )}
+                      {!role.isSystem && canManage && (
                         <button
                           onClick={() => setDeleteTarget(role)}
                           className="p-1.5 rounded-md hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
@@ -864,6 +885,7 @@ export default function RoleManagementContent() {
         <AssignUsersPanel
           role={assignTarget}
           allUsers={allUsers}
+          canManage={canManage}
           onClose={() => setAssignTarget(null)}
           onAssigned={() => loadData(true)}
           showToast={showToast}

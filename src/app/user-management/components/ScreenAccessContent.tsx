@@ -17,7 +17,7 @@ import {
   Settings,
   Shield,
 } from 'lucide-react';
-import { fetchRoles, getRoleColorClasses, RoleDefinition } from '@/lib/rbac';
+import { fetchRoles, getRoleColorClasses, RoleDefinition, usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Screen Definitions ───────────────────────────────────────────────────────
@@ -102,6 +102,8 @@ function matrixKey(screenId: string, roleName: string, actionKey: string): strin
 
 export default function ScreenAccessContent() {
   const supabase = createClient();
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission(PERMISSIONS.ROLES_MANAGE);
 
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [matrix, setMatrix] = useState<AccessMatrix>({});
@@ -165,6 +167,7 @@ export default function ScreenAccessContent() {
   // ─── Toggle ────────────────────────────────────────────────────────────────
 
   function toggleCell(screenId: string, roleName: string, actionKey: string) {
+    if (!canManage) return;
     const key = matrixKey(screenId, roleName, actionKey);
     setMatrix((prev) => {
       const next = { ...prev, [key]: !prev[key] };
@@ -188,6 +191,7 @@ export default function ScreenAccessContent() {
   // ─── Toggle all actions for a role on a screen ────────────────────────────
 
   function toggleScreenRole(screen: ScreenDefinition, roleName: string) {
+    if (!canManage) return;
     const allOn = screen.actions.every((a) => matrix[matrixKey(screen.id, roleName, a.key)]);
     setMatrix((prev) => {
       const next = { ...prev };
@@ -204,6 +208,10 @@ export default function ScreenAccessContent() {
   // ─── Save ──────────────────────────────────────────────────────────────────
 
   async function handleSave() {
+    if (!canManage) {
+      showToast('You do not have permission to manage screen access rules.', 'error');
+      return;
+    }
     setSaving(true);
     try {
       // Build upsert rows for all defined cells
