@@ -223,7 +223,6 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Administration',
         items: [
           { label: 'User Management', icon: Users, href: '/user-management', permission: PERMISSIONS.USER_MANAGEMENT_VIEW },
-          { label: 'Client Bank Accounts', icon: Landmark, href: '/client-bank-accounts', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'Scheduled Jobs', icon: CalendarClock, href: '/scheduled-jobs', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Settings', icon: Settings, href: '/settings', permission: PERMISSIONS.SETTINGS_VIEW },
         ],

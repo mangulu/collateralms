@@ -301,7 +301,6 @@ const ROLE_GUIDES: RoleGuide[] = [
     screens: [
       { screen: 'Admin Console', icon: ShieldCheck, actions: ['Full Access'], notes: 'Central administration hub — manage system-wide settings.' },
       { screen: 'User Management', icon: Users, actions: ['View', 'Create', 'Edit', 'Deactivate', 'Roles & Permissions', 'Screen Access'], notes: 'Full user lifecycle management — create and deactivate accounts, assign roles (Credit Officer, Legal Officer, System Admin), edit role permissions, and configure screen access.' },
-      { screen: 'Client Bank Accounts', icon: Landmark, actions: ['View', 'Create', 'Edit', 'Deactivate'], notes: 'Manage client bank account records linked to obligors.' },
       { screen: 'System Settings', icon: Settings, actions: ['View', 'Configure'], notes: 'Email provider, notification, document types, collateral types, and registry settings.' },
       { screen: 'Alert Thresholds', icon: SlidersHorizontal, actions: ['View', 'Configure'], notes: 'Set thresholds for automated alerts (e.g. LTV ratio, expiry days, value changes).' },
       { screen: 'All Collateral Screens', icon: FolderOpen, actions: ['Full Access'], notes: 'Unrestricted access to all collateral management screens.' },

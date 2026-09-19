@@ -6,7 +6,7 @@ import {
   TrendingUp, LineChart, Target, ShieldAlert, ScanSearch, Zap, Map, Flame,
   Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, Download, DatabaseZap,
   BookOpen, Scale, ShieldCheck, Radio, KeyRound, Settings,
-  Landmark, Building2, MapPin, ClipboardCheck, Eye, FileStack,
+  Building2, MapPin, ClipboardCheck, Eye, FileStack,
   MailCheck, GitBranch, BadgeCheck, Brain, SlidersHorizontal, FolderArchive,
   LayoutGrid, Sparkles, ArrowRight, Hash, CheckSquare, Trash2, ClipboardSignature,
 } from 'lucide-react';
@@ -96,7 +96,6 @@ const NAV_INDEX: NavResult[] = [
   // ── Administration ──
   { id: 'n-adm-users', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'User Management', description: 'Add, edit, and deactivate system users', href: '/user-management', icon: Users, keywords: ['users', 'manage', 'add', 'edit', 'deactivate'] },
   { id: 'n-adm-perms', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Roles & Permissions', description: 'Configure role-based access and permissions', href: '/user-management?tab=roles', icon: KeyRound, keywords: ['permissions', 'rbac', 'roles', 'access', 'officer'] },
-  { id: 'n-adm-bank', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Client Bank Accounts', description: 'Manage client bank account records', href: '/client-bank-accounts', icon: Landmark, keywords: ['bank', 'accounts', 'client', 'financial'] },
   { id: 'n-adm-settings', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'System Settings', description: 'Configure system-wide settings', href: '/settings', icon: Settings, keywords: ['settings', 'config', 'system', 'configure'] },
   { id: 'n-adm-thresh', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Alert Thresholds', description: 'Set alert trigger thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, keywords: ['thresholds', 'alerts', 'trigger', 'configure'] },
   { id: 'n-adm-sysconf', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'System Config', description: 'Advanced system configuration options', href: '/system-config', icon: Brain, keywords: ['system', 'config', 'advanced', 'configuration'] },

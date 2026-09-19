@@ -221,16 +221,6 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Two-Factor Auth tab: enable SMS-based 2FA for your own account',
     ],
   },
-  '/client-bank-accounts': {
-    title: 'Client Bank Accounts',
-    narrative: "Client Bank Accounts manages white-label deployments of this platform for different bank clients — each one's own Supabase project, branding (logo, colors, tagline), and admin contact. This is a vendor/deployment management screen, not a record of a bank's own financial accounts.",
-    steps: [
-      'Add a deployment with its bank name, Supabase project URL/key, and branding — the live preview shows how the login screen will look',
-      'Only update the Supabase URL/key fields if you\'re actually pointing this deployment at a different project',
-      'Toggle a deployment Active/Inactive to track which client banks are currently live',
-      'Search or filter by status to find a specific deployment',
-    ],
-  },
   '/scheduled-jobs': {
     title: 'Scheduled Batch Release Jobs',
     narrative: 'This page combines two independent automations. Scheduled Batch Release Jobs releases collateral whose registry charge is already confirmed discharged, on a schedule or on demand. The Workflow Trigger Processor panel above it is a separate system that auto-initiates workflow instances when trigger rule conditions match.',
