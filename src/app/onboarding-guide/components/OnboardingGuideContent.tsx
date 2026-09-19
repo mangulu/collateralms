@@ -60,10 +60,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'The core registry for all collateral assets',
     purpose: 'Register, track, and manage every collateral asset across its full lifecycle — from initial registration through perfection, monitoring, and eventual release. This is the operational heart of the system.',
     icon: FolderOpen,
-    color: '#1D4ED8',
-    bgGradient: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%)',
-    iconBg: '#2563EB',
-    textColor: '#1D4ED8',
+    color: '#12213C',
+    bgGradient: 'linear-gradient(135deg, #E9EEF6 0%, #D5DFEE 60%, #B8C8E0 100%)',
+    iconBg: '#12213C',
+    textColor: '#12213C',
     features: [
       { label: 'Collateral Dashboard', href: '/collateral-dashboard', icon: LayoutDashboard, description: 'KPI overview, overdue alerts, portfolio health bar, and recent activity feed.' },
       { label: 'Portfolio Monitoring', href: '/portfolio-monitoring', icon: Activity, description: 'Live portfolio health trends pulled from Supabase — daily collateral volumes by status and real-time concentration breakdown by collateral type.' },
@@ -110,10 +110,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'Borrower profiles with credit risk intelligence',
     purpose: 'Maintain a complete profile for every borrower (obligor), including their credit risk score, exposure metrics, and approval trend history. Risk ratings are validated on load — unknown or null ratings fall back to a safe default so the screen never crashes. Surfaces high-risk obligors directly in approval workflows.',
     icon: Users,
-    color: '#0F766E',
-    bgGradient: 'linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 60%, #99F6E4 100%)',
-    iconBg: '#0D9488',
-    textColor: '#0F766E',
+    color: '#1E3A66',
+    bgGradient: 'linear-gradient(135deg, #EAF6F4 0%, #CBEAE5 60%, #A8DDD4 100%)',
+    iconBg: '#1E3A66',
+    textColor: '#1E3A66',
     features: [
       { label: 'Obligors List', href: '/obligors', icon: Users, description: 'Full directory of all obligors with search, filter, and risk-level indicators. Handles null or unexpected risk ratings gracefully.' },
       { label: 'Obligor Profile', href: '/obligors', icon: BookMarked, description: 'Individual profile with credit risk score gauge, exposure metrics, and approval trend summary. Risk badge falls back to MEDIUM when rating is unrecognised.' },
@@ -140,10 +140,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'Centralised workflow for all approval decisions',
     purpose: 'A dedicated hub for every approval decision in the system — perfection approvals, document sign-offs, and collateral releases. Keeps all pending work in one place so nothing falls through the cracks.',
     icon: CheckSquare,
-    color: '#1D4ED8',
-    bgGradient: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%)',
-    iconBg: '#3B82F6',
-    textColor: '#1D4ED8',
+    color: '#12213C',
+    bgGradient: 'linear-gradient(135deg, #E9EEF6 0%, #D5DFEE 60%, #B8C8E0 100%)',
+    iconBg: '#12213C',
+    textColor: '#12213C',
     features: [
       { label: 'Approval Inbox', href: '/approval-inbox', icon: MailCheck, description: 'Unified inbox showing all items awaiting your approval decision.' },
       { label: 'Perfection Approval', href: '/perfection-workflow', icon: GitBranch, description: 'Step-by-step workflow for approving or returning collateral perfection submissions.' },
@@ -185,10 +185,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'AI-powered analytics and risk tools',
     purpose: 'Harness AI and advanced analytics to detect fraud, assess risk, predict deadlines, and visualise portfolio health. Turns raw collateral data into actionable intelligence for smarter decisions.',
     icon: Brain,
-    color: '#7C3AED',
-    bgGradient: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 60%, #DDD6FE 100%)',
-    iconBg: '#7C3AED',
-    textColor: '#7C3AED',
+    color: '#DB2777',
+    bgGradient: 'linear-gradient(135deg, #FBE6F0 0%, #F5C2DE 60%, #EDA0C9 100%)',
+    iconBg: '#DB2777',
+    textColor: '#DB2777',
     features: [
       { label: 'Executive Dashboard', href: '/executive-dashboard', icon: TrendingUp, description: 'C-suite level KPIs, trend charts, and portfolio performance summary.' },
       { label: 'Cohort Analytics', href: '/cohort-analytics', icon: LineChart, description: 'Segment and compare collateral cohorts by type, region, or time period.' },
@@ -235,8 +235,8 @@ const MODULES: ModuleGuide[] = [
     purpose: 'Proactively surface deadlines, workflow events, and system alerts so nothing is missed. Covers in-app notifications, SMS/email delivery tracking, and deadline reminder management.',
     icon: Bell,
     color: '#B45309',
-    bgGradient: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 60%, #FDE68A 100%)',
-    iconBg: '#D97706',
+    bgGradient: 'linear-gradient(135deg, #FDF1E0 0%, #FADFB8 60%, #F5C889 100%)',
+    iconBg: '#B45309',
     textColor: '#B45309',
     features: [
       { label: 'Notifications Hub', href: '/notifications-hub', icon: Bell, description: 'Central inbox for all in-app system notifications and workflow updates.' },
@@ -269,10 +269,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'Data-driven reporting and export tools',
     purpose: 'Generate regulatory reports, utilization summaries, and custom analytics. Export data in multiple formats for board presentations, regulatory submissions, and internal reviews.',
     icon: BarChart2,
-    color: '#065F46',
-    bgGradient: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 60%, #A7F3D0 100%)',
-    iconBg: '#059669',
-    textColor: '#065F46',
+    color: '#15803D',
+    bgGradient: 'linear-gradient(135deg, #E7F6EC 0%, #C8ECD5 60%, #A3DFB8 100%)',
+    iconBg: '#15803D',
+    textColor: '#15803D',
     features: [
       { label: 'Reports Hub', href: '/reports', icon: BarChart2, description: 'Tabbed hub with Regulatory, Utilization, and Collateral report views in one place.' },
       { label: 'Custom Reports', href: '/custom-reports', icon: ScrollText, description: 'Build and save custom report templates with your own filters and columns.' },
@@ -302,10 +302,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'Full transparency and regulatory compliance',
     purpose: 'Maintain a tamper-proof record of every action in the system. Supports regulatory audits, internal compliance reviews, and real-time activity monitoring across all users and modules.',
     icon: ShieldCheck,
-    color: '#9D174D',
-    bgGradient: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 60%, #FECDD3 100%)',
-    iconBg: '#E11D48',
-    textColor: '#9D174D',
+    color: '#B91C1C',
+    bgGradient: 'linear-gradient(135deg, #FBEAEA 0%, #F3C7C7 60%, #E9A3A3 100%)',
+    iconBg: '#B91C1C',
+    textColor: '#B91C1C',
     features: [
       { label: 'Live Activity Stream', href: '/live-activity', icon: Radio, description: 'Real-time feed of all user actions across the system — auto-refreshes every 30 seconds.' },
       { label: 'Security & Compliance Trail', href: '/audit-trail', icon: DatabaseZap, description: 'Searchable, immutable audit database with advanced filters by user, action, date, and collateral — for regulatory submissions and internal audits.' },
@@ -338,10 +338,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'System configuration and user governance',
     purpose: 'Control who can access what, configure system behaviour, and manage all platform settings. Restricted to System Administrators — the control centre for the entire platform.',
     icon: Settings,
-    color: '#374151',
-    bgGradient: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 60%, #E5E7EB 100%)',
-    iconBg: '#4B5563',
-    textColor: '#374151',
+    color: '#4B4B4E',
+    bgGradient: 'linear-gradient(135deg, #F0F1F4 0%, #E0E1E5 60%, #C9CBD1 100%)',
+    iconBg: '#4B4B4E',
+    textColor: '#4B4B4E',
     features: [
       { label: 'User Management', href: '/user-management', icon: Users, description: 'Create, edit, and deactivate user accounts, assign roles, and manage role-based permissions and screen access.' },
       { label: 'System Settings', href: '/settings', icon: Settings, description: 'Configure email providers, document types, notification preferences, and registries.' },
@@ -372,10 +372,10 @@ const MODULES: ModuleGuide[] = [
     tagline: 'Physical vault and document custody management',
     purpose: 'Track the physical custody of original collateral documents — from vault placement to loan file workflows and custody handoffs. Bridges the digital record with the physical document lifecycle.',
     icon: Archive,
-    color: '#92400E',
-    bgGradient: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 60%, #FDE68A 100%)',
-    iconBg: '#D97706',
-    textColor: '#92400E',
+    color: '#B45309',
+    bgGradient: 'linear-gradient(135deg, #FDF1E0 0%, #FADFB8 60%, #F5C889 100%)',
+    iconBg: '#B45309',
+    textColor: '#B45309',
     features: [
       { label: 'Vault Management', href: '/archive/vault-management', icon: Building2, description: 'Manage physical vault locations, capacity, and document placement records.' },
       { label: 'Collateral Placement', href: '/archive/collateral-placement', icon: MapPin, description: 'Record and track where each original document is physically stored.' },
@@ -420,8 +420,8 @@ function JourneyCard({ journey, moduleColor }: { journey: UserJourney; moduleCol
             <Route size={13} style={{ color: moduleColor }} />
           </div>
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#1E293B' }}>{journey.title}</p>
-            <p className="text-xs" style={{ color: '#64748B' }}>Typical journey for {journey.role}</p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--izou-text)' }}>{journey.title}</p>
+            <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>Typical journey for {journey.role}</p>
           </div>
         </div>
         <ChevronDown
@@ -441,7 +441,7 @@ function JourneyCard({ journey, moduleColor }: { journey: UserJourney; moduleCol
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs" style={{ color: '#374151' }}>{step.action}</p>
+                  <p className="text-xs" style={{ color: 'var(--izou-text)' }}>{step.action}</p>
                   <Link
                     href={step.href}
                     className="inline-flex items-center gap-1 text-xs font-medium mt-0.5 hover:underline"
@@ -486,7 +486,7 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-bold" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>
+            <h3 className="text-base font-bold" style={{ color: 'var(--izou-text)', fontFamily: 'DM Sans, sans-serif' }}>
               {module.title}
             </h3>
             <span
@@ -496,7 +496,7 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
               {module.features.length} features
             </span>
           </div>
-          <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>{module.tagline}</p>
+          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--izou-muted)' }}>{module.tagline}</p>
         </div>
         <ChevronDown
           size={18}
@@ -511,18 +511,18 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
 
       {/* Expanded Content */}
       {isActive && (
-        <div style={{ backgroundColor: '#FAFBFC' }}>
+        <div style={{ backgroundColor: 'var(--izou-bg)' }}>
           {/* Purpose */}
           <div className="px-5 pt-4 pb-3">
             <div className="flex items-start gap-2.5 p-3 rounded-xl" style={{ backgroundColor: module.color + '0D' }}>
               <Lightbulb size={15} style={{ color: module.color, marginTop: 1, flexShrink: 0 }} />
-              <p className="text-sm leading-relaxed" style={{ color: '#374151' }}>{module.purpose}</p>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--izou-text)' }}>{module.purpose}</p>
             </div>
           </div>
 
           {/* Tabs */}
           <div className="px-5 pb-2">
-            <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: '#F1F5F9' }}>
+            <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--izou-bg)' }}>
               {(['features', 'journeys', 'shortcuts'] as const).map((tab) => (
                 <button
                   key={tab}
@@ -531,7 +531,7 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
                   style={
                     activeTab === tab
                       ? { backgroundColor: '#FFFFFF', color: module.color, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
-                      : { color: '#64748B' }
+                      : { color: 'var(--izou-muted)' }
                   }
                 >
                   {tab === 'features' ? 'Features' : tab === 'journeys' ? 'User Journeys' : 'Quick Access'}
@@ -551,7 +551,7 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
                       key={feat.href + feat.label}
                       href={feat.href}
                       className="flex items-start gap-3 p-3 rounded-xl transition-all duration-150 group"
-                      style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)' }}
+                      style={{ backgroundColor: 'var(--izou-card)', border: '1px solid rgba(0,0,0,0.06)' }}
                       onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = module.color + '40'; }}
                       onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,0,0,0.06)'; }}
                     >
@@ -562,11 +562,11 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
                         <FeatIcon size={14} style={{ color: module.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: '#1E293B' }}>
+                        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--izou-text)' }}>
                           {feat.label}
                           <ChevronRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: module.color }} />
                         </p>
-                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#64748B' }}>{feat.description}</p>
+                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>{feat.description}</p>
                       </div>
                     </Link>
                   );
@@ -581,7 +581,7 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
                     <JourneyCard key={i} journey={journey} moduleColor={module.color} />
                   ))
                 ) : (
-                  <p className="text-sm text-center py-6" style={{ color: '#94A3B8' }}>No journeys defined for this module.</p>
+                  <p className="text-sm text-center py-6" style={{ color: 'var(--izou-muted)' }}>No journeys defined for this module.</p>
                 )}
               </div>
             )}
@@ -608,8 +608,8 @@ function ModulePanel({ module, isActive, onToggle }: { module: ModuleGuide; isAc
                         <ScIcon size={17} style={{ color: module.color }} />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold leading-tight" style={{ color: '#1E293B' }}>{sc.label}</p>
-                        <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{sc.description}</p>
+                        <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--izou-text)' }}>{sc.label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>{sc.description}</p>
                       </div>
                     </Link>
                   );
@@ -661,12 +661,12 @@ export default function OnboardingGuideContent() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F0F7FF' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--izou-bg)' }}>
       {/* Page Header */}
       <div
         className="px-6 py-8"
         style={{
-          background: 'linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 60%, #2563EB 100%)',
+          background: 'linear-gradient(135deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 60%, var(--izou-secondary-end) 100%)',
         }}
       >
         <div className="max-w-4xl mx-auto">
@@ -712,16 +712,16 @@ export default function OnboardingGuideContent() {
             className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all"
             style={{
               backgroundColor: '#FFFFFF',
-              border: '1.5px solid #E2E8F0',
-              color: '#1E293B',
+              border: '1.5px solid var(--izou-border)',
+              color: 'var(--izou-text)',
             }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = '#2563EB'; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--izou-secondary)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--izou-border)'; }}
           />
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2"
             width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            stroke="var(--izou-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
           >
             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
           </svg>
@@ -730,7 +730,7 @@ export default function OnboardingGuideContent() {
         {/* Module Accordion */}
         <div className="space-y-3">
           {filtered.length === 0 ? (
-            <div className="text-center py-12" style={{ color: '#94A3B8' }}>
+            <div className="text-center py-12" style={{ color: 'var(--izou-muted)' }}>
               <p className="text-sm">No modules match your search.</p>
             </div>
           ) : (
@@ -749,10 +749,10 @@ export default function OnboardingGuideContent() {
         {/* Footer tip */}
         <div
           className="mt-6 flex items-start gap-3 p-4 rounded-xl"
-          style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}
+          style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}
         >
-          <Lightbulb size={16} style={{ color: '#2563EB', marginTop: 1, flexShrink: 0 }} />
-          <p className="text-xs leading-relaxed" style={{ color: '#1D4ED8' }}>
+          <Lightbulb size={16} style={{ color: 'var(--izou-secondary)', marginTop: 1, flexShrink: 0 }} />
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-secondary)' }}>
             <strong>Tip:</strong> Click any feature link or shortcut to navigate directly to that screen. Use the User Journeys tab to follow step-by-step workflows for common tasks in your role.
           </p>
         </div>

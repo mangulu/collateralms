@@ -38,9 +38,11 @@ export interface RoleGuide {
 export const CREDIT_OFFICER_GUIDE: RoleGuide = {
   role: 'Credit Officer',
   slug: 'credit-officer',
-  color: '#1D4ED8',
-  iconBg: '#2563EB',
-  bg: 'linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 60%, #2563EB 100%)',
+  // Kept as literal hex (not CSS vars) — consumers append a hex alpha suffix
+  // (e.g. `${color}20`), which only works on raw hex, not var(--x).
+  color: '#12213C',
+  iconBg: '#12213C',
+  bg: 'linear-gradient(135deg, #12213C 0%, #1E3A66 60%, #28497D 100%)',
   icon: BarChart2,
   summary:
     'As a Credit Officer you are the first point of contact for every collateral asset. You register new collateral, upload supporting documents, schedule valuations, initiate substitution requests when assets change, submit registry filings, and monitor LTV thresholds to ensure the portfolio stays within risk limits. Your work feeds directly into the legal review and approval pipeline.',
@@ -144,9 +146,9 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
 export const LEGAL_OFFICER_GUIDE: RoleGuide = {
   role: 'Legal Officer',
   slug: 'legal-officer',
-  color: '#7C3AED',
-  iconBg: '#7C3AED',
-  bg: 'linear-gradient(135deg, #4C1D95 0%, #6D28D9 60%, #7C3AED 100%)',
+  color: '#DB2777',
+  iconBg: '#DB2777',
+  bg: 'linear-gradient(135deg, #7A0F45 0%, #B91763 60%, #DB2777 100%)',
   icon: Scale,
   summary:
     'As a Legal Officer you own the legal lifecycle of every collateral asset. You review and approve perfection submissions, sign off on documents, track covenant compliance, authorise collateral releases, verify registry submissions, and manage the physical archive. Your approvals are the legal gate that protects the institution\'s security interest in every asset.',
@@ -247,9 +249,9 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
 export const MANAGER_GUIDE: RoleGuide = {
   role: 'Legal / Credit Manager',
   slug: 'manager',
-  color: '#065F46',
-  iconBg: '#059669',
-  bg: 'linear-gradient(135deg, #064E3B 0%, #065F46 60%, #047857 100%)',
+  color: '#15803D',
+  iconBg: '#15803D',
+  bg: 'linear-gradient(135deg, #0B4023 0%, #116937 60%, #15803D 100%)',
   icon: ShieldCheck,
   summary:
     'As a Legal/Credit Manager you oversee the full approval pipeline across both legal and credit functions. You handle escalations from officers, reassign tasks, monitor workflow SLAs, run portfolio-level analytics, and generate regulatory reports. You are the final decision-maker on escalated items and the primary point of accountability for portfolio governance.',
@@ -353,9 +355,9 @@ export const MANAGER_GUIDE: RoleGuide = {
 export const SYSTEM_ADMIN_GUIDE: RoleGuide = {
   role: 'System Admin',
   slug: 'system-admin',
-  color: '#374151',
-  iconBg: '#4B5563',
-  bg: 'linear-gradient(135deg, #111827 0%, #1F2937 60%, #374151 100%)',
+  color: '#4B4B4E',
+  iconBg: '#4B4B4E',
+  bg: 'linear-gradient(135deg, #1F1F22 0%, #2E2E32 60%, #4B4B4E 100%)',
   icon: Settings2,
   summary:
     'As a System Admin you control the entire CollateralMS platform. You manage user accounts and role assignments, configure workflow templates and trigger rules, set alert thresholds, manage system settings, and run the migration tool for data operations. You are the only role with access to all modules — use this power carefully and always test configuration changes before applying them to production.',

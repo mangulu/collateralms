@@ -185,7 +185,7 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
   }
 
   if (field.type === 'color') {
-    const colorVal = String(value ?? '#2563EB');
+    const colorVal = String(value ?? '#EC1E27');
     return (
       <div className="flex items-center gap-3">
         <input
@@ -198,7 +198,7 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
           type="text"
           value={colorVal}
           onChange={(e) => onChange(field.key, e.target.value)}
-          placeholder="#2563EB"
+          placeholder="#EC1E27"
           className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-md text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
         />
         <div className="w-8 h-8 rounded-md border border-border shrink-0" style={{ backgroundColor: colorVal }} title="Color preview" />

@@ -284,7 +284,7 @@ export default function AlertThresholdsContent() {
           value={config.ltvBreachPct}
           defaultValue={DEFAULTS.ltvBreachPct}
           onChange={set('ltvBreachPct')}
-          accentColor="#DC2626"
+          accentColor="var(--izou-danger)"
           trackColor="bg-red-100"
           warningNote="Setting this too high may delay critical risk alerts. Recommended range: 75–90%."
         />
@@ -300,7 +300,7 @@ export default function AlertThresholdsContent() {
           value={config.perfectionRateDropPct}
           defaultValue={DEFAULTS.perfectionRateDropPct}
           onChange={set('perfectionRateDropPct')}
-          accentColor="#D97706"
+          accentColor="var(--izou-warning)"
           trackColor="bg-amber-100"
           warningNote="A very low value (< 5%) may generate excessive noise. Recommended: 8–15%."
         />
@@ -316,7 +316,7 @@ export default function AlertThresholdsContent() {
           value={config.brelaDeadlineDays}
           defaultValue={DEFAULTS.brelaDeadlineDays}
           onChange={set('brelaDeadlineDays')}
-          accentColor="#2563EB"
+          accentColor="var(--izou-secondary)"
           trackColor="bg-blue-100"
           warningNote="Fewer than 7 days may not leave enough time for remediation. Recommended: 14–45 days."
         />

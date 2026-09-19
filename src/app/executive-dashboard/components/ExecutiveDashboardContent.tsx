@@ -37,7 +37,7 @@ interface TypeDist {
   count: number;
 }
 
-const PIE_COLORS = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#be185d'];
+const PIE_COLORS = ['var(--izou-secondary)', 'var(--izou-success)', 'var(--izou-warning)', 'var(--izou-danger)', 'var(--izou-highlight)', 'var(--izou-secondary-mid)', 'var(--izou-neutral)'];
 
 function fmtTSh(n: number) {
   if (n >= 1_000_000_000_000) return `TSh ${(n / 1_000_000_000_000).toFixed(1)}T`;
@@ -297,22 +297,22 @@ export default function ExecutiveDashboardContent() {
               <AreaChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--izou-secondary)" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="var(--izou-secondary)" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="overdueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#dc2626" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--izou-danger)" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="var(--izou-danger)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="perfected" stroke="#2563eb" fill="url(#perfGrad)" strokeWidth={2} name="Perfected" />
-                <Area type="monotone" dataKey="submitted" stroke="#16a34a" fill="none" strokeWidth={2} strokeDasharray="4 2" name="Submitted" />
-                <Area type="monotone" dataKey="overdue" stroke="#dc2626" fill="url(#overdueGrad)" strokeWidth={2} name="Overdue" />
+                <Area type="monotone" dataKey="perfected" stroke="var(--izou-secondary)" fill="url(#perfGrad)" strokeWidth={2} name="Perfected" />
+                <Area type="monotone" dataKey="submitted" stroke="var(--izou-success)" fill="none" strokeWidth={2} strokeDasharray="4 2" name="Submitted" />
+                <Area type="monotone" dataKey="overdue" stroke="var(--izou-danger)" fill="url(#overdueGrad)" strokeWidth={2} name="Overdue" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -367,14 +367,14 @@ export default function ExecutiveDashboardContent() {
             </span>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="perfected" fill="#2563eb" name="Perfected" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="submitted" fill="#16a34a" name="Submitted" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="overdue" fill="#dc2626" name="Overdue" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="perfected" fill="var(--izou-secondary)" name="Perfected" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="submitted" fill="var(--izou-success)" name="Submitted" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="overdue" fill="var(--izou-danger)" name="Overdue" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

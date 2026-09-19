@@ -204,13 +204,13 @@ function computeAnalytics(instances: WorkflowInstance[], templates: WorkflowTemp
 // ─── SLA Gauge ────────────────────────────────────────────────────────────────
 
 function SLAGauge({ rate }: { rate: number }) {
-  const color = rate >= 90 ? '#10b981' : rate >= 70 ? '#f59e0b' : '#ef4444';
+  const color = rate >= 90 ? 'var(--izou-success)' : rate >= 70 ? 'var(--izou-warning)' : 'var(--izou-danger)';
   const circumference = 2 * Math.PI * 40;
   const offset = circumference - (rate / 100) * circumference;
   return (
     <div className="flex flex-col items-center justify-center gap-1">
       <svg width="100" height="100" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="10" />
+        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--izou-border)" strokeWidth="10" />
         <circle
           cx="50" cy="50" r="40" fill="none"
           stroke={color} strokeWidth="10"
@@ -229,7 +229,7 @@ function SLAGauge({ rate }: { rate: number }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const ROLE_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe', '#f5f3ff', '#faf5ff'];
+const ROLE_COLORS = ['var(--izou-secondary)', 'var(--izou-primary)', 'var(--izou-success)', 'var(--izou-warning)', 'var(--izou-highlight)', 'var(--izou-secondary-mid)', 'var(--izou-neutral)', 'var(--izou-danger)'];
 
 export default function ProcessAnalyticsContent() {
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -387,7 +387,7 @@ export default function ProcessAnalyticsContent() {
                           className="h-full rounded-full transition-all duration-700"
                           style={{
                             width: `${t.rate}%`,
-                            backgroundColor: t.rate >= 90 ? '#10b981' : t.rate >= 70 ? '#f59e0b' : '#ef4444',
+                            backgroundColor: t.rate >= 90 ? 'var(--izou-success)' : t.rate >= 70 ? 'var(--izou-warning)' : 'var(--izou-danger)',
                           }}
                         />
                       </div>
@@ -424,7 +424,7 @@ export default function ProcessAnalyticsContent() {
                     <Tooltip formatter={(v: number) => [`${v}d`, 'Avg Duration']} />
                     <Bar dataKey="avgDays" radius={[0, 4, 4, 0]}>
                       {data.stepDurations.map((_, i) => (
-                        <Cell key={i} fill={i === 0 ? '#f97316' : i === 1 ? '#fb923c' : '#fdba74'} />
+                        <Cell key={i} fill={i === 0 ? 'var(--izou-warning)' : i === 1 ? '#C2660D' : '#DDA155'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -448,8 +448,8 @@ export default function ProcessAnalyticsContent() {
                     <YAxis type="category" dataKey="role" tick={{ fontSize: 11 }} width={110} />
                     <Tooltip />
                     <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="activeSteps" name="Active" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="pendingSteps" name="Pending" stackId="a" fill="#a78bfa" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="activeSteps" name="Active" stackId="a" fill="var(--izou-secondary)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="pendingSteps" name="Pending" stackId="a" fill="var(--izou-secondary-mid)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -470,16 +470,16 @@ export default function ProcessAnalyticsContent() {
                 <AreaChart data={data.throughputTrend} margin={{ left: 0, right: 16, top: 4 }}>
                   <defs>
                     <linearGradient id="gradStarted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--izou-secondary)" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="var(--izou-secondary)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="gradCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--izou-success)" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="var(--izou-success)" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="gradEscalated" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                      <stop offset="5%" stopColor="var(--izou-warning)" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="var(--izou-warning)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -487,9 +487,9 @@ export default function ProcessAnalyticsContent() {
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                  <Area type="monotone" dataKey="started" name="Started" stroke="#3b82f6" fill="url(#gradStarted)" strokeWidth={2} dot={{ r: 3 }} />
-                  <Area type="monotone" dataKey="completed" name="Completed" stroke="#10b981" fill="url(#gradCompleted)" strokeWidth={2} dot={{ r: 3 }} />
-                  <Area type="monotone" dataKey="escalated" name="Escalated" stroke="#f97316" fill="url(#gradEscalated)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Area type="monotone" dataKey="started" name="Started" stroke="var(--izou-secondary)" fill="url(#gradStarted)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Area type="monotone" dataKey="completed" name="Completed" stroke="var(--izou-success)" fill="url(#gradCompleted)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Area type="monotone" dataKey="escalated" name="Escalated" stroke="var(--izou-warning)" fill="url(#gradEscalated)" strokeWidth={2} dot={{ r: 3 }} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -511,9 +511,9 @@ export default function ProcessAnalyticsContent() {
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="completed" name="Completed" fill="#10B981" radius={[4, 4, 0, 0]} stackId="a" />
-                  <Bar dataKey="active" name="Active" fill="#3B82F6" stackId="a" />
-                  <Bar dataKey="escalated" name="Escalated" fill="#F97316" radius={[0, 0, 4, 4]} stackId="a" />
+                  <Bar dataKey="completed" name="Completed" fill="var(--izou-success)" radius={[4, 4, 0, 0]} stackId="a" />
+                  <Bar dataKey="active" name="Active" fill="var(--izou-secondary)" stackId="a" />
+                  <Bar dataKey="escalated" name="Escalated" fill="var(--izou-warning)" radius={[0, 0, 4, 4]} stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             )}

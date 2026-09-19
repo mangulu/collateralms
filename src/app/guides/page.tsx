@@ -13,9 +13,9 @@ const ROLE_GUIDES = [
     tagline: 'Collateral intake, valuation scheduling, and substitution requests',
     description: 'Your daily workflow covers registering new collateral, scheduling valuations, initiating substitution requests, and monitoring LTV thresholds. This guide walks through every task step by step.',
     icon: BarChart2,
-    color: '#1D4ED8',
-    bg: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-    iconBg: '#2563EB',
+    color: 'var(--izou-secondary)',
+    bg: 'var(--izou-secondary-light)',
+    iconBg: 'var(--izou-secondary)',
     badge: 'credit_officer',
     tasks: ['Register collateral', 'Schedule valuations', 'Submit substitution requests', 'Monitor LTV alerts'],
   },
@@ -25,9 +25,9 @@ const ROLE_GUIDES = [
     tagline: 'Perfection, document approvals, covenants, and release approvals',
     description: 'You own the legal lifecycle of every collateral asset — from perfection review and document sign-off to covenant tracking and release authorisation. This guide covers your full scope.',
     icon: Scale,
-    color: '#7C3AED',
-    bg: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
-    iconBg: '#7C3AED',
+    color: 'var(--izou-highlight)',
+    bg: 'var(--izou-highlight-light)',
+    iconBg: 'var(--izou-highlight)',
     badge: 'legal_officer',
     tasks: ['Review perfection submissions', 'Approve/reject documents', 'Track covenants', 'Authorise releases'],
   },
@@ -37,9 +37,9 @@ const ROLE_GUIDES = [
     tagline: 'Workflow oversight, escalation management, and portfolio governance',
     description: 'As a manager you oversee the full approval pipeline, handle escalations, reassign tasks, and run portfolio-level analytics. This guide covers your oversight and governance responsibilities.',
     icon: ShieldCheck,
-    color: '#065F46',
-    bg: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
-    iconBg: '#059669',
+    color: 'var(--izou-success)',
+    bg: 'var(--izou-success-light)',
+    iconBg: 'var(--izou-success)',
     badge: 'manager',
     tasks: ['Oversee approval queues', 'Manage escalations', 'Run portfolio analytics', 'Generate regulatory reports'],
   },
@@ -49,9 +49,9 @@ const ROLE_GUIDES = [
     tagline: 'User management, workflow templates, trigger rules, and migration tools',
     description: 'You control the entire platform — user accounts, role permissions, workflow engine configuration, alert thresholds, and system settings. This guide covers every admin capability.',
     icon: Settings2,
-    color: '#374151',
-    bg: 'linear-gradient(135deg, #F9FAFB 0%, #E5E7EB 100%)',
-    iconBg: '#4B5563',
+    color: 'var(--izou-neutral)',
+    bg: 'var(--izou-bg)',
+    iconBg: 'var(--izou-neutral)',
     badge: 'system_admin',
     tasks: ['Manage users & roles', 'Configure workflow templates', 'Set trigger rules', 'Run migration tools'],
   },
@@ -63,20 +63,20 @@ const TESTING_GUIDE = {
   tagline: 'End-to-end test flow, feature checklists, and test data references',
   description: 'A step-by-step guide for testers and trainers covering the full collateral lifecycle — from obligor creation to release approval — with per-module checklists and known test data.',
   icon: FlaskConical,
-  color: '#1D4ED8',
-  bg: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-  iconBg: '#1D4ED8',
+  color: 'var(--izou-secondary-mid)',
+  bg: 'var(--izou-secondary-light)',
+  iconBg: 'var(--izou-secondary-mid)',
   tasks: ['Prerequisites & setup', 'E2E test phases', 'Feature checklists', 'Test data references'],
 };
 
 export default function GuidesIndexPage() {
   return (
     <AppLayout>
-      <div className="min-h-screen" style={{ backgroundColor: '#F0F7FF' }}>
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--izou-bg)' }}>
         {/* Header */}
         <div
           className="px-6 py-10"
-          style={{ background: 'linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 60%, #2563EB 100%)' }}
+          style={{ background: 'linear-gradient(135deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 60%, var(--izou-secondary-end) 100%)' }}
         >
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-2 mb-3">
@@ -96,7 +96,7 @@ export default function GuidesIndexPage() {
 
         {/* Role Cards */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>Role Guides</p>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--izou-muted)' }}>Role Guides</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {ROLE_GUIDES.map((guide) => {
               const Icon = guide.icon;
@@ -134,13 +134,13 @@ export default function GuidesIndexPage() {
                       />
                     </div>
 
-                    <h2 className="text-base font-bold mb-1" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>
+                    <h2 className="text-base font-bold mb-1" style={{ color: 'var(--izou-text)', fontFamily: 'DM Sans, sans-serif' }}>
                       {guide.role}
                     </h2>
                     <p className="text-xs font-medium mb-3" style={{ color: guide.color }}>
                       {guide.tagline}
                     </p>
-                    <p className="text-xs leading-relaxed mb-4" style={{ color: '#475569' }}>
+                    <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--izou-muted)' }}>
                       {guide.description}
                     </p>
 
@@ -172,7 +172,7 @@ export default function GuidesIndexPage() {
           </div>
 
           {/* Testing & Training Guide */}
-          <p className="text-xs font-semibold uppercase tracking-wider mt-8 mb-3" style={{ color: '#94A3B8' }}>Testing & Training</p>
+          <p className="text-xs font-semibold uppercase tracking-wider mt-8 mb-3" style={{ color: 'var(--izou-muted)' }}>Testing & Training</p>
           <Link
             href="/guides/testing"
             className="group block rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
@@ -200,7 +200,7 @@ export default function GuidesIndexPage() {
                     <FlaskConical size={22} color="#fff" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>
+                    <h2 className="text-base font-bold" style={{ color: 'var(--izou-text)', fontFamily: 'DM Sans, sans-serif' }}>
                       {TESTING_GUIDE.title}
                     </h2>
                     <p className="text-xs font-medium" style={{ color: TESTING_GUIDE.color }}>
@@ -214,7 +214,7 @@ export default function GuidesIndexPage() {
                   className="opacity-0 group-hover:opacity-100 transition-opacity mt-1 shrink-0"
                 />
               </div>
-              <p className="text-xs leading-relaxed mb-4" style={{ color: '#475569' }}>
+              <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--izou-muted)' }}>
                 {TESTING_GUIDE.description}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -243,10 +243,10 @@ export default function GuidesIndexPage() {
           {/* Also see */}
           <div
             className="mt-8 flex items-start gap-3 p-4 rounded-xl"
-            style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}
+            style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}
           >
-            <BookOpen size={15} style={{ color: '#2563EB', marginTop: 1, flexShrink: 0 }} />
-            <p className="text-xs leading-relaxed" style={{ color: '#1D4ED8' }}>
+            <BookOpen size={15} style={{ color: 'var(--izou-secondary)', marginTop: 1, flexShrink: 0 }} />
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-secondary)' }}>
               <strong>Looking for the full module guide?</strong>{' '}
               <Link href="/onboarding-guide" className="underline font-semibold">
                 Visit the Onboarding Guide

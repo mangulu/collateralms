@@ -46,7 +46,7 @@ const PREREQUISITES = [
   {
     category: 'Test Accounts',
     icon: User,
-    color: '#1D4ED8',
+    color: '#12213C',
     items: [
       { label: 'Credit Officer account', detail: 'Role: credit_officer — used for collateral intake, valuation, and substitution steps' },
       { label: 'Legal Officer account', detail: 'Role: legal_officer — used for perfection review, document sign-off, and release approval' },
@@ -57,7 +57,7 @@ const PREREQUISITES = [
   {
     category: 'Environment Checklist',
     icon: ShieldCheck,
-    color: '#059669',
+    color: '#15803D',
     items: [
       { label: 'Supabase connection active', detail: 'Verify NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in .env' },
       { label: 'OpenAI API key configured', detail: 'Required for AI Risk Assessment, Fraud Prevention, and AI narrative features' },
@@ -69,7 +69,7 @@ const PREREQUISITES = [
   {
     category: 'What to Have Open',
     icon: Eye,
-    color: '#7C3AED',
+    color: '#DB2777',
     items: [
       { label: 'Two browser windows or profiles', detail: 'Log in as Credit Officer in one, Legal Officer in the other — to test handoffs in real time' },
       { label: 'Supabase Table Editor (optional)', detail: 'Useful to confirm DB writes after each step — check collateral_records, workflow_instances, audit_logs' },
@@ -198,7 +198,7 @@ const TEST_PHASES: TestPhase[] = [
 const MODULE_CHECKLISTS: ModuleChecklist[] = [
   {
     module: 'Collateral Management',
-    color: '#1D4ED8',
+    color: '#12213C',
     items: [
       { label: 'Add new collateral record', href: '/collateral-management' },
       { label: 'Edit existing collateral', href: '/collateral-management' },
@@ -212,7 +212,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
   },
   {
     module: 'Workflows',
-    color: '#7C3AED',
+    color: '#DB2777',
     items: [
       { label: 'Perfection workflow — submit and approve', href: '/perfection-workflow' },
       { label: 'Valuation workflow — schedule and sign off', href: '/valuation-workflow' },
@@ -227,7 +227,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
   },
   {
     module: 'Archive',
-    color: '#065F46',
+    color: '#15803D',
     items: [
       { label: 'Place document in vault slot', href: '/archive/vault-management' },
       { label: 'Custody screen shows correct status', href: '/archive/custody' },
@@ -251,7 +251,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
   },
   {
     module: 'Loans & Obligors',
-    color: '#0E7490',
+    color: '#1E3A66',
     items: [
       { label: 'Create new loan facility', href: '/loan-registry' },
       { label: 'Link collateral to loan', href: '/loan-registry' },
@@ -263,7 +263,7 @@ const MODULE_CHECKLISTS: ModuleChecklist[] = [
   },
   {
     module: 'Admin & Settings',
-    color: '#374151',
+    color: '#4B4B4E',
     items: [
       { label: 'Create and deactivate a user', href: '/user-management' },
       { label: 'Assign and change user role', href: '/user-management' },
@@ -301,15 +301,15 @@ function PrerequisiteCard({ category, icon: IconComp, color, items }: typeof PRE
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: color + '15' }}>
           {React.createElement(IconComp, { size: 16, style: { color } })}
         </div>
-        <h3 className="text-sm font-bold" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>{category}</h3>
+        <h3 className="text-sm font-bold" style={{ color: 'var(--izou-text)', fontFamily: 'DM Sans, sans-serif' }}>{category}</h3>
       </div>
       <div className="space-y-3">
         {items.map((item, i) => (
           <div key={i} className="flex items-start gap-2.5">
             <CheckCircle2 size={14} style={{ color, marginTop: 1, flexShrink: 0 }} />
             <div>
-              <p className="text-xs font-semibold" style={{ color: '#1E293B' }}>{item.label}</p>
-              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#64748B' }}>{item.detail}</p>
+              <p className="text-xs font-semibold" style={{ color: 'var(--izou-text)' }}>{item.label}</p>
+              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>{item.detail}</p>
             </div>
           </div>
         ))}
@@ -335,73 +335,73 @@ function PhaseAccordion({ phase }: { phase: TestPhase }) {
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ border: `1.5px solid ${allDone ? '#059669' : '#E2E8F0'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+      style={{ border: `1.5px solid ${allDone ? 'var(--izou-success)' : 'var(--izou-border)'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
     >
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors"
-        style={{ backgroundColor: open ? '#F8FAFC' : '#FFFFFF' }}
+        style={{ backgroundColor: open ? 'var(--izou-bg)' : '#FFFFFF' }}
       >
         <div className="flex items-start gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-            style={{ backgroundColor: allDone ? '#DCFCE7' : '#EFF6FF' }}
+            style={{ backgroundColor: allDone ? 'var(--izou-success-light)' : 'var(--izou-secondary-light)' }}
           >
             {allDone
-              ? <CheckCircle2 size={16} style={{ color: '#059669' }} />
-              : <FlaskConical size={16} style={{ color: '#1D4ED8' }} />
+              ? <CheckCircle2 size={16} style={{ color: 'var(--izou-success)' }} />
+              : <FlaskConical size={16} style={{ color: 'var(--izou-secondary)' }} />
             }
           </div>
           <div>
-            <p className="text-sm font-bold" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>{phase.title}</p>
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{phase.description}</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--izou-text)', fontFamily: 'DM Sans, sans-serif' }}>{phase.title}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>{phase.description}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-3">
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: allDone ? '#DCFCE7' : '#EFF6FF', color: allDone ? '#059669' : '#1D4ED8' }}>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: allDone ? 'var(--izou-success-light)' : 'var(--izou-secondary-light)', color: allDone ? 'var(--izou-success)' : 'var(--izou-secondary)' }}>
             {checked.size}/{phase.steps.length}
           </span>
-          <ChevronDown size={16} style={{ color: '#94A3B8', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+          <ChevronDown size={16} style={{ color: 'var(--izou-muted)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
         </div>
       </button>
 
       {open && (
-        <div className="px-5 pb-5 pt-1" style={{ backgroundColor: '#FAFBFC', borderTop: '1px solid #E2E8F0' }}>
+        <div className="px-5 pb-5 pt-1" style={{ backgroundColor: 'var(--izou-bg)', borderTop: '1px solid var(--izou-border)' }}>
           <div className="space-y-3 mt-3">
             {phase.steps.map((s) => (
               <div
                 key={s.step}
                 className="flex items-start gap-3 p-3.5 rounded-xl cursor-pointer transition-colors"
                 style={{
-                  backgroundColor: checked.has(s.step) ? '#F0FDF4' : '#FFFFFF',
-                  border: `1px solid ${checked.has(s.step) ? '#BBF7D0' : '#E2E8F0'}`,
+                  backgroundColor: checked.has(s.step) ? 'var(--izou-success-light)' : '#FFFFFF',
+                  border: `1px solid ${checked.has(s.step) ? 'var(--izou-success-light)' : 'var(--izou-border)'}`,
                 }}
                 onClick={() => toggle(s.step)}
               >
                 <div className="shrink-0 mt-0.5">
                   {checked.has(s.step)
-                    ? <CheckCircle2 size={16} style={{ color: '#059669' }} />
-                    : <Circle size={16} style={{ color: '#CBD5E1' }} />
+                    ? <CheckCircle2 size={16} style={{ color: 'var(--izou-success)' }} />
+                    : <Circle size={16} style={{ color: 'var(--izou-border)' }} />
                   }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-semibold" style={{ color: checked.has(s.step) ? '#065F46' : '#1E293B' }}>
+                    <p className="text-xs font-semibold" style={{ color: checked.has(s.step) ? 'var(--izou-success)' : 'var(--izou-text)' }}>
                       Step {s.step}: {s.action}
                     </p>
                     <Link
                       href={s.href}
                       onClick={e => e.stopPropagation()}
                       className="shrink-0 flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-lg transition-colors"
-                      style={{ color: '#1D4ED8', backgroundColor: '#EFF6FF', whiteSpace: 'nowrap' }}
+                      style={{ color: 'var(--izou-secondary)', backgroundColor: 'var(--izou-secondary-light)', whiteSpace: 'nowrap' }}
                     >
                       {s.where} <ArrowRight size={10} />
                     </Link>
                   </div>
                   <div className="flex items-start gap-1.5 mt-1.5">
-                    <Eye size={11} style={{ color: '#94A3B8', marginTop: 1, flexShrink: 0 }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#64748B' }}>
-                      <span className="font-medium" style={{ color: '#475569' }}>Expect: </span>{s.expect}
+                    <Eye size={11} style={{ color: 'var(--izou-muted)', marginTop: 1, flexShrink: 0 }} />
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
+                      <span className="font-medium" style={{ color: 'var(--izou-muted)' }}>Expect: </span>{s.expect}
                     </p>
                   </div>
                 </div>
@@ -431,7 +431,7 @@ function ChecklistCard({ checklist }: { checklist: ModuleChecklist }) {
       style={{ backgroundColor: '#FFFFFF', border: `1.5px solid ${checklist.color}18`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold" style={{ color: '#1E293B', fontFamily: 'DM Sans, sans-serif' }}>{checklist.module}</h3>
+        <h3 className="text-sm font-bold" style={{ color: 'var(--izou-text)', fontFamily: 'DM Sans, sans-serif' }}>{checklist.module}</h3>
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: checklist.color + '15', color: checklist.color }}>
           {checked.size}/{checklist.items.length}
         </span>
@@ -446,13 +446,13 @@ function ChecklistCard({ checklist }: { checklist: ModuleChecklist }) {
           >
             {checked.has(i)
               ? <CheckCircle2 size={14} style={{ color: checklist.color, flexShrink: 0 }} />
-              : <Circle size={14} style={{ color: '#CBD5E1', flexShrink: 0 }} />
+              : <Circle size={14} style={{ color: 'var(--izou-border)', flexShrink: 0 }} />
             }
             <Link
               href={item.href}
               onClick={e => e.stopPropagation()}
               className="text-xs hover:underline flex-1"
-              style={{ color: checked.has(i) ? checklist.color : '#374151' }}
+              style={{ color: checked.has(i) ? checklist.color : 'var(--izou-text)' }}
             >
               {item.label}
             </Link>
@@ -479,11 +479,11 @@ export default function TestingGuidePage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen" style={{ backgroundColor: '#F0F7FF' }}>
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--izou-bg)' }}>
         {/* Header */}
         <div
           className="px-6 py-10"
-          style={{ background: 'linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 60%, #2563EB 100%)' }}
+          style={{ background: 'linear-gradient(135deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 60%, var(--izou-secondary-end) 100%)' }}
         >
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-2 mb-5">
@@ -545,7 +545,7 @@ export default function TestingGuidePage() {
         {/* Content */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           {/* Tabs */}
-          <div className="flex gap-1 p-1 rounded-xl mb-6 overflow-x-auto" style={{ backgroundColor: '#E2E8F0' }}>
+          <div className="flex gap-1 p-1 rounded-xl mb-6 overflow-x-auto" style={{ backgroundColor: 'var(--izou-border)' }}>
             {tabs.map((tab) => {
               const TabIcon = tab.icon;
               return (
@@ -555,8 +555,8 @@ export default function TestingGuidePage() {
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap"
                   style={
                     activeSection === tab.key
-                      ? { backgroundColor: '#FFFFFF', color: '#1D4ED8', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
-                      : { color: '#64748B' }
+                      ? { backgroundColor: '#FFFFFF', color: 'var(--izou-secondary)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
+                      : { color: 'var(--izou-muted)' }
                   }
                 >
                   <TabIcon size={13} />
@@ -569,7 +569,7 @@ export default function TestingGuidePage() {
           {/* Prerequisites */}
           {activeSection === 'prerequisites' && (
             <div>
-              <p className="text-xs mb-5 leading-relaxed" style={{ color: '#64748B' }}>
+              <p className="text-xs mb-5 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
                 Complete all prerequisites before starting the E2E test flow. Missing any of these will cause steps to fail.
               </p>
               <div className="grid grid-cols-1 gap-4">
@@ -579,10 +579,10 @@ export default function TestingGuidePage() {
               </div>
               <div
                 className="mt-6 flex items-start gap-3 p-4 rounded-xl"
-                style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA' }}
+                style={{ backgroundColor: 'var(--izou-warning-light)', border: '1px solid var(--izou-warning-light)' }}
               >
-                <AlertTriangle size={15} style={{ color: '#D97706', marginTop: 1, flexShrink: 0 }} />
-                <p className="text-xs leading-relaxed" style={{ color: '#92400E' }}>
+                <AlertTriangle size={15} style={{ color: 'var(--izou-warning)', marginTop: 1, flexShrink: 0 }} />
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-warning)' }}>
                   <strong>Before you start:</strong> Open two browser windows — one logged in as Credit Officer, one as Legal Officer. This lets you test workflow handoffs without logging out and back in.
                 </p>
               </div>
@@ -594,10 +594,10 @@ export default function TestingGuidePage() {
             <div>
               <div
                 className="flex items-start gap-3 p-4 rounded-xl mb-5"
-                style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}
+                style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}
               >
-                <Info size={15} style={{ color: '#2563EB', marginTop: 1, flexShrink: 0 }} />
-                <p className="text-xs leading-relaxed" style={{ color: '#1D4ED8' }}>
+                <Info size={15} style={{ color: 'var(--izou-secondary)', marginTop: 1, flexShrink: 0 }} />
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-secondary)' }}>
                   <strong>How to use this flow:</strong> Work through the phases in order. Click each step to mark it complete. Each step shows the exact screen to use and what a successful outcome looks like.
                 </p>
               </div>
@@ -612,7 +612,7 @@ export default function TestingGuidePage() {
           {/* Feature Checklists */}
           {activeSection === 'checklists' && (
             <div>
-              <p className="text-xs mb-5 leading-relaxed" style={{ color: '#64748B' }}>
+              <p className="text-xs mb-5 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
                 Use these per-module checklists to track feature coverage. Click each item to mark it tested. Click the feature name to navigate directly to that screen.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -626,7 +626,7 @@ export default function TestingGuidePage() {
           {/* Test Data */}
           {activeSection === 'testdata' && (
             <div>
-              <p className="text-xs mb-5 leading-relaxed" style={{ color: '#64748B' }}>
+              <p className="text-xs mb-5 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
                 Reference values and seeded records to use during testing. These ensure consistent, predictable outcomes across test runs.
               </p>
               <div className="space-y-3">
@@ -634,23 +634,23 @@ export default function TestingGuidePage() {
                   <div
                     key={i}
                     className="flex items-start gap-4 p-4 rounded-xl"
-                    style={{ backgroundColor: '#FFFFFF', border: '1.5px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+                    style={{ backgroundColor: '#FFFFFF', border: '1.5px solid var(--izou-border)', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
                   >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#EFF6FF' }}>
-                      <Database size={14} style={{ color: '#1D4ED8' }} />
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+                      <Database size={14} style={{ color: 'var(--izou-secondary)' }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <p className="text-xs font-bold" style={{ color: '#1E293B' }}>{entry.label}</p>
+                        <p className="text-xs font-bold" style={{ color: 'var(--izou-text)' }}>{entry.label}</p>
                         <span
                           className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg"
-                          style={{ backgroundColor: '#F1F5F9', color: '#334155', border: '1px solid #E2E8F0' }}
+                          style={{ backgroundColor: 'var(--izou-bg)', color: 'var(--izou-text)', border: '1px solid var(--izou-border)' }}
                         >
                           {entry.value}
                         </span>
                       </div>
                       {entry.note && (
-                        <p className="text-xs mt-1.5 leading-relaxed" style={{ color: '#64748B' }}>{entry.note}</p>
+                        <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>{entry.note}</p>
                       )}
                     </div>
                   </div>
@@ -659,10 +659,10 @@ export default function TestingGuidePage() {
 
               <div
                 className="mt-6 flex items-start gap-3 p-4 rounded-xl"
-                style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}
+                style={{ backgroundColor: 'var(--izou-success-light)', border: '1px solid var(--izou-success-light)' }}
               >
-                <Lightbulb size={15} style={{ color: '#059669', marginTop: 1, flexShrink: 0 }} />
-                <p className="text-xs leading-relaxed" style={{ color: '#065F46' }}>
+                <Lightbulb size={15} style={{ color: 'var(--izou-success)', marginTop: 1, flexShrink: 0 }} />
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-success)' }}>
                   <strong>Tip:</strong> After each major test phase, open the Supabase Table Editor and verify the expected rows exist in <code className="font-mono bg-green-100 px-1 rounded">collateral_records</code>, <code className="font-mono bg-green-100 px-1 rounded">workflow_instances</code>, and <code className="font-mono bg-green-100 px-1 rounded">audit_logs</code>. This confirms the UI writes are persisting correctly.
                 </p>
               </div>
@@ -672,10 +672,10 @@ export default function TestingGuidePage() {
           {/* Footer nav */}
           <div
             className="mt-8 flex items-start gap-3 p-4 rounded-xl"
-            style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}
+            style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}
           >
-            <BookOpen size={15} style={{ color: '#2563EB', marginTop: 1, flexShrink: 0 }} />
-            <p className="text-xs leading-relaxed" style={{ color: '#1D4ED8' }}>
+            <BookOpen size={15} style={{ color: 'var(--izou-secondary)', marginTop: 1, flexShrink: 0 }} />
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-secondary)' }}>
               <strong>Also see:</strong>{' '}
               <Link href="/guides" className="underline font-semibold">Role Guides</Link>{' '}
               for role-specific task walkthroughs, or the{' '}

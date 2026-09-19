@@ -364,7 +364,7 @@ function ValuationActionDialog({ open, valuation, action, onClose, onRecord, onA
                 onClick={() => onRecord(recordForm)}
                 disabled={loading || !recordForm.valuationAmount}
                 className="px-4 py-2 text-sm text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-                style={{ backgroundColor: '#003c5a' }}
+                style={{ backgroundColor: 'var(--izou-primary)' }}
               >
                 {loading && <Loader2 size={14} className="animate-spin" />}
                 {loading ? 'Saving…' : 'Save Result'}
@@ -714,7 +714,7 @@ function ValuationDetailPanel({
                   <button
                     onClick={() => onOpenAction('record')}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors"
-                    style={{ backgroundColor: '#7c3aed' }}
+                    style={{ backgroundColor: 'var(--izou-highlight)' }}
                   >
                     Record Result
                   </button>
@@ -1001,7 +1001,7 @@ export default function ValuationWorkflowContent() {
             <button
               onClick={openScheduleModal}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
-              style={{ backgroundColor: '#003c5a' }}
+              style={{ backgroundColor: 'var(--izou-primary)' }}
             >
               <Plus size={16} /> Schedule Valuation
             </button>
@@ -1088,7 +1088,7 @@ export default function ValuationWorkflowContent() {
                   className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                     filterStatus === s ? 'text-white border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
-                  style={filterStatus === s ? { backgroundColor: '#003c5a' } : {}}
+                  style={filterStatus === s ? { backgroundColor: 'var(--izou-primary)' } : {}}
                 >
                   {s}
                 </button>
@@ -1302,7 +1302,7 @@ export default function ValuationWorkflowContent() {
                 onClick={handleSchedule}
                 disabled={actionLoading || !scheduleForm.collateralId || !scheduleForm.scheduledDate}
                 className="px-4 py-2 text-sm text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-                style={{ backgroundColor: '#003c5a' }}
+                style={{ backgroundColor: 'var(--izou-primary)' }}
               >
                 {actionLoading && <Loader2 size={14} className="animate-spin" />}
                 {actionLoading ? 'Scheduling…' : 'Schedule'}

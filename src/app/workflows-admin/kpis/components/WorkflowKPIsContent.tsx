@@ -407,7 +407,7 @@ function KPIsTab({ kpis }: { kpis: KPIData | null }) {
                 <XAxis type="number" tick={{ fontSize: 11 }} />
                 <YAxis type="category" dataKey="role" tick={{ fontSize: 11 }} width={110} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="count" fill="var(--izou-secondary)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -460,9 +460,9 @@ function KPIsTab({ kpis }: { kpis: KPIData | null }) {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Bar dataKey="completed" name="Completed" fill="#10B981" radius={[4, 4, 0, 0]} stackId="a" />
-              <Bar dataKey="active" name="Active" fill="#3B82F6" radius={[0, 0, 0, 0]} stackId="a" />
-              <Bar dataKey="escalated" name="Escalated" fill="#F97316" radius={[0, 0, 4, 4]} stackId="a" />
+              <Bar dataKey="completed" name="Completed" fill="var(--izou-success)" radius={[4, 4, 0, 0]} stackId="a" />
+              <Bar dataKey="active" name="Active" fill="var(--izou-secondary)" radius={[0, 0, 0, 0]} stackId="a" />
+              <Bar dataKey="escalated" name="Escalated" fill="var(--izou-warning)" radius={[0, 0, 4, 4]} stackId="a" />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -519,9 +519,9 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend />
-              <Area type="monotone" dataKey="started" name="Started" stroke="#3B82F6" fill="#DBEAFE" strokeWidth={2} />
-              <Area type="monotone" dataKey="completed" name="Completed" stroke="#10B981" fill="#D1FAE5" strokeWidth={2} />
-              <Area type="monotone" dataKey="escalated" name="Escalated" stroke="#F97316" fill="#FFEDD5" strokeWidth={2} />
+              <Area type="monotone" dataKey="started" name="Started" stroke="var(--izou-secondary)" fill="var(--izou-secondary-light)" strokeWidth={2} />
+              <Area type="monotone" dataKey="completed" name="Completed" stroke="var(--izou-success)" fill="var(--izou-success-light)" strokeWidth={2} />
+              <Area type="monotone" dataKey="escalated" name="Escalated" stroke="var(--izou-warning)" fill="var(--izou-warning-light)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -575,8 +575,8 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
                 <XAxis type="number" tick={{ fontSize: 11 }} />
                 <YAxis type="category" dataKey="role" tick={{ fontSize: 11 }} width={110} />
                 <Tooltip />
-                <Bar dataKey="activeSteps" name="Active" fill="#F97316" stackId="a" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="pendingSteps" name="Pending" fill="#FED7AA" stackId="a" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="activeSteps" name="Active" fill="var(--izou-warning)" stackId="a" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="pendingSteps" name="Pending" fill="var(--izou-warning-light)" stackId="a" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

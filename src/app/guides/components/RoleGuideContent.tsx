@@ -33,8 +33,8 @@ function TaskCard({ task, color }: { task: GuideTask; color: string }) {
             <CheckSquare size={14} style={{ color }} />
           </div>
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#1E293B' }}>{task.title}</p>
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>{task.description}</p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--izou-text)' }}>{task.title}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>{task.description}</p>
           </div>
         </div>
         <ChevronDown
@@ -61,7 +61,7 @@ function TaskCard({ task, color }: { task: GuideTask; color: string }) {
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs leading-relaxed" style={{ color: '#374151' }}>{step.action}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-text)' }}>{step.action}</p>
                   <Link
                     href={step.href}
                     className="inline-flex items-center gap-1 text-xs font-medium mt-0.5 hover:underline"
@@ -84,9 +84,9 @@ function TaskCard({ task, color }: { task: GuideTask; color: string }) {
 
 function TipCard({ tip }: { tip: GuideTip }) {
   const config = {
-    tip: { icon: Lightbulb, bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', iconColor: '#2563EB' },
-    warning: { icon: AlertTriangle, bg: '#FFF7ED', border: '#FED7AA', text: '#92400E', iconColor: '#D97706' },
-    info: { icon: Info, bg: '#F0FDF4', border: '#BBF7D0', text: '#065F46', iconColor: '#059669' },
+    tip: { icon: Lightbulb, bg: 'var(--izou-secondary-light)', border: 'var(--izou-border)', text: 'var(--izou-secondary)', iconColor: 'var(--izou-secondary)' },
+    warning: { icon: AlertTriangle, bg: 'var(--izou-warning-light)', border: 'var(--izou-warning-light)', text: 'var(--izou-warning)', iconColor: 'var(--izou-warning)' },
+    info: { icon: Info, bg: 'var(--izou-success-light)', border: 'var(--izou-success-light)', text: 'var(--izou-success)', iconColor: 'var(--izou-success)' },
   }[tip.type];
 
   const TipIcon = config.icon;
@@ -110,7 +110,7 @@ function ModuleRow({ mod, color }: { mod: GuideModule; color: string }) {
     <Link
       href={mod.href}
       className="flex items-start gap-3 p-3 rounded-xl transition-all duration-150 group"
-      style={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)' }}
+      style={{ backgroundColor: 'var(--izou-card)', border: '1px solid rgba(0,0,0,0.06)' }}
       onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = color + '40'; }}
       onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,0,0,0.06)'; }}
     >
@@ -121,11 +121,11 @@ function ModuleRow({ mod, color }: { mod: GuideModule; color: string }) {
         <ModIcon size={15} style={{ color }} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: '#1E293B' }}>
+        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--izou-text)' }}>
           {mod.label}
           <ChevronRight size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color }} />
         </p>
-        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#64748B' }}>{mod.why}</p>
+        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>{mod.why}</p>
       </div>
     </Link>
   );
@@ -144,7 +144,7 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F0F7FF' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--izou-bg)' }}>
       {/* Header */}
       <div className="px-6 py-10" style={{ background: guide.bg }}>
         <div className="max-w-4xl mx-auto">
@@ -213,7 +213,7 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
         {/* Tabs */}
         <div
           className="flex gap-1 p-1 rounded-xl mb-6"
-          style={{ backgroundColor: '#E2E8F0' }}
+          style={{ backgroundColor: 'var(--izou-border)' }}
         >
           {tabs.map((tab) => (
             <button
@@ -223,7 +223,7 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
               style={
                 activeSection === tab.key
                   ? { backgroundColor: '#FFFFFF', color: guide.color, boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
-                  : { color: '#64748B' }
+                  : { color: 'var(--izou-muted)' }
               }
             >
               {tab.label}
@@ -232,7 +232,7 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
                 style={
                   activeSection === tab.key
                     ? { backgroundColor: guide.color + '18', color: guide.color }
-                    : { backgroundColor: '#CBD5E1', color: '#64748B' }
+                    : { backgroundColor: 'var(--izou-border)', color: 'var(--izou-muted)' }
                 }
               >
                 {tab.count}
@@ -244,7 +244,7 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
         {/* Module Map */}
         {activeSection === 'modules' && (
           <div>
-            <p className="text-xs mb-4 leading-relaxed" style={{ color: '#64748B' }}>
+            <p className="text-xs mb-4 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
               These are the modules you will use most as a {guide.role}. Click any module to navigate directly to it.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -258,7 +258,7 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
         {/* Task Walkthroughs */}
         {activeSection === 'tasks' && (
           <div>
-            <p className="text-xs mb-4 leading-relaxed" style={{ color: '#64748B' }}>
+            <p className="text-xs mb-4 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
               Step-by-step walkthroughs for the core tasks you perform as a {guide.role}. Click any task to expand the steps.
             </p>
             <div className="space-y-3">
@@ -272,7 +272,7 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
         {/* Tips & Watchouts */}
         {activeSection === 'tips' && (
           <div>
-            <p className="text-xs mb-4 leading-relaxed" style={{ color: '#64748B' }}>
+            <p className="text-xs mb-4 leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
               Key tips, SLA watchouts, and common pitfalls specific to the {guide.role} role.
             </p>
             <div className="space-y-3">
@@ -286,10 +286,10 @@ export default function RoleGuideContent({ guide }: { guide: RoleGuide }) {
         {/* Footer */}
         <div
           className="mt-8 flex items-start gap-3 p-4 rounded-xl"
-          style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}
+          style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}
         >
-          <BookOpen size={15} style={{ color: '#2563EB', marginTop: 1, flexShrink: 0 }} />
-          <p className="text-xs leading-relaxed" style={{ color: '#1D4ED8' }}>
+          <BookOpen size={15} style={{ color: 'var(--izou-secondary)', marginTop: 1, flexShrink: 0 }} />
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-secondary)' }}>
             <strong>Need the full module guide?</strong>{' '}
             <Link href="/onboarding-guide" className="underline font-semibold">
               Visit the Onboarding Guide

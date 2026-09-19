@@ -56,12 +56,12 @@ interface SummaryKPI {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const COLLATERAL_COLORS: Record<string, string> = {
-  mortgage: '#2563eb',
-  debenture: '#7c3aed',
-  motorVehicle: '#0891b2',
-  shares: '#16a34a',
-  fdr: '#d97706',
-  guarantee: '#be185d',
+  mortgage: 'var(--izou-secondary)',
+  debenture: 'var(--izou-highlight)',
+  motorVehicle: 'var(--izou-secondary-mid)',
+  shares: 'var(--izou-success)',
+  fdr: 'var(--izou-warning)',
+  guarantee: 'var(--izou-danger)',
 };
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -339,7 +339,7 @@ function KPIStat({ label, value, delta, direction, good }: SummaryKPI) {
 const ForecastDot = (props: any) => {
   const { cx, cy, payload } = props;
   if (!payload?.forecast) return null;
-  return <circle cx={cx} cy={cy} r={3} fill="#94a3b8" stroke="#64748b" strokeWidth={1} strokeDasharray="2 2" />;
+  return <circle cx={cx} cy={cy} r={3} fill="var(--izou-border)" stroke="var(--izou-muted)" strokeWidth={1} strokeDasharray="2 2" />;
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -514,16 +514,16 @@ export default function CohortAnalyticsContent() {
             >
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={perfTrends} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'var(--izou-muted)' }}
                     tickLine={false}
                     axisLine={false}
                   />
                   <YAxis
                     domain={[0, 100]}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'var(--izou-muted)' }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(v) => `${v}%`}
@@ -534,10 +534,10 @@ export default function CohortAnalyticsContent() {
                       const point = perfTrends.find(p => p.month === label);
                       return point?.forecast ? `${label} (Projected — linear estimate)` : label;
                     }}
-                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--izou-border)' }}
                   />
-                  <ReferenceLine y={80} stroke="#dc2626" strokeDasharray="4 4" strokeWidth={1.5}
-                    label={{ value: '80% target', position: 'insideTopRight', fontSize: 10, fill: '#dc2626' }} />
+                  <ReferenceLine y={80} stroke="var(--izou-danger)" strokeDasharray="4 4" strokeWidth={1.5}
+                    label={{ value: '80% target', position: 'insideTopRight', fontSize: 10, fill: 'var(--izou-danger)' }} />
                   {Object.entries(COLLATERAL_COLORS).map(([key, color]) =>
                     activeTypes.has(key) ? (
                       <Line
@@ -595,11 +595,11 @@ export default function CohortAnalyticsContent() {
                     layout="vertical"
                     margin={{ top: 0, right: 40, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" horizontal={false} />
                     <XAxis
                       type="number"
                       domain={[0, 100]}
-                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      tick={{ fontSize: 10, fill: 'var(--izou-muted)' }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(v) => `${v}%`}
@@ -607,7 +607,7 @@ export default function CohortAnalyticsContent() {
                     <YAxis
                       type="category"
                       dataKey="officer"
-                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      tick={{ fontSize: 10, fill: 'var(--izou-muted)' }}
                       tickLine={false}
                       axisLine={false}
                       width={72}
@@ -617,14 +617,14 @@ export default function CohortAnalyticsContent() {
                         name === 'rate' ? `${v}%` : v,
                         name === 'rate' ? 'Perfection Rate' : 'Total Items',
                       ]}
-                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--izou-border)' }}
                     />
-                    <ReferenceLine x={80} stroke="#dc2626" strokeDasharray="4 4" strokeWidth={1.5} />
+                    <ReferenceLine x={80} stroke="var(--izou-danger)" strokeDasharray="4 4" strokeWidth={1.5} />
                     <Bar dataKey="rate" radius={[0, 4, 4, 0]} maxBarSize={18}>
                       {officerPerf.map((entry) => (
                         <rect
                           key={entry.officer}
-                          fill={entry.rate >= 80 ? '#16a34a' : entry.rate >= 60 ? '#d97706' : '#dc2626'}
+                          fill={entry.rate >= 80 ? 'var(--izou-success)' : entry.rate >= 60 ? 'var(--izou-warning)' : 'var(--izou-danger)'}
                         />
                       ))}
                     </Bar>
@@ -670,28 +670,28 @@ export default function CohortAnalyticsContent() {
                   <AreaChart data={ltvDrift} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="ltvP90" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#dc2626" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
+                        <stop offset="5%" stopColor="var(--izou-danger)" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="var(--izou-danger)" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="ltvP75" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#d97706" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#d97706" stopOpacity={0} />
+                        <stop offset="5%" stopColor="var(--izou-warning)" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="var(--izou-warning)" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="ltvAvg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                        <stop offset="5%" stopColor="var(--izou-secondary)" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="var(--izou-secondary)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                     <XAxis
                       dataKey="month"
-                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      tick={{ fontSize: 10, fill: 'var(--izou-muted)' }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <YAxis
                       domain={[0.4, 1.0]}
-                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      tick={{ fontSize: 10, fill: 'var(--izou-muted)' }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={ltvPct}
@@ -705,15 +705,15 @@ export default function CohortAnalyticsContent() {
                         const point = ltvDrift.find(p => p.month === label);
                         return point?.forecast ? `${label} (Projected — linear estimate)` : label;
                       }}
-                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--izou-border)' }}
                     />
-                    <ReferenceLine y={0.80} stroke="#dc2626" strokeDasharray="4 4" strokeWidth={1.5}
-                      label={{ value: '80% limit', position: 'insideTopRight', fontSize: 10, fill: '#dc2626' }} />
-                    <Area type="monotone" dataKey="p90LTV" stroke="#dc2626" strokeWidth={1.5}
+                    <ReferenceLine y={0.80} stroke="var(--izou-danger)" strokeDasharray="4 4" strokeWidth={1.5}
+                      label={{ value: '80% limit', position: 'insideTopRight', fontSize: 10, fill: 'var(--izou-danger)' }} />
+                    <Area type="monotone" dataKey="p90LTV" stroke="var(--izou-danger)" strokeWidth={1.5}
                       fill="url(#ltvP90)" strokeDasharray="4 3" dot={false} />
-                    <Area type="monotone" dataKey="p75LTV" stroke="#d97706" strokeWidth={1.5}
+                    <Area type="monotone" dataKey="p75LTV" stroke="var(--izou-warning)" strokeWidth={1.5}
                       fill="url(#ltvP75)" strokeDasharray="4 3" dot={false} />
-                    <Area type="monotone" dataKey="avgLTV" stroke="#2563eb" strokeWidth={2}
+                    <Area type="monotone" dataKey="avgLTV" stroke="var(--izou-secondary)" strokeWidth={2}
                       fill="url(#ltvAvg)" dot={false} activeDot={{ r: 4 }} />
                   </AreaChart>
                 </ResponsiveContainer>
