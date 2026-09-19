@@ -4,6 +4,7 @@ import { Zap, Star, RefreshCw, User, Search, Copy, CheckCircle2, AlertCircle, Ar
 import { obligorService, type Obligor } from '@/lib/supabase/obligorService';
 import { obligorTierService } from '@/lib/supabase/obligorTierService';
 import { createClient } from '@/lib/supabase/client';
+import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -212,6 +213,8 @@ function TierEditModal({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FastTrackContent() {
+  const { hasPermission } = usePermissions();
+  const canEdit = hasPermission(PERMISSIONS.COLLATERAL_EDIT);
   const [search, setSearch] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -263,7 +266,7 @@ export default function FastTrackContent() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleTierSave = async (tier: CustomerTier, reason: string) => {
-    if (!selectedCustomer) return;
+    if (!selectedCustomer || !canEdit) return;
 
     // Find the obligor id from the obligor code
     const supabase = createClient();
@@ -404,13 +407,15 @@ export default function FastTrackContent() {
                     <p className="text-xs text-muted-foreground">{selectedCustomer.id} · {selectedCustomer.reason}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setEditingTier(true)}
-                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-600 rounded-lg bg-white border border-border text-foreground hover:bg-muted transition-colors"
-                    >
-                      <Star size={12} />
-                      Edit Tier
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => setEditingTier(true)}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-600 rounded-lg bg-white border border-border text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Star size={12} />
+                        Edit Tier
+                      </button>
+                    )}
                     {isFastTrack && selectedCustomer.lastCollateralType && (
                       <button
                         onClick={handleClone}
