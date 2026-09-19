@@ -211,6 +211,47 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Filter by year, stage, BOT status, or priority to find a specific review',
     ],
   },
+  '/user-management': {
+    title: 'User Management',
+    narrative: 'User Management covers the full user lifecycle across four tabs: creating and deactivating accounts, assigning roles, editing what each role is allowed to do, controlling which screens appear in the sidebar per role, and enabling two-factor authentication.',
+    steps: [
+      'Users tab: add, edit, or deactivate accounts and assign a role — role list is loaded live, not hardcoded',
+      'Roles & Permissions tab (requires Roles permission): create custom roles and choose exactly which permissions each role grants — this is what actually gates access throughout the app',
+      'Screen Access tab: choose which screens appear in the sidebar for each role via the View column; the other action columns are recorded for reference but don\'t yet gate individual buttons within a screen',
+      'Two-Factor Auth tab: enable SMS-based 2FA for your own account',
+    ],
+  },
+  '/client-bank-accounts': {
+    title: 'Client Bank Accounts',
+    narrative: "Client Bank Accounts manages white-label deployments of this platform for different bank clients — each one's own Supabase project, branding (logo, colors, tagline), and admin contact. This is a vendor/deployment management screen, not a record of a bank's own financial accounts.",
+    steps: [
+      'Add a deployment with its bank name, Supabase project URL/key, and branding — the live preview shows how the login screen will look',
+      'Only update the Supabase URL/key fields if you\'re actually pointing this deployment at a different project',
+      'Toggle a deployment Active/Inactive to track which client banks are currently live',
+      'Search or filter by status to find a specific deployment',
+    ],
+  },
+  '/scheduled-jobs': {
+    title: 'Scheduled Batch Release Jobs',
+    narrative: 'This page combines two independent automations. Scheduled Batch Release Jobs releases collateral whose registry charge is already confirmed discharged, on a schedule or on demand. The Workflow Trigger Processor panel above it is a separate system that auto-initiates workflow instances when trigger rule conditions match.',
+    steps: [
+      'Batch release jobs only release items with a matching charge_registry entry the registry has confirmed discharged — there\'s no reliable "days since loan closure" signal to filter on otherwise, so that criterion was deliberately left out',
+      'Click Run Now to validate and immediately run a job — the validation panel shows exactly how many real items are eligible before anything is released',
+      'Turning off "Require Discharge Number" releases items with no registry confirmation on file — not recommended',
+      'A separate hourly job checks each active schedule\'s configured time and day automatically; Run Now doesn\'t wait for that',
+      'Use the Workflow Trigger Processor\'s own Run Now to manually fire trigger-rule evaluation and see per-rule match/creation counts',
+    ],
+  },
+  '/settings': {
+    title: 'System Settings',
+    narrative: 'System Settings is organized into four groups: Reference Data (document types, required documents, collateral types, registries), Integrations (email provider), Notifications (preferences and templates), and Advanced (bank details, BRELA API config, thresholds, retention policies) — most of Advanced requires Settings Manage permission.',
+    steps: [
+      'Reference Data controls the dropdown options and requirements used throughout the app — e.g. which documents are mandatory per collateral type',
+      'Email Provider lets you configure and test-send via your SMTP/API provider before saving',
+      'Notification Preferences and Email Templates control what automated emails say and who gets them',
+      'Advanced holds bank identity details, BRELA API endpoint configuration, system-wide alert thresholds, and document retention periods — changes here affect the whole platform',
+    ],
+  },
   '/archive/disposal-queue': {
     title: 'Disposal Queue',
     narrative: "Disposal Queue lists physical collateral documents whose retention period has elapsed since their collateral was released — each document type's retention period is set in Settings, and the clock starts once a Release Request is approved. Items appear here automatically; nothing is ever deleted without an explicit, reasoned approval.",
