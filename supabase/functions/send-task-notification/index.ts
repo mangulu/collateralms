@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
-
-declare const Deno: { env: { get(key: string): string | undefined } };
+import { fetchEmailProviderConfig, sendEmailViaProvider } from "../_shared/emailProvider.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -25,9 +24,6 @@ serve(async (req) => {
       collateralId,
       type, // 'assignment' | 'deadline'
     } = await req.json();
-
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
 
     const isDeadline = type === "deadline";
     const subject = isDeadline
@@ -134,23 +130,10 @@ serve(async (req) => {
 </body>
 </html>`;
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "onboarding@resend.dev",
-        to: assigneeEmail,
-        subject,
-        html: htmlBody,
-      }),
-    });
+    const config = await fetchEmailProviderConfig();
+    const result = await sendEmailViaProvider(config, { to: assigneeEmail, subject, html: htmlBody });
 
-    const result = await res.json();
-
-    return new Response(JSON.stringify({ success: res.ok, result }), {
+    return new Response(JSON.stringify({ success: result.success, result }), {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     });
   } catch (error) {

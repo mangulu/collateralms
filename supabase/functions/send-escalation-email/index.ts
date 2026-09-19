@@ -1,10 +1,5 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
-
-declare const Deno: {
-  env: {
-    get(key: string): string | undefined;
-  };
-};
+import { fetchEmailProviderConfig, sendEmailViaProvider } from "../_shared/emailProvider.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -30,11 +25,6 @@ serve(async (req) => {
       slaHours,
       comment,
     } = await req.json();
-
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not configured");
-    }
 
     const recipients: Array<{ name: string; email: string }> = Array.isArray(to) ? to : [to];
 
@@ -169,23 +159,12 @@ serve(async (req) => {
       ? `🚨 Payment Hold + Escalation: ${stepName} — ${workflowName}`
       : `⚠️ Escalation Alert: ${stepName} — ${workflowName}`;
 
+    const config = await fetchEmailProviderConfig();
+
     const sendResults = await Promise.all(
       recipients.map(async (recipient) => {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${RESEND_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "onboarding@resend.dev",
-            to: recipient.email,
-            subject,
-            html: htmlBody,
-          }),
-        });
-        const result = await res.json();
-        return { email: recipient.email, success: res.ok, result };
+        const result = await sendEmailViaProvider(config, { to: recipient.email, subject, html: htmlBody });
+        return { email: recipient.email, success: result.success, result };
       })
     );
 
