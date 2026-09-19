@@ -197,7 +197,7 @@ export const releaseRequestService = {
       // Fetch current record for audit trail + collateral lookup
       const { data: current } = await supabase
         .from('release_requests')
-        .select('request_status, collateral_ref, client_name, collateral_record_id')
+        .select('request_status, collateral_ref, client_name')
         .eq('id', id)
         .maybeSingle();
 
