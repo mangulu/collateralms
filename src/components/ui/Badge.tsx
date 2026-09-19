@@ -15,11 +15,11 @@ const variantMap: Record<BadgeVariant, string> = {
   submitted: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
 };
 
-// Dynamic class for 'released' to use IZOU primary color
+// Dynamic class for 'released' to use the IZOU brand primary color
 const releasedStyle = {
-  backgroundColor: 'rgba(0,169,224,0.1)',
-  color: '#007CB3',
-  borderColor: 'rgba(0,169,224,0.25)',
+  backgroundColor: 'var(--izou-primary-tint)',
+  color: 'var(--izou-primary-dark)',
+  borderColor: 'var(--izou-primary-tint)',
 };
 
 interface BadgeProps {

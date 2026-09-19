@@ -359,11 +359,11 @@ export default function GlobalSearch() {
         className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm w-full max-w-xs transition-all"
         style={{
           backgroundColor: 'var(--izou-primary-light)',
-          border: '1px solid rgba(0,169,224,0.2)',
+          border: '1px solid rgba(236,30,39,0.2)',
           color: 'var(--izou-muted)',
         }}
-        onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.4)'; }}
-        onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.2)'; }}
+        onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,30,39,0.4)'; }}
+        onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,30,39,0.2)'; }}
       >
         <Search size={14} />
         <span className="flex-1 text-left">Search everything…</span>
@@ -456,7 +456,7 @@ export default function GlobalSearch() {
                           }}
                           onMouseOver={(e) => {
                             (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
-                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.3)';
+                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,30,39,0.3)';
                           }}
                           onMouseOut={(e) => {
                             (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
@@ -506,7 +506,7 @@ export default function GlobalSearch() {
                           style={{ border: '1px solid var(--izou-border)' }}
                           onMouseOver={(e) => {
                             (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
-                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,169,224,0.3)';
+                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,30,39,0.3)';
                           }}
                           onMouseOut={(e) => {
                             (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';

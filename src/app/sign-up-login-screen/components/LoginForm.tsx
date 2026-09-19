@@ -251,7 +251,7 @@ export default function LoginForm() {
           }}
         >
           <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
-          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(236,30,39,0.18)' }} />
           <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-8 py-12">
             <div className="text-center">
               {/* Large centered logo with glowing circle border */}
@@ -264,7 +264,7 @@ export default function LoginForm() {
                     background: 'rgba(255,255,255,0.08)',
                     border: '3px solid transparent',
                     backgroundClip: 'padding-box',
-                    boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(53,200,243,0.55), 0 0 64px 16px rgba(0,169,224,0.35)',
+                    boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(236,30,39,0.45), 0 0 64px 16px rgba(192,22,30,0.35)',
                     backdropFilter: 'blur(8px)',
                   }}
                 >
@@ -375,7 +375,7 @@ export default function LoginForm() {
         >
           {/* Decorative blobs */}
           <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} aria-hidden="true" />
-          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} aria-hidden="true" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(236,30,39,0.18)' }} aria-hidden="true" />
           {/* Decorative lines */}
           <svg className="pointer-events-none absolute bottom-0 left-0 h-[55%] w-[70%] text-white/20" viewBox="0 0 400 320" fill="none" preserveAspectRatio="xMinYMax slice" aria-hidden="true">
             <path d="M-20 280 C 60 220, 140 240, 200 200 C 260 160, 300 180, 380 120" stroke="currentColor" strokeWidth="1.5" />
@@ -397,7 +397,7 @@ export default function LoginForm() {
                       background: 'rgba(255,255,255,0.08)',
                       border: '3px solid transparent',
                       backgroundClip: 'padding-box',
-                      boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(53,200,243,0.55), 0 0 64px 16px rgba(0,169,224,0.35)',
+                      boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(236,30,39,0.45), 0 0 64px 16px rgba(192,22,30,0.35)',
                       backdropFilter: 'blur(8px)',
                     }}
                   >
@@ -451,7 +451,7 @@ export default function LoginForm() {
               width: 80,
               height: 80,
               background: 'rgba(255,255,255,0.08)',
-              boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 20px 4px rgba(53,200,243,0.55)',
+              boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 20px 4px rgba(236,30,39,0.45)',
               backdropFilter: 'blur(8px)',
             }}
           >

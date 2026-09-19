@@ -70,10 +70,12 @@ function fmtPct(v: number): string {
 }
 
 function computeScenario(portfolio: StressPortfolioPosition[], decline: 10 | 20 | 30): ScenarioResult {
+  // Note: colors stay literal hex (not CSS vars) — they're read straight into
+  // Recharts `fill`/`stroke` props and interpolated into rgba() bgColor strings below.
   const colors = {
-    10: { color: '#D97706', bgColor: 'rgba(217,119,6,0.06)', borderColor: '#D97706' },
-    20: { color: '#EA580C', bgColor: 'rgba(234,88,12,0.06)', borderColor: '#EA580C' },
-    30: { color: '#DC2626', bgColor: 'rgba(220,38,38,0.06)', borderColor: '#DC2626' },
+    10: { color: '#B45309', bgColor: 'rgba(180,83,9,0.06)', borderColor: '#B45309' },
+    20: { color: '#B63A15', bgColor: 'rgba(182,58,21,0.06)', borderColor: '#B63A15' },
+    30: { color: '#B91C1C', bgColor: 'rgba(185,28,28,0.06)', borderColor: '#B91C1C' },
   };
 
   const positions = portfolio.map(p => {
@@ -202,7 +204,7 @@ export default function StressSimulatorContent() {
   const valueChartData = useMemo(() => {
     if (scenarios.length === 0) return [];
     return [
-      { name: 'Current', value: scenarios[0].summary.totalOriginalValue, fill: '#007CB3' },
+      { name: 'Current', value: scenarios[0].summary.totalOriginalValue, fill: 'var(--izou-secondary)' },
       ...scenarios.map(s => ({
         name: s.label,
         value: s.summary.totalStressedValue,
@@ -456,7 +458,7 @@ export default function StressSimulatorContent() {
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={valueChartData} barSize={40}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis
                   tickFormatter={v => `${(v / 1e9).toFixed(1)}B`}
@@ -481,14 +483,14 @@ export default function StressSimulatorContent() {
             </div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={breachChartData} barSize={40}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis yAxisId="left" tick={{ fontSize: 11 }} width={30} />
                 <YAxis yAxisId="right" orientation="right" tickFormatter={v => `${v}B`} tick={{ fontSize: 11 }} width={40} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar yAxisId="left" dataKey="Breached Positions" fill="#DC2626" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="right" dataKey="Breach Exposure (B)" fill="#F97316" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="left" dataKey="Breached Positions" fill="var(--izou-danger)" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="Breach Exposure (B)" fill="var(--izou-warning)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -508,13 +510,13 @@ export default function StressSimulatorContent() {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={ltvChartData} margin={{ left: 0, right: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={40} />
               <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 11 }} width={45} domain={[0, 'auto']} />
               <Tooltip content={<CustomLTVTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <ReferenceLine y={75} stroke="#9CA3AF" strokeDasharray="5 5" label={{ value: 'Threshold 75%', position: 'insideTopRight', fontSize: 10, fill: '#9CA3AF' }} />
-              <Line type="monotone" dataKey="Current LTV" stroke="#007CB3" strokeWidth={2} dot={{ r: 3 }} />
+              <ReferenceLine y={75} stroke="var(--izou-muted)" strokeDasharray="5 5" label={{ value: 'Threshold 75%', position: 'insideTopRight', fontSize: 10, fill: 'var(--izou-muted)' }} />
+              <Line type="monotone" dataKey="Current LTV" stroke="var(--izou-secondary)" strokeWidth={2} dot={{ r: 3 }} />
               {activeScenarioList.map(s => (
                 <Line
                   key={s.decline}
@@ -606,7 +608,7 @@ export default function StressSimulatorContent() {
                         <td className="px-4 py-3 text-right font-medium text-red-700">{fmt(pos.stressedValue)}</td>
                         <td className="px-4 py-3 text-right text-gray-700">{fmt(pos.loanExposure)}</td>
                         <td className="px-4 py-3 text-right text-gray-700">{fmtPct(pos.originalLTV)}</td>
-                        <td className="px-4 py-3 text-right font-bold" style={{ color: pos.breached ? '#DC2626' : '#059669' }}>
+                        <td className="px-4 py-3 text-right font-bold" style={{ color: pos.breached ? 'var(--izou-danger)' : 'var(--izou-success)' }}>
                           {fmtPct(pos.stressedLTV)}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-500">{fmtPct(pos.ltvThreshold)}</td>
@@ -651,7 +653,7 @@ export default function StressSimulatorContent() {
                                       </div>
                                       <div className="flex justify-between">
                                         <span className="text-gray-500">Stressed LTV</span>
-                                        <span className="font-bold" style={{ color: sp.breached ? '#DC2626' : '#059669' }}>
+                                        <span className="font-bold" style={{ color: sp.breached ? 'var(--izou-danger)' : 'var(--izou-success)' }}>
                                           {fmtPct(sp.stressedLTV)}
                                         </span>
                                       </div>
@@ -661,7 +663,7 @@ export default function StressSimulatorContent() {
                                       </div>
                                       <div className="flex justify-between">
                                         <span className="text-gray-500">Breach Margin</span>
-                                        <span className="font-medium" style={{ color: sp.breached ? '#DC2626' : '#059669' }}>
+                                        <span className="font-medium" style={{ color: sp.breached ? 'var(--izou-danger)' : 'var(--izou-success)' }}>
                                           {sp.breached ? `+${fmtPct(sp.breachMargin)}` : 'Within limit'}
                                         </span>
                                       </div>

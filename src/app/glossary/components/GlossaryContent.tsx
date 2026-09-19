@@ -328,11 +328,11 @@ const CATEGORIES = ['All', 'Financial', 'Legal', 'Workflow', 'Risk & Compliance'
 type CategoryFilter = typeof CATEGORIES[number];
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  Financial: { bg: '#e8f8fd', text: '#007CB3', border: '#9be1f7' },
-  Legal: { bg: '#F5F3FF', text: '#7C3AED', border: '#DDD6FE' },
-  Workflow: { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0' },
-  'Risk & Compliance': { bg: '#FFF1F2', text: '#E11D48', border: '#FECDD3' },
-  'Archive & Custody': { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A' },
+  Financial: { bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)' },
+  Legal: { bg: 'var(--izou-highlight-light)', text: 'var(--izou-highlight)', border: 'var(--izou-highlight-light)' },
+  Workflow: { bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)' },
+  'Risk & Compliance': { bg: 'var(--izou-danger-light)', text: 'var(--izou-danger)', border: 'var(--izou-danger-light)' },
+  'Archive & Custody': { bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
 };
 
 export default function GlossaryContent() {

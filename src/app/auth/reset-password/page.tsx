@@ -52,11 +52,11 @@ export default function ResetPasswordPage() {
       <div
         className="hidden lg:relative lg:flex lg:min-h-screen lg:flex-col lg:overflow-hidden"
         style={{
-          background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+          background: 'linear-gradient(155deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 55%, var(--izou-secondary-end) 100%)'
         }}
       >
         <div className="pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(53,200,243,0.2)' }} />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full blur-3xl" style={{ backgroundColor: 'rgba(236,30,39,0.18)' }} />
         <div className="relative z-10 flex flex-1 flex-col justify-center px-8 py-12 sm:px-10">
           <div className="mx-auto w-full max-w-sm">
             {/* Large centered logo with glowing circle border */}
@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
                   background: 'rgba(255,255,255,0.08)',
                   border: '3px solid transparent',
                   backgroundClip: 'padding-box',
-                  boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(53,200,243,0.55), 0 0 64px 16px rgba(0,169,224,0.35)',
+                  boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 32px 8px rgba(236,30,39,0.45), 0 0 64px 16px rgba(192,22,30,0.35)',
                   backdropFilter: 'blur(8px)',
                 }}
               >
@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
       <div
         className="lg:hidden flex flex-col items-center justify-center py-8 px-6"
         style={{
-          background: 'linear-gradient(155deg, #007CB3 0%, #008FBE 28%, #00A9E0 58%, #1AB8E6 82%, #35C8F3 100%)'
+          background: 'linear-gradient(155deg, var(--izou-secondary) 0%, var(--izou-secondary-mid) 55%, var(--izou-secondary-end) 100%)'
         }}
       >
         <div
@@ -105,7 +105,7 @@ export default function ResetPasswordPage() {
             width: 80,
             height: 80,
             background: 'rgba(255,255,255,0.08)',
-            boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 20px 4px rgba(53,200,243,0.55)',
+            boxShadow: '0 0 0 3px rgba(255,255,255,0.35), 0 0 20px 4px rgba(236,30,39,0.45)',
             backdropFilter: 'blur(8px)',
           }}
         >
@@ -127,8 +127,8 @@ export default function ResetPasswordPage() {
           >
             {success ? (
               <div className="text-center py-4">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#f0fdf4' }}>
-                  <CheckCircle2 size={28} className="text-green-600" />
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--izou-success-light)' }}>
+                  <CheckCircle2 size={28} style={{ color: 'var(--izou-success)' }} />
                 </div>
                 <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--izou-text)' }}>Password Updated</h2>
                 <p className="text-sm" style={{ color: 'var(--izou-muted)' }}>
@@ -143,9 +143,9 @@ export default function ResetPasswordPage() {
                 </div>
 
                 {error && (
-                  <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
-                    <AlertCircle size={14} className="text-red-600 shrink-0" />
-                    <p className="text-xs text-red-700">{error}</p>
+                  <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: 'var(--izou-danger-light)', border: '1px solid var(--izou-danger-light)' }}>
+                    <AlertCircle size={14} style={{ color: 'var(--izou-danger)' }} className="shrink-0" />
+                    <p className="text-xs" style={{ color: 'var(--izou-danger)' }}>{error}</p>
                   </div>
                 )}
 
@@ -160,8 +160,8 @@ export default function ResetPasswordPage() {
                         placeholder="Minimum 8 characters"
                         className="w-full rounded-xl px-3.5 pr-10 text-sm outline-none transition h-12 focus:ring-2"
                         style={{
-                          border: errors.password ? '1px solid #dc2626' : '1px solid var(--izou-border)',
-                          backgroundColor: 'var(--izou-primary-light)',
+                          border: errors.password ? '1px solid var(--izou-danger)' : '1px solid var(--izou-border)',
+                          backgroundColor: 'var(--izou-field-bg)',
                           color: 'var(--izou-text)',
                         }}
                         {...register('password', {
@@ -200,8 +200,8 @@ export default function ResetPasswordPage() {
                         placeholder="Re-enter your password"
                         className="w-full rounded-xl px-3.5 pr-10 text-sm outline-none transition h-12 focus:ring-2"
                         style={{
-                          border: errors.confirmPassword ? '1px solid #dc2626' : '1px solid var(--izou-border)',
-                          backgroundColor: 'var(--izou-primary-light)',
+                          border: errors.confirmPassword ? '1px solid var(--izou-danger)' : '1px solid var(--izou-border)',
+                          backgroundColor: 'var(--izou-field-bg)',
                           color: 'var(--izou-text)',
                         }}
                         {...register('confirmPassword', {

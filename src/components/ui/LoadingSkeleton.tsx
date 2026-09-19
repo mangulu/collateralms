@@ -8,7 +8,7 @@ export function Skeleton({ className = '' }: SkeletonProps) {
   return (
     <div
       className={`animate-pulse rounded-lg ${className}`}
-      style={{ backgroundColor: 'rgba(0,169,224,0.08)' }}
+      style={{ backgroundColor: 'var(--izou-skeleton)' }}
     />
   );
 }
@@ -48,7 +48,7 @@ export function ChartSkeleton({ height = 280 }: { height?: number }) {
   return (
     <div
       className="animate-pulse rounded-xl w-full"
-      style={{ height, backgroundColor: 'rgba(0,169,224,0.08)' }}
+      style={{ height, backgroundColor: 'var(--izou-skeleton)' }}
     />
   );
 }

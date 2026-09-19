@@ -38,13 +38,13 @@ interface SectionCardProps {
 
 function SectionCard({ icon: Icon, title, subtitle, status, children }: SectionCardProps) {
   const statusStyles = {
-    ready: 'border-l-[#007CB3] bg-white',
+    ready: 'border-l-[var(--izou-secondary-mid)] bg-white',
     ok: 'border-l-emerald-500 bg-white',
     warning: 'border-l-amber-500 bg-white',
     critical: 'border-l-red-600 bg-white',
   };
   const badgeStyles = {
-    ready: 'bg-blue-50 text-[#007CB3]',
+    ready: 'bg-blue-50 text-[var(--izou-secondary-mid)]',
     ok: 'bg-emerald-50 text-emerald-700',
     warning: 'bg-amber-50 text-amber-700',
     critical: 'bg-red-50 text-red-700',
@@ -55,11 +55,11 @@ function SectionCard({ icon: Icon, title, subtitle, status, children }: SectionC
     <div className={`rounded-xl border border-gray-200 border-l-4 ${statusStyles[status]} shadow-sm overflow-hidden`}>
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#0A2A4E]/8 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-[#0A2A4E]" />
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(18,33,60,0.08)' }}>
+            <Icon className="w-5 h-5 text-[var(--izou-secondary)]" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-[#0A2A4E]">{title}</p>
+            <p className="text-sm font-semibold text-[var(--izou-secondary)]">{title}</p>
             <p className="text-xs text-gray-500">{subtitle}</p>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function BoardReportBuilderContent() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Loader2 className="w-10 h-10 text-[#007CB3] animate-spin" />
+        <Loader2 className="w-10 h-10 text-[var(--izou-secondary-mid)] animate-spin" />
         <p className="text-sm text-gray-500">Loading live portfolio data…</p>
       </div>
     );
@@ -157,7 +157,7 @@ export default function BoardReportBuilderContent() {
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <AlertCircle className="w-10 h-10 text-red-500" />
         <p className="text-sm text-red-600">{error}</p>
-        <button onClick={loadData} className="text-sm text-[#007CB3] underline">Retry</button>
+        <button onClick={loadData} className="text-sm text-[var(--izou-secondary-mid)] underline">Retry</button>
       </div>
     );
   }
@@ -175,11 +175,11 @@ export default function BoardReportBuilderContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Building2 className="w-5 h-5 text-[#007CB3]" />
-            <h1 className="text-xl font-bold text-[#0A2A4E]">Board Report Builder</h1>
+            <Building2 className="w-5 h-5 text-[var(--izou-secondary-mid)]" />
+            <h1 className="text-xl font-bold text-[var(--izou-secondary)]">Board Report Builder</h1>
           </div>
           <p className="text-sm text-gray-500">
-            BOT-format PDF for board approval workflows · Period: <span className="font-semibold text-[#0A2A4E]">{data.reportPeriod}</span> · As of {fmtDate(data.reportDate)}
+            BOT-format PDF for board approval workflows · Period: <span className="font-semibold text-[var(--izou-secondary)]">{data.reportPeriod}</span> · As of {fmtDate(data.reportDate)}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -194,7 +194,7 @@ export default function BoardReportBuilderContent() {
           <button
             onClick={handleGeneratePdf}
             disabled={generating}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#0A2A4E] rounded-lg hover:bg-[#0d3566] transition-colors disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[var(--izou-secondary)] rounded-lg hover:bg-[var(--izou-secondary-mid)] transition-colors disabled:opacity-60"
           >
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             {generating ? 'Generating PDF…' : 'Generate BOT PDF'}
@@ -203,19 +203,19 @@ export default function BoardReportBuilderContent() {
       </div>
 
       {/* ── Status bar ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-[#0A2A4E]/4 rounded-xl border border-[#0A2A4E]/10">
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'rgba(18,33,60,0.04)', border: '1px solid rgba(18,33,60,0.1)' }}>
         <div className="flex items-center gap-1.5 text-xs text-gray-600">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
           <span>Live data loaded</span>
         </div>
         <span className="text-gray-300">|</span>
         <div className="flex items-center gap-1.5 text-xs text-gray-600">
-          <Calendar className="w-3.5 h-3.5 text-[#007CB3]" />
+          <Calendar className="w-3.5 h-3.5 text-[var(--izou-secondary-mid)]" />
           <span>Report period: {data.reportPeriod}</span>
         </div>
         <span className="text-gray-300">|</span>
         <div className="flex items-center gap-1.5 text-xs text-gray-600">
-          <FileText className="w-3.5 h-3.5 text-[#007CB3]" />
+          <FileText className="w-3.5 h-3.5 text-[var(--izou-secondary-mid)]" />
           <span>5 sections · 6 pages</span>
         </div>
         {lastGenerated && (
@@ -255,7 +255,7 @@ export default function BoardReportBuilderContent() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-[#0A2A4E] text-white">
+              <tr className="bg-[var(--izou-secondary)] text-white">
                 <th className="text-left px-3 py-2 rounded-tl-lg">Classification</th>
                 <th className="text-center px-3 py-2">Count</th>
                 <th className="text-right px-3 py-2">Outstanding Balance</th>
@@ -270,7 +270,7 @@ export default function BoardReportBuilderContent() {
                   <td className="px-3 py-2 text-center text-gray-600">{b.count}</td>
                   <td className="px-3 py-2 text-right text-gray-700">{fmtNum(b.outstandingBalance)}</td>
                   <td className="px-3 py-2 text-center text-gray-600">{fmtPct(b.provisionRate)}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-[#0A2A4E]">{fmtNum(b.provisionAmount)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-[var(--izou-secondary)]">{fmtNum(b.provisionAmount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -293,7 +293,7 @@ export default function BoardReportBuilderContent() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-[#0A2A4E] text-white">
+              <tr className="bg-[var(--izou-secondary)] text-white">
                 <th className="text-left px-3 py-2 rounded-tl-lg">Classification</th>
                 <th className="text-right px-3 py-2">Opening</th>
                 <th className="text-right px-3 py-2">New Provision</th>
@@ -310,7 +310,7 @@ export default function BoardReportBuilderContent() {
                   <td className="px-3 py-2 text-right text-amber-700">{fmtNum(r.newProvision)}</td>
                   <td className="px-3 py-2 text-right text-red-600">{fmtNum(r.writtenOff)}</td>
                   <td className="px-3 py-2 text-right text-emerald-600">{fmtNum(r.recoveries)}</td>
-                  <td className="px-3 py-2 text-right font-semibold text-[#0A2A4E]">{fmtNum(r.closingProvision)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-[var(--izou-secondary)]">{fmtNum(r.closingProvision)}</td>
                 </tr>
               ))}
             </tbody>
@@ -373,7 +373,7 @@ export default function BoardReportBuilderContent() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-[#0A2A4E] text-white">
+                <tr className="bg-[var(--izou-secondary)] text-white">
                   <th className="text-left px-3 py-2 rounded-tl-lg">Obligor</th>
                   <th className="text-left px-3 py-2">Collateral Type</th>
                   <th className="text-right px-3 py-2">Exposure</th>
@@ -427,7 +427,7 @@ export default function BoardReportBuilderContent() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-[#0A2A4E] text-white">
+                <tr className="bg-[var(--izou-secondary)] text-white">
                   <th className="text-left px-3 py-2 rounded-tl-lg">Flag Type</th>
                   <th className="text-center px-3 py-2">Total</th>
                   <th className="text-center px-3 py-2">Critical</th>
@@ -463,7 +463,7 @@ export default function BoardReportBuilderContent() {
       </SectionCard>
 
       {/* ── Generate CTA ────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-[#0A2A4E]/20 bg-[#0A2A4E] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ backgroundColor: 'var(--izou-secondary)', border: '1px solid rgba(255,255,255,0.15)' }}>
         <div>
           <p className="text-white font-bold text-base mb-1">Ready to generate board report</p>
           <p className="text-blue-200 text-sm">6-page BOT-format PDF · NPL Aging · Provision Reconciliation · Stress Tests · Concentration Breaches · Valuation Flags · Board Approval Block</p>
@@ -471,7 +471,7 @@ export default function BoardReportBuilderContent() {
         <button
           onClick={handleGeneratePdf}
           disabled={generating}
-          className="flex items-center gap-2 px-6 py-3 text-sm font-bold text-[#0A2A4E] bg-white rounded-xl hover:bg-blue-50 transition-colors disabled:opacity-60 whitespace-nowrap"
+          className="flex items-center gap-2 px-6 py-3 text-sm font-bold text-[var(--izou-secondary)] bg-white rounded-xl hover:bg-blue-50 transition-colors disabled:opacity-60 whitespace-nowrap"
         >
           {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           {generating ? 'Generating…' : 'Download BOT PDF'}
