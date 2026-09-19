@@ -8,28 +8,17 @@ import { toast } from 'sonner';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Only these two actions actually do anything at runtime (WorkflowInstancesContent
+// sends an escalation email when a human clicks "Escalate" on the instance) --
+// the other options this used to offer (reassign/auto_approve/auto_reject/
+// escalate_to_role/hold_payment) had no execution path at all.
 const ESCALATION_ACTIONS: { value: WorkflowEscalationAction; label: string; color: string }[] = [
   { value: 'notify_manager', label: 'Notify Manager', color: 'bg-blue-100 text-blue-700' },
-  { value: 'reassign', label: 'Reassign to Manager', color: 'bg-indigo-100 text-indigo-700' },
-  { value: 'auto_approve', label: 'Auto-Approve', color: 'bg-emerald-100 text-emerald-700' },
-  { value: 'auto_reject', label: 'Auto-Reject', color: 'bg-red-100 text-red-700' },
-  { value: 'escalate_to_role', label: 'Escalate to Role', color: 'bg-orange-100 text-orange-700' },
-  { value: 'hold_payment', label: 'Hold Payment', color: 'bg-amber-100 text-amber-700' },
-  { value: 'notify_and_hold', label: 'Notify & Hold Payment', color: 'bg-rose-100 text-rose-700' },
-];
-
-const ESCALATION_ROLES = [
-  { value: 'credit_manager', label: 'Credit Manager' },
-  { value: 'senior_officer', label: 'Senior Officer' },
-  { value: 'compliance_officer', label: 'Compliance Officer' },
-  { value: 'risk_manager', label: 'Risk Manager' },
-  { value: 'head_of_credit', label: 'Head of Credit' },
-  { value: 'ceo', label: 'CEO' },
-  { value: 'board', label: 'Board' },
+  { value: 'notify_and_hold', label: 'Notify Manager & Flag Payment for Review', color: 'bg-rose-100 text-rose-700' },
 ];
 
 function getActionMeta(action: string | null) {
-  return ESCALATION_ACTIONS.find((a) => a.value === action) ?? null;
+  return ESCALATION_ACTIONS.find((a) => a.value === action) ?? (action ? { value: action, label: action, color: 'bg-slate-100 text-slate-600' } : null);
 }
 
 // ─── Step Edit Row ────────────────────────────────────────────────────────────
@@ -43,7 +32,6 @@ interface StepEscalationEditProps {
 function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps) {
   const [slaHours, setSlaHours] = useState<string>(step.slaHours != null ? String(step.slaHours) : '');
   const [action, setAction] = useState<string>(step.escalationAction ?? '');
-  const [role, setRole] = useState<string>(step.escalationRole ?? '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -53,7 +41,7 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
         step.id,
         slaHours !== '' ? Number(slaHours) : null,
         (action as WorkflowEscalationAction) || null,
-        role || null,
+        null,
       );
     } finally {
       setSaving(false);
@@ -62,11 +50,11 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
 
   return (
     <div className="px-4 py-3 bg-orange-50 border-t border-orange-200">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         {/* SLA Hours */}
         <div>
           <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">
-            SLA Threshold (hours)
+            Reference SLA (hours)
           </label>
           <div className="relative">
             <Clock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -79,7 +67,7 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
               className="w-full text-sm border border-border rounded-lg pl-7 pr-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
-          <p className="text-[10px] text-slate-400 mt-0.5">Escalate if step not completed within this time</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Shown on the instance as a reference target — not automatically enforced. Escalation only fires when someone clicks "Escalate" on the instance.</p>
         </div>
 
         {/* Escalation Action */}
@@ -95,23 +83,6 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
             <option value="">— None —</option>
             {ESCALATION_ACTIONS.map((a) => (
               <option key={a.value} value={a.value}>{a.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Escalation Role */}
-        <div>
-          <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wide mb-1">
-            Escalate To Role
-          </label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
-          >
-            <option value="">— None —</option>
-            {ESCALATION_ROLES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
         </div>

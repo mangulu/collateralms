@@ -54,35 +54,27 @@ const CONDITION_OPERATOR_LABELS: Record<WorkflowConditionOperator, string> = {
   is_not_empty: 'is not empty',
 };
 
-const ESCALATION_ACTION_LABELS: Record<WorkflowEscalationAction, string> = {
+// Only these two actions actually do anything at runtime -- escalation only
+// ever fires when a human clicks "Escalate" on the instance, which sends a
+// notification email. reassign/auto_approve/auto_reject/escalate_to_role/
+// hold_payment used to be offered here but had no execution path at all
+// (hold_payment never set any hold flag despite the UI claiming it would).
+const ESCALATION_ACTION_LABELS: Partial<Record<WorkflowEscalationAction, string>> = {
   notify_manager: 'Notify Manager',
-  reassign: 'Reassign to Manager',
-  auto_approve: 'Auto-Approve',
-  auto_reject: 'Auto-Reject',
-  escalate_to_role: 'Escalate to Role',
-  hold_payment: 'Hold Payment',
-  notify_and_hold: 'Notify & Hold Payment',
+  notify_and_hold: 'Notify Manager & Flag Payment for Review',
 };
 
-const ESCALATION_ACTION_DESCRIPTIONS: Record<WorkflowEscalationAction, string> = {
+const ESCALATION_ACTION_DESCRIPTIONS: Partial<Record<WorkflowEscalationAction, string>> = {
   notify_manager: 'Send an alert to the manager when the step is idle',
-  reassign: 'Automatically move the task to the manager for action',
-  auto_approve: 'Automatically approve and advance to the next step',
-  auto_reject: 'Automatically reject and cancel the workflow',
-  escalate_to_role: 'Reassign the step to a specific role',
-  hold_payment: 'Place a hold on any pending payment until resolved',
-  notify_and_hold: 'Notify the manager AND hold any pending payment',
+  notify_and_hold: 'Send an alert to the manager and flag the payment for manual review (does not place an automatic hold)',
 };
 
-const ESCALATION_ACTION_ICONS: Record<WorkflowEscalationAction, React.ReactNode> = {
+const ESCALATION_ACTION_ICONS: Partial<Record<WorkflowEscalationAction, React.ReactNode>> = {
   notify_manager: <Bell size={13} className="text-blue-500" />,
-  reassign: <UserCheck size={13} className="text-indigo-500" />,
-  auto_approve: <ShieldAlert size={13} className="text-green-500" />,
-  auto_reject: <ShieldAlert size={13} className="text-red-500" />,
-  escalate_to_role: <UserCheck size={13} className="text-violet-500" />,
-  hold_payment: <CreditCard size={13} className="text-rose-500" />,
   notify_and_hold: <CreditCard size={13} className="text-amber-500" />,
 };
+
+const ESCALATION_ACTIONS_AVAILABLE = Object.keys(ESCALATION_ACTION_LABELS) as WorkflowEscalationAction[];
 
 const AVAILABLE_ROLES = [
   { value: 'credit_officer', label: 'Credit Officer' },
@@ -139,7 +131,6 @@ interface EscalationPanelProps {
 }
 
 function EscalationPanel({ step, onChange }: EscalationPanelProps) {
-  const needsRole = step.escalationAction === 'escalate_to_role' || step.escalationAction === 'reassign';
   const needsNotifyRoles = step.escalationAction === 'notify_manager' || step.escalationAction === 'notify_and_hold';
 
   function toggleNotifyRole(role: string) {
@@ -177,7 +168,7 @@ function EscalationPanel({ step, onChange }: EscalationPanelProps) {
         <div>
           <label className="block text-xs font-600 text-foreground mb-2">What should happen when SLA is breached?</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {(Object.keys(ESCALATION_ACTION_LABELS) as WorkflowEscalationAction[]).map((action) => (
+            {ESCALATION_ACTIONS_AVAILABLE.map((action) => (
               <button
                 key={action}
                 type="button"
@@ -221,26 +212,6 @@ function EscalationPanel({ step, onChange }: EscalationPanelProps) {
           </div>
         </div>
 
-        {/* Conditional: Role picker for reassign / escalate_to_role */}
-        {needsRole && (
-          <div>
-            <label className="block text-xs font-600 text-foreground mb-1.5">
-              {step.escalationAction === 'reassign' ? 'Reassign to which role?' : 'Escalate to which role?'}
-            </label>
-            <select
-              value={step.escalationRole ?? ''}
-              onChange={(e) => onChange({ ...step, escalationRole: e.target.value || null })}
-              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-            >
-              <option value="">Select a role</option>
-              {AVAILABLE_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-            {!step.escalationRole && (
-              <p className="text-[10px] text-amber-600 mt-1">Please select a role to complete this escalation rule.</p>
-            )}
-          </div>
-        )}
-
         {/* Conditional: Notify roles for notify_manager / notify_and_hold */}
         {needsNotifyRoles && (
           <div>
@@ -272,15 +243,6 @@ function EscalationPanel({ step, onChange }: EscalationPanelProps) {
           </div>
         )}
 
-        {/* hold_payment info */}
-        {(step.escalationAction === 'hold_payment' || step.escalationAction === 'notify_and_hold') && (
-          <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-100 rounded-lg">
-            <CreditCard size={12} className="text-rose-500 mt-0.5 shrink-0" />
-            <p className="text-[10px] text-rose-700 leading-relaxed">
-              A payment hold flag will be set on the associated collateral record. The hold is automatically lifted when this step is approved or the workflow is completed.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -346,7 +308,7 @@ function StepEditor({ step, index, total, onChange, onMoveUp, onMoveDown, onDele
   const escalationBadge = step.escalationAction && step.slaHours ? (
     <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-600 border border-amber-200 flex items-center gap-1">
       <Clock size={9} />
-      {step.slaHours}h → {ESCALATION_ACTION_LABELS[step.escalationAction]}
+      {step.slaHours}h → {ESCALATION_ACTION_LABELS[step.escalationAction] ?? step.escalationAction}
     </span>
   ) : null;
 
