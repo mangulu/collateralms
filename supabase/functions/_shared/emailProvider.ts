@@ -16,7 +16,7 @@
 
 declare const Deno: { env: { get(key: string): string | undefined } };
 
-export type EmailProviderType = 'resend' | 'sendgrid' | 'brevo';
+export type EmailProviderType = 'resend' | 'sendgrid' | 'brevo' | 'microsoft365';
 
 export interface EmailProviderConfig {
   activeProvider: EmailProviderType;
@@ -26,6 +26,10 @@ export interface EmailProviderConfig {
   sendgridFromEmail?: string | null;
   brevoApiKey?: string | null;
   brevoFromEmail?: string | null;
+  microsoft365TenantId?: string | null;
+  microsoft365ClientId?: string | null;
+  microsoft365ClientSecret?: string | null;
+  microsoft365FromEmail?: string | null;
 }
 
 export interface SendEmailParams {
@@ -62,6 +66,10 @@ export async function fetchEmailProviderConfig(): Promise<EmailProviderConfig | 
       sendgridFromEmail: row.sendgrid_from_email,
       brevoApiKey: row.brevo_api_key,
       brevoFromEmail: row.brevo_from_email,
+      microsoft365TenantId: row.microsoft365_tenant_id,
+      microsoft365ClientId: row.microsoft365_client_id,
+      microsoft365ClientSecret: row.microsoft365_client_secret,
+      microsoft365FromEmail: row.microsoft365_from_email,
     };
   } catch {
     return null;
@@ -114,6 +122,50 @@ async function sendViaBrevo(apiKey: string, from: string, params: SendEmailParam
     : { success: false, error: result?.message ?? `Brevo error ${res.status}` };
 }
 
+async function getMicrosoftGraphToken(tenantId: string, clientId: string, clientSecret: string): Promise<string | null> {
+  const res = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: 'https://graph.microsoft.com/.default',
+    }),
+  });
+  if (!res.ok) return null;
+  const result = await res.json().catch(() => ({}));
+  return result?.access_token ?? null;
+}
+
+async function sendViaMicrosoft365(
+  tenantId: string,
+  clientId: string,
+  clientSecret: string,
+  from: string,
+  params: SendEmailParams
+): Promise<SendEmailResult> {
+  const token = await getMicrosoftGraphToken(tenantId, clientId, clientSecret);
+  if (!token) return { success: false, error: 'Failed to obtain a Microsoft Graph access token — check the tenant ID, client ID and client secret.' };
+
+  const res = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: {
+        subject: params.subject,
+        body: { contentType: 'HTML', content: params.html },
+        toRecipients: [{ emailAddress: { address: params.to } }],
+      },
+      saveToSentItems: false,
+    }),
+  });
+  // sendMail returns 202 Accepted with no body on success.
+  if (res.ok) return { success: true };
+  const result = await res.json().catch(() => ({}));
+  return { success: false, error: result?.error?.message ?? `Microsoft Graph error ${res.status}` };
+}
+
 /**
  * Sends one email through whichever provider is actually configured and
  * has credentials, falling back to Resend via RESEND_API_KEY if the config
@@ -131,6 +183,15 @@ export async function sendEmailViaProvider(
   }
   if (provider === 'brevo' && config?.brevoApiKey) {
     return sendViaBrevo(config.brevoApiKey, config.brevoFromEmail || 'noreply@example.com', params);
+  }
+  if (provider === 'microsoft365' && config?.microsoft365TenantId && config?.microsoft365ClientId && config?.microsoft365ClientSecret && config?.microsoft365FromEmail) {
+    return sendViaMicrosoft365(
+      config.microsoft365TenantId,
+      config.microsoft365ClientId,
+      config.microsoft365ClientSecret,
+      config.microsoft365FromEmail,
+      params
+    );
   }
 
   const resendKey = config?.resendApiKey || fallbackResendKey;

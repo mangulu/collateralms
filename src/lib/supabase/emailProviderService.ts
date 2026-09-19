@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 
-export type EmailProviderType = 'resend' | 'sendgrid' | 'brevo';
+export type EmailProviderType = 'resend' | 'sendgrid' | 'brevo' | 'microsoft365';
 
 export interface EmailProviderConfig {
   id?: string;
@@ -13,6 +13,10 @@ export interface EmailProviderConfig {
   sendgridFromEmail?: string;
   brevoApiKey?: string;
   brevoFromEmail?: string;
+  microsoft365TenantId?: string;
+  microsoft365ClientId?: string;
+  microsoft365ClientSecret?: string;
+  microsoft365FromEmail?: string;
   updatedBy?: string;
   updatedAt?: string;
 }
@@ -27,6 +31,10 @@ function rowToConfig(row: any): EmailProviderConfig {
     sendgridFromEmail: row.sendgrid_from_email ?? '',
     brevoApiKey: row.brevo_api_key ?? '',
     brevoFromEmail: row.brevo_from_email ?? '',
+    microsoft365TenantId: row.microsoft365_tenant_id ?? '',
+    microsoft365ClientId: row.microsoft365_client_id ?? '',
+    microsoft365ClientSecret: row.microsoft365_client_secret ?? '',
+    microsoft365FromEmail: row.microsoft365_from_email ?? '',
     updatedBy: row.updated_by,
     updatedAt: row.updated_at,
   };
@@ -40,6 +48,10 @@ export const defaultEmailProviderConfig = (): EmailProviderConfig => ({
   sendgridFromEmail: '',
   brevoApiKey: '',
   brevoFromEmail: '',
+  microsoft365TenantId: '',
+  microsoft365ClientId: '',
+  microsoft365ClientSecret: '',
+  microsoft365FromEmail: '',
 });
 
 export const emailProviderService = {
@@ -69,6 +81,10 @@ export const emailProviderService = {
       sendgrid_from_email: config.sendgridFromEmail || null,
       brevo_api_key: config.brevoApiKey || null,
       brevo_from_email: config.brevoFromEmail || null,
+      microsoft365_tenant_id: config.microsoft365TenantId || null,
+      microsoft365_client_id: config.microsoft365ClientId || null,
+      microsoft365_client_secret: config.microsoft365ClientSecret || null,
+      microsoft365_from_email: config.microsoft365FromEmail || null,
       updated_by: userId,
     };
 

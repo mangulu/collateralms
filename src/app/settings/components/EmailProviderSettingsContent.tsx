@@ -27,6 +27,7 @@ interface ProviderMeta {
   docsUrl: string;
   color: string;
   fields: { key: keyof EmailProviderConfig; label: string; placeholder: string; isSecret?: boolean }[];
+  note?: string;
 }
 
 const PROVIDERS: ProviderMeta[] = [
@@ -62,6 +63,20 @@ const PROVIDERS: ProviderMeta[] = [
       { key: 'brevoApiKey', label: 'API Key', placeholder: 'xkeysib-xxxxxxxxxxxxxxxxxxxx', isSecret: true },
       { key: 'brevoFromEmail', label: 'From Email', placeholder: 'noreply@yourdomain.com' },
     ],
+  },
+  {
+    id: 'microsoft365',
+    name: 'Microsoft 365 / Exchange',
+    description: 'Send via Microsoft Graph using an Azure AD app registration with Mail.Send permission.',
+    docsUrl: 'https://learn.microsoft.com/en-us/graph/api/user-sendmail',
+    color: 'bg-[#EA3E23]',
+    fields: [
+      { key: 'microsoft365TenantId', label: 'Tenant ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+      { key: 'microsoft365ClientId', label: 'Application (Client) ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+      { key: 'microsoft365ClientSecret', label: 'Client Secret', placeholder: 'Enter client secret value', isSecret: true },
+      { key: 'microsoft365FromEmail', label: 'From Email (Mailbox)', placeholder: 'noreply@yourdomain.com' },
+    ],
+    note: 'Requires an Azure AD app registration with application-level Mail.Send permission, granted admin consent. The From Email must be a mailbox the app is authorized to send as.',
   },
 ];
 
@@ -178,6 +193,11 @@ function ProviderCard({ provider, isActive, config, onSelect, onFieldChange }: P
       {/* Credentials Form */}
       {expanded && (
         <div className="px-4 pb-4 border-t border-border/60 pt-4 space-y-3">
+          {provider.note && (
+            <p className="text-xs text-muted-foreground bg-muted/40 border border-border/60 rounded-md px-3 py-2">
+              {provider.note}
+            </p>
+          )}
           {provider.fields.map((field) => (
             <div key={field.key}>
               <label className="block text-xs font-medium text-foreground mb-1.5">
