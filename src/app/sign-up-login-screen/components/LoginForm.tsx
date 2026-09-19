@@ -101,7 +101,7 @@ export default function LoginForm() {
               'Two-Factor Authentication is required for your account. Please set it up from your profile settings.',
               { duration: 8000 }
             );
-            router.push('/module-hub');
+            router.push('/collateral-dashboard');
             router.refresh();
             return;
           }
@@ -124,7 +124,7 @@ export default function LoginForm() {
       }
 
       toast.success('Welcome back');
-      router.push('/module-hub');
+      router.push('/collateral-dashboard');
       router.refresh();
     } catch (err: any) {
       setIsLoading(false);
@@ -210,7 +210,7 @@ export default function LoginForm() {
           await supabase.from('otp_verifications').update({ verified_at: new Date().toISOString() }).eq('id', otpId);
         }
         toast.success('Welcome back — 2FA verified');
-        router.push('/module-hub');
+        router.push('/collateral-dashboard');
         router.refresh();
         return;
       }
@@ -227,7 +227,7 @@ export default function LoginForm() {
       await supabase.from('otp_verifications').update({ verified_at: new Date().toISOString() }).eq('id', otpId);
       await signIn(pendingUser.email, pendingUser.password);
       toast.success('Welcome back — 2FA verified');
-      router.push('/module-hub');
+      router.push('/collateral-dashboard');
       router.refresh();
     } catch (err: any) {
       setOtpError(err?.message ?? 'Verification failed');
