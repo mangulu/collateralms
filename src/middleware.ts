@@ -60,6 +60,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/geomapping': ['collateral.view'],
   '/compliance-rules': ['compliance.view'],
   '/compliance-audit': ['compliance.view'],
+  '/compliance-breach-log': ['compliance.view'],
   '/notifications-hub': ['dashboard.view'],
   '/alerts-inbox': ['dashboard.view'],
   '/alerts-delivery': ['dashboard.view'],

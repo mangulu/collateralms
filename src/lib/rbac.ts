@@ -103,6 +103,7 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/geomapping': PERMISSIONS.COLLATERAL_VIEW,
   '/compliance-rules': PERMISSIONS.COMPLIANCE_VIEW,
   '/compliance-audit': PERMISSIONS.COMPLIANCE_VIEW,
+  '/compliance-breach-log': PERMISSIONS.COMPLIANCE_VIEW,
   '/notifications-hub': PERMISSIONS.DASHBOARD_VIEW,
   '/alerts-inbox': PERMISSIONS.DASHBOARD_VIEW,
   '/alerts-delivery': PERMISSIONS.DASHBOARD_VIEW,
