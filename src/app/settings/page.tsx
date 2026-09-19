@@ -139,6 +139,7 @@ const FIELD_DEFS: Record<ConfigCategory, FieldDef[]> = {
     { key: 'fraud_score_alert_threshold', label: 'Fraud Score Alert Threshold (0–100)', type: 'number', hint: 'AI fraud score above this value triggers an alert' },
     { key: 'compliance_score_minimum', label: 'Minimum Compliance Score (%)', type: 'number', hint: 'Minimum acceptable compliance score before flagging' },
     { key: 'batch_release_max_items', label: 'Batch Release Max Items', type: 'number', hint: 'Maximum collateral items per batch release operation' },
+    { key: 'archive_dual_custody_threshold_tsh', label: 'Archive Dual-Custody Threshold (TSh)', type: 'number', hint: 'Collateral value at/above which an Access Requests checkout needs a second, different approver. Leave blank to disable dual-custody.' },
   ],
   retention: [
     { key: 'active_collateral_years', label: 'Active Collateral Records (years)', type: 'number', hint: 'Retention period for active collateral records' },
