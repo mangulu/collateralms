@@ -4,11 +4,11 @@ interface StatCardProps {
   label: string;
   value: string | number;
   icon?: React.ReactNode;
-  /** Color of the value text (and the icon, when no explicit icon color is set). Defaults to a neutral dark blue. */
+  /** Color of the value text (and the icon, when no explicit icon color is set). Defaults to the brand secondary (navy). */
   color?: string;
   /** Label color override — for a severity-tinted card (e.g. a warning/critical KPI), pass this alongside bg/border. */
   labelColor?: string;
-  /** Card background — defaults to the standard light-blue card used across most Archive pages. */
+  /** Card background — defaults to the standard light-navy card used across most Archive pages. */
   bg?: string;
   /** Card border — defaults to match the standard card. */
   border?: string;
@@ -19,7 +19,7 @@ interface StatCardProps {
  * number, optional icon. Centralized here so a future visual pass changes
  * every page at once instead of hunting down each hand-copied instance.
  */
-export default function StatCard({ label, value, icon, color = '#1E3A8A', labelColor = '#6B7280', bg = '#F8FAFF', border = '#DBEAFE' }: StatCardProps) {
+export default function StatCard({ label, value, icon, color = 'var(--izou-secondary)', labelColor = 'var(--izou-muted)', bg = 'var(--izou-secondary-light)', border = 'var(--izou-secondary-light)' }: StatCardProps) {
   return (
     <div className="rounded-xl p-4" style={{ backgroundColor: bg, border: `1px solid ${border}` }}>
       {icon && (

@@ -24,10 +24,10 @@ import StatusBadge from '@/components/ui/StatusBadge';
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
 
 const LOCATION_TYPE_COLORS: Record<LocationType, { bg: string; text: string; border: string }> = {
-  vault:   { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
-  room:    { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
-  cabinet: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-  slot:    { bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD' },
+  vault:   { bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)' },
+  room:    { bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)' },
+  cabinet: { bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
+  slot:    { bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary-mid)', border: 'var(--izou-secondary-light)' },
 };
 
 const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
@@ -102,21 +102,21 @@ function MoveToSlotModal({ placement, currentSlotId, allLocations, onClose, onMo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#E5E7EB' }}>
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--izou-border)' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-              style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}>
-              <MoveRight size={18} style={{ color: '#0369A1' }} />
+              style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-secondary-light)' }}>
+              <MoveRight size={18} style={{ color: 'var(--izou-secondary-mid)' }} />
             </div>
             <div>
-              <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>Move to Another Slot</h3>
-              <p className="text-xs mt-0.5 truncate max-w-[220px]" style={{ color: '#6B7280' }}>
+              <h3 className="text-base font-bold" style={{ color: 'var(--izou-secondary)' }}>Move to Another Slot</h3>
+              <p className="text-xs mt-0.5 truncate max-w-[220px]" style={{ color: 'var(--izou-muted)' }}>
                 {placement.collateral?.description ?? 'Collateral'}
               </p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <X size={16} style={{ color: '#6B7280' }} />
+            <X size={16} style={{ color: 'var(--izou-muted)' }} />
           </button>
         </div>
 
@@ -127,18 +127,18 @@ function MoveToSlotModal({ placement, currentSlotId, allLocations, onClose, onMo
             </div>
           )}
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search slots by name or code…"
               className="w-full border rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }}
+              style={{ borderColor: 'var(--izou-border)' }}
             />
           </div>
-          <div className="border rounded-xl overflow-hidden max-h-64 overflow-y-auto" style={{ borderColor: '#E5E7EB' }}>
+          <div className="border rounded-xl overflow-hidden max-h-64 overflow-y-auto" style={{ borderColor: 'var(--izou-border)' }}>
             {filtered.length === 0 ? (
-              <p className="text-xs text-center py-8" style={{ color: '#9CA3AF' }}>
+              <p className="text-xs text-center py-8" style={{ color: 'var(--izou-muted)' }}>
                 {search ? 'No matching slots found' : 'No other slots available'}
               </p>
             ) : (
@@ -152,51 +152,51 @@ function MoveToSlotModal({ placement, currentSlotId, allLocations, onClose, onMo
                     disabled={isFull}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-left border-b last:border-b-0 transition-colors"
                     style={{
-                      borderColor: '#F3F4F6',
-                      backgroundColor: isSelected ? '#EFF6FF' : isFull ? '#F9FAFB' : 'white',
+                      borderColor: 'var(--izou-border)',
+                      backgroundColor: isSelected ? 'var(--izou-secondary-light)' : isFull ? 'var(--izou-bg)' : 'white',
                       opacity: isFull ? 0.5 : 1,
                       cursor: isFull ? 'not-allowed' : 'pointer',
                     }}
                   >
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
+                      style={{ backgroundColor: isSelected ? 'var(--izou-secondary-light)' : 'var(--izou-secondary-light)', border: '1px solid var(--izou-secondary-light)', color: 'var(--izou-secondary-mid)' }}>
                       {LEVEL_ICONS.slot}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: '#1E3A8A' }}>{slot.name}</p>
-                      <p className="text-xs" style={{ color: '#6B7280' }}>
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--izou-secondary)' }}>{slot.name}</p>
+                      <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                         {slot.code} · {slot.currentOccupancy}/{slot.capacity} items
                         {isFull && <span className="ml-1 text-red-500 font-medium">· Full</span>}
                       </p>
                     </div>
-                    {isSelected && <Check size={14} style={{ color: '#2563EB' }} className="shrink-0" />}
+                    {isSelected && <Check size={14} style={{ color: 'var(--izou-secondary)' }} className="shrink-0" />}
                   </button>
                 );
               })
             )}
           </div>
           {selectedSlot && (
-            <div className="p-3 rounded-xl" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: '#1D4ED8' }}>Moving to:</p>
-              <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>{selectedSlot.name}</p>
-              <p className="text-xs" style={{ color: '#6B7280' }}>
+            <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}>
+              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--izou-secondary)' }}>Moving to:</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>{selectedSlot.name}</p>
+              <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                 {selectedSlot.code} · {selectedSlot.currentOccupancy}/{selectedSlot.capacity} items
               </p>
             </div>
           )}
         </div>
 
-        <div className="flex gap-2 p-5 border-t" style={{ borderColor: '#E5E7EB' }}>
+        <div className="flex gap-2 p-5 border-t" style={{ borderColor: 'var(--izou-border)' }}>
           <button onClick={onClose}
             className="flex-1 py-2 rounded-lg text-sm font-medium border"
-            style={{ borderColor: '#D1D5DB', color: '#374151' }}>
+            style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>
             Cancel
           </button>
           <button
             onClick={handleMove}
             disabled={moving || !selectedSlotId}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-opacity"
-            style={{ backgroundColor: '#2563EB', opacity: moving || !selectedSlotId ? 0.5 : 1 }}>
+            style={{ backgroundColor: 'var(--izou-secondary)', opacity: moving || !selectedSlotId ? 0.5 : 1 }}>
             {moving ? 'Moving…' : 'Move Here'}
           </button>
         </div>
@@ -265,22 +265,22 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={!isMoving ? onClose : undefined}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#E5E7EB' }}>
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--izou-border)' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}>
-              <MoveRight size={18} style={{ color: '#0369A1' }} />
+              style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-secondary-light)' }}>
+              <MoveRight size={18} style={{ color: 'var(--izou-secondary-mid)' }} />
             </div>
             <div>
-              <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>Bulk Move to Another Slot</h3>
-              <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+              <h3 className="text-base font-bold" style={{ color: 'var(--izou-secondary)' }}>Bulk Move to Another Slot</h3>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>
                 {selectedPlacements.length} collateral{selectedPlacements.length !== 1 ? 's' : ''} selected
               </p>
             </div>
           </div>
           {!isMoving && (
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-              <X size={16} style={{ color: '#6B7280' }} />
+              <X size={16} style={{ color: 'var(--izou-muted)' }} />
             </button>
           )}
         </div>
@@ -294,17 +294,17 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
 
           {/* Progress */}
           {progress && (
-            <div className="p-3 rounded-xl" style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}>
+            <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-secondary-light)' }}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold" style={{ color: '#0369A1' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--izou-secondary-mid)' }}>
                   {progress.done < progress.total ? 'Moving…' : 'Done!'}
                 </span>
-                <span className="text-xs" style={{ color: '#6B7280' }}>{progress.done}/{progress.total}</span>
+                <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>{progress.done}/{progress.total}</span>
               </div>
-              <div className="w-full h-2 rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
+              <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--izou-border)' }}>
                 <div
                   className="h-full rounded-full transition-all"
-                  style={{ width: `${Math.round((progress.done / progress.total) * 100)}%`, backgroundColor: '#2563EB' }}
+                  style={{ width: `${Math.round((progress.done / progress.total) * 100)}%`, backgroundColor: 'var(--izou-secondary)' }}
                 />
               </div>
             </div>
@@ -313,13 +313,13 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
           {!progress && (
             <>
               {/* Selected items preview */}
-              <div className="p-3 rounded-xl" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-                <p className="text-xs font-semibold mb-2" style={{ color: '#1D4ED8' }}>Selected collaterals:</p>
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
+                <p className="text-xs font-semibold mb-2" style={{ color: 'var(--izou-secondary)' }}>Selected collaterals:</p>
                 <div className="space-y-1 max-h-28 overflow-y-auto">
                   {selectedPlacements.map((p) => (
                     <div key={p.id} className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: '#2563EB' }} />
-                      <span className="text-xs truncate" style={{ color: '#374151' }}>
+                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--izou-secondary)' }} />
+                      <span className="text-xs truncate" style={{ color: 'var(--izou-text)' }}>
                         {p.collateral?.description ?? 'Unnamed'}
                       </span>
                     </div>
@@ -328,19 +328,19 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
               </div>
 
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search destination slots…"
                   className="w-full border rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  style={{ borderColor: '#D1D5DB' }}
+                  style={{ borderColor: 'var(--izou-border)' }}
                 />
               </div>
 
-              <div className="border rounded-xl overflow-hidden max-h-52 overflow-y-auto" style={{ borderColor: '#E5E7EB' }}>
+              <div className="border rounded-xl overflow-hidden max-h-52 overflow-y-auto" style={{ borderColor: 'var(--izou-border)' }}>
                 {filtered.length === 0 ? (
-                  <p className="text-xs text-center py-8" style={{ color: '#9CA3AF' }}>
+                  <p className="text-xs text-center py-8" style={{ color: 'var(--izou-muted)' }}>
                     {search ? 'No matching slots found' : 'No other slots available'}
                   </p>
                 ) : (
@@ -354,24 +354,24 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
                         disabled={isFull}
                         className="w-full flex items-center gap-3 px-3 py-2.5 text-left border-b last:border-b-0 transition-colors"
                         style={{
-                          borderColor: '#F3F4F6',
-                          backgroundColor: isSelected ? '#EFF6FF' : isFull ? '#F9FAFB' : 'white',
+                          borderColor: 'var(--izou-border)',
+                          backgroundColor: isSelected ? 'var(--izou-secondary-light)' : isFull ? 'var(--izou-bg)' : 'white',
                           opacity: isFull ? 0.5 : 1,
                           cursor: isFull ? 'not-allowed' : 'pointer',
                         }}
                       >
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD', color: '#0369A1' }}>
+                          style={{ backgroundColor: isSelected ? 'var(--izou-secondary-light)' : 'var(--izou-secondary-light)', border: '1px solid var(--izou-secondary-light)', color: 'var(--izou-secondary-mid)' }}>
                           {LEVEL_ICONS.slot}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate" style={{ color: '#1E3A8A' }}>{slot.name}</p>
-                          <p className="text-xs" style={{ color: '#6B7280' }}>
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--izou-secondary)' }}>{slot.name}</p>
+                          <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                             {slot.code} · {slot.currentOccupancy}/{slot.capacity} items
                             {isFull && <span className="ml-1 text-red-500 font-medium">· Full</span>}
                           </p>
                         </div>
-                        {isSelected && <Check size={14} style={{ color: '#2563EB' }} className="shrink-0" />}
+                        {isSelected && <Check size={14} style={{ color: 'var(--izou-secondary)' }} className="shrink-0" />}
                       </button>
                     );
                   })
@@ -379,10 +379,10 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
               </div>
 
               {selectedSlot && (
-                <div className="p-3 rounded-xl" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                  <p className="text-xs font-semibold mb-1" style={{ color: '#1D4ED8' }}>Moving all to:</p>
-                  <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>{selectedSlot.name}</p>
-                  <p className="text-xs" style={{ color: '#6B7280' }}>
+                <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}>
+                  <p className="text-xs font-semibold mb-1" style={{ color: 'var(--izou-secondary)' }}>Moving all to:</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>{selectedSlot.name}</p>
+                  <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                     {selectedSlot.code} · {selectedSlot.currentOccupancy}/{selectedSlot.capacity} items
                   </p>
                 </div>
@@ -391,11 +391,11 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
           )}
         </div>
 
-        <div className="flex gap-2 p-5 border-t" style={{ borderColor: '#E5E7EB' }}>
+        <div className="flex gap-2 p-5 border-t" style={{ borderColor: 'var(--izou-border)' }}>
           {!isMoving && (
             <button onClick={onClose}
               className="flex-1 py-2 rounded-lg text-sm font-medium border"
-              style={{ borderColor: '#D1D5DB', color: '#374151' }}>
+              style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>
               Cancel
             </button>
           )}
@@ -403,7 +403,7 @@ function BulkMoveModal({ selectedPlacements, currentSlotId, allLocations, onClos
             onClick={handleBulkMove}
             disabled={isMoving || !selectedSlotId || !!progress}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-opacity flex items-center justify-center gap-2"
-            style={{ backgroundColor: '#2563EB', opacity: (isMoving || !selectedSlotId || !!progress) ? 0.5 : 1 }}>
+            style={{ backgroundColor: 'var(--izou-secondary)', opacity: (isMoving || !selectedSlotId || !!progress) ? 0.5 : 1 }}>
             {isMoving ? <><Loader2 size={14} className="animate-spin" /> Moving…</> : 'Move All'}
           </button>
         </div>
@@ -482,19 +482,19 @@ function FileCollateralModal({ slotId, slotName, userId, onClose, onSaved }: Fil
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#E5E7EB' }}>
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--izou-border)' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#0369A1' }}>
+              style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)', color: 'var(--izou-secondary-mid)' }}>
               {React.cloneElement(LEVEL_ICONS.slot as React.ReactElement<{ size?: number }>, { size: 18 })}
             </div>
             <div>
-              <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>File Collateral</h3>
-              <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>Filing into: {slotName}</p>
+              <h3 className="text-base font-bold" style={{ color: 'var(--izou-secondary)' }}>File Collateral</h3>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>Filing into: {slotName}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <X size={16} style={{ color: '#6B7280' }} />
+            <X size={16} style={{ color: 'var(--izou-muted)' }} />
           </button>
         </div>
 
@@ -506,26 +506,26 @@ function FileCollateralModal({ slotId, slotName, userId, onClose, onSaved }: Fil
           )}
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--izou-text)' }}>
               Select Collateral *
             </label>
             <div className="relative mb-2">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by type, obligor, description…"
                 className="w-full border rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ borderColor: '#D1D5DB' }}
+                style={{ borderColor: 'var(--izou-border)' }}
               />
             </div>
-            <div className="border rounded-xl overflow-hidden max-h-52 overflow-y-auto" style={{ borderColor: '#E5E7EB' }}>
+            <div className="border rounded-xl overflow-hidden max-h-52 overflow-y-auto" style={{ borderColor: 'var(--izou-border)' }}>
               {loading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 size={20} className="animate-spin" style={{ color: '#2563EB' }} />
+                  <Loader2 size={20} className="animate-spin" style={{ color: 'var(--izou-secondary)' }} />
                 </div>
               ) : filtered.length === 0 ? (
-                <p className="text-xs text-center py-8" style={{ color: '#9CA3AF' }}>
+                <p className="text-xs text-center py-8" style={{ color: 'var(--izou-muted)' }}>
                   {search ? 'No matching collaterals' : 'No collaterals available'}
                 </p>
               ) : (
@@ -537,23 +537,23 @@ function FileCollateralModal({ slotId, slotName, userId, onClose, onSaved }: Fil
                       onClick={() => setSelectedId(c.id)}
                       className="w-full flex items-center gap-3 px-3 py-2.5 text-left border-b last:border-b-0 transition-colors"
                       style={{
-                        borderColor: '#F3F4F6',
-                        backgroundColor: isSelected ? '#EFF6FF' : 'white',
+                        borderColor: 'var(--izou-border)',
+                        backgroundColor: isSelected ? 'var(--izou-secondary-light)' : 'white',
                       }}
                     >
                       <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: isSelected ? '#DBEAFE' : '#F0F9FF', border: '1px solid #BAE6FD' }}>
-                        <FileText size={13} style={{ color: '#2563EB' }} />
+                        style={{ backgroundColor: isSelected ? 'var(--izou-secondary-light)' : 'var(--izou-secondary-light)', border: '1px solid var(--izou-secondary-light)' }}>
+                        <FileText size={13} style={{ color: 'var(--izou-secondary)' }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: '#1E3A8A' }}>
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--izou-secondary)' }}>
                           {c.description ?? c.type}
                         </p>
-                        <p className="text-xs" style={{ color: '#6B7280' }}>
+                        <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                           {c.type} · {c.obligor}
                         </p>
                       </div>
-                      {isSelected && <Check size={14} style={{ color: '#2563EB' }} className="shrink-0" />}
+                      {isSelected && <Check size={14} style={{ color: 'var(--izou-secondary)' }} className="shrink-0" />}
                     </button>
                   );
                 })
@@ -562,48 +562,48 @@ function FileCollateralModal({ slotId, slotName, userId, onClose, onSaved }: Fil
           </div>
 
           {selected && (
-            <div className="p-3 rounded-xl" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: '#1D4ED8' }}>Selected:</p>
-              <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>{selected.description ?? selected.type}</p>
-              <p className="text-xs" style={{ color: '#6B7280' }}>{selected.type} · {selected.obligor}</p>
+            <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}>
+              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--izou-secondary)' }}>Selected:</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>{selected.description ?? selected.type}</p>
+              <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{selected.type} · {selected.obligor}</p>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Physical Reference</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Physical Reference</label>
             <input
               value={physicalRef}
               onChange={(e) => setPhysicalRef(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }}
+              style={{ borderColor: 'var(--izou-border)' }}
             />
-            <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Auto-generated — edit if needed</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>Auto-generated — edit if needed</p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Notes (optional)</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Notes (optional)</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }}
+              style={{ borderColor: 'var(--izou-border)' }}
               placeholder="Any filing notes…"
             />
           </div>
         </div>
 
-        <div className="flex gap-2 p-5 border-t" style={{ borderColor: '#E5E7EB' }}>
+        <div className="flex gap-2 p-5 border-t" style={{ borderColor: 'var(--izou-border)' }}>
           <button onClick={onClose}
             className="flex-1 py-2 rounded-lg text-sm font-medium border"
-            style={{ borderColor: '#D1D5DB', color: '#374151' }}>
+            style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !selectedId}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2 transition-opacity"
-            style={{ backgroundColor: '#2563EB', opacity: saving || !selectedId ? 0.5 : 1 }}>
+            style={{ backgroundColor: 'var(--izou-secondary)', opacity: saving || !selectedId ? 0.5 : 1 }}>
             {saving ? <><Loader2 size={14} className="animate-spin" /> Filing…</> : <><Plus size={14} /> File Collateral</>}
           </button>
         </div>
@@ -628,24 +628,24 @@ function CollateralDetailDrawer({ placement, onClose }: CollateralDetailDrawerPr
       <div className="w-full max-w-sm bg-white shadow-2xl h-full flex flex-col overflow-y-auto"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10"
-          style={{ borderColor: '#E5E7EB' }}>
-          <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>Collateral Detail</h3>
+          style={{ borderColor: 'var(--izou-border)' }}>
+          <h3 className="text-base font-bold" style={{ color: 'var(--izou-secondary)' }}>Collateral Detail</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <X size={16} style={{ color: '#6B7280' }} />
+            <X size={16} style={{ color: 'var(--izou-muted)' }} />
           </button>
         </div>
 
         <div className="p-5 space-y-5">
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-              <FileText size={22} style={{ color: '#2563EB' }} />
+              style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}>
+              <FileText size={22} style={{ color: 'var(--izou-secondary)' }} />
             </div>
             <div>
-              <p className="text-sm font-bold leading-snug" style={{ color: '#1E3A8A' }}>
+              <p className="text-sm font-bold leading-snug" style={{ color: 'var(--izou-secondary)' }}>
                 {c?.description ?? 'Unnamed Collateral'}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>{c?.collateral_type ?? '—'}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>{c?.collateral_type ?? '—'}</p>
             </div>
           </div>
 
@@ -658,8 +658,8 @@ function CollateralDetailDrawer({ placement, onClose }: CollateralDetailDrawerPr
               { label: 'Notes', value: placement.notes ?? '—' },
             ].map(({ label, value, mono }) => (
               <div key={label} className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium" style={{ color: '#9CA3AF' }}>{label}</span>
-                <span className={`text-sm ${mono ? 'font-mono' : 'font-medium'}`} style={{ color: '#1E3A8A' }}>
+                <span className="text-xs font-medium" style={{ color: 'var(--izou-muted)' }}>{label}</span>
+                <span className={`text-sm ${mono ? 'font-mono' : 'font-medium'}`} style={{ color: 'var(--izou-secondary)' }}>
                   {value}
                 </span>
               </div>
@@ -670,7 +670,7 @@ function CollateralDetailDrawer({ placement, onClose }: CollateralDetailDrawerPr
             <button
               onClick={() => router.push(`/collateral-detail/${c.id}`)}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors hover:bg-blue-50"
-              style={{ borderColor: '#BFDBFE', color: '#2563EB' }}>
+              style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-secondary)' }}>
               <FolderOpen size={15} />
               View Full Collateral Record
             </button>
@@ -770,7 +770,7 @@ export default function VaultSlotDetailContent() {
     ? Math.round((slot.currentOccupancy / slot.capacity) * 100)
     : 0;
 
-  const occupancyColor = occupancyPct >= 90 ? '#DC2626' : occupancyPct >= 70 ? '#D97706' : '#16A34A';
+  const occupancyColor = occupancyPct >= 90 ? 'var(--izou-danger)' : occupancyPct >= 70 ? 'var(--izou-warning)' : 'var(--izou-success)';
 
   // ── Selection helpers ──────────────────────────────────────────────────────
   const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
@@ -855,7 +855,7 @@ export default function VaultSlotDetailContent() {
       <button
         onClick={() => router.push('/archive/vault-management')}
         className="flex items-center gap-1.5 text-sm font-medium mb-5 hover:underline"
-        style={{ color: '#2563EB' }}>
+        style={{ color: 'var(--izou-secondary)' }}>
         <ArrowLeft size={15} /> Back to Vault Management
       </button>
 
@@ -876,7 +876,7 @@ export default function VaultSlotDetailContent() {
                   <span>{loc.name}</span>
                   <span className="opacity-60 font-mono text-[10px]">{loc.code}</span>
                 </div>
-                {!isLast && <ChevronRight size={13} style={{ color: '#9CA3AF' }} />}
+                {!isLast && <ChevronRight size={13} style={{ color: 'var(--izou-muted)' }} />}
               </React.Fragment>
             );
           })}
@@ -887,14 +887,14 @@ export default function VaultSlotDetailContent() {
       <div className="flex items-start justify-between mb-6 gap-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ backgroundColor: '#F0F9FF', border: '2px solid #BAE6FD', color: '#0369A1' }}>
+            style={{ backgroundColor: 'var(--izou-secondary-light)', border: '2px solid var(--izou-secondary-light)', color: 'var(--izou-secondary-mid)' }}>
             {React.cloneElement(LEVEL_ICONS.slot as React.ReactElement<{ size?: number }>, { size: 28 })}
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
               {slot?.name ?? 'Vault Slot'}
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
               {slot?.code} {slot?.description ? `· ${slot.description}` : ''}
             </p>
           </div>
@@ -903,31 +903,31 @@ export default function VaultSlotDetailContent() {
           <button
             onClick={() => setShowFileModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
-            style={{ backgroundColor: '#2563EB' }}>
+            style={{ backgroundColor: 'var(--izou-secondary)' }}>
             <Plus size={15} /> File Collateral
           </button>
           <button onClick={load}
             className="p-2 rounded-lg border transition-colors hover:bg-blue-50"
-            style={{ borderColor: '#BFDBFE' }}>
-            <RefreshCw size={16} style={{ color: '#2563EB' }} />
+            style={{ borderColor: 'var(--izou-border)' }}>
+            <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />
           </button>
         </div>
       </div>
 
       {/* Occupancy bar */}
       {slot && (
-        <div className="mb-6 p-4 rounded-xl" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+        <div className="mb-6 p-4 rounded-xl" style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold" style={{ color: '#374151' }}>Slot Occupancy</span>
+            <span className="text-xs font-semibold" style={{ color: 'var(--izou-text)' }}>Slot Occupancy</span>
             <span className="text-xs font-bold" style={{ color: occupancyColor }}>{occupancyPct}%</span>
           </div>
-          <div className="w-full h-2.5 rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
+          <div className="w-full h-2.5 rounded-full" style={{ backgroundColor: 'var(--izou-border)' }}>
             <div
               className="h-full rounded-full transition-all"
               style={{ width: `${Math.min(occupancyPct, 100)}%`, backgroundColor: occupancyColor }}
             />
           </div>
-          <p className="text-xs mt-1.5" style={{ color: '#9CA3AF' }}>
+          <p className="text-xs mt-1.5" style={{ color: 'var(--izou-muted)' }}>
             {slot.currentOccupancy} of {slot.capacity} items filed in this slot
           </p>
         </div>
@@ -945,9 +945,9 @@ export default function VaultSlotDetailContent() {
         <div
           className="flex items-center justify-between gap-2 p-3 rounded-xl mb-4 text-sm"
           style={{
-            backgroundColor: bulkActionResult.type === 'success' ? '#F0FDF4' : '#FEF2F2',
-            border: `1px solid ${bulkActionResult.type === 'success' ? '#BBF7D0' : '#FECACA'}`,
-            color: bulkActionResult.type === 'success' ? '#15803D' : '#DC2626',
+            backgroundColor: bulkActionResult.type === 'success' ? 'var(--izou-success-light)' : 'var(--izou-danger-light)',
+            border: `1px solid ${bulkActionResult.type === 'success' ? 'var(--izou-success-light)' : 'var(--izou-danger-light)'}`,
+            color: bulkActionResult.type === 'success' ? 'var(--izou-success)' : 'var(--izou-danger)',
           }}>
           <div className="flex items-center gap-2">
             <CheckCheck size={15} />
@@ -964,17 +964,17 @@ export default function VaultSlotDetailContent() {
         <div className="space-y-3 mb-4">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by description, obligor, type, ref…"
                 className="w-full border rounded-xl pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ borderColor: '#D1D5DB' }}
+                style={{ borderColor: 'var(--izou-border)' }}
               />
             </div>
             <span className="text-xs font-medium px-2.5 py-1.5 rounded-lg shrink-0"
-              style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+              style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', border: '1px solid var(--izou-border)' }}>
               {filtered.length} item{filtered.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -985,14 +985,14 @@ export default function VaultSlotDetailContent() {
               <button
                 onClick={toggleSelectAll}
                 className="flex items-center gap-2 text-xs font-medium transition-colors hover:opacity-80"
-                style={{ color: allFilteredSelected ? '#2563EB' : '#6B7280' }}>
+                style={{ color: allFilteredSelected ? 'var(--izou-secondary)' : 'var(--izou-muted)' }}>
                 {allFilteredSelected
-                  ? <CheckSquare size={16} style={{ color: '#2563EB' }} />
-                  : <Square size={16} style={{ color: '#9CA3AF' }} />}
+                  ? <CheckSquare size={16} style={{ color: 'var(--izou-secondary)' }} />
+                  : <Square size={16} style={{ color: 'var(--izou-muted)' }} />}
                 {allFilteredSelected ? 'Deselect all' : `Select all (${filtered.length})`}
               </button>
               {someSelected && (
-                <StatusBadge label={`${selectedIds.size} selected`} bg="#DBEAFE" text="#1D4ED8" />
+                <StatusBadge label={`${selectedIds.size} selected`} bg="var(--izou-secondary-light)" text="var(--izou-secondary)" />
               )}
             </div>
           )}
@@ -1002,8 +1002,8 @@ export default function VaultSlotDetailContent() {
       {/* Bulk action toolbar */}
       {someSelected && (
         <div className="flex items-center gap-2 flex-wrap p-3 rounded-xl mb-4"
-          style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-          <span className="text-xs font-semibold mr-1" style={{ color: '#1D4ED8' }}>
+          style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}>
+          <span className="text-xs font-semibold mr-1" style={{ color: 'var(--izou-secondary)' }}>
             {selectedIds.size} selected:
           </span>
 
@@ -1011,7 +1011,7 @@ export default function VaultSlotDetailContent() {
           <button
             onClick={() => setShowBulkMove(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: '#2563EB' }}>
+            style={{ backgroundColor: 'var(--izou-secondary)' }}>
             <MoveRight size={13} /> Move to Slot
           </button>
 
@@ -1020,7 +1020,7 @@ export default function VaultSlotDetailContent() {
             onClick={handleBulkMarkReceived}
             disabled={bulkReceiving}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ backgroundColor: '#15803D' }}>
+            style={{ backgroundColor: 'var(--izou-success)' }}>
             {bulkReceiving
               ? <><Loader2 size={13} className="animate-spin" /> Marking…</>
               : <><CheckCheck size={13} /> Mark as Received</>}
@@ -1031,25 +1031,25 @@ export default function VaultSlotDetailContent() {
             <button
               onClick={() => setConfirmBulkRemove(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: '#DC2626' }}>
+              style={{ backgroundColor: 'var(--izou-danger)' }}>
               <Trash2 size={13} /> Remove
             </button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium" style={{ color: '#DC2626' }}>
+              <span className="text-xs font-medium" style={{ color: 'var(--izou-danger)' }}>
                 Remove {selectedIds.size} item{selectedIds.size !== 1 ? 's' : ''}?
               </span>
               <button
                 onClick={() => setConfirmBulkRemove(false)}
                 className="px-2.5 py-1 rounded-lg text-xs font-medium border"
-                style={{ borderColor: '#D1D5DB', color: '#374151' }}>
+                style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>
                 Cancel
               </button>
               <button
                 onClick={handleBulkRemove}
                 disabled={bulkRemoving}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-white disabled:opacity-60"
-                style={{ backgroundColor: '#DC2626' }}>
+                style={{ backgroundColor: 'var(--izou-danger)' }}>
                 {bulkRemoving ? <><Loader2 size={12} className="animate-spin" /> Removing…</> : 'Confirm Remove'}
               </button>
             </div>
@@ -1059,7 +1059,7 @@ export default function VaultSlotDetailContent() {
           <button
             onClick={() => { setSelectedIds(new Set()); setConfirmBulkRemove(false); }}
             className="ml-auto flex items-center gap-1 text-xs font-medium hover:opacity-70"
-            style={{ color: '#6B7280' }}>
+            style={{ color: 'var(--izou-muted)' }}>
             <X size={13} /> Clear
           </button>
         </div>
@@ -1069,28 +1069,28 @@ export default function VaultSlotDetailContent() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />
+            <div key={i} className="h-20 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-secondary-light)' }} />
           ))}
         </div>
       ) : placements.length === 0 ? (
         <div className="text-center py-16">
-          <Package size={40} className="mx-auto mb-3" style={{ color: '#BAE6FD' }} />
-          <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>This slot is empty</p>
-          <p className="text-xs mt-1 mb-4" style={{ color: '#6B7280' }}>
+          <Package size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-secondary-light)' }} />
+          <p className="text-sm font-semibold" style={{ color: 'var(--izou-secondary)' }}>This slot is empty</p>
+          <p className="text-xs mt-1 mb-4" style={{ color: 'var(--izou-muted)' }}>
             File a collateral directly into this slot
           </p>
           <button
             onClick={() => setShowFileModal(true)}
             className="px-4 py-2 rounded-xl text-sm font-medium text-white"
-            style={{ backgroundColor: '#2563EB' }}>
+            style={{ backgroundColor: 'var(--izou-secondary)' }}>
             <Plus size={14} className="inline mr-1.5" />
             File Collateral
           </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-10">
-          <Search size={32} className="mx-auto mb-2" style={{ color: '#BAE6FD' }} />
-          <p className="text-sm" style={{ color: '#6B7280' }}>No items match your search</p>
+          <Search size={32} className="mx-auto mb-2" style={{ color: 'var(--izou-secondary-light)' }} />
+          <p className="text-sm" style={{ color: 'var(--izou-muted)' }}>No items match your search</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -1101,8 +1101,8 @@ export default function VaultSlotDetailContent() {
                 key={p.id}
                 className="rounded-xl overflow-hidden transition-all"
                 style={{
-                  border: `1px solid ${isSelected ? '#93C5FD' : '#DBEAFE'}`,
-                  backgroundColor: isSelected ? '#EFF6FF' : '#F8FAFF',
+                  border: `1px solid ${isSelected ? 'var(--izou-secondary)' : 'var(--izou-border)'}`,
+                  backgroundColor: isSelected ? 'var(--izou-secondary-light)' : 'var(--izou-bg)',
                 }}
               >
                 {/* Main row */}
@@ -1114,47 +1114,47 @@ export default function VaultSlotDetailContent() {
                     title={isSelected ? 'Deselect' : 'Select'}
                   >
                     {isSelected
-                      ? <CheckSquare size={18} style={{ color: '#2563EB' }} />
-                      : <Square size={18} style={{ color: '#CBD5E1' }} />}
+                      ? <CheckSquare size={18} style={{ color: 'var(--izou-secondary)' }} />
+                      : <Square size={18} style={{ color: 'var(--izou-border)' }} />}
                   </button>
 
                   {/* Icon */}
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 cursor-pointer hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}
+                    style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}
                     onClick={() => setDetailTarget(p)}
                     title="View detail"
                   >
-                    <FileText size={18} style={{ color: '#2563EB' }} />
+                    <FileText size={18} style={{ color: 'var(--izou-secondary)' }} />
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <button
                       className="text-sm font-bold text-left hover:underline leading-snug"
-                      style={{ color: '#1E3A8A' }}
+                      style={{ color: 'var(--izou-secondary)' }}
                       onClick={() => setDetailTarget(p)}
                     >
                       {p.collateral?.description ?? 'Unnamed Collateral'}
                     </button>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
-                      <StatusBadge label={p.collateral?.collateral_type ?? '—'} bg="#DBEAFE" text="#1D4ED8" />
-                      <span className="text-xs" style={{ color: '#6B7280' }}>
+                      <StatusBadge label={p.collateral?.collateral_type ?? '—'} bg="var(--izou-secondary-light)" text="var(--izou-secondary)" />
+                      <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                         {p.collateral?.obligor ?? '—'}
                       </span>
                       {p.physicalRef && (
                         <span className="text-xs font-mono px-2 py-0.5 rounded"
-                          style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>
+                          style={{ backgroundColor: 'var(--izou-bg)', color: 'var(--izou-muted)' }}>
                           {p.physicalRef}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
+                    <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>
                       Filed {new Date(p.placedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                       {p.placedByProfile?.full_name ? ` · ${p.placedByProfile.full_name}` : ''}
                     </p>
                     {p.notes && (
-                      <p className="text-xs mt-1 italic" style={{ color: '#9CA3AF' }}>{p.notes}</p>
+                      <p className="text-xs mt-1 italic" style={{ color: 'var(--izou-muted)' }}>{p.notes}</p>
                     )}
                   </div>
 
@@ -1164,21 +1164,21 @@ export default function VaultSlotDetailContent() {
                       onClick={() => setDetailTarget(p)}
                       className="p-2 rounded-lg transition-colors hover:bg-blue-100"
                       title="View detail"
-                      style={{ color: '#2563EB' }}>
+                      style={{ color: 'var(--izou-secondary)' }}>
                       <FolderOpen size={15} />
                     </button>
                     <button
                       onClick={() => setMoveTarget(p)}
                       className="p-2 rounded-lg transition-colors hover:bg-amber-100"
                       title="Move to another slot"
-                      style={{ color: '#D97706' }}>
+                      style={{ color: 'var(--izou-warning)' }}>
                       <MoveRight size={15} />
                     </button>
                     <button
                       onClick={() => setConfirmRemoveId(p.id)}
                       className="p-2 rounded-lg transition-colors hover:bg-red-100"
                       title="Remove from slot"
-                      style={{ color: '#DC2626' }}>
+                      style={{ color: 'var(--izou-danger)' }}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -1187,22 +1187,22 @@ export default function VaultSlotDetailContent() {
                 {/* Inline remove confirmation */}
                 {confirmRemoveId === p.id && (
                   <div className="flex items-center justify-between px-4 py-3 border-t"
-                    style={{ borderColor: '#FEE2E2', backgroundColor: '#FFF5F5' }}>
-                    <p className="text-xs font-medium" style={{ color: '#DC2626' }}>
+                    style={{ borderColor: 'var(--izou-danger-light)', backgroundColor: 'var(--izou-danger-light)' }}>
+                    <p className="text-xs font-medium" style={{ color: 'var(--izou-danger)' }}>
                       Remove this collateral from the slot?
                     </p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setConfirmRemoveId(null)}
                         className="px-3 py-1 rounded-lg text-xs font-medium border"
-                        style={{ borderColor: '#D1D5DB', color: '#374151' }}>
+                        style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>
                         Cancel
                       </button>
                       <button
                         onClick={() => handleRemove(p)}
                         disabled={removingId === p.id}
                         className="px-3 py-1 rounded-lg text-xs font-medium text-white"
-                        style={{ backgroundColor: '#DC2626', opacity: removingId === p.id ? 0.6 : 1 }}>
+                        style={{ backgroundColor: 'var(--izou-danger)', opacity: removingId === p.id ? 0.6 : 1 }}>
                         {removingId === p.id ? 'Removing…' : 'Remove'}
                       </button>
                     </div>

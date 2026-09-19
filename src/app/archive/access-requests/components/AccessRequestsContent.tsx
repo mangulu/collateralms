@@ -12,12 +12,12 @@ import StatusBadge from '@/components/ui/StatusBadge';
 
 
 const STATUS_CONFIG: Record<RequestStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
-  pending:                  { label: 'Pending',               bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', icon: Clock },
-  pending_second_approval:  { label: 'Awaiting 2nd Approval',  bg: '#F5F3FF', text: '#7C3AED', border: '#DDD6FE', icon: Shield },
-  approved:                 { label: 'Approved',               bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle },
-  rejected:                 { label: 'Rejected',               bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3', icon: XCircle },
-  checked_out:              { label: 'Checked Out',            bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: ArrowRight },
-  returned:                 { label: 'Returned',               bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD', icon: RotateCcw },
+  pending:                  { label: 'Pending',               bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)', icon: Clock },
+  pending_second_approval:  { label: 'Awaiting 2nd Approval',  bg: 'var(--izou-highlight-light)', text: 'var(--izou-highlight)', border: 'var(--izou-highlight-light)', icon: Shield },
+  approved:                 { label: 'Approved',               bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)', icon: CheckCircle },
+  rejected:                 { label: 'Rejected',               bg: 'var(--izou-danger-light)', text: 'var(--izou-danger)', border: 'var(--izou-danger-light)', icon: XCircle },
+  checked_out:              { label: 'Checked Out',            bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)', icon: ArrowRight },
+  returned:                 { label: 'Returned',               bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary-mid)', border: 'var(--izou-secondary-light)', icon: RotateCcw },
 };
 
 function formatDate(iso: string) {
@@ -91,7 +91,7 @@ function RaiseRequestModal({ collaterals, userId, onClose, onSaved }: RaiseReque
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <h3 className="text-base font-bold mb-4" style={{ color: '#1E3A8A' }}>Raise File Request</h3>
+        <h3 className="text-base font-bold mb-4" style={{ color: 'var(--izou-secondary)' }}>Raise File Request</h3>
         {error && (
           <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-red-50 text-red-700 text-sm">
             <AlertCircle size={14} /> {error}
@@ -99,10 +99,10 @@ function RaiseRequestModal({ collaterals, userId, onClose, onSaved }: RaiseReque
         )}
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Collateral *</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Collateral *</label>
             <select value={collateralId} onChange={(e) => setCollateralId(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }}>
+              style={{ borderColor: 'var(--izou-border)' }}>
               <option value="">Select collateral…</option>
               {collaterals.map((c) => (
                 <option key={c.id} value={c.id}>{c.type} — {c.obligor}</option>
@@ -110,41 +110,41 @@ function RaiseRequestModal({ collaterals, userId, onClose, onSaved }: RaiseReque
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Purpose *</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Purpose *</label>
             <textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} rows={3}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }} placeholder="Reason for requesting the physical file…" />
+              style={{ borderColor: 'var(--izou-border)' }} placeholder="Reason for requesting the physical file…" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>From</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>From</label>
               <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ borderColor: '#D1D5DB' }} />
+                style={{ borderColor: 'var(--izou-border)' }} />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Number of Days</label>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Number of Days</label>
               <input type="number" min="1" value={numberOfDays} onChange={(e) => setNumberOfDays(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ borderColor: '#D1D5DB' }} placeholder="e.g. 7" />
+                style={{ borderColor: 'var(--izou-border)' }} placeholder="e.g. 7" />
             </div>
           </div>
           <div className="rounded-lg px-3 py-2.5 flex items-center gap-2"
-            style={{ backgroundColor: expectedReturnDate ? '#EFF6FF' : '#F9FAFB', border: `1px solid ${expectedReturnDate ? '#BFDBFE' : '#E5E7EB'}` }}>
-            <Calendar size={14} style={{ color: expectedReturnDate ? '#2563EB' : '#9CA3AF' }} />
+            style={{ backgroundColor: expectedReturnDate ? 'var(--izou-secondary-light)' : 'var(--izou-bg)', border: `1px solid ${expectedReturnDate ? 'var(--izou-border)' : 'var(--izou-border)'}` }}>
+            <Calendar size={14} style={{ color: expectedReturnDate ? 'var(--izou-secondary)' : 'var(--izou-muted)' }} />
             <div>
-              <p className="text-xs font-medium" style={{ color: '#374151' }}>Expected Return Date</p>
-              <p className="text-sm font-semibold" style={{ color: expectedReturnDate ? '#1E3A8A' : '#9CA3AF' }}>
+              <p className="text-xs font-medium" style={{ color: 'var(--izou-text)' }}>Expected Return Date</p>
+              <p className="text-sm font-semibold" style={{ color: expectedReturnDate ? 'var(--izou-secondary)' : 'var(--izou-muted)' }}>
                 {expectedReturnDate ? formatDisplayDate(expectedReturnDate) : 'Enter From date and Number of Days'}
               </p>
             </div>
           </div>
         </div>
         <div className="flex gap-2 mt-5">
-          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: '#D1D5DB', color: '#374151' }}>Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>Cancel</button>
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white"
-            style={{ backgroundColor: '#2563EB', opacity: saving ? 0.6 : 1 }}>
+            style={{ backgroundColor: 'var(--izou-secondary)', opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Checking vault…' : 'Submit Request'}
           </button>
         </div>
@@ -170,7 +170,7 @@ function ActionModal({ request, action, userId, onClose, onDone }: ActionModalPr
 
   const titles = { approve: 'Approve Request', reject: 'Reject Request', return: 'Mark as Returned' };
   const buttonLabels = { approve: 'Approve', reject: 'Reject', return: 'Mark Returned' };
-  const buttonColors = { approve: '#15803D', reject: '#BE123C', return: '#0369A1' };
+  const buttonColors = { approve: 'var(--izou-success)', reject: 'var(--izou-danger)', return: 'var(--izou-secondary-mid)' };
 
   const handleAction = async () => {
     if (action === 'reject' && !notes.trim()) { setError('Rejection reason is required.'); return; }
@@ -198,8 +198,8 @@ function ActionModal({ request, action, userId, onClose, onDone }: ActionModalPr
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <h3 className="text-base font-bold mb-2" style={{ color: '#1E3A8A' }}>{titles[action]}</h3>
-        <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
+        <h3 className="text-base font-bold mb-2" style={{ color: 'var(--izou-secondary)' }}>{titles[action]}</h3>
+        <p className="text-sm mb-4" style={{ color: 'var(--izou-muted)' }}>
           {request.collateral?.collateral_type} — {request.collateral?.obligor}
         </p>
         {error && (
@@ -208,15 +208,15 @@ function ActionModal({ request, action, userId, onClose, onDone }: ActionModalPr
           </div>
         )}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>
             {action === 'reject' ? 'Rejection Reason *' : 'Notes (optional)'}
           </label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            style={{ borderColor: '#D1D5DB' }} />
+            style={{ borderColor: 'var(--izou-border)' }} />
         </div>
         <div className="flex gap-2 mt-5">
-          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: '#D1D5DB', color: '#374151' }}>Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>Cancel</button>
           <button onClick={handleAction} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white"
             style={{ backgroundColor: buttonColors[action], opacity: saving ? 0.6 : 1 }}>
@@ -250,10 +250,10 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
       <div className="w-full max-w-sm bg-white shadow-2xl h-full flex flex-col overflow-y-auto"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10"
-          style={{ borderColor: '#E5E7EB' }}>
-          <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>Request Detail</h3>
+          style={{ borderColor: 'var(--izou-border)' }}>
+          <h3 className="text-base font-bold" style={{ color: 'var(--izou-secondary)' }}>Request Detail</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <X size={16} style={{ color: '#6B7280' }} />
+            <X size={16} style={{ color: 'var(--izou-muted)' }} />
           </button>
         </div>
 
@@ -261,12 +261,12 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
           <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} large />
             {isOverdue && (
-              <StatusBadge label="Overdue" bg="#FFF1F2" text="#BE123C" />
+              <StatusBadge label="Overdue" bg="var(--izou-danger-light)" text="var(--izou-danger)" />
             )}
           </div>
 
           {request.requestStatus === 'pending_second_approval' && (
-            <div className="flex items-start gap-2 p-3 rounded-xl text-xs" style={{ backgroundColor: '#F5F3FF', border: '1px solid #DDD6FE', color: '#6D28D9' }}>
+            <div className="flex items-start gap-2 p-3 rounded-xl text-xs" style={{ backgroundColor: 'var(--izou-highlight-light)', border: '1px solid var(--izou-highlight-light)', color: 'var(--izou-highlight)' }}>
               <Shield size={14} className="shrink-0 mt-0.5" />
               <span>
                 This collateral is above the dual-custody threshold. <strong>{request.firstApprovedByProfile?.full_name ?? 'An officer'}</strong> gave
@@ -275,12 +275,12 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
             </div>
           )}
 
-          <div className="p-3 rounded-xl" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
-            <p className="text-xs font-medium mb-1" style={{ color: '#9CA3AF' }}>Collateral</p>
-            <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
+          <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
+            <p className="text-xs font-medium mb-1" style={{ color: 'var(--izou-muted)' }}>Collateral</p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--izou-secondary)' }}>
               {request.collateral?.collateral_type} — {request.collateral?.description}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>{request.collateral?.obligor}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>{request.collateral?.obligor}</p>
           </div>
 
           <div>
@@ -302,33 +302,33 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
               const FieldIcon = icon as React.ElementType;
               return (
                 <div key={label} className="flex items-start gap-2">
-                  <FieldIcon size={13} className="mt-0.5 shrink-0" style={{ color: '#9CA3AF' }} />
+                  <FieldIcon size={13} className="mt-0.5 shrink-0" style={{ color: 'var(--izou-muted)' }} />
                   <div>
-                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{label}</p>
-                    <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>{value}</p>
+                    <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{label}</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>{value}</p>
                   </div>
                 </div>
               );
             })}
             {request.rejectionReason && (
-              <div className="p-3 rounded-xl" style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3' }}>
-                <p className="text-xs font-medium mb-1" style={{ color: '#BE123C' }}>Rejection Reason</p>
-                <p className="text-sm" style={{ color: '#BE123C' }}>{request.rejectionReason}</p>
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-danger-light)', border: '1px solid var(--izou-danger-light)' }}>
+                <p className="text-xs font-medium mb-1" style={{ color: 'var(--izou-danger)' }}>Rejection Reason</p>
+                <p className="text-sm" style={{ color: 'var(--izou-danger)' }}>{request.rejectionReason}</p>
               </div>
             )}
           </div>
 
           {reqLog.length > 0 && (
             <div>
-              <p className="text-xs font-semibold mb-3" style={{ color: '#374151' }}>Status History</p>
+              <p className="text-xs font-semibold mb-3" style={{ color: 'var(--izou-text)' }}>Status History</p>
               <div className="space-y-2">
                 {reqLog.map((log) => {
                   const newSc = STATUS_CONFIG[log.newStatus as RequestStatus];
                   return (
                     <div key={log.id} className="flex items-center gap-2 p-2.5 rounded-lg"
-                      style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+                      style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
                       <StatusBadge label={newSc.label} bg={newSc.bg} text={newSc.text} />
-                      <span className="text-xs ml-auto" style={{ color: '#9CA3AF' }}>
+                      <span className="text-xs ml-auto" style={{ color: 'var(--izou-muted)' }}>
                         {formatDateTime(log.createdAt)}
                       </span>
                     </div>
@@ -340,7 +340,7 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
         </div>
 
         {(isApprover && (request.requestStatus === 'pending' || request.requestStatus === 'pending_second_approval')) || request.requestStatus === 'approved' ? (
-          <div className="px-5 py-4 border-t" style={{ borderColor: '#E5E7EB' }}>
+          <div className="px-5 py-4 border-t" style={{ borderColor: 'var(--izou-border)' }}>
             <div className="flex items-center gap-2">
               {isApprover && (request.requestStatus === 'pending' || request.requestStatus === 'pending_second_approval') && (
                 <>
@@ -358,7 +358,7 @@ function RequestDetailDrawer({ request, statusLog, onClose, onAction, isApprover
               {request.requestStatus === 'approved' && (
                 <button onClick={() => onAction('return')}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors"
-                  style={{ backgroundColor: '#0369A1' }}>
+                  style={{ backgroundColor: 'var(--izou-secondary-mid)' }}>
                   <RotateCcw size={14} /> Mark Returned
                 </button>
               )}
@@ -469,32 +469,32 @@ export default function AccessRequestsContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
             Access Requests
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
             Raise, approve, and track physical file loan requests
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: '#BFDBFE' }}>
-            <RefreshCw size={16} style={{ color: '#2563EB' }} />
+          <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>
+            <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />
           </button>
           <button onClick={exportCSV} disabled={filtered.length === 0}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border disabled:opacity-50"
-            style={{ borderColor: '#BFDBFE', color: '#1D4ED8' }}>
+            style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-secondary)' }}>
             <Download size={15} /> Export
           </button>
           <button onClick={() => setShowRaiseModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
-            style={{ backgroundColor: '#2563EB' }}>
+            style={{ backgroundColor: 'var(--izou-secondary)' }}>
             <Plus size={16} /> Raise Request
           </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ backgroundColor: '#F1F5F9', width: 'fit-content' }}>
+      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ backgroundColor: 'var(--izou-bg)', width: 'fit-content' }}>
         {[
           { id: 'approvals' as ActiveTab, label: 'Pending Approvals', count: pendingCount },
           { id: 'my-requests' as ActiveTab, label: 'My Requests', count: myRequestsCount },
@@ -504,14 +504,14 @@ export default function AccessRequestsContent() {
             onClick={() => { setActiveTab(tab.id); setStatusFilter('all'); setSearch(''); }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
             style={activeTab === tab.id
-              ? { backgroundColor: 'white', color: '#1E3A8A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
-              : { color: '#6B7280' }}>
+              ? { backgroundColor: 'white', color: 'var(--izou-secondary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+              : { color: 'var(--izou-muted)' }}>
             {tab.label}
             {tab.count > 0 && (
               <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
                 style={activeTab === tab.id
-                  ? { backgroundColor: '#DBEAFE', color: '#1D4ED8' }
-                  : { backgroundColor: '#E5E7EB', color: '#6B7280' }}>
+                  ? { backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }
+                  : { backgroundColor: 'var(--izou-border)', color: 'var(--izou-muted)' }}>
                 {tab.count}
               </span>
             )}
@@ -528,12 +528,12 @@ export default function AccessRequestsContent() {
             <button key={s} onClick={() => setStatusFilter(statusFilter === s ? 'all' : s)}
               className="rounded-xl p-3 text-left transition-all"
               style={{
-                backgroundColor: statusFilter === s ? sc.bg : '#F8FAFF',
-                border: `1px solid ${statusFilter === s ? sc.border : '#DBEAFE'}`,
+                backgroundColor: statusFilter === s ? sc.bg : 'var(--izou-bg)',
+                border: `1px solid ${statusFilter === s ? sc.border : 'var(--izou-border)'}`,
               }}>
               <StatusIcon size={15} style={{ color: sc.text }} className="mb-1" />
               <p className="text-xl font-bold" style={{ color: sc.text }}>{counts[s] ?? 0}</p>
-              <p className="text-xs font-medium" style={{ color: '#6B7280' }}>{sc.label}</p>
+              <p className="text-xs font-medium" style={{ color: 'var(--izou-muted)' }}>{sc.label}</p>
             </button>
           );
         })}
@@ -541,10 +541,10 @@ export default function AccessRequestsContent() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
         <input value={search} onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
+          style={{ borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' }}
           placeholder="Search by collateral, obligor, purpose…" />
       </div>
 
@@ -557,15 +557,15 @@ export default function AccessRequestsContent() {
       {/* Request list */}
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-skeleton)' }} />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <ClipboardList size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
-          <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>
+          <ClipboardList size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-secondary-light)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>
             {activeTab === 'approvals' ? 'No pending approvals' : 'No requests found'}
           </p>
-          <p className="text-xs mt-1" style={{ color: '#3B82F6' }}>
+          <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>
             {activeTab === 'my-requests' ? 'Raise a new request to get started' : 'All requests have been processed'}
           </p>
         </div>
@@ -579,7 +579,7 @@ export default function AccessRequestsContent() {
 
             return (
               <div key={req.id} className="rounded-xl overflow-hidden transition-all"
-                style={{ border: `1px solid ${isOverdue ? '#FECDD3' : '#DBEAFE'}`, backgroundColor: isOverdue ? '#FFF5F5' : '#F8FAFF' }}>
+                style={{ border: `1px solid ${isOverdue ? 'var(--izou-danger-light)' : 'var(--izou-border)'}`, backgroundColor: isOverdue ? 'var(--izou-danger-light)' : 'var(--izou-bg)' }}>
                 <div className="flex items-start gap-3 p-4">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ backgroundColor: sc.bg, border: `1px solid ${sc.border}` }}>
@@ -588,24 +588,24 @@ export default function AccessRequestsContent() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--izou-secondary)' }}>
                         {req.collateral?.collateral_type ?? 'Unknown'} — {req.collateral?.obligor ?? '—'}
                       </p>
                       <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} />
                       {isOverdue && (
-                        <StatusBadge label="OVERDUE" bg="#FFF1F2" text="#BE123C" border="#FECDD3" />
+                        <StatusBadge label="OVERDUE" bg="var(--izou-danger-light)" text="var(--izou-danger)" border="var(--izou-danger-light)" />
                       )}
                     </div>
-                    <p className="text-xs mt-0.5 line-clamp-1" style={{ color: '#6B7280' }}>{req.purpose}</p>
+                    <p className="text-xs mt-0.5 line-clamp-1" style={{ color: 'var(--izou-muted)' }}>{req.purpose}</p>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1 text-xs" style={{ color: '#9CA3AF' }}>
+                      <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                         <User size={11} /> {req.requestedByProfile?.full_name ?? '—'}
                       </span>
-                      <span className="flex items-center gap-1 text-xs" style={{ color: '#9CA3AF' }}>
+                      <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                         <Clock size={11} /> {formatDate(req.createdAt)}
                       </span>
                       {req.expectedReturnDate && (
-                        <span className="flex items-center gap-1 text-xs" style={{ color: isOverdue ? '#BE123C' : '#9CA3AF' }}>
+                        <span className="flex items-center gap-1 text-xs" style={{ color: isOverdue ? 'var(--izou-danger)' : 'var(--izou-muted)' }}>
                           <Calendar size={11} /> Due {formatDate(req.expectedReturnDate)}
                         </span>
                       )}
@@ -615,12 +615,12 @@ export default function AccessRequestsContent() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button onClick={() => setDetailRequest(req)}
                       className="p-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-                      title="View detail" style={{ color: '#2563EB' }}>
+                      title="View detail" style={{ color: 'var(--izou-secondary)' }}>
                       <Eye size={15} />
                     </button>
                     <button onClick={() => setExpandedId(isExpanded ? null : req.id)}
                       className="p-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-                      style={{ color: '#6B7280' }}>
+                      style={{ color: 'var(--izou-muted)' }}>
                       {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </button>
                     {isApprover && (req.requestStatus === 'pending' || req.requestStatus === 'pending_second_approval') && (
@@ -629,12 +629,12 @@ export default function AccessRequestsContent() {
                           disabled={req.requestStatus === 'pending_second_approval' && req.firstApprovedBy === user?.id}
                           title={req.requestStatus === 'pending_second_approval' && req.firstApprovedBy === user?.id ? 'A different officer must give the second approval' : undefined}
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                          style={{ backgroundColor: '#15803D' }}>
+                          style={{ backgroundColor: 'var(--izou-success)' }}>
                           <CheckCircle size={12} /> Approve
                         </button>
                         <button onClick={() => setActionModal({ request: req, action: 'reject' })}
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
-                          style={{ backgroundColor: '#BE123C' }}>
+                          style={{ backgroundColor: 'var(--izou-danger)' }}>
                           <XCircle size={12} /> Reject
                         </button>
                       </>
@@ -642,7 +642,7 @@ export default function AccessRequestsContent() {
                     {req.requestStatus === 'approved' && (
                       <button onClick={() => setActionModal({ request: req, action: 'return' })}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
-                        style={{ backgroundColor: '#0369A1' }}>
+                        style={{ backgroundColor: 'var(--izou-secondary-mid)' }}>
                         <RotateCcw size={12} /> Return
                       </button>
                     )}
@@ -650,17 +650,17 @@ export default function AccessRequestsContent() {
                 </div>
 
                 {isExpanded && reqLog.length > 0 && (
-                  <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: '#DBEAFE' }}>
-                    <p className="text-xs font-semibold mb-2 mt-3" style={{ color: '#374151' }}>Status History</p>
+                  <div className="px-4 pb-4 pt-0 border-t" style={{ borderColor: 'var(--izou-border)' }}>
+                    <p className="text-xs font-semibold mb-2 mt-3" style={{ color: 'var(--izou-text)' }}>Status History</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {reqLog.map((log, i) => {
                         const newSc = STATUS_CONFIG[log.newStatus as RequestStatus];
                         return (
                           <React.Fragment key={log.id}>
-                            {i > 0 && <ArrowRight size={10} style={{ color: '#9CA3AF' }} />}
+                            {i > 0 && <ArrowRight size={10} style={{ color: 'var(--izou-muted)' }} />}
                             <div className="flex flex-col items-center">
                               <StatusBadge label={newSc.label} bg={newSc.bg} text={newSc.text} />
-                              <span className="text-[10px] mt-0.5" style={{ color: '#9CA3AF' }}>
+                              <span className="text-[10px] mt-0.5" style={{ color: 'var(--izou-muted)' }}>
                                 {formatDate(log.createdAt)}
                               </span>
                             </div>

@@ -42,11 +42,11 @@ function DisposalModal({ placement, userId, onClose, onDone }: DisposalModalProp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <h3 className="text-base font-bold mb-2" style={{ color: '#1E3A8A' }}>Approve Disposal</h3>
-        <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
+        <h3 className="text-base font-bold mb-2" style={{ color: 'var(--izou-secondary)' }}>Approve Disposal</h3>
+        <p className="text-sm mb-4" style={{ color: 'var(--izou-muted)' }}>
           {placement.collateral?.collateral_type} — {placement.collateral?.obligor}
         </p>
-        <div className="flex items-start gap-2 mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA', color: '#9A3412' }}>
+        <div className="flex items-start gap-2 mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: 'var(--izou-warning-light)', border: '1px solid var(--izou-warning-light)', color: 'var(--izou-warning)' }}>
           <ShieldAlert size={14} className="shrink-0 mt-0.5" />
           <span>This permanently marks the physical document as destroyed. The filing record and its audit trail are kept for compliance history.</span>
         </div>
@@ -56,16 +56,16 @@ function DisposalModal({ placement, userId, onClose, onDone }: DisposalModalProp
           </div>
         )}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Disposal Reason *</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Disposal Reason *</label>
           <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            style={{ borderColor: '#D1D5DB' }} placeholder="e.g. Retention period elapsed per policy, collateral fully released…" />
+            style={{ borderColor: 'var(--izou-border)' }} placeholder="e.g. Retention period elapsed per policy, collateral fully released…" />
         </div>
         <div className="flex gap-2 mt-5">
-          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: '#D1D5DB', color: '#374151' }}>Cancel</button>
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border" style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>Cancel</button>
           <button onClick={handleApprove} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white"
-            style={{ backgroundColor: '#DC2626', opacity: saving ? 0.6 : 1 }}>
+            style={{ backgroundColor: 'var(--izou-danger)', opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Disposing…' : 'Approve Disposal'}
           </button>
         </div>
@@ -130,20 +130,20 @@ export default function DisposalQueueContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
             Disposal Queue
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
             Physical documents past their retention period and eligible for destruction
           </p>
         </div>
-        <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: '#BFDBFE' }}>
-          <RefreshCw size={16} style={{ color: '#2563EB' }} />
+        <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>
+          <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />
         </button>
       </div>
 
       {!canDispose && (
-        <div className="flex items-center gap-2 mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE', color: '#1D4ED8' }}>
+        <div className="flex items-center gap-2 mb-4 p-3 rounded-xl text-xs" style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)', color: 'var(--izou-secondary)' }}>
           <ShieldAlert size={14} />
           <span>Only a Legal Officer or System Admin can approve disposal. You can still view the queue below.</span>
         </div>
@@ -151,17 +151,17 @@ export default function DisposalQueueContent() {
 
       {/* KPI summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
-        <StatCard label="Eligible Now" value={queue.length} color="#C2410C" labelColor="#9A3412" bg="#FFF7ED" border="#FED7AA" />
-        <StatCard label="Disposed This Month" value={disposedThisMonth} color="#BE123C" labelColor="#9F1239" bg="#FFF1F2" border="#FECDD3" />
-        <StatCard label="Oldest Eligible" value={`${oldestEligibleDays}d`} color="#1D4ED8" />
+        <StatCard label="Eligible Now" value={queue.length} color="var(--izou-warning)" labelColor="var(--izou-warning)" bg="var(--izou-warning-light)" border="var(--izou-warning-light)" />
+        <StatCard label="Disposed This Month" value={disposedThisMonth} color="var(--izou-danger)" labelColor="var(--izou-danger)" bg="var(--izou-danger-light)" border="var(--izou-danger-light)" />
+        <StatCard label="Oldest Eligible" value={`${oldestEligibleDays}d`} color="var(--izou-secondary)" />
       </div>
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
         <input value={search} onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
+          style={{ borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' }}
           placeholder="Search by collateral, obligor, slot, physical ref…" />
       </div>
 
@@ -174,13 +174,13 @@ export default function DisposalQueueContent() {
       {/* Queue list */}
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-secondary-light)' }} />)}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <Package size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
-          <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>Nothing eligible for disposal</p>
-          <p className="text-xs mt-1" style={{ color: '#3B82F6' }}>
+          <Package size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-secondary-light)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>Nothing eligible for disposal</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>
             {queue.length === 0 ? 'Documents appear here once their retention period elapses after collateral release.' : 'Try adjusting your search.'}
           </p>
         </div>
@@ -188,24 +188,24 @@ export default function DisposalQueueContent() {
         <div className="space-y-2">
           {filtered.map((p) => (
             <div key={p.id} className="flex items-center gap-4 p-4 rounded-xl"
-              style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA' }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#FFEDD5' }}>
-                <Clock size={18} style={{ color: '#C2410C' }} />
+              style={{ backgroundColor: 'var(--izou-warning-light)', border: '1px solid var(--izou-warning-light)' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--izou-warning-light)' }}>
+                <Clock size={18} style={{ color: 'var(--izou-warning)' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--izou-secondary)' }}>
                   {p.collateral?.collateral_type ?? 'Unknown'} — {p.collateral?.obligor ?? '—'}
                 </p>
                 <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                  <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                  <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                     <Package size={11} /> {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
                   </span>
                   {p.physicalRef && (
-                    <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#FFEDD5', color: '#9A3412' }}>
+                    <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' }}>
                       {p.physicalRef}
                     </span>
                   )}
-                  <span className="text-xs font-medium" style={{ color: '#C2410C' }}>
+                  <span className="text-xs font-medium" style={{ color: 'var(--izou-warning)' }}>
                     Eligible since {formatDate(p.retentionEligibleAt ?? p.placedAt)} ({daysSince(p.retentionEligibleAt ?? p.placedAt)}d)
                   </span>
                 </div>
@@ -213,7 +213,7 @@ export default function DisposalQueueContent() {
               {canDispose && (
                 <button onClick={() => setDisposeTarget(p)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white shrink-0"
-                  style={{ backgroundColor: '#DC2626' }}>
+                  style={{ backgroundColor: 'var(--izou-danger)' }}>
                   <Trash2 size={12} /> Approve Disposal
                 </button>
               )}

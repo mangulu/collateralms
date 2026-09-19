@@ -18,11 +18,11 @@ import StatusBadge from '@/components/ui/StatusBadge';
 // ─── Custody Tracker types ────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<CustodyStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
-  in_vault:  { label: 'In Vault',  bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle2 },
-  on_loan:   { label: 'On Loan',   bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: ArrowDownToLine },
-  overdue:   { label: 'Overdue',   bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3', icon: AlertTriangle },
-  returned:  { label: 'Returned',  bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD', icon: RotateCcw },
-  missing:   { label: 'Missing',   bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA', icon: AlertCircle },
+  in_vault:  { label: 'In Vault',  bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)', icon: CheckCircle2 },
+  on_loan:   { label: 'On Loan',   bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)', icon: ArrowDownToLine },
+  overdue:   { label: 'Overdue',   bg: 'var(--izou-danger-light)', text: 'var(--izou-danger)', border: 'var(--izou-danger-light)', icon: AlertTriangle },
+  returned:  { label: 'Returned',  bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary-mid)', border: 'var(--izou-secondary-light)', icon: RotateCcw },
+  missing:   { label: 'Missing',   bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)', icon: AlertCircle },
 };
 
 async function sendOverdueSmsReminder(custody: ArchiveCustody, userId: string): Promise<void> {
@@ -52,22 +52,22 @@ async function sendOverdueSmsReminder(custody: ArchiveCustody, userId: string): 
 // ─── Chain of Custody types ───────────────────────────────────────────────────
 
 const EVENT_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon: React.ElementType }> = {
-  custody_received:  { label: 'Received',        bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle2 },
-  custody_handoff:   { label: 'Handoff',          bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: ArrowRight },
-  officer_assigned:  { label: 'Officer Assigned', bg: '#F5F3FF', text: '#7C3AED', border: '#DDD6FE', icon: User },
-  collateral_moved:  { label: 'Moved',            bg: '#FFFBEB', text: '#D97706', border: '#FDE68A', icon: MapPin },
-  checked_out:       { label: 'Checked Out',      bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: ArrowRight },
-  returned:          { label: 'Returned',         bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD', icon: RotateCcw },
+  custody_received:  { label: 'Received',        bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)', icon: CheckCircle2 },
+  custody_handoff:   { label: 'Handoff',          bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)', icon: ArrowRight },
+  officer_assigned:  { label: 'Officer Assigned', bg: 'var(--izou-highlight-light)', text: 'var(--izou-highlight)', border: 'var(--izou-highlight-light)', icon: User },
+  collateral_moved:  { label: 'Moved',            bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)', icon: MapPin },
+  checked_out:       { label: 'Checked Out',      bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)', icon: ArrowRight },
+  returned:          { label: 'Returned',         bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary-mid)', border: 'var(--izou-secondary-light)', icon: RotateCcw },
 };
 
 const CONFIRM_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  pending:   { label: 'Pending',   bg: '#FFFBEB', text: '#B45309' },
-  confirmed: { label: 'Confirmed', bg: '#F0FDF4', text: '#15803D' },
-  rejected:  { label: 'Rejected',  bg: '#FFF1F2', text: '#BE123C' },
+  pending:   { label: 'Pending',   bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)' },
+  confirmed: { label: 'Confirmed', bg: 'var(--izou-success-light)', text: 'var(--izou-success)' },
+  rejected:  { label: 'Rejected',  bg: 'var(--izou-danger-light)', text: 'var(--izou-danger)' },
 };
 
 function getEventCfg(eventType: string) {
-  return EVENT_CONFIG[eventType] ?? { label: eventType.replace(/_/g, ' '), bg: '#F9FAFB', text: '#6B7280', border: '#E5E7EB', icon: Clock };
+  return EVENT_CONFIG[eventType] ?? { label: eventType.replace(/_/g, ' '), bg: 'var(--izou-bg)', text: 'var(--izou-muted)', border: 'var(--izou-border)', icon: Clock };
 }
 
 function formatDateTime(iso: string) {
@@ -93,17 +93,17 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
   const visible = expanded ? entries : entries.slice(0, 3);
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #DBEAFE' }}>
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--izou-border)' }}>
       <div className="flex items-center justify-between px-4 py-3"
-        style={{ backgroundColor: '#EFF6FF', borderBottom: '1px solid #DBEAFE' }}>
+        style={{ backgroundColor: 'var(--izou-secondary-light)', borderBottom: '1px solid var(--izou-border)' }}>
         <div className="flex items-center gap-2">
-          <Package size={15} style={{ color: '#1D4ED8' }} />
-          <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>{collateralLabel}</p>
-          <StatusBadge label={`${entries.length} event${entries.length !== 1 ? 's' : ''}`} bg="#DBEAFE" text="#1D4ED8" />
+          <Package size={15} style={{ color: 'var(--izou-secondary)' }} />
+          <p className="text-sm font-semibold" style={{ color: 'var(--izou-secondary)' }}>{collateralLabel}</p>
+          <StatusBadge label={`${entries.length} event${entries.length !== 1 ? 's' : ''}`} bg="var(--izou-secondary-light)" text="var(--izou-secondary)" />
         </div>
         <button onClick={() => setExpanded(!expanded)}
           className="p-1 rounded hover:bg-blue-100 transition-colors"
-          style={{ color: '#6B7280' }}>
+          style={{ color: 'var(--izou-muted)' }}>
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
       </div>
@@ -123,7 +123,7 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
                   <EntryIcon size={13} style={{ color: cfg.text }} />
                 </div>
                 {idx < visible.length - 1 && (
-                  <div className="w-px flex-1 mt-1" style={{ backgroundColor: '#DBEAFE', minHeight: '16px' }} />
+                  <div className="w-px flex-1 mt-1" style={{ backgroundColor: 'var(--izou-border)', minHeight: '16px' }} />
                 )}
               </div>
 
@@ -133,21 +133,21 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
                     <StatusBadge label={cfg.label} bg={cfg.bg} text={cfg.text} />
                     <StatusBadge label={confirmCfg.label} bg={confirmCfg.bg} text={confirmCfg.text} />
                   </div>
-                  <span className="text-xs shrink-0" style={{ color: '#9CA3AF' }}>
+                  <span className="text-xs shrink-0" style={{ color: 'var(--izou-muted)' }}>
                     {formatDateTime(entry.createdAt)}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                   {entry.fromOfficer && (
-                    <div className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                    <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                       <User size={11} />
                       <span className="font-medium">{entry.fromOfficer.full_name}</span>
-                      <ArrowRight size={10} style={{ color: '#9CA3AF' }} />
+                      <ArrowRight size={10} style={{ color: 'var(--izou-muted)' }} />
                     </div>
                   )}
                   {entry.toOfficer && (
-                    <div className="flex items-center gap-1 text-xs" style={{ color: '#1E3A8A' }}>
+                    <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-secondary)' }}>
                       <Shield size={11} />
                       <span className="font-semibold">{entry.toOfficer.full_name}</span>
                     </div>
@@ -155,16 +155,16 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
                 </div>
 
                 {(entry.fromLocation || entry.toLocation) && (
-                  <div className="flex items-center gap-2 mt-1 text-xs" style={{ color: '#6B7280' }}>
+                  <div className="flex items-center gap-2 mt-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                     <MapPin size={11} />
                     {entry.fromLocation && (
-                      <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                      <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' }}>
                         {entry.fromLocation.code}
                       </span>
                     )}
-                    {entry.fromLocation && entry.toLocation && <ArrowRight size={10} style={{ color: '#9CA3AF' }} />}
+                    {entry.fromLocation && entry.toLocation && <ArrowRight size={10} style={{ color: 'var(--izou-muted)' }} />}
                     {entry.toLocation && (
-                      <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#DCFCE7', color: '#166534' }}>
+                      <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)' }}>
                         {entry.toLocation.code}
                       </span>
                     )}
@@ -172,11 +172,11 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
                 )}
 
                 {entry.notes && (
-                  <p className="text-xs mt-1 italic" style={{ color: '#9CA3AF' }}>{entry.notes}</p>
+                  <p className="text-xs mt-1 italic" style={{ color: 'var(--izou-muted)' }}>{entry.notes}</p>
                 )}
 
                 {entry.confirmedByProfile && entry.confirmationStatus === 'confirmed' && (
-                  <p className="text-xs mt-1" style={{ color: '#15803D' }}>
+                  <p className="text-xs mt-1" style={{ color: 'var(--izou-success)' }}>
                     ✓ Confirmed by {entry.confirmedByProfile.full_name}
                     {entry.confirmedAt ? ` · ${formatDateTime(entry.confirmedAt)}` : ''}
                   </p>
@@ -187,7 +187,7 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
                     onClick={() => onConfirm(entry.id)}
                     disabled={confirmingId === entry.id}
                     className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-60"
-                    style={{ backgroundColor: '#15803D' }}>
+                    style={{ backgroundColor: 'var(--izou-success)' }}>
                     <CheckCircle2 size={12} />
                     {confirmingId === entry.id ? 'Confirming…' : 'Confirm Receipt'}
                   </button>
@@ -200,7 +200,7 @@ function CollateralChain({ collateralLabel, entries, onConfirm, confirmingId, us
         {entries.length > 3 && (
           <button onClick={() => setExpanded(!expanded)}
             className="w-full text-xs font-medium py-1.5 rounded-lg transition-colors hover:bg-blue-50"
-            style={{ color: '#2563EB' }}>
+            style={{ color: 'var(--izou-secondary)' }}>
             {expanded ? 'Show less' : `Show ${entries.length - 3} more events`}
           </button>
         )}
@@ -354,19 +354,19 @@ export default function CustodyContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>Custody</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>Custody</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
             Live custody status and full chain-of-custody history for all physical collateral files
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { loadCustody(); loadChain(); }} className="p-2 rounded-lg border" style={{ borderColor: '#BFDBFE' }}>
-            <RefreshCw size={16} style={{ color: '#2563EB' }} />
+          <button onClick={() => { loadCustody(); loadChain(); }} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>
+            <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />
           </button>
           {activeTab === 'history' && (
             <button onClick={exportChainCSV} disabled={filteredChain.length === 0}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border disabled:opacity-50"
-              style={{ borderColor: '#BFDBFE', color: '#1D4ED8' }}>
+              style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-secondary)' }}>
               <Download size={15} /> Export CSV
             </button>
           )}
@@ -374,7 +374,7 @@ export default function CustodyContent() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ backgroundColor: '#F1F5F9', width: 'fit-content' }}>
+      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ backgroundColor: 'var(--izou-bg)', width: 'fit-content' }}>
         {[
           { id: 'tracker' as ActiveTab, label: 'Current Status', count: custody.filter((c) => c.currentStatus === 'overdue').length },
           { id: 'history' as ActiveTab, label: 'History', count: pendingCount },
@@ -384,14 +384,14 @@ export default function CustodyContent() {
             onClick={() => setActiveTab(tab.id)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
             style={activeTab === tab.id
-              ? { backgroundColor: 'white', color: '#1E3A8A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
-              : { color: '#6B7280' }}>
+              ? { backgroundColor: 'white', color: 'var(--izou-secondary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+              : { color: 'var(--izou-muted)' }}>
             {tab.label}
             {tab.count > 0 && (
               <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
                 style={activeTab === tab.id
-                  ? { backgroundColor: tab.id === 'tracker' ? '#FFF1F2' : '#DBEAFE', color: tab.id === 'tracker' ? '#BE123C' : '#1D4ED8' }
-                  : { backgroundColor: '#E5E7EB', color: '#6B7280' }}>
+                  ? { backgroundColor: tab.id === 'tracker' ? 'var(--izou-danger-light)' : 'var(--izou-secondary-light)', color: tab.id === 'tracker' ? 'var(--izou-danger)' : 'var(--izou-secondary)' }
+                  : { backgroundColor: 'var(--izou-border)', color: 'var(--izou-muted)' }}>
                 {tab.count}
               </span>
             )}
@@ -410,22 +410,22 @@ export default function CustodyContent() {
                 <button key={s} onClick={() => setStatusFilter(statusFilter === s ? 'all' : s)}
                   className="rounded-xl p-3 text-left transition-all"
                   style={{
-                    backgroundColor: statusFilter === s ? sc.bg : '#F8FAFF',
-                    border: `1px solid ${statusFilter === s ? sc.border : '#DBEAFE'}`,
+                    backgroundColor: statusFilter === s ? sc.bg : 'var(--izou-bg)',
+                    border: `1px solid ${statusFilter === s ? sc.border : 'var(--izou-border)'}`,
                   }}>
                   <StatusIcon size={16} style={{ color: sc.text }} className="mb-1" />
                   <p className="text-lg font-bold" style={{ color: sc.text }}>{custodyCounts[s] ?? 0}</p>
-                  <p className="text-xs font-medium" style={{ color: '#6B7280' }}>{sc.label}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--izou-muted)' }}>{sc.label}</p>
                 </button>
               );
             })}
           </div>
 
           <div className="relative mb-4">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
             <input value={custodySearch} onChange={(e) => setCustodySearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
+              style={{ borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' }}
               placeholder="Search by collateral or owner…" />
           </div>
 
@@ -437,13 +437,13 @@ export default function CustodyContent() {
 
           {custodyLoading ? (
             <div className="space-y-2">
-              {[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />)}
+              {[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-skeleton)' }} />)}
             </div>
           ) : filteredCustody.length === 0 ? (
             <div className="text-center py-16">
-              <ShieldCheck size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
-              <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No custody records found</p>
-              <p className="text-xs mt-1" style={{ color: '#3B82F6' }}>Assign placements to collaterals to track custody</p>
+              <ShieldCheck size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-secondary-light)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>No custody records found</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>Assign placements to collaterals to track custody</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -453,30 +453,30 @@ export default function CustodyContent() {
                 const isOverdue = c.currentStatus === 'overdue';
                 return (
                   <div key={c.id} className="flex items-center gap-4 p-4 rounded-xl"
-                    style={{ backgroundColor: '#F8FAFF', border: `1px solid ${isOverdue ? '#FECDD3' : '#DBEAFE'}` }}>
+                    style={{ backgroundColor: 'var(--izou-bg)', border: `1px solid ${isOverdue ? 'var(--izou-danger-light)' : 'var(--izou-border)'}` }}>
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: sc.bg }}>
                       <StatusIcon size={18} style={{ color: sc.text }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold" style={{ color: '#1E3A8A' }}>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--izou-secondary)' }}>
                           {c.collateral?.collateral_type ?? 'Unknown'} — {c.collateral?.obligor ?? '—'}
                         </p>
                         <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} />
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {c.checkedOutByProfile && (
-                          <span className="text-xs" style={{ color: '#6B7280' }}>
+                          <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                             Checked out by: {c.checkedOutByProfile.full_name}
                           </span>
                         )}
                         {c.lastCheckedOutAt && (
-                          <span className="flex items-center gap-1 text-xs" style={{ color: '#9CA3AF' }}>
+                          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                             <Clock size={11} /> {new Date(c.lastCheckedOutAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </span>
                         )}
                         {c.overdueSince && (
-                          <span className="text-xs font-medium" style={{ color: '#BE123C' }}>
+                          <span className="text-xs font-medium" style={{ color: 'var(--izou-danger)' }}>
                             Overdue since {new Date(c.overdueSince).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                           </span>
                         )}
@@ -488,8 +488,8 @@ export default function CustodyContent() {
                         disabled={smsSending === c.id}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                         style={{
-                          backgroundColor: smsSuccess === c.id ? '#F0FDF4' : '#FFF1F2',
-                          color: smsSuccess === c.id ? '#15803D' : '#BE123C',
+                          backgroundColor: smsSuccess === c.id ? 'var(--izou-success-light)' : 'var(--izou-danger-light)',
+                          color: smsSuccess === c.id ? 'var(--izou-success)' : 'var(--izou-danger)',
                           opacity: smsSending === c.id ? 0.6 : 1,
                         }}>
                         {smsSuccess === c.id ? <CheckCircle2 size={12} /> : <Send size={12} />}
@@ -508,18 +508,18 @@ export default function CustodyContent() {
       {activeTab === 'history' && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            <StatCard label="Total Events" value={entries.length} color="#1D4ED8" bg="#EFF6FF" border="#BFDBFE" />
-            <StatCard label="Pending Confirmation" value={pendingCount} color="#B45309" bg="#FFFBEB" border="#FDE68A" />
-            <StatCard label="Confirmed" value={confirmedCount} color="#15803D" bg="#F0FDF4" border="#BBF7D0" />
-            <StatCard label="Collaterals Tracked" value={Object.keys(grouped).length} color="#7C3AED" bg="#F5F3FF" border="#DDD6FE" />
+            <StatCard label="Total Events" value={entries.length} color="var(--izou-secondary)" bg="var(--izou-secondary-light)" border="var(--izou-secondary-light)" />
+            <StatCard label="Pending Confirmation" value={pendingCount} color="var(--izou-warning)" bg="var(--izou-warning-light)" border="var(--izou-warning-light)" />
+            <StatCard label="Confirmed" value={confirmedCount} color="var(--izou-success)" bg="var(--izou-success-light)" border="var(--izou-success-light)" />
+            <StatCard label="Collaterals Tracked" value={Object.keys(grouped).length} color="var(--izou-highlight)" bg="var(--izou-highlight-light)" border="var(--izou-highlight-light)" />
           </div>
 
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="relative flex-1 min-w-48">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
               <input value={chainSearch} onChange={(e) => setChainSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
+                style={{ borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' }}
                 placeholder="Search by collateral, obligor, officer…" />
             </div>
             <div className="flex gap-2">
@@ -527,8 +527,8 @@ export default function CustodyContent() {
                 <button key={s} onClick={() => setFilterStatus(s)}
                   className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
                   style={filterStatus === s
-                    ? { backgroundColor: '#2563EB', color: '#fff' }
-                    : { backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
+                    ? { backgroundColor: 'var(--izou-secondary)', color: '#fff' }
+                    : { backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }}>
                   {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
               ))}
@@ -543,13 +543,13 @@ export default function CustodyContent() {
 
           {chainLoading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map((i) => <div key={i} className="h-32 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />)}
+              {[1, 2, 3].map((i) => <div key={i} className="h-32 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-skeleton)' }} />)}
             </div>
           ) : Object.keys(grouped).length === 0 ? (
             <div className="text-center py-16">
-              <Link2 size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
-              <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No custody chain records found</p>
-              <p className="text-xs mt-1" style={{ color: '#3B82F6' }}>
+              <Link2 size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-secondary-light)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>No custody chain records found</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>
                 Custody events are recorded when collaterals are filed, moved, or checked out
               </p>
             </div>

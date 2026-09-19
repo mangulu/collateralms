@@ -24,11 +24,11 @@ interface FileLocationRow {
 // ─── Status config ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<CustodyStatus, { label: string; bg: string; text: string; border: string; icon: React.ElementType; dot: string }> = {
-  in_vault:  { label: 'In Vault',       bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: CheckCircle2,    dot: '#22C55E' },
-  on_loan:   { label: 'Checked Out',    bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: ArrowDownToLine, dot: '#3B82F6' },
-  overdue:   { label: 'Pending Return', bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA', icon: AlertTriangle,   dot: '#F97316' },
-  returned:  { label: 'Returned',       bg: '#F0F9FF', text: '#0369A1', border: '#BAE6FD', icon: RotateCcw,       dot: '#0EA5E9' },
-  missing:   { label: 'Missing',        bg: '#FFF1F2', text: '#BE123C', border: '#FECDD3', icon: AlertCircle,     dot: '#F43F5E' },
+  in_vault:  { label: 'In Vault',       bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)', icon: CheckCircle2,    dot: 'var(--izou-success)' },
+  on_loan:   { label: 'Checked Out',    bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)', icon: ArrowDownToLine, dot: 'var(--izou-secondary)' },
+  overdue:   { label: 'Pending Return', bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)', icon: AlertTriangle,   dot: 'var(--izou-warning)' },
+  returned:  { label: 'Returned',       bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary-mid)', border: 'var(--izou-secondary-light)', icon: RotateCcw,       dot: 'var(--izou-secondary-mid)' },
+  missing:   { label: 'Missing',        bg: 'var(--izou-danger-light)', text: 'var(--izou-danger)', border: 'var(--izou-danger-light)', icon: AlertCircle,     dot: 'var(--izou-danger)' },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,18 +59,18 @@ function DrillDownDrawer({ row, onClose }: DrillDownDrawerProps) {
         {/* Header */}
         <div
           className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10"
-          style={{ borderColor: '#E5E7EB' }}
+          style={{ borderColor: 'var(--izou-border)' }}
         >
           <div>
-            <h3 className="text-base font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+            <h3 className="text-base font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
               File Location Detail
             </h3>
-            <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>
               {custody.collateral?.collateral_type ?? 'Unknown'} — {custody.collateral?.obligor ?? '—'}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <X size={16} style={{ color: '#6B7280' }} />
+            <X size={16} style={{ color: 'var(--izou-muted)' }} />
           </button>
         </div>
 
@@ -85,7 +85,7 @@ function DrillDownDrawer({ row, onClose }: DrillDownDrawerProps) {
               <span className="text-sm font-semibold" style={{ color: sc.text }}>{sc.label}</span>
             </div>
             {custody.currentStatus === 'in_vault' && placement && (
-              <p className="text-xs mt-1" style={{ color: '#374151' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--izou-text)' }}>
                 <span className="font-medium">Location:</span>{' '}
                 {placement.location?.name ?? '—'}{placement.location?.code ? ` (${placement.location.code})` : ''}
               </p>
@@ -93,17 +93,17 @@ function DrillDownDrawer({ row, onClose }: DrillDownDrawerProps) {
             {(custody.currentStatus === 'on_loan' || custody.currentStatus === 'overdue') && (
               <div className="space-y-1 mt-1">
                 {custody.checkedOutByProfile && (
-                  <p className="text-xs" style={{ color: '#374151' }}>
+                  <p className="text-xs" style={{ color: 'var(--izou-text)' }}>
                     <span className="font-medium">Checked out by:</span> {custody.checkedOutByProfile.full_name}
                   </p>
                 )}
                 {custody.lastCheckedOutAt && (
-                  <p className="text-xs" style={{ color: '#374151' }}>
+                  <p className="text-xs" style={{ color: 'var(--izou-text)' }}>
                     <span className="font-medium">Since:</span> {fmtDate(custody.lastCheckedOutAt)}
                   </p>
                 )}
                 {custody.overdueSince && (
-                  <p className="text-xs font-semibold" style={{ color: '#BE123C' }}>
+                  <p className="text-xs font-semibold" style={{ color: 'var(--izou-danger)' }}>
                     Overdue since {fmtDate(custody.overdueSince)}
                   </p>
                 )}
@@ -114,26 +114,26 @@ function DrillDownDrawer({ row, onClose }: DrillDownDrawerProps) {
           {/* Vault slot */}
           {placement && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--izou-muted)' }}>
                 Vault Slot
               </p>
-              <div className="rounded-xl p-3 space-y-1" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+              <div className="rounded-xl p-3 space-y-1" style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
                 <div className="flex items-center gap-2">
-                  <Building2 size={13} style={{ color: '#3B82F6' }} />
-                  <span className="text-sm font-medium" style={{ color: '#1E3A8A' }}>
+                  <Building2 size={13} style={{ color: 'var(--izou-muted)' }} />
+                  <span className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>
                     {placement.location?.name ?? '—'}
                   </span>
                   {placement.location?.code && (
-                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
+                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }}>
                       {placement.location.code}
                     </span>
                   )}
                 </div>
                 {placement.physicalRef && (
-                  <p className="text-xs" style={{ color: '#6B7280' }}>Ref: {placement.physicalRef}</p>
+                  <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>Ref: {placement.physicalRef}</p>
                 )}
                 {placement.notes && (
-                  <p className="text-xs" style={{ color: '#6B7280' }}>{placement.notes}</p>
+                  <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{placement.notes}</p>
                 )}
               </div>
             </div>
@@ -141,46 +141,46 @@ function DrillDownDrawer({ row, onClose }: DrillDownDrawerProps) {
 
           {/* Active requests */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>
+            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--izou-muted)' }}>
               Active Requests ({activeRequests.length})
             </p>
             {activeRequests.length === 0 ? (
-              <p className="text-xs" style={{ color: '#9CA3AF' }}>No active requests for this file.</p>
+              <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>No active requests for this file.</p>
             ) : (
               <div className="space-y-2">
                 {activeRequests.map((req) => {
                   const reqStatuses: Record<string, { bg: string; text: string; label: string }> = {
-                    pending:                 { bg: '#FFFBEB', text: '#B45309', label: 'Pending' },
-                    pending_second_approval: { bg: '#F5F3FF', text: '#7C3AED', label: 'Awaiting 2nd Approval' },
-                    approved:                { bg: '#F0FDF4', text: '#15803D', label: 'Approved' },
-                    checked_out:             { bg: '#EFF6FF', text: '#1D4ED8', label: 'Checked Out' },
+                    pending:                 { bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', label: 'Pending' },
+                    pending_second_approval: { bg: 'var(--izou-highlight-light)', text: 'var(--izou-highlight)', label: 'Awaiting 2nd Approval' },
+                    approved:                { bg: 'var(--izou-success-light)', text: 'var(--izou-success)', label: 'Approved' },
+                    checked_out:             { bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', label: 'Checked Out' },
                   };
-                  const rs = reqStatuses[req.requestStatus] ?? { bg: '#F3F4F6', text: '#374151', label: req.requestStatus };
+                  const rs = reqStatuses[req.requestStatus] ?? { bg: 'var(--izou-bg)', text: 'var(--izou-text)', label: req.requestStatus };
                   return (
                     <div
                       key={req.id}
                       className="rounded-xl p-3 space-y-1.5"
-                      style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}
+                      style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5">
-                          <User size={12} style={{ color: '#6B7280' }} />
-                          <span className="text-xs font-medium" style={{ color: '#1E3A8A' }}>
+                          <User size={12} style={{ color: 'var(--izou-muted)' }} />
+                          <span className="text-xs font-medium" style={{ color: 'var(--izou-secondary)' }}>
                             {req.requestedByProfile?.full_name ?? 'Unknown'}
                           </span>
                         </div>
                         <StatusBadge label={rs.label} bg={rs.bg} text={rs.text} />
                       </div>
-                      <p className="text-xs" style={{ color: '#374151' }}>{req.purpose}</p>
+                      <p className="text-xs" style={{ color: 'var(--izou-text)' }}>{req.purpose}</p>
                       {req.expectedReturnDate && (
                         <div className="flex items-center gap-1.5">
-                          <Calendar size={11} style={{ color: '#9CA3AF' }} />
-                          <span className="text-xs" style={{ color: '#6B7280' }}>
+                          <Calendar size={11} style={{ color: 'var(--izou-muted)' }} />
+                          <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                             Due: {fmtDate(req.expectedReturnDate)}
                           </span>
                         </div>
                       )}
-                      <p className="text-xs" style={{ color: '#9CA3AF' }}>
+                      <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                         Raised {fmtDate(req.createdAt)}
                       </p>
                     </div>
@@ -282,25 +282,25 @@ export default function FileLocationStatusContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
             File Location Status
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
             Real-time location status for every physical collateral file
           </p>
         </div>
         <div className="flex items-center gap-3">
           {lastRefreshed && (
-            <span className="text-xs hidden sm:block" style={{ color: '#9CA3AF' }}>
+            <span className="text-xs hidden sm:block" style={{ color: 'var(--izou-muted)' }}>
               Updated {lastRefreshed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
           <button
             onClick={load}
             className="p-2 rounded-lg border transition-colors hover:bg-blue-50"
-            style={{ borderColor: '#BFDBFE' }}
+            style={{ borderColor: 'var(--izou-border)' }}
           >
-            <RefreshCw size={16} style={{ color: '#2563EB' }} />
+            <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />
           </button>
         </div>
       </div>
@@ -317,8 +317,8 @@ export default function FileLocationStatusContent() {
               onClick={() => setStatusFilter(active ? 'all' : s)}
               className="rounded-xl p-3 text-left transition-all"
               style={{
-                backgroundColor: active ? sc.bg : '#F8FAFF',
-                border: `1px solid ${active ? sc.border : '#DBEAFE'}`,
+                backgroundColor: active ? sc.bg : 'var(--izou-bg)',
+                border: `1px solid ${active ? sc.border : 'var(--izou-border)'}`,
               }}
             >
               <div className="flex items-center gap-1.5 mb-1">
@@ -329,7 +329,7 @@ export default function FileLocationStatusContent() {
                 <Icon size={13} style={{ color: sc.text }} />
               </div>
               <p className="text-lg font-bold" style={{ color: sc.text }}>{counts[s] ?? 0}</p>
-              <p className="text-xs font-medium" style={{ color: '#6B7280' }}>{sc.label}</p>
+              <p className="text-xs font-medium" style={{ color: 'var(--izou-muted)' }}>{sc.label}</p>
             </button>
           );
         })}
@@ -337,12 +337,12 @@ export default function FileLocationStatusContent() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
+          style={{ borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' }}
           placeholder="Search by collateral, obligor, location…"
         />
       </div>
@@ -357,14 +357,14 @@ export default function FileLocationStatusContent() {
       {loading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />
+            <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-secondary-light)' }} />
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <MapPin size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
-          <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No files found</p>
-          <p className="text-xs mt-1" style={{ color: '#3B82F6' }}>
+          <MapPin size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-secondary-light)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>No files found</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>
             {rows.length === 0 ? 'No custody records exist yet.' : 'Try adjusting your search or filter.'}
           </p>
         </div>
@@ -382,12 +382,12 @@ export default function FileLocationStatusContent() {
               <div
                 key={custody.id}
                 className="rounded-xl overflow-hidden"
-                style={{ border: `1px solid ${isOverdue ? '#FED7AA' : '#DBEAFE'}` }}
+                style={{ border: `1px solid ${isOverdue ? 'var(--izou-warning-light)' : 'var(--izou-border)'}` }}
               >
                 {/* Row */}
                 <div
                   className="flex items-center gap-4 p-4"
-                  style={{ backgroundColor: isOverdue ? '#FFFBEB' : '#F8FAFF' }}
+                  style={{ backgroundColor: isOverdue ? 'var(--izou-warning-light)' : 'var(--izou-bg)' }}
                 >
                   {/* Status icon */}
                   <div
@@ -400,14 +400,14 @@ export default function FileLocationStatusContent() {
                   {/* Main info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--izou-secondary)' }}>
                         {custody.collateral?.collateral_type ?? 'Unknown'} — {custody.collateral?.obligor ?? '—'}
                       </p>
                       <StatusBadge label={sc.label} bg={sc.bg} text={sc.text} border={sc.border} />
                       {hasActiveReqs && (
                         <StatusBadge
                           label={`${activeRequests.length} active request${activeRequests.length > 1 ? 's' : ''}`}
-                          bg="#EFF6FF" text="#1D4ED8" border="#BFDBFE"
+                          bg="var(--izou-secondary-light)" text="var(--izou-secondary)" border="var(--izou-secondary-light)"
                         />
                       )}
                     </div>
@@ -415,7 +415,7 @@ export default function FileLocationStatusContent() {
                     {/* Sub-details */}
                     <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                       {custody.currentStatus === 'in_vault' && placement?.location && (
-                        <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                        <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                           <Building2 size={11} />
                           {placement.location.name}
                           {placement.location.code ? ` (${placement.location.code})` : ''}
@@ -424,20 +424,20 @@ export default function FileLocationStatusContent() {
                       {(custody.currentStatus === 'on_loan' || custody.currentStatus === 'overdue') && (
                         <>
                           {custody.checkedOutByProfile && (
-                            <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                               <User size={11} />
                               {custody.checkedOutByProfile.full_name}
                             </span>
                           )}
                           {/* Due date from active approved request */}
                           {activeRequests.find((r) => r.requestStatus === 'approved' && r.expectedReturnDate) && (
-                            <span className="flex items-center gap-1 text-xs" style={{ color: isOverdue ? '#C2410C' : '#6B7280' }}>
+                            <span className="flex items-center gap-1 text-xs" style={{ color: isOverdue ? 'var(--izou-warning)' : 'var(--izou-muted)' }}>
                               <Calendar size={11} />
                               Due: {fmtDate(activeRequests.find((r) => r.requestStatus === 'approved')?.expectedReturnDate)}
                             </span>
                           )}
                           {custody.overdueSince && (
-                            <span className="flex items-center gap-1 text-xs font-medium" style={{ color: '#BE123C' }}>
+                            <span className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--izou-danger)' }}>
                               <Clock size={11} />
                               Overdue since {fmtDate(custody.overdueSince)}
                             </span>
@@ -445,7 +445,7 @@ export default function FileLocationStatusContent() {
                         </>
                       )}
                       {custody.currentStatus === 'returned' && custody.lastReturnedAt && (
-                        <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                        <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                           <RotateCcw size={11} />
                           Returned {fmtDate(custody.lastReturnedAt)}
                         </span>
@@ -458,7 +458,7 @@ export default function FileLocationStatusContent() {
                     <button
                       onClick={() => setDrawerRow(row)}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors hover:opacity-80"
-                      style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}
+                      style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }}
                     >
                       View
                     </button>
@@ -466,7 +466,7 @@ export default function FileLocationStatusContent() {
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : custody.id)}
                         className="p-1.5 rounded-lg transition-colors hover:bg-blue-100"
-                        style={{ color: '#3B82F6' }}
+                        style={{ color: 'var(--izou-muted)' }}
                       >
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
@@ -478,38 +478,38 @@ export default function FileLocationStatusContent() {
                 {isExpanded && hasActiveReqs && (
                   <div
                     className="border-t px-4 py-3 space-y-2"
-                    style={{ borderColor: '#DBEAFE', backgroundColor: '#FFFFFF' }}
+                    style={{ borderColor: 'var(--izou-border)', backgroundColor: '#FFFFFF' }}
                   >
-                    <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--izou-muted)' }}>
                       Active Requests
                     </p>
                     {activeRequests.map((req) => {
                       const reqStatuses: Record<string, { bg: string; text: string; label: string }> = {
-                        pending:                 { bg: '#FFFBEB', text: '#B45309', label: 'Pending' },
-                        pending_second_approval: { bg: '#F5F3FF', text: '#7C3AED', label: 'Awaiting 2nd Approval' },
-                        approved:                { bg: '#F0FDF4', text: '#15803D', label: 'Approved' },
-                        checked_out:             { bg: '#EFF6FF', text: '#1D4ED8', label: 'Checked Out' },
+                        pending:                 { bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', label: 'Pending' },
+                        pending_second_approval: { bg: 'var(--izou-highlight-light)', text: 'var(--izou-highlight)', label: 'Awaiting 2nd Approval' },
+                        approved:                { bg: 'var(--izou-success-light)', text: 'var(--izou-success)', label: 'Approved' },
+                        checked_out:             { bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', label: 'Checked Out' },
                       };
-                      const rs = reqStatuses[req.requestStatus] ?? { bg: '#F3F4F6', text: '#374151', label: req.requestStatus };
+                      const rs = reqStatuses[req.requestStatus] ?? { bg: 'var(--izou-bg)', text: 'var(--izou-text)', label: req.requestStatus };
                       return (
                         <div
                           key={req.id}
                           className="flex items-start justify-between gap-3 p-3 rounded-lg"
-                          style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}
+                          style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                              <span className="text-xs font-medium" style={{ color: '#1E3A8A' }}>
+                              <span className="text-xs font-medium" style={{ color: 'var(--izou-secondary)' }}>
                                 {req.requestedByProfile?.full_name ?? 'Unknown'}
                               </span>
                               <StatusBadge label={rs.label} bg={rs.bg} text={rs.text} />
                             </div>
-                            <p className="text-xs truncate" style={{ color: '#6B7280' }}>{req.purpose}</p>
+                            <p className="text-xs truncate" style={{ color: 'var(--izou-muted)' }}>{req.purpose}</p>
                           </div>
                           {req.expectedReturnDate && (
                             <div className="flex items-center gap-1 shrink-0">
-                              <Calendar size={11} style={{ color: '#9CA3AF' }} />
-                              <span className="text-xs" style={{ color: '#6B7280' }}>
+                              <Calendar size={11} style={{ color: 'var(--izou-muted)' }} />
+                              <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                                 {fmtDate(req.expectedReturnDate)}
                               </span>
                             </div>

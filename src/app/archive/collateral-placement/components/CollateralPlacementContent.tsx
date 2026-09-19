@@ -91,12 +91,12 @@ function BulkMoveModal({ selected, locations, totalCount, userId, onClose, onSav
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ backgroundColor: '#EFF6FF' }}>
-            <Layers size={18} style={{ color: '#2563EB' }} />
+            style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+            <Layers size={18} style={{ color: 'var(--izou-secondary)' }} />
           </div>
           <div>
-            <h3 className="text-base font-bold" style={{ color: '#1E3A8A' }}>Bulk File Collaterals</h3>
-            <p className="text-xs" style={{ color: '#6B7280' }}>
+            <h3 className="text-base font-bold" style={{ color: 'var(--izou-secondary)' }}>Bulk File Collaterals</h3>
+            <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
               {selected.length} collateral{selected.length !== 1 ? 's' : ''} selected
             </p>
           </div>
@@ -110,12 +110,12 @@ function BulkMoveModal({ selected, locations, totalCount, userId, onClose, onSav
 
         {/* Selected collaterals preview */}
         <div className="mb-4 rounded-xl border max-h-36 overflow-y-auto"
-          style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}>
+          style={{ borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' }}>
           {selected.map((c) => (
             <div key={c.id} className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0"
-              style={{ borderColor: '#DBEAFE' }}>
-              <Package size={13} style={{ color: '#1D4ED8' }} />
-              <span className="text-xs truncate" style={{ color: '#1E3A8A' }}>
+              style={{ borderColor: 'var(--izou-border)' }}>
+              <Package size={13} style={{ color: 'var(--izou-secondary)' }} />
+              <span className="text-xs truncate" style={{ color: 'var(--izou-secondary)' }}>
                 {c.type} — {c.obligor}
               </span>
             </div>
@@ -124,12 +124,12 @@ function BulkMoveModal({ selected, locations, totalCount, userId, onClose, onSav
 
         {/* Slot selector */}
         <div className="mb-4">
-          <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>
             Target Vault Slot *
           </label>
           <select value={locationId} onChange={(e) => setLocationId(e.target.value)}
             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            style={{ borderColor: '#D1D5DB' }}>
+            style={{ borderColor: 'var(--izou-border)' }}>
             <option value="">Select slot…</option>
             {slots.map((l) => (
               <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
@@ -139,7 +139,7 @@ function BulkMoveModal({ selected, locations, totalCount, userId, onClose, onSav
 
         {/* Physical ref note */}
         <div className="flex items-start gap-2 mb-5 p-3 rounded-xl text-xs"
-          style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D' }}>
+          style={{ backgroundColor: 'var(--izou-success-light)', border: '1px solid var(--izou-success-light)', color: 'var(--izou-success)' }}>
           <CheckCircle2 size={13} className="mt-0.5 shrink-0" />
           <span>
             A unique physical reference (PHY-YYYYMMDD-XXXX) will be auto-generated for each
@@ -150,30 +150,30 @@ function BulkMoveModal({ selected, locations, totalCount, userId, onClose, onSav
         {/* Progress bar while saving */}
         {saving && (
           <div className="mb-4">
-            <div className="flex justify-between text-xs mb-1" style={{ color: '#6B7280' }}>
+            <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--izou-muted)' }}>
               <span>Filing…</span>
               <span>{progress} / {selected.length}</span>
             </div>
-            <div className="w-full rounded-full h-2" style={{ backgroundColor: '#DBEAFE' }}>
+            <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
               <div className="h-2 rounded-full transition-all"
-                style={{ width: `${(progress / selected.length) * 100}%`, backgroundColor: '#2563EB' }} />
+                style={{ width: `${(progress / selected.length) * 100}%`, backgroundColor: 'var(--izou-secondary)' }} />
             </div>
           </div>
         )}
 
         {selectedSlot && (
           <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-xs"
-            style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8' }}>
+            style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)', color: 'var(--izou-secondary)' }}>
             <MoveRight size={13} />
             <span>All selected collaterals → <strong>{selectedSlot.name}</strong> ({selectedSlot.code})</span>
           </div>
         )}
 
         <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg text-xs"
-          style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE', color: '#1E3A8A' }}>
-          <Package size={13} style={{ color: '#1D4ED8' }} />
+          style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)', color: 'var(--izou-secondary)' }}>
+          <Package size={13} style={{ color: 'var(--izou-secondary)' }} />
           <span className="font-medium">Selected collaterals:</span>
-          <span className="ml-2 text-xs" style={{ color: '#6B7280' }}>
+          <span className="ml-2 text-xs" style={{ color: 'var(--izou-muted)' }}>
             {selected.length} / {totalCount}
           </span>
         </div>
@@ -181,12 +181,12 @@ function BulkMoveModal({ selected, locations, totalCount, userId, onClose, onSav
         <div className="flex gap-2">
           <button onClick={onClose} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium border"
-            style={{ borderColor: '#D1D5DB', color: '#374151', opacity: saving ? 0.5 : 1 }}>
+            style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)', opacity: saving ? 0.5 : 1 }}>
             Cancel
           </button>
           <button onClick={handleBulkFile} disabled={saving || !locationId}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
-            style={{ backgroundColor: '#2563EB', opacity: (saving || !locationId) ? 0.6 : 1 }}>
+            style={{ backgroundColor: 'var(--izou-secondary)', opacity: (saving || !locationId) ? 0.6 : 1 }}>
             {saving
               ? <><Loader2 size={14} className="animate-spin" /> Filing…</>
               : <><Layers size={14} /> File {selected.length} Collateral{selected.length !== 1 ? 's' : ''}</>
@@ -294,7 +294,7 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-base font-bold mb-4" style={{ color: '#1E3A8A' }}>
+        <h3 className="text-base font-bold mb-4" style={{ color: 'var(--izou-secondary)' }}>
           {existing ? 'Update Filing' : 'File Collateral'}
         </h3>
         {error && (
@@ -304,10 +304,10 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
         )}
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Collateral *</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Collateral *</label>
             <select value={collateralId} onChange={(e) => setCollateralId(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }}>
+              style={{ borderColor: 'var(--izou-border)' }}>
               <option value="">Select collateral…</option>
               {collaterals.map((c) => (
                 <option key={c.id} value={c.id}>{c.type} — {c.obligor}</option>
@@ -315,10 +315,10 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Filing Slot *</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Filing Slot *</label>
             <select value={locationId} onChange={(e) => setLocationId(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }}>
+              style={{ borderColor: 'var(--izou-border)' }}>
               <option value="">Select slot…</option>
               {slots.map((l) => (
                 <option key={l.id} value={l.id}>{l.name} ({l.code})</option>
@@ -326,56 +326,56 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>
               Physical Reference
               <span className="ml-1 text-xs font-normal px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: '#F0FDF4', color: '#15803D' }}>Auto-generated</span>
+                style={{ backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)' }}>Auto-generated</span>
             </label>
             <div className="flex gap-2">
               <input value={physicalRef} onChange={(e) => setPhysicalRef(e.target.value)}
                 className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono"
-                style={{ borderColor: '#D1D5DB' }} placeholder="PHY-YYYYMMDD-XXXX" />
+                style={{ borderColor: 'var(--izou-border)' }} placeholder="PHY-YYYYMMDD-XXXX" />
               <button type="button" onClick={() => setPhysicalRef(generatePhysicalRef())}
                 className="px-3 py-2 rounded-lg text-xs font-medium border"
-                style={{ borderColor: '#BFDBFE', color: '#1D4ED8', backgroundColor: '#EFF6FF' }}
+                style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-secondary)', backgroundColor: 'var(--izou-secondary-light)' }}
                 title="Regenerate reference">
                 ↺
               </button>
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>Notes</label>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--izou-text)' }}>Notes</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style={{ borderColor: '#D1D5DB' }} />
+              style={{ borderColor: 'var(--izou-border)' }} />
           </div>
 
           {/* Supporting Document Upload */}
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--izou-text)' }}>
               Supporting Document
               <span className="ml-1 font-normal text-gray-400">(deed, certificate, agreement…)</span>
             </label>
             {existingDocUrl && !pendingFile && (
               <div className="flex items-center gap-2 mb-2 p-2 rounded-lg text-xs"
-                style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                <Link2 size={12} style={{ color: '#2563EB' }} />
-                <span style={{ color: '#1D4ED8' }} className="font-medium">Electronic record linked</span>
+                style={{ backgroundColor: 'var(--izou-secondary-light)', border: '1px solid var(--izou-border)' }}>
+                <Link2 size={12} style={{ color: 'var(--izou-secondary)' }} />
+                <span style={{ color: 'var(--izou-secondary)' }} className="font-medium">Electronic record linked</span>
                 <a href={existingDocUrl} target="_blank" rel="noopener noreferrer"
-                  className="ml-auto underline" style={{ color: '#2563EB' }}>View</a>
+                  className="ml-auto underline" style={{ color: 'var(--izou-secondary)' }}>View</a>
               </div>
             )}
             {pendingFile ? (
               <div className="flex items-center gap-2 p-2.5 rounded-lg border"
-                style={{ backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }}>
-                <FileText size={14} style={{ color: '#15803D' }} />
+                style={{ backgroundColor: 'var(--izou-success-light)', borderColor: 'var(--izou-success-light)' }}>
+                <FileText size={14} style={{ color: 'var(--izou-success)' }} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: '#166534' }}>{pendingFile.name}</p>
-                  <p className="text-xs" style={{ color: '#4ADE80' }}>{formatFileSize(pendingFile.size)}</p>
+                  <p className="text-xs font-medium truncate" style={{ color: 'var(--izou-success)' }}>{pendingFile.name}</p>
+                  <p className="text-xs" style={{ color: 'var(--izou-success)' }}>{formatFileSize(pendingFile.size)}</p>
                 </div>
                 <button type="button" onClick={() => setPendingFile(null)}
                   className="p-1 rounded hover:bg-green-100 transition-colors">
-                  <X size={13} style={{ color: '#15803D' }} />
+                  <X size={13} style={{ color: 'var(--izou-success)' }} />
                 </button>
               </div>
             ) : (
@@ -386,21 +386,21 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors"
                 style={{
-                  borderColor: dragOver ? '#2563EB' : '#D1D5DB',
-                  backgroundColor: dragOver ? '#EFF6FF' : '#FAFAFA',
+                  borderColor: dragOver ? 'var(--izou-secondary)' : 'var(--izou-border)',
+                  backgroundColor: dragOver ? 'var(--izou-secondary-light)' : '#FAFAFA',
                 }}>
-                <Upload size={16} className="mx-auto mb-1.5" style={{ color: '#9CA3AF' }} />
-                <p className="text-xs font-medium" style={{ color: '#6B7280' }}>
-                  Drag & drop or <span style={{ color: '#2563EB' }}>click to browse</span>
+                <Upload size={16} className="mx-auto mb-1.5" style={{ color: 'var(--izou-muted)' }} />
+                <p className="text-xs font-medium" style={{ color: 'var(--izou-muted)' }}>
+                  Drag & drop or <span style={{ color: 'var(--izou-secondary)' }}>click to browse</span>
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>PDF, JPG, PNG, DOCX — max 10 MB</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>PDF, JPG, PNG, DOCX — max 10 MB</p>
                 <input ref={fileInputRef} type="file"
                   accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                   className="hidden" onChange={handleFileInput} />
               </div>
             )}
             {fileError && (
-              <div className="flex items-center gap-1.5 mt-1.5 text-xs" style={{ color: '#DC2626' }}>
+              <div className="flex items-center gap-1.5 mt-1.5 text-xs" style={{ color: 'var(--izou-danger)' }}>
                 <AlertCircle size={12} /> {fileError}
               </div>
             )}
@@ -409,10 +409,10 @@ function AssignModal({ collaterals, locations, existing, userId, onClose, onSave
 
         <div className="flex gap-2 mt-5">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg text-sm font-medium border"
-            style={{ borderColor: '#D1D5DB', color: '#374151' }}>Cancel</button>
+            style={{ borderColor: 'var(--izou-border)', color: 'var(--izou-text)' }}>Cancel</button>
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2"
-            style={{ backgroundColor: '#2563EB', opacity: saving ? 0.6 : 1 }}>
+            style={{ backgroundColor: 'var(--izou-secondary)', opacity: saving ? 0.6 : 1 }}>
             {saving ? (
               <><Loader2 size={14} className="animate-spin" />{uploading ? 'Uploading…' : 'Saving…'}</>
             ) : 'Save'}
@@ -539,20 +539,20 @@ export default function CollateralFilingContent() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: '#1E3A8A', fontFamily: 'DM Sans, sans-serif' }}>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
             Collateral Filing
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#3B82F6' }}>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
             Assign physical vault slots to collateral records
           </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: '#BFDBFE' }}>
-            <RefreshCw size={16} style={{ color: '#2563EB' }} />
+          <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>
+            <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />
           </button>
           <button onClick={() => { setEditPlacement(undefined); setShowModal(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white"
-            style={{ backgroundColor: '#2563EB' }}>
+            style={{ backgroundColor: 'var(--izou-secondary)' }}>
             <Plus size={16} /> File Collateral
           </button>
         </div>
@@ -560,35 +560,35 @@ export default function CollateralFilingContent() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <StatCard label="Total Filed" value={placements.length} color="#1D4ED8" />
-        <StatCard label="Awaiting Filing" value={unfiledCollaterals.length} color="#B45309" />
-        <StatCard label="With Electronic Record" value={placements.filter((p) => p.electronicRecordUrl).length} color="#15803D" />
-        <StatCard label="High-Value Missing Backup" value={highValueMissingBackupCount} color={highValueMissingBackupCount > 0 ? '#BE123C' : '#7E22CE'} />
+        <StatCard label="Total Filed" value={placements.length} color="var(--izou-secondary)" />
+        <StatCard label="Awaiting Filing" value={unfiledCollaterals.length} color="var(--izou-warning)" />
+        <StatCard label="With Electronic Record" value={placements.filter((p) => p.electronicRecordUrl).length} color="var(--izou-success)" />
+        <StatCard label="High-Value Missing Backup" value={highValueMissingBackupCount} color={highValueMissingBackupCount > 0 ? 'var(--izou-danger)' : 'var(--izou-highlight)'} />
       </div>
 
       {/* Toggle + Search */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-48">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#9CA3AF' }} />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--izou-muted)' }} />
           <input value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            style={{ borderColor: '#DBEAFE', backgroundColor: '#F8FAFF' }}
+            style={{ borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' }}
             placeholder="Search by collateral, owner, location…" />
         </div>
-        <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: '#DBEAFE' }}>
+        <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: 'var(--izou-border)' }}>
           <button onClick={() => handleTabSwitch(false)}
             className="px-3 py-2 text-xs font-medium transition-colors"
             style={{
-              backgroundColor: !showFiledOnly ? '#2563EB' : '#F8FAFF',
-              color: !showFiledOnly ? '#fff' : '#1D4ED8',
+              backgroundColor: !showFiledOnly ? 'var(--izou-secondary)' : 'var(--izou-bg)',
+              color: !showFiledOnly ? '#fff' : 'var(--izou-secondary)',
             }}>
             Filed ({placements.length})
           </button>
           <button onClick={() => handleTabSwitch(true)}
             className="px-3 py-2 text-xs font-medium transition-colors"
             style={{
-              backgroundColor: showFiledOnly ? '#B45309' : '#F8FAFF',
-              color: showFiledOnly ? '#fff' : '#B45309',
+              backgroundColor: showFiledOnly ? 'var(--izou-warning)' : 'var(--izou-bg)',
+              color: showFiledOnly ? '#fff' : 'var(--izou-warning)',
             }}>
             Awaiting ({unfiledCollaterals.length})
           </button>
@@ -597,8 +597,8 @@ export default function CollateralFilingContent() {
           <button onClick={() => setMissingBackupOnly((v) => !v)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-colors"
             style={missingBackupOnly
-              ? { backgroundColor: '#FFF1F2', borderColor: '#FECDD3', color: '#BE123C' }
-              : { backgroundColor: '#F8FAFF', borderColor: '#DBEAFE', color: '#6B7280' }}>
+              ? { backgroundColor: 'var(--izou-danger-light)', borderColor: 'var(--izou-danger-light)', color: 'var(--izou-danger)' }
+              : { backgroundColor: 'var(--izou-bg)', borderColor: 'var(--izou-border)', color: 'var(--izou-muted)' }}>
             <ShieldAlert size={13} /> Missing Backup Only
           </button>
         )}
@@ -612,27 +612,27 @@ export default function CollateralFilingContent() {
 
       {loading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />)}
+          {[1, 2, 3].map((i) => <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-secondary-light)' }} />)}
         </div>
       ) : showFiledOnly ? (
         /* ── Awaiting Filing list with multi-select ── */
         filteredUnfiled.length === 0 ? (
           <div className="text-center py-16">
-            <CheckCircle2 size={40} className="mx-auto mb-3" style={{ color: '#86EFAC' }} />
-            <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>All collaterals have been filed!</p>
+            <CheckCircle2 size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-success-light)' }} />
+            <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>All collaterals have been filed!</p>
           </div>
         ) : (
           <div className="space-y-2">
             {/* Info banner */}
             <div className="flex items-center gap-2 mb-1 px-3 py-2 rounded-xl text-xs"
-              style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', color: '#B45309' }}>
+              style={{ backgroundColor: 'var(--izou-warning-light)', border: '1px solid var(--izou-warning-light)', color: 'var(--izou-warning)' }}>
               <AlertCircle size={13} />
               <span>These collaterals have not been assigned a physical vault location yet.</span>
             </div>
 
             {/* Bulk action toolbar */}
             <div className="flex items-center justify-between px-3 py-2 rounded-xl"
-              style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+              style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <button
                   type="button"
@@ -641,14 +641,14 @@ export default function CollateralFilingContent() {
                   aria-label={allUnfiledSelected ? 'Deselect all' : 'Select all'}
                 >
                   {allUnfiledSelected ? (
-                    <CheckSquare size={18} style={{ color: '#2563EB' }} />
+                    <CheckSquare size={18} style={{ color: 'var(--izou-secondary)' }} />
                   ) : someUnfiledSelected ? (
-                    <CheckSquare size={18} style={{ color: '#93C5FD' }} />
+                    <CheckSquare size={18} style={{ color: 'var(--izou-secondary-light)' }} />
                   ) : (
-                    <Square size={18} style={{ color: '#9CA3AF' }} />
+                    <Square size={18} style={{ color: 'var(--izou-muted)' }} />
                   )}
                 </button>
-                <span className="text-xs font-medium" style={{ color: '#374151' }}>
+                <span className="text-xs font-medium" style={{ color: 'var(--izou-text)' }}>
                   {selectedIds.size > 0
                     ? `${selectedIds.size} of ${filteredUnfiled.length} selected`
                     : 'Select all'}
@@ -657,19 +657,19 @@ export default function CollateralFilingContent() {
 
               {selectedIds.size > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: '#6B7280' }}>
+                  <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
                     {selectedIds.size} collateral{selectedIds.size !== 1 ? 's' : ''} selected
                   </span>
                   <button
                     onClick={() => setShowBulkModal(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-                    style={{ backgroundColor: '#2563EB' }}>
+                    style={{ backgroundColor: 'var(--izou-secondary)' }}>
                     <Layers size={13} /> Bulk File to Slot
                   </button>
                   <button
                     onClick={() => setSelectedIds(new Set())}
                     className="p-1.5 rounded-lg text-xs"
-                    style={{ color: '#6B7280' }}
+                    style={{ color: 'var(--izou-muted)' }}
                     title="Clear selection">
                     <X size={13} />
                   </button>
@@ -684,8 +684,8 @@ export default function CollateralFilingContent() {
                 <div key={c.id}
                   className="flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all"
                   style={{
-                    backgroundColor: isSelected ? '#EFF6FF' : '#FFFBEB',
-                    border: `1px solid ${isSelected ? '#93C5FD' : '#FDE68A'}`,
+                    backgroundColor: isSelected ? 'var(--izou-secondary-light)' : 'var(--izou-warning-light)',
+                    border: `1px solid ${isSelected ? 'var(--izou-secondary-light)' : 'var(--izou-warning-light)'}`,
                   }}
                   onClick={() => toggleSelect(c.id)}>
                   {/* Checkbox */}
@@ -695,22 +695,22 @@ export default function CollateralFilingContent() {
                     className="flex items-center justify-center w-5 h-5 shrink-0 rounded transition-colors"
                     aria-label={isSelected ? 'Deselect' : 'Select'}>
                     {isSelected
-                      ? <CheckSquare size={18} style={{ color: '#2563EB' }} />
-                      : <Square size={18} style={{ color: '#9CA3AF' }} />
+                      ? <CheckSquare size={18} style={{ color: 'var(--izou-secondary)' }} />
+                      : <Square size={18} style={{ color: 'var(--izou-muted)' }} />
                     }
                   </button>
 
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: isSelected ? '#DBEAFE' : '#FEF3C7' }}>
-                    <Package size={16} style={{ color: isSelected ? '#1D4ED8' : '#B45309' }} />
+                    style={{ backgroundColor: isSelected ? 'var(--izou-secondary-light)' : 'var(--izou-warning-light)' }}>
+                    <Package size={16} style={{ color: isSelected ? 'var(--izou-secondary)' : 'var(--izou-warning)' }} />
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate"
-                      style={{ color: isSelected ? '#1E3A8A' : '#92400E' }}>
+                      style={{ color: isSelected ? 'var(--izou-secondary)' : 'var(--izou-warning)' }}>
                       {c.type} — {c.obligor}
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: isSelected ? '#3B82F6' : '#B45309' }}>
+                    <p className="text-xs mt-0.5" style={{ color: isSelected ? 'var(--izou-muted)' : 'var(--izou-warning)' }}>
                       {c.description}
                     </p>
                   </div>
@@ -722,7 +722,7 @@ export default function CollateralFilingContent() {
                       setShowModal(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0"
-                    style={{ backgroundColor: '#2563EB', color: '#fff' }}>
+                    style={{ backgroundColor: 'var(--izou-secondary)', color: '#fff' }}>
                     <Plus size={12} /> File Now
                   </button>
                 </div>
@@ -734,47 +734,47 @@ export default function CollateralFilingContent() {
         /* ── Filed placements list ── */
         filtered.length === 0 ? (
           <div className="text-center py-16">
-            <FolderCheck size={40} className="mx-auto mb-3" style={{ color: '#93C5FD' }} />
-            <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No filings found</p>
+            <FolderCheck size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-secondary-light)' }} />
+            <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>No filings found</p>
           </div>
         ) : (
           <div className="space-y-2">
             {filtered.map((p) => (
               <div key={p.id} className="flex items-center gap-4 p-4 rounded-xl group transition-all"
-                style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+                style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: '#DBEAFE' }}>
-                  <Package size={18} style={{ color: '#1D4ED8' }} />
+                  style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+                  <Package size={18} style={{ color: 'var(--izou-secondary)' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: '#1E3A8A' }}>
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--izou-secondary)' }}>
                     {p.collateral?.collateral_type ?? 'Unknown'} — {p.collateral?.obligor ?? '—'}
                   </p>
                   <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                    <span className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                       <FolderOpen size={11} /> {p.location?.name ?? '—'} ({p.location?.code ?? '—'})
                     </span>
                     {p.physicalRef && (
                       <span className="text-xs font-mono px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
+                        style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }}>
                         {p.physicalRef}
                       </span>
                     )}
                     {p.electronicRecordUrl ? (
                       <a href={p.electronicRecordUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs hover:underline" style={{ color: '#15803D' }}>
+                        className="flex items-center gap-1 text-xs hover:underline" style={{ color: 'var(--izou-success)' }}>
                         <Paperclip size={11} /> Document attached
                       </a>
                     ) : isHighValueMissingBackup(p) ? (
-                      <StatusBadge label="No Backup — High Value" bg="#FFF1F2" text="#BE123C" icon={ShieldAlert} />
+                      <StatusBadge label="No Backup — High Value" bg="var(--izou-danger-light)" text="var(--izou-danger)" icon={ShieldAlert} />
                     ) : (
-                      <StatusBadge label="No Backup" bg="#FFFBEB" text="#B45309" icon={ShieldAlert} />
+                      <StatusBadge label="No Backup" bg="var(--izou-warning-light)" text="var(--izou-warning)" icon={ShieldAlert} />
                     )}
                   </div>
                 </div>
                 <button onClick={() => { setEditPlacement(p); setShowModal(true); }}
                   className="opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all hover:bg-blue-100">
-                  <Edit2 size={14} style={{ color: '#2563EB' }} />
+                  <Edit2 size={14} style={{ color: 'var(--izou-secondary)' }} />
                 </button>
               </div>
             ))}

@@ -10,27 +10,27 @@ import StatusBadge from '@/components/ui/StatusBadge';
 
 
 const EVENT_CONFIG: Partial<Record<ArchiveEventType, { label: string; color: string; bg: string; icon: React.ElementType }>> = {
-  collateral_moved:    { label: 'Moved',          color: '#D97706', bg: '#FFFBEB', icon: MoveRight },
-  placement_assigned:  { label: 'Filed',           color: '#15803D', bg: '#F0FDF4', icon: FileText },
-  placement_removed:   { label: 'Removed',         color: '#DC2626', bg: '#FEF2F2', icon: X },
-  placement_updated:   { label: 'Updated',         color: '#0369A1', bg: '#F0F9FF', icon: FileText },
-  vault_created:       { label: 'Vault Created',   color: '#7C3AED', bg: '#F5F3FF', icon: MapPin },
-  vault_updated:       { label: 'Vault Updated',   color: '#7C3AED', bg: '#F5F3FF', icon: MapPin },
-  request_raised:      { label: 'Request Raised',  color: '#B45309', bg: '#FFFBEB', icon: FileText },
-  request_approved:    { label: 'Approved',        color: '#15803D', bg: '#F0FDF4', icon: FileText },
-  request_rejected:    { label: 'Rejected',        color: '#DC2626', bg: '#FEF2F2', icon: X },
-  checked_out:         { label: 'Checked Out',     color: '#1D4ED8', bg: '#EFF6FF', icon: ArrowRight },
-  returned:            { label: 'Returned',        color: '#0369A1', bg: '#F0F9FF', icon: ArrowRight },
-  overdue_flagged:     { label: 'Overdue',         color: '#DC2626', bg: '#FEF2F2', icon: AlertCircle },
-  disposal_flagged:    { label: 'Disposal Flagged',  color: '#B45309', bg: '#FFFBEB', icon: Clock },
-  disposal_approved:   { label: 'Disposal Approved', color: '#C2410C', bg: '#FFF7ED', icon: FileText },
-  disposed:            { label: 'Disposed',          color: '#DC2626', bg: '#FEF2F2', icon: X },
-  reconciliation_discrepancy: { label: 'Reconciliation Discrepancy', color: '#DC2626', bg: '#FEF2F2', icon: AlertCircle },
+  collateral_moved:    { label: 'Moved',          color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', icon: MoveRight },
+  placement_assigned:  { label: 'Filed',           color: 'var(--izou-success)', bg: 'var(--izou-success-light)', icon: FileText },
+  placement_removed:   { label: 'Removed',         color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: X },
+  placement_updated:   { label: 'Updated',         color: 'var(--izou-secondary-mid)', bg: 'var(--izou-secondary-light)', icon: FileText },
+  vault_created:       { label: 'Vault Created',   color: 'var(--izou-highlight)', bg: 'var(--izou-highlight-light)', icon: MapPin },
+  vault_updated:       { label: 'Vault Updated',   color: 'var(--izou-highlight)', bg: 'var(--izou-highlight-light)', icon: MapPin },
+  request_raised:      { label: 'Request Raised',  color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', icon: FileText },
+  request_approved:    { label: 'Approved',        color: 'var(--izou-success)', bg: 'var(--izou-success-light)', icon: FileText },
+  request_rejected:    { label: 'Rejected',        color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: X },
+  checked_out:         { label: 'Checked Out',     color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', icon: ArrowRight },
+  returned:            { label: 'Returned',        color: 'var(--izou-secondary-mid)', bg: 'var(--izou-secondary-light)', icon: ArrowRight },
+  overdue_flagged:     { label: 'Overdue',         color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: AlertCircle },
+  disposal_flagged:    { label: 'Disposal Flagged',  color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', icon: Clock },
+  disposal_approved:   { label: 'Disposal Approved', color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', icon: FileText },
+  disposed:            { label: 'Disposed',          color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: X },
+  reconciliation_discrepancy: { label: 'Reconciliation Discrepancy', color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: AlertCircle },
 };
 
 function getEventConfig(eventType: ArchiveEventType | null | undefined) {
-  if (!eventType) return { label: 'Unknown', color: '#6B7280', bg: '#F9FAFB', icon: Clock };
-  return EVENT_CONFIG[eventType] ?? { label: eventType.replace(/_/g, ' '), color: '#6B7280', bg: '#F9FAFB', icon: Clock };
+  if (!eventType) return { label: 'Unknown', color: 'var(--izou-muted)', bg: 'var(--izou-bg)', icon: Clock };
+  return EVENT_CONFIG[eventType] ?? { label: eventType.replace(/_/g, ' '), color: 'var(--izou-muted)', bg: 'var(--izou-bg)', icon: Clock };
 }
 
 function formatDate(iso: string) {
@@ -100,16 +100,16 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
   const uniqueEventTypes = [...new Set(entries.map((e) => e.eventType))];
 
   return (
-    <div className="mt-8 rounded-2xl overflow-hidden" style={{ border: '1px solid #DBEAFE' }}>
+    <div className="mt-8 rounded-2xl overflow-hidden" style={{ border: '1px solid var(--izou-border)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4" style={{ backgroundColor: '#F0F9FF', borderBottom: '1px solid #DBEAFE' }}>
+      <div className="flex items-center justify-between px-5 py-4" style={{ backgroundColor: 'var(--izou-secondary-light)', borderBottom: '1px solid var(--izou-border)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#DBEAFE' }}>
-            <History size={16} style={{ color: '#1D4ED8' }} />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+            <History size={16} style={{ color: 'var(--izou-secondary)' }} />
           </div>
           <div>
-            <h2 className="text-sm font-bold" style={{ color: '#1E3A8A' }}>Movement Timeline Log</h2>
-            <p className="text-xs" style={{ color: '#3B82F6' }}>
+            <h2 className="text-sm font-bold" style={{ color: 'var(--izou-secondary)' }}>Movement Timeline Log</h2>
+            <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>
               All collateral movements for this slot · {filtered.length} event{filtered.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -119,23 +119,23 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
             style={{
-              borderColor: showFilters ? '#93C5FD' : '#DBEAFE',
-              backgroundColor: showFilters ? '#EFF6FF' : 'white',
-              color: '#1D4ED8',
+              borderColor: showFilters ? 'var(--izou-secondary)' : 'var(--izou-border)',
+              backgroundColor: showFilters ? 'var(--izou-secondary-light)' : 'white',
+              color: 'var(--izou-secondary)',
             }}>
             <Filter size={12} /> Filter
           </button>
           <button
             onClick={load}
             className="p-1.5 rounded-lg border transition-colors hover:bg-blue-50"
-            style={{ borderColor: '#DBEAFE' }}>
-            <RefreshCw size={14} style={{ color: '#2563EB' }} />
+            style={{ borderColor: 'var(--izou-border)' }}>
+            <RefreshCw size={14} style={{ color: 'var(--izou-secondary)' }} />
           </button>
           <button
             onClick={exportCSV}
             disabled={filtered.length === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50"
-            style={{ backgroundColor: '#2563EB' }}>
+            style={{ backgroundColor: 'var(--izou-secondary)' }}>
             <Download size={12} /> Export CSV
           </button>
         </div>
@@ -143,11 +143,11 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
 
       {/* Filter bar */}
       {showFilters && uniqueEventTypes.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap px-5 py-3" style={{ backgroundColor: '#F8FAFF', borderBottom: '1px solid #DBEAFE' }}>
+        <div className="flex items-center gap-2 flex-wrap px-5 py-3" style={{ backgroundColor: 'var(--izou-bg)', borderBottom: '1px solid var(--izou-border)' }}>
           <button
             onClick={() => setFilterType('all')}
             className="px-2.5 py-1 rounded-full text-xs font-medium transition-all"
-            style={filterType === 'all' ? { backgroundColor: '#2563EB', color: '#fff' } : { backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
+            style={filterType === 'all' ? { backgroundColor: 'var(--izou-secondary)', color: '#fff' } : { backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }}>
             All
           </button>
           {uniqueEventTypes.map((et) => {
@@ -178,21 +178,21 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: '#EFF6FF' }} />
+              <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--izou-secondary-light)' }} />
             ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-10">
-            <History size={32} className="mx-auto mb-2" style={{ color: '#BAE6FD' }} />
-            <p className="text-sm font-medium" style={{ color: '#1E3A8A' }}>No movement events recorded</p>
-            <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
+            <History size={32} className="mx-auto mb-2" style={{ color: 'var(--izou-secondary-light)' }} />
+            <p className="text-sm font-medium" style={{ color: 'var(--izou-secondary)' }}>No movement events recorded</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>
               Events will appear here as collaterals are filed, moved, or removed
             </p>
           </div>
         ) : (
           <div className="relative">
             {/* Timeline line */}
-            <div className="absolute left-[18px] top-0 bottom-0 w-px" style={{ backgroundColor: '#DBEAFE' }} />
+            <div className="absolute left-[18px] top-0 bottom-0 w-px" style={{ backgroundColor: 'var(--izou-secondary-light)' }} />
 
             <div className="space-y-4">
               {filtered.map((entry, idx) => {
@@ -210,38 +210,38 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
                     {/* Content */}
                     <div
                       className="flex-1 rounded-xl p-3.5 min-w-0"
-                      style={{ backgroundColor: idx % 2 === 0 ? '#F8FAFF' : 'white', border: '1px solid #DBEAFE' }}>
+                      style={{ backgroundColor: idx % 2 === 0 ? 'var(--izou-bg)' : 'white', border: '1px solid var(--izou-border)' }}>
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
                           <StatusBadge label={cfg.label} bg={cfg.bg} text={cfg.color} />
                           {entry.collateral && (
-                            <span className="text-xs font-medium" style={{ color: '#1E3A8A' }}>
+                            <span className="text-xs font-medium" style={{ color: 'var(--izou-secondary)' }}>
                               {entry.collateral.collateral_type} — {entry.collateral.description}
                             </span>
                           )}
                         </div>
-                        <span className="flex items-center gap-1 text-xs shrink-0" style={{ color: '#9CA3AF' }}>
+                        <span className="flex items-center gap-1 text-xs shrink-0" style={{ color: 'var(--izou-muted)' }}>
                           <Clock size={11} /> {formatDate(entry.createdAt)}
                         </span>
                       </div>
 
-                      <p className="text-xs mt-1.5" style={{ color: '#374151' }}>{entry.description}</p>
+                      <p className="text-xs mt-1.5" style={{ color: 'var(--izou-text)' }}>{entry.description}</p>
 
                       <div className="flex items-center gap-3 mt-2 flex-wrap">
                         {/* Source → Destination */}
                         {(entry.sourceLocationId || entry.destinationLocationId) && (
-                          <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6B7280' }}>
+                          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--izou-muted)' }}>
                             <MapPin size={11} />
                             {entry.sourceLocationId ? (
-                              <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                              <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' }}>
                                 {entry.location?.code ?? 'Source'}
                               </span>
                             ) : null}
                             {entry.sourceLocationId && entry.destinationLocationId && (
-                              <ArrowRight size={10} style={{ color: '#9CA3AF' }} />
+                              <ArrowRight size={10} style={{ color: 'var(--izou-muted)' }} />
                             )}
                             {entry.destinationLocationId && entry.destinationLocationId !== entry.sourceLocationId ? (
-                              <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#DCFCE7', color: '#166534' }}>
+                              <span className="font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)' }}>
                                 Dest
                               </span>
                             ) : null}
@@ -250,7 +250,7 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
 
                         {/* Actor */}
                         {(entry.performedByProfile?.full_name ?? entry.actorName) && (
-                          <div className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                          <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--izou-muted)' }}>
                             <User size={11} />
                             {entry.performedByProfile?.full_name ?? entry.actorName}
                           </div>
@@ -258,7 +258,7 @@ export default function SlotTimelineLog({ slotId, slotCode }: SlotTimelineLogPro
 
                         {/* Reason */}
                         {entry.reason && (
-                          <span className="text-xs italic" style={{ color: '#9CA3AF' }}>
+                          <span className="text-xs italic" style={{ color: 'var(--izou-muted)' }}>
                             Reason: {entry.reason}
                           </span>
                         )}

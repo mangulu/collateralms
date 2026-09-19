@@ -13,19 +13,22 @@ function getOccupancyPct(loc: ArchiveLocation): number {
 }
 
 function getHeatColor(pct: number): { bg: string; text: string; border: string; label: string } {
-  if (pct >= 90) return { bg: '#FEF2F2', text: '#991B1B', border: '#FECACA', label: 'Critical' };
-  if (pct >= 75) return { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA', label: 'High' };
+  if (pct >= 90) return { bg: 'var(--izou-danger-light)', text: 'var(--izou-danger)', border: 'var(--izou-danger-light)', label: 'Critical' };
+  if (pct >= 75) return { bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)', label: 'High' };
+  // Kept as its own literal yellow (not a brand token) so this 5-step heatmap
+  // keeps a "Moderate" tier visually distinct from "High", which already
+  // uses the single warning-orange token.
   if (pct >= 50) return { bg: '#FEFCE8', text: '#A16207', border: '#FEF08A', label: 'Moderate' };
-  if (pct >= 25) return { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', label: 'Low' };
-  return { bg: '#F8FAFC', text: '#64748B', border: '#E2E8F0', label: 'Empty' };
+  if (pct >= 25) return { bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)', label: 'Low' };
+  return { bg: 'var(--izou-bg)', text: 'var(--izou-muted)', border: 'var(--izou-border)', label: 'Empty' };
 }
 
 function getHeatFill(pct: number): string {
-  if (pct >= 90) return '#EF4444';
-  if (pct >= 75) return '#F97316';
+  if (pct >= 90) return 'var(--izou-danger)';
+  if (pct >= 75) return 'var(--izou-warning)';
   if (pct >= 50) return '#EAB308';
-  if (pct >= 25) return '#22C55E';
-  return '#CBD5E1';
+  if (pct >= 25) return 'var(--izou-success)';
+  return 'var(--izou-border)';
 }
 
 const LEVEL_ICONS: Record<LocationType, React.ReactNode> = {
@@ -60,18 +63,18 @@ interface BottleneckItem {
 
 function HeatLegend() {
   const items = [
-    { label: 'Empty (0–24%)', fill: '#CBD5E1' },
-    { label: 'Low (25–49%)', fill: '#22C55E' },
+    { label: 'Empty (0–24%)', fill: 'var(--izou-border)' },
+    { label: 'Low (25–49%)', fill: 'var(--izou-success)' },
     { label: 'Moderate (50–74%)', fill: '#EAB308' },
-    { label: 'High (75–89%)', fill: '#F97316' },
-    { label: 'Critical (90–100%)', fill: '#EF4444' },
+    { label: 'High (75–89%)', fill: 'var(--izou-warning)' },
+    { label: 'Critical (90–100%)', fill: 'var(--izou-danger)' },
   ];
   return (
     <div className="flex flex-wrap gap-3 items-center">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: item.fill }} />
-          <span className="text-xs" style={{ color: '#6B7280' }}>{item.label}</span>
+          <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>{item.label}</span>
         </div>
       ))}
     </div>
@@ -96,7 +99,7 @@ function SlotCell({ slot, onClick }: SlotCellProps) {
       style={{ backgroundColor: fill + '22', borderColor: fill, minHeight: 44, minWidth: 44 }}
     >
       <div className="w-4 h-4 rounded-sm mb-0.5" style={{ backgroundColor: fill }} />
-      <span className="text-[9px] font-semibold leading-none" style={{ color: '#374151' }}>
+      <span className="text-[9px] font-semibold leading-none" style={{ color: 'var(--izou-text)' }}>
         {pct}%
       </span>
     </button>
@@ -131,7 +134,7 @@ function CabinetGrid({ cabinet, onSlotClick }: CabinetGridProps) {
           ))}
         </div>
       ) : (
-        <p className="text-xs" style={{ color: '#9CA3AF' }}>No slots defined</p>
+        <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>No slots defined</p>
       )}
     </div>
   );
@@ -151,20 +154,20 @@ function RoomPanel({ room, onSlotClick }: RoomPanelProps) {
   const colors = getHeatColor(pct);
 
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--izou-border)' }}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
         style={{ backgroundColor: colors.bg }}
       >
-        <span style={{ color: '#1E3A8A' }}>{React.cloneElement(LEVEL_ICONS.room as React.ReactElement<{ size?: number }>, { size: 18 })}</span>
+        <span style={{ color: 'var(--izou-secondary)' }}>{React.cloneElement(LEVEL_ICONS.room as React.ReactElement<{ size?: number }>, { size: 18 })}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold" style={{ color: '#1E3A8A' }}>{room.name}</span>
+            <span className="text-sm font-bold" style={{ color: 'var(--izou-secondary)' }}>{room.name}</span>
             <StatusBadge label={colors.label} bg={colors.border} text={colors.text} />
           </div>
           <div className="flex items-center gap-3 mt-0.5">
-            <span className="text-xs" style={{ color: '#6B7280' }}>
+            <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
               {room.currentOccupancy}/{room.capacity} items · {cabinets.length} cabinets
             </span>
           </div>
@@ -176,14 +179,14 @@ function RoomPanel({ room, onSlotClick }: RoomPanelProps) {
           </div>
           <span className="text-xs font-semibold" style={{ color: colors.text }}>{pct}%</span>
         </div>
-        <ChevronRight size={16} className={`transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''}`} style={{ color: '#9CA3AF' }} />
+        <ChevronRight size={16} className={`transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''}`} style={{ color: 'var(--izou-muted)' }} />
       </button>
       {expanded && (
-        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" style={{ backgroundColor: '#FAFAFA' }}>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" style={{ backgroundColor: 'var(--izou-bg)' }}>
           {cabinets.length > 0 ? cabinets.map((cabinet) => (
             <CabinetGrid key={cabinet.id} cabinet={cabinet} onSlotClick={onSlotClick} />
           )) : (
-            <p className="text-xs col-span-full text-center py-4" style={{ color: '#9CA3AF' }}>No cabinets in this room</p>
+            <p className="text-xs col-span-full text-center py-4" style={{ color: 'var(--izou-muted)' }}>No cabinets in this room</p>
           )}
         </div>
       )}
@@ -209,18 +212,18 @@ function SlotDetailPanel({ slot, onClose }: SlotDetailPanelProps) {
             {React.cloneElement(LEVEL_ICONS.slot as React.ReactElement<{ size?: number }>, { size: 18 })}
           </div>
           <div>
-            <h3 className="text-sm font-bold" style={{ color: '#1E3A8A' }}>{slot.name}</h3>
-            <p className="text-xs" style={{ color: '#6B7280' }}>{slot.code}</p>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--izou-secondary)' }}>{slot.name}</h3>
+            <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{slot.code}</p>
           </div>
           <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
         </div>
         <div className="space-y-3">
           <div className="flex justify-between items-center p-3 rounded-xl" style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}` }}>
-            <span className="text-xs font-medium" style={{ color: '#374151' }}>Occupancy</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--izou-text)' }}>Occupancy</span>
             <span className="text-sm font-bold" style={{ color: colors.text }}>{slot.currentOccupancy} / {slot.capacity} files</span>
           </div>
           <div>
-            <div className="flex justify-between text-xs mb-1" style={{ color: '#6B7280' }}>
+            <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--izou-muted)' }}>
               <span>Fill level</span><span>{pct}%</span>
             </div>
             <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
@@ -232,7 +235,7 @@ function SlotDetailPanel({ slot, onClose }: SlotDetailPanelProps) {
             <span className="text-xs font-semibold" style={{ color: colors.text }}>{colors.label} — {pct >= 90 ? 'Immediate action needed' : pct >= 75 ? 'Consider redistribution' : pct >= 50 ? 'Monitor closely' : 'Capacity available'}</span>
           </div>
           {slot.description && (
-            <p className="text-xs" style={{ color: '#6B7280' }}>{slot.description}</p>
+            <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{slot.description}</p>
           )}
         </div>
       </div>
@@ -376,20 +379,20 @@ export default function OccupancyHeatmapContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#1E3A8A' }}>Vault Occupancy Heatmap</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-secondary)' }}>Vault Occupancy Heatmap</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
             Real-time room, cabinet, and slot occupancy with capacity alerts and filing trends
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs" style={{ color: '#9CA3AF' }}>
+          <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>
             Updated {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           <button
             onClick={loadData}
             disabled={loading}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-            style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}
+            style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', border: '1px solid var(--izou-border)' }}
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -398,7 +401,7 @@ export default function OccupancyHeatmapContent() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-xl text-sm" style={{ backgroundColor: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' }}>
+        <div className="flex items-center gap-2 p-3 rounded-xl text-sm" style={{ backgroundColor: 'var(--izou-danger-light)', color: 'var(--izou-danger)', border: '1px solid var(--izou-danger-light)' }}>
           <AlertTriangle size={16} /> {error}
         </div>
       )}
@@ -406,10 +409,10 @@ export default function OccupancyHeatmapContent() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Overall Occupancy', value: `${overallPct}%`, sub: `${totalSlotOcc} / ${totalSlotCap} files`, icon: <Activity size={18} />, bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
-          { label: 'Critical Slots', value: criticalCount, sub: '≥ 90% full', icon: <AlertTriangle size={18} />, bg: '#FEF2F2', text: '#991B1B', border: '#FECACA' },
-          { label: 'High Occupancy', value: highCount, sub: '75–89% full', icon: <BarChart2 size={18} />, bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-          { label: 'Available Slots', value: availableSlots, sub: '< 75% full', icon: <Grid3X3 size={18} />, bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
+          { label: 'Overall Occupancy', value: `${overallPct}%`, sub: `${totalSlotOcc} / ${totalSlotCap} files`, icon: <Activity size={18} />, bg: 'var(--izou-secondary-light)', text: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)' },
+          { label: 'Critical Slots', value: criticalCount, sub: '≥ 90% full', icon: <AlertTriangle size={18} />, bg: 'var(--izou-danger-light)', text: 'var(--izou-danger)', border: 'var(--izou-danger-light)' },
+          { label: 'High Occupancy', value: highCount, sub: '75–89% full', icon: <BarChart2 size={18} />, bg: 'var(--izou-warning-light)', text: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
+          { label: 'Available Slots', value: availableSlots, sub: '< 75% full', icon: <Grid3X3 size={18} />, bg: 'var(--izou-success-light)', text: 'var(--izou-success)', border: 'var(--izou-success-light)' },
         ].map((kpi) => (
           <div key={kpi.label} className="rounded-2xl p-4 flex items-start gap-3" style={{ backgroundColor: kpi.bg, border: `1px solid ${kpi.border}` }}>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: kpi.border, color: kpi.text }}>
@@ -418,7 +421,7 @@ export default function OccupancyHeatmapContent() {
             <div>
               <p className="text-2xl font-bold leading-none" style={{ color: kpi.text }}>{kpi.value}</p>
               <p className="text-xs font-medium mt-0.5" style={{ color: kpi.text }}>{kpi.label}</p>
-              <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>{kpi.sub}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>{kpi.sub}</p>
             </div>
           </div>
         ))}
@@ -426,21 +429,21 @@ export default function OccupancyHeatmapContent() {
 
       {/* Capacity Alerts Banner */}
       {alerts.length > 0 && (
-        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: '#FECACA' }}>
-          <div className="flex items-center gap-2 px-4 py-2.5" style={{ backgroundColor: '#FEF2F2' }}>
-            <AlertTriangle size={15} style={{ color: '#DC2626' }} />
-            <span className="text-sm font-semibold" style={{ color: '#991B1B' }}>
+        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--izou-danger-light)' }}>
+          <div className="flex items-center gap-2 px-4 py-2.5" style={{ backgroundColor: 'var(--izou-danger-light)' }}>
+            <AlertTriangle size={15} style={{ color: 'var(--izou-danger)' }} />
+            <span className="text-sm font-semibold" style={{ color: 'var(--izou-danger)' }}>
               {alerts.filter((a) => a.level === 'critical').length} Critical · {alerts.filter((a) => a.level === 'warning').length} Warning
             </span>
-            <span className="text-xs ml-1" style={{ color: '#6B7280' }}>— Locations exceeding capacity thresholds</span>
+            <span className="text-xs ml-1" style={{ color: 'var(--izou-muted)' }}>— Locations exceeding capacity thresholds</span>
           </div>
-          <div className="divide-y divide-[#FEE2E2]">
+          <div className="divide-y divide-[var(--izou-danger-light)]">
             {alerts.slice(0, 5).map((alert) => (
               <div key={alert.id} className="flex items-center gap-3 px-4 py-2.5 bg-white">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${alert.level === 'critical' ? 'bg-red-500' : 'bg-orange-400'}`} />
-                <span className="text-xs font-medium flex-1" style={{ color: '#374151' }}>{alert.message}</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>{alert.location}</span>
-                <span className="text-xs font-bold w-10 text-right" style={{ color: alert.level === 'critical' ? '#DC2626' : '#EA580C' }}>{alert.pct}%</span>
+                <span className="text-xs font-medium flex-1" style={{ color: 'var(--izou-text)' }}>{alert.message}</span>
+                <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-bg)', color: 'var(--izou-muted)' }}>{alert.location}</span>
+                <span className="text-xs font-bold w-10 text-right" style={{ color: alert.level === 'critical' ? 'var(--izou-danger)' : 'var(--izou-warning)' }}>{alert.pct}%</span>
               </div>
             ))}
           </div>
@@ -450,11 +453,11 @@ export default function OccupancyHeatmapContent() {
       {/* Vault Filter */}
       {vaults.length > 1 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-medium" style={{ color: '#6B7280' }}>Filter by vault:</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--izou-muted)' }}>Filter by vault:</span>
           <button
             onClick={() => setSelectedVaultId('all')}
             className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={selectedVaultId === 'all' ? { backgroundColor: '#1E3A8A', color: '#fff' } : { backgroundColor: '#F3F4F6', color: '#374151' }}
+            style={selectedVaultId === 'all' ? { backgroundColor: 'var(--izou-secondary)', color: '#fff' } : { backgroundColor: 'var(--izou-bg)', color: 'var(--izou-text)' }}
           >
             All Vaults
           </button>
@@ -463,7 +466,7 @@ export default function OccupancyHeatmapContent() {
               key={v.id}
               onClick={() => setSelectedVaultId(v.id)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-              style={selectedVaultId === v.id ? { backgroundColor: '#1E3A8A', color: '#fff' } : { backgroundColor: '#F3F4F6', color: '#374151' }}
+              style={selectedVaultId === v.id ? { backgroundColor: 'var(--izou-secondary)', color: '#fff' } : { backgroundColor: 'var(--izou-bg)', color: 'var(--izou-text)' }}
             >
               <Building2 size={12} /> {v.name}
             </button>
@@ -472,15 +475,15 @@ export default function OccupancyHeatmapContent() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: '#F3F4F6' }}>
+      <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--izou-bg)' }}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all flex-1 justify-center"
             style={activeTab === tab.id
-              ? { backgroundColor: '#fff', color: '#1E3A8A', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
-              : { color: '#6B7280' }}
+              ? { backgroundColor: '#fff', color: 'var(--izou-secondary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
+              : { color: 'var(--izou-muted)' }}
           >
             {tab.icon}
             <span className="hidden sm:inline">{tab.label}</span>
@@ -491,8 +494,8 @@ export default function OccupancyHeatmapContent() {
       {/* Tab Content */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <RefreshCw size={24} className="animate-spin" style={{ color: '#1D4ED8' }} />
-          <span className="ml-3 text-sm" style={{ color: '#6B7280' }}>Loading vault data…</span>
+          <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--izou-secondary)' }} />
+          <span className="ml-3 text-sm" style={{ color: 'var(--izou-muted)' }}>Loading vault data…</span>
         </div>
       ) : (
         <>
@@ -501,13 +504,13 @@ export default function OccupancyHeatmapContent() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <HeatLegend />
-                <span className="text-xs" style={{ color: '#9CA3AF' }}>Click any slot for details</span>
+                <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>Click any slot for details</span>
               </div>
               {filteredVaults.length === 0 ? (
-                <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#F9FAFB', border: '1px dashed #E5E7EB' }}>
-                  <Building2 size={40} className="mx-auto mb-3" style={{ color: '#D1D5DB' }} />
-                  <p className="text-sm font-medium" style={{ color: '#9CA3AF' }}>No vault data available</p>
-                  <p className="text-xs mt-1" style={{ color: '#D1D5DB' }}>Create vaults in Vault Management to see the heatmap</p>
+                <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--izou-bg)', border: '1px dashed var(--izou-border)' }}>
+                  <Building2 size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-muted)' }} />
+                  <p className="text-sm font-medium" style={{ color: 'var(--izou-muted)' }}>No vault data available</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>Create vaults in Vault Management to see the heatmap</p>
                 </div>
               ) : (
                 filteredVaults.map((vault) => {
@@ -515,30 +518,30 @@ export default function OccupancyHeatmapContent() {
                   const vaultColors = getHeatColor(vaultPct);
                   const rooms = vault.children ?? [];
                   return (
-                    <div key={vault.id} className="rounded-2xl border overflow-hidden" style={{ borderColor: '#BFDBFE' }}>
+                    <div key={vault.id} className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--izou-border)' }}>
                       {/* Vault header */}
-                      <div className="flex items-center gap-3 px-5 py-4" style={{ backgroundColor: '#EFF6FF' }}>
-                        <span style={{ color: '#1D4ED8' }}>{React.cloneElement(LEVEL_ICONS.vault as React.ReactElement<{ size?: number }>, { size: 24 })}</span>
+                      <div className="flex items-center gap-3 px-5 py-4" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+                        <span style={{ color: 'var(--izou-secondary)' }}>{React.cloneElement(LEVEL_ICONS.vault as React.ReactElement<{ size?: number }>, { size: 24 })}</span>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-base font-bold" style={{ color: '#1E3A8A' }}>{vault.name}</span>
-                            <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ backgroundColor: '#BFDBFE', color: '#1D4ED8' }}>{vault.code}</span>
+                            <span className="text-base font-bold" style={{ color: 'var(--izou-secondary)' }}>{vault.name}</span>
+                            <span className="text-xs font-mono px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }}>{vault.code}</span>
                           </div>
-                          <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--izou-muted)' }}>
                             {rooms.length} room{rooms.length !== 1 ? 's' : ''} · {vault.currentOccupancy}/{vault.capacity} capacity
                           </p>
                         </div>
                         <div className="text-right">
                           <div className="text-xl font-bold" style={{ color: vaultColors.text }}>{vaultPct}%</div>
-                          <div className="text-xs" style={{ color: '#6B7280' }}>overall</div>
+                          <div className="text-xs" style={{ color: 'var(--izou-muted)' }}>overall</div>
                         </div>
                       </div>
                       {/* Rooms */}
-                      <div className="p-4 space-y-3" style={{ backgroundColor: '#FAFAFA' }}>
+                      <div className="p-4 space-y-3" style={{ backgroundColor: 'var(--izou-bg)' }}>
                         {rooms.length > 0 ? rooms.map((room) => (
                           <RoomPanel key={room.id} room={room} onSlotClick={setSelectedSlot} />
                         )) : (
-                          <p className="text-xs text-center py-6" style={{ color: '#9CA3AF' }}>No rooms in this vault</p>
+                          <p className="text-xs text-center py-6" style={{ color: 'var(--izou-muted)' }}>No rooms in this vault</p>
                         )}
                       </div>
                     </div>
@@ -552,20 +555,20 @@ export default function OccupancyHeatmapContent() {
           {activeTab === 'trends' && (
             <div className="space-y-6">
               {/* Room occupancy bar chart */}
-              <div className="rounded-2xl border p-5" style={{ borderColor: '#E5E7EB', backgroundColor: '#fff' }}>
+              <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--izou-border)', backgroundColor: '#fff' }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <BarChart2 size={16} style={{ color: '#1D4ED8' }} />
-                  <h3 className="text-sm font-bold" style={{ color: '#1E3A8A' }}>Room Occupancy Comparison</h3>
+                  <BarChart2 size={16} style={{ color: 'var(--izou-secondary)' }} />
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--izou-secondary)' }}>Room Occupancy Comparison</h3>
                 </div>
                 {roomChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={roomChartData} margin={{ top: 4, right: 8, left: -16, bottom: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6B7280' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} domain={[0, 100]} unit="%" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--izou-muted)' }} />
+                      <YAxis tick={{ fontSize: 11, fill: 'var(--izou-muted)' }} domain={[0, 100]} unit="%" />
                       <Tooltip
                         formatter={(v: number) => [`${v}%`, 'Occupancy']}
-                        contentStyle={{ borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 12 }}
+                        contentStyle={{ borderRadius: 8, border: '1px solid var(--izou-border)', fontSize: 12 }}
                       />
                       <Bar dataKey="pct" radius={[6, 6, 0, 0]}>
                         {roomChartData.map((entry, index) => (
@@ -575,48 +578,48 @@ export default function OccupancyHeatmapContent() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-xs text-center py-8" style={{ color: '#9CA3AF' }}>No room data available</p>
+                  <p className="text-xs text-center py-8" style={{ color: 'var(--izou-muted)' }}>No room data available</p>
                 )}
               </div>
 
               {/* Historical filing trend */}
-              <div className="rounded-2xl border p-5" style={{ borderColor: '#E5E7EB', backgroundColor: '#fff' }}>
+              <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--izou-border)', backgroundColor: '#fff' }}>
                 <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp size={16} style={{ color: '#15803D' }} />
-                  <h3 className="text-sm font-bold" style={{ color: '#1E3A8A' }}>Historical Filing & Retrieval Trends</h3>
+                  <TrendingUp size={16} style={{ color: 'var(--izou-success)' }} />
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--izou-secondary)' }}>Historical Filing & Retrieval Trends</h3>
                 </div>
-                <p className="text-xs mb-4" style={{ color: '#9CA3AF' }}>Monthly filing and retrieval activity over the past 7 months, from the archive audit log</p>
+                <p className="text-xs mb-4" style={{ color: 'var(--izou-muted)' }}>Monthly filing and retrieval activity over the past 7 months, from the archive audit log</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={trendData} margin={{ top: 4, right: 8, left: -16, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6B7280' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 12 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--izou-muted)' }} />
+                    <YAxis tick={{ fontSize: 11, fill: 'var(--izou-muted)' }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid var(--izou-border)', fontSize: 12 }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line type="monotone" dataKey="filings" stroke="#1D4ED8" strokeWidth={2} dot={{ r: 3 }} name="Filings" />
-                    <Line type="monotone" dataKey="retrievals" stroke="#15803D" strokeWidth={2} dot={{ r: 3 }} name="Retrievals" />
+                    <Line type="monotone" dataKey="filings" stroke="var(--izou-secondary)" strokeWidth={2} dot={{ r: 3 }} name="Filings" />
+                    <Line type="monotone" dataKey="retrievals" stroke="var(--izou-success)" strokeWidth={2} dot={{ r: 3 }} name="Retrievals" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               {/* Occupancy distribution */}
-              <div className="rounded-2xl border p-5" style={{ borderColor: '#E5E7EB', backgroundColor: '#fff' }}>
+              <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--izou-border)', backgroundColor: '#fff' }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <Info size={16} style={{ color: '#6B7280' }} />
-                  <h3 className="text-sm font-bold" style={{ color: '#1E3A8A' }}>Slot Occupancy Distribution</h3>
+                  <Info size={16} style={{ color: 'var(--izou-muted)' }} />
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--izou-secondary)' }}>Slot Occupancy Distribution</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {[
-                    { label: 'Empty', range: '0–24%', count: slots.filter((l) => getOccupancyPct(l) < 25).length, fill: '#CBD5E1' },
-                    { label: 'Low', range: '25–49%', count: slots.filter((l) => getOccupancyPct(l) >= 25 && getOccupancyPct(l) < 50).length, fill: '#22C55E' },
+                    { label: 'Empty', range: '0–24%', count: slots.filter((l) => getOccupancyPct(l) < 25).length, fill: 'var(--izou-border)' },
+                    { label: 'Low', range: '25–49%', count: slots.filter((l) => getOccupancyPct(l) >= 25 && getOccupancyPct(l) < 50).length, fill: 'var(--izou-success)' },
                     { label: 'Moderate', range: '50–74%', count: slots.filter((l) => getOccupancyPct(l) >= 50 && getOccupancyPct(l) < 75).length, fill: '#EAB308' },
-                    { label: 'High', range: '75–89%', count: slots.filter((l) => getOccupancyPct(l) >= 75 && getOccupancyPct(l) < 90).length, fill: '#F97316' },
-                    { label: 'Critical', range: '90–100%', count: slots.filter((l) => getOccupancyPct(l) >= 90).length, fill: '#EF4444' },
+                    { label: 'High', range: '75–89%', count: slots.filter((l) => getOccupancyPct(l) >= 75 && getOccupancyPct(l) < 90).length, fill: 'var(--izou-warning)' },
+                    { label: 'Critical', range: '90–100%', count: slots.filter((l) => getOccupancyPct(l) >= 90).length, fill: 'var(--izou-danger)' },
                   ].map((item) => (
                     <div key={item.label} className="rounded-xl p-3 text-center" style={{ backgroundColor: item.fill + '18', border: `1px solid ${item.fill}44` }}>
-                      <div className="text-2xl font-bold" style={{ color: item.fill === '#CBD5E1' ? '#64748B' : item.fill }}>{item.count}</div>
-                      <div className="text-xs font-semibold mt-0.5" style={{ color: '#374151' }}>{item.label}</div>
-                      <div className="text-xs" style={{ color: '#9CA3AF' }}>{item.range}</div>
+                      <div className="text-2xl font-bold" style={{ color: item.fill === 'var(--izou-border)' ? 'var(--izou-muted)' : item.fill }}>{item.count}</div>
+                      <div className="text-xs font-semibold mt-0.5" style={{ color: 'var(--izou-text)' }}>{item.label}</div>
+                      <div className="text-xs" style={{ color: 'var(--izou-muted)' }}>{item.range}</div>
                     </div>
                   ))}
                 </div>
@@ -627,22 +630,22 @@ export default function OccupancyHeatmapContent() {
           {/* ── BOTTLENECKS TAB ── */}
           {activeTab === 'bottlenecks' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
-                <Zap size={15} style={{ color: '#D97706' }} />
-                <p className="text-xs" style={{ color: '#92400E' }}>
+              <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--izou-warning-light)', border: '1px solid var(--izou-warning-light)' }}>
+                <Zap size={15} style={{ color: 'var(--izou-warning)' }} />
+                <p className="text-xs" style={{ color: 'var(--izou-warning)' }}>
                   Bottlenecks are locations with ≥ 50% occupancy that may slow filing operations. Prioritize redistribution for critical items.
                 </p>
               </div>
 
               {bottlenecks.length === 0 ? (
-                <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                  <Activity size={40} className="mx-auto mb-3" style={{ color: '#22C55E' }} />
-                  <p className="text-sm font-bold" style={{ color: '#15803D' }}>No bottlenecks detected</p>
-                  <p className="text-xs mt-1" style={{ color: '#6B7280' }}>All locations are below 50% capacity</p>
+                <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--izou-success-light)', border: '1px solid var(--izou-success-light)' }}>
+                  <Activity size={40} className="mx-auto mb-3" style={{ color: 'var(--izou-success)' }} />
+                  <p className="text-sm font-bold" style={{ color: 'var(--izou-success)' }}>No bottlenecks detected</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--izou-muted)' }}>All locations are below 50% capacity</p>
                 </div>
               ) : (
-                <div className="rounded-2xl border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
-                  <div className="grid grid-cols-12 px-4 py-2.5 text-xs font-semibold" style={{ backgroundColor: '#F9FAFB', color: '#6B7280', borderBottom: '1px solid #E5E7EB' }}>
+                <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--izou-border)' }}>
+                  <div className="grid grid-cols-12 px-4 py-2.5 text-xs font-semibold" style={{ backgroundColor: 'var(--izou-bg)', color: 'var(--izou-muted)', borderBottom: '1px solid var(--izou-border)' }}>
                     <div className="col-span-1">#</div>
                     <div className="col-span-1">Type</div>
                     <div className="col-span-3">Location</div>
@@ -650,21 +653,21 @@ export default function OccupancyHeatmapContent() {
                     <div className="col-span-2">Occupancy</div>
                     <div className="col-span-2">Fill Level</div>
                   </div>
-                  <div className="divide-y divide-[#F3F4F6]">
+                  <div className="divide-y divide-[var(--izou-border)]">
                     {bottlenecks.map((item, idx) => {
                       const colors = getHeatColor(item.pct);
                       return (
                         <div key={item.id} className="grid grid-cols-12 px-4 py-3 items-center hover:bg-gray-50 transition-colors">
-                          <div className="col-span-1 text-xs font-bold" style={{ color: '#9CA3AF' }}>{idx + 1}</div>
+                          <div className="col-span-1 text-xs font-bold" style={{ color: 'var(--izou-muted)' }}>{idx + 1}</div>
                           <div className="col-span-1 text-gray-500" title={item.type}>
                             {LEVEL_ICONS[item.type]}
                           </div>
                           <div className="col-span-3">
-                            <p className="text-xs font-semibold truncate" style={{ color: '#1E3A8A' }}>{item.name}</p>
-                            <p className="text-xs font-mono" style={{ color: '#9CA3AF' }}>{item.code}</p>
+                            <p className="text-xs font-semibold truncate" style={{ color: 'var(--izou-secondary)' }}>{item.name}</p>
+                            <p className="text-xs font-mono" style={{ color: 'var(--izou-muted)' }}>{item.code}</p>
                           </div>
                           <div className="col-span-3">
-                            <p className="text-xs truncate" style={{ color: '#6B7280' }}>{item.parentPath}</p>
+                            <p className="text-xs truncate" style={{ color: 'var(--izou-muted)' }}>{item.parentPath}</p>
                           </div>
                           <div className="col-span-2">
                             <p className="text-xs font-semibold" style={{ color: colors.text }}>{item.occupancy}/{item.capacity}</p>

@@ -59,13 +59,13 @@ export default function LocationDetailDrawer({ stack, onClose, onDrillInto, onBr
           )}
 
           {/* Stats */}
-          <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: '#F8FAFF', border: '1px solid #DBEAFE' }}>
+          <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: 'var(--izou-bg)', border: '1px solid var(--izou-border)' }}>
             <div className="flex items-center justify-between">
-              <StatusBadge label={TYPE_LABELS[current.locationType] ?? current.locationType} bg="#DBEAFE" text="#1D4ED8" />
-              <span className="text-xs font-bold" style={{ color: '#1D4ED8' }}>{current.currentOccupancy}/{current.capacity}</span>
+              <StatusBadge label={TYPE_LABELS[current.locationType] ?? current.locationType} bg="var(--izou-secondary-light)" text="var(--izou-secondary)" />
+              <span className="text-xs font-bold" style={{ color: 'var(--izou-secondary)' }}>{current.currentOccupancy}/{current.capacity}</span>
             </div>
-            <div className="w-full h-2 rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
-              <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(occupancyPct, 100)}%`, backgroundColor: '#2563EB' }} />
+            <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--izou-border)' }}>
+              <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(occupancyPct, 100)}%`, backgroundColor: 'var(--izou-secondary)' }} />
             </div>
             {current.description && (
               <p className="text-xs text-gray-600">{current.description}</p>
@@ -94,16 +94,16 @@ export default function LocationDetailDrawer({ stack, onClose, onDrillInto, onBr
                       key={child.id}
                       onClick={() => (childKind === 'slot' ? onSlotClick(child) : onDrillInto(child))}
                       className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors hover:bg-blue-50"
-                      style={{ border: '1px solid #E5E7EB' }}
+                      style={{ border: '1px solid var(--izou-border)' }}
                     >
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#F0F9FF' }}>
-                        {childKind === 'slot' ? <Package size={14} style={{ color: '#0369A1' }} /> : <Grid3X3 size={14} style={{ color: '#C2410C' }} />}
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+                        {childKind === 'slot' ? <Package size={14} style={{ color: 'var(--izou-secondary-mid)' }} /> : <Grid3X3 size={14} style={{ color: 'var(--izou-warning)' }} />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate text-gray-900">{child.name}</p>
                         <p className="text-xs text-gray-500">{child.code} · {child.currentOccupancy}/{child.capacity} {childKind === 'slot' ? 'items' : 'slots'}</p>
                       </div>
-                      <span className="text-xs font-semibold shrink-0" style={{ color: pct >= 90 ? '#DC2626' : '#6B7280' }}>{pct}%</span>
+                      <span className="text-xs font-semibold shrink-0" style={{ color: pct >= 90 ? 'var(--izou-danger)' : 'var(--izou-muted)' }}>{pct}%</span>
                     </button>
                   );
                 })}
