@@ -258,7 +258,7 @@ export default function CollateralSettlementContent() {
         loanService.getAll(),
         supabase
           .from('collateral_loan_links')
-          .select('id, collateral_id, loan_account_id, allocated_amount, release_status, discharge_date, discharge_number, collateral_records(collateral_id, collateral_type, description)')
+          .select('id, collateral_id, loan_id, allocated_amount, status, release_date, collateral_records(collateral_id, collateral_type, description)')
           .order('created_at', { ascending: false }),
       ]);
 
@@ -266,7 +266,7 @@ export default function CollateralSettlementContent() {
       const linkRows = linksData.data ?? [];
 
       const settlementRecords: LoanSettlementRecord[] = loans.map(loan => {
-        const loanLinks = linkRows.filter((l: any) => l.loan_account_id === loan.id);
+        const loanLinks = linkRows.filter((l: any) => l.loan_id === loan.id);
         const collaterals: CollateralLink[] = loanLinks.map((l: any) => ({
           id: l.id,
           collateralId: l.collateral_id,
@@ -274,9 +274,9 @@ export default function CollateralSettlementContent() {
           collateralType: l.collateral_records?.collateral_type ?? 'Unknown',
           collateralDescription: l.collateral_records?.description ?? '',
           allocatedAmount: Number(l.allocated_amount) || 0,
-          releaseStatus: l.release_status ?? 'PENDING',
-          dischargeDate: l.discharge_date,
-          dischargeNumber: l.discharge_number,
+          releaseStatus: l.status ?? 'ACTIVE',
+          dischargeDate: l.release_date,
+          dischargeNumber: null,
         }));
         return mapLoanToSettlement(loan, collaterals);
       });
