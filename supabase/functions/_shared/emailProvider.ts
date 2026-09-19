@@ -36,6 +36,65 @@ export interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
+  /** Overrides the active provider's configured from-address, e.g. from notification template settings. */
+  from?: string;
+}
+
+export interface NotificationTemplateConfig {
+  senderName?: string;
+  senderEmail?: string;
+  replyToEmail?: string;
+  approvalSubject?: string;
+  approvalBody?: string;
+  rejectionSubject?: string;
+  rejectionBody?: string;
+  perfectionDueSubject?: string;
+  perfectionDueBody?: string;
+  overdueSubject?: string;
+  overdueBody?: string;
+}
+
+/** Fetches the admin-configured "Email Templates" settings (system_config, key 'email_templates'). */
+export async function fetchNotificationTemplateConfig(): Promise<NotificationTemplateConfig | null> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !serviceRoleKey) return null;
+
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/system_config?select=config_value&config_key=eq.email_templates&limit=1`, {
+      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    const v = rows?.[0]?.config_value;
+    if (!v) return null;
+    return {
+      senderName: v.sender_name || undefined,
+      senderEmail: v.sender_email || undefined,
+      replyToEmail: v.reply_to_email || undefined,
+      approvalSubject: v.approval_subject || undefined,
+      approvalBody: v.approval_body || undefined,
+      rejectionSubject: v.rejection_subject || undefined,
+      rejectionBody: v.rejection_body || undefined,
+      perfectionDueSubject: v.perfection_due_subject || undefined,
+      perfectionDueBody: v.perfection_due_body || undefined,
+      overdueSubject: v.overdue_subject || undefined,
+      overdueBody: v.overdue_body || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Replaces {{key}} placeholders in a template string with the given values. */
+export function applyTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{\s*([a-zA-Z_]+)\s*\}\}/g, (_match, key) => vars[key] ?? '');
+}
+
+/** Builds a "Name <email>" from-address from template sender settings, or null if neither is configured. */
+export function buildFromAddress(cfg: NotificationTemplateConfig | null): string | null {
+  if (!cfg?.senderEmail) return null;
+  return cfg.senderName ? `${cfg.senderName} <${cfg.senderEmail}>` : cfg.senderEmail;
 }
 
 export interface SendEmailResult {
@@ -178,11 +237,15 @@ export async function sendEmailViaProvider(
   const fallbackResendKey = Deno.env.get('RESEND_API_KEY');
   const provider = config?.activeProvider ?? 'resend';
 
+  // params.from overrides the provider's configured from-address (e.g. from
+  // notification template settings) -- except for Microsoft365, where the
+  // "from" is the authenticated mailbox identity Graph sends as, not a
+  // header value, so an arbitrary override isn't meaningful there.
   if (provider === 'sendgrid' && config?.sendgridApiKey) {
-    return sendViaSendGrid(config.sendgridApiKey, config.sendgridFromEmail || 'noreply@example.com', params);
+    return sendViaSendGrid(config.sendgridApiKey, params.from || config.sendgridFromEmail || 'noreply@example.com', params);
   }
   if (provider === 'brevo' && config?.brevoApiKey) {
-    return sendViaBrevo(config.brevoApiKey, config.brevoFromEmail || 'noreply@example.com', params);
+    return sendViaBrevo(config.brevoApiKey, params.from || config.brevoFromEmail || 'noreply@example.com', params);
   }
   if (provider === 'microsoft365' && config?.microsoft365TenantId && config?.microsoft365ClientId && config?.microsoft365ClientSecret && config?.microsoft365FromEmail) {
     return sendViaMicrosoft365(
@@ -198,5 +261,5 @@ export async function sendEmailViaProvider(
   if (!resendKey) {
     return { success: false, error: `No credentials configured for active provider "${provider}", and no RESEND_API_KEY fallback is set.` };
   }
-  return sendViaResend(resendKey, config?.resendFromEmail || 'onboarding@resend.dev', params);
+  return sendViaResend(resendKey, params.from || config?.resendFromEmail || 'onboarding@resend.dev', params);
 }

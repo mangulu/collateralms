@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
-import { fetchEmailProviderConfig, sendEmailViaProvider } from "../_shared/emailProvider.ts";
+import { fetchEmailProviderConfig, sendEmailViaProvider, fetchNotificationTemplateConfig, applyTemplate, buildFromAddress } from "../_shared/emailProvider.ts";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string; description: string }> = {
   Rejected: {
@@ -68,6 +68,27 @@ serve(async (req) => {
       description: `Collateral status has been updated to ${newStatus}.`,
     };
 
+    // Admin-configured Email Templates (Settings → Email Templates) override
+    // the hardcoded subject/description for Perfected/Rejected when set --
+    // there's no saved template for Released, so it always keeps the default.
+    const templateVars = {
+      collateral_id: collateralId ?? "",
+      obligor: obligor ?? "",
+      collateral_type: collateralType ?? "",
+      changed_by: changedBy ?? "System",
+    };
+    const templates = await fetchNotificationTemplateConfig();
+    let subjectOverride: string | null = null;
+    let descriptionOverride: string | null = null;
+    if (newStatus === "Perfected" && templates?.approvalSubject) {
+      subjectOverride = applyTemplate(templates.approvalSubject, templateVars);
+      if (templates.approvalBody) descriptionOverride = applyTemplate(templates.approvalBody, templateVars);
+    } else if (newStatus === "Rejected" && templates?.rejectionSubject) {
+      subjectOverride = applyTemplate(templates.rejectionSubject, templateVars);
+      if (templates.rejectionBody) descriptionOverride = applyTemplate(templates.rejectionBody, templateVars);
+    }
+    const description = descriptionOverride ?? cfg.description;
+
     const notesRow = notes
       ? `<tr>
           <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;color:#555;font-size:13px;">Notes</td>
@@ -101,7 +122,7 @@ serve(async (req) => {
               </tr>
             </table>
             <h2 style="margin:14px 0 4px;color:#1e3a5f;font-size:18px;font-weight:700;">Collateral Status Changed</h2>
-            <p style="margin:0;color:#6b7280;font-size:14px;">${cfg.description}</p>
+            <p style="margin:0;color:#6b7280;font-size:14px;">${description}</p>
           </td>
         </tr>
         <!-- Details Table -->
@@ -177,13 +198,14 @@ serve(async (req) => {
 </body>
 </html>`;
 
-    const subject = `${cfg.icon} Collateral ${cfg.label}: ${collateralId ?? collateralDescription ?? "Status Update"}`;
+    const subject = subjectOverride ?? `${cfg.icon} Collateral ${cfg.label}: ${collateralId ?? collateralDescription ?? "Status Update"}`;
 
     const config = await fetchEmailProviderConfig();
+    const from = buildFromAddress(templates) ?? undefined;
 
     const sendResults = await Promise.all(
       recipients.map(async (recipient) => {
-        const result = await sendEmailViaProvider(config, { to: recipient.email, subject, html: htmlBody });
+        const result = await sendEmailViaProvider(config, { to: recipient.email, subject, html: htmlBody, from });
         return { email: recipient.email, success: result.success, result };
       })
     );
