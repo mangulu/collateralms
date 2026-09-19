@@ -1170,7 +1170,7 @@ export default function CollateralDocumentsContent() {
 
   const userId = user?.id ?? '';
   const userName = userProfile?.full_name ?? user?.email ?? 'Unknown';
-  const canDelete = hasPermission(PERMISSIONS.COLLATERAL_VIEW);
+  const canDelete = hasPermission(PERMISSIONS.COLLATERAL_DELETE) || hasPermission(PERMISSIONS.COLLATERAL_EDIT);
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
