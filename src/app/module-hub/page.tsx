@@ -569,10 +569,10 @@ export default function ModuleHubPage() {
               {/* Welcome row */}
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
                 <div>
-                  <h1 className="text-2xl font-bold leading-tight" style={{ color: 'var(--izou-secondary)' }}>
+                  <h1 className="text-2xl font-bold leading-tight" style={{ color: 'var(--izou-primary)' }}>
                     Good {greeting || '—'}, {firstName}
                   </h1>
-                  <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--izou-muted)' }}>
+                  <p className="text-sm mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--izou-secondary)' }}>
                     <Calendar size={13} />
                     {todayStr || '—'}
                   </p>
