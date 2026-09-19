@@ -98,7 +98,6 @@ const NAV_INDEX: NavResult[] = [
   { id: 'n-adm-perms', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Roles & Permissions', description: 'Configure role-based access and permissions', href: '/user-management?tab=roles', icon: KeyRound, keywords: ['permissions', 'rbac', 'roles', 'access', 'officer'] },
   { id: 'n-adm-settings', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'System Settings', description: 'Configure system-wide settings', href: '/settings', icon: Settings, keywords: ['settings', 'config', 'system', 'configure'] },
   { id: 'n-adm-thresh', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Alert Thresholds', description: 'Set alert trigger thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, keywords: ['thresholds', 'alerts', 'trigger', 'configure'] },
-  { id: 'n-adm-sysconf', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'System Config', description: 'Advanced system configuration options', href: '/system-config', icon: Brain, keywords: ['system', 'config', 'advanced', 'configuration'] },
   { id: 'n-adm-glossary', kind: 'screen', module: 'Administration', moduleId: 'administration', label: 'Glossary', description: 'Collateral management terms and definitions', href: '/glossary', icon: BookOpen, keywords: ['glossary', 'terms', 'definitions', 'reference', 'help'] },
 
   // ── Archive ──

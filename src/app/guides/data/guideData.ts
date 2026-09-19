@@ -371,7 +371,6 @@ export const SYSTEM_ADMIN_GUIDE: RoleGuide = {
     { label: 'Migration Tool', href: '/workflows-admin/migration', icon: DatabaseZap, why: 'Run data migration operations and manage the migration queue.' },
     { label: 'System Settings', href: '/settings', icon: Settings, why: 'Configure email providers, document types, notification preferences, and registries.' },
     { label: 'Alert Thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, why: 'Set numeric thresholds that trigger automated alerts (e.g. LTV > 80%).' },
-    { label: 'System Config', href: '/system-config', icon: Settings2, why: 'Advanced configuration — brand kit, feature flags, and integrations.' },
     { label: 'SMS Notification Rules', href: '/sms-notification-rules', icon: SendHorizonal, why: 'Configure which events trigger SMS alerts and to which roles.' },
     { label: 'Scheduled Jobs', href: '/scheduled-jobs', icon: CalendarClock, why: 'Monitor automated background tasks and their execution status.' },
     { label: 'Compliance Trail', href: '/audit-trail', icon: DatabaseZap, why: 'Full audit database — review any user action across the entire system.' },

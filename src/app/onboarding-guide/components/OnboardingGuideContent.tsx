@@ -346,7 +346,6 @@ const MODULES: ModuleGuide[] = [
       { label: 'User Management', href: '/user-management', icon: Users, description: 'Create, edit, and deactivate user accounts, assign roles, and manage role-based permissions and screen access.' },
       { label: 'System Settings', href: '/settings', icon: Settings, description: 'Configure email providers, document types, notification preferences, and registries.' },
       { label: 'Alert Thresholds', href: '/alert-thresholds', icon: SlidersHorizontal, description: 'Set numeric thresholds that trigger automated alerts (e.g. LTV > 80%).' },
-      { label: 'System Config', href: '/system-config', icon: Settings, description: 'Advanced system configuration — brand kit, feature flags, and integrations.' },
     ],
     journeys: [
       {

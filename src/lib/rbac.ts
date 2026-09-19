@@ -118,7 +118,6 @@ export const SCREEN_PERMISSIONS: Record<string, PermissionKey> = {
   '/user-management': PERMISSIONS.USER_MANAGEMENT_VIEW,
   '/admin': PERMISSIONS.USER_MANAGEMENT_VIEW,
   '/settings': PERMISSIONS.SETTINGS_VIEW,
-  '/system-config': PERMISSIONS.SETTINGS_MANAGE,
   '/archive/vault-management': PERMISSIONS.COLLATERAL_VIEW,
   '/archive/collateral-placement': PERMISSIONS.COLLATERAL_VIEW,
   '/document-management': PERMISSIONS.COLLATERAL_VIEW,
