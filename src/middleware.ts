@@ -152,7 +152,7 @@ export async function middleware(request: NextRequest) {
   try {
     const { data } = await supabase
       .from('user_profiles')
-      .select('role, two_fa_enabled, two_fa_enforced')
+      .select('role, is_active, two_fa_enabled, two_fa_enforced')
       .eq('id', user.id)
       .single();
     profile = data ?? null;
@@ -163,6 +163,14 @@ export async function middleware(request: NextRequest) {
   if (!profile) {
     const url = request.nextUrl.clone();
     url.pathname = '/sign-up-login-screen';
+    return NextResponse.redirect(url);
+  }
+
+  // ─── Deactivated accounts: block every route, regardless of role ──────────
+  if (profile.is_active === false) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/sign-up-login-screen';
+    url.searchParams.set('deactivated', '1');
     return NextResponse.redirect(url);
   }
 

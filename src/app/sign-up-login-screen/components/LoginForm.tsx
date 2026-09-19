@@ -33,6 +33,12 @@ export default function LoginForm() {
     return new URLSearchParams(window.location.search).get('require_2fa_setup') === '1';
   });
 
+  // Deactivated-account notice (redirected here by middleware)
+  const [showDeactivatedNotice] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('deactivated') === '1';
+  });
+
   // Password reset state
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -469,6 +475,17 @@ export default function LoginForm() {
                 <h2 className="text-xl font-bold" style={{ color: 'var(--izou-text)' }}>Sign in</h2>
                 <p className="text-sm mt-1" style={{ color: 'var(--izou-muted)' }}>Enter your credentials to access the system</p>
               </div>
+
+              {/* Deactivated account notice */}
+              {showDeactivatedNotice && (
+                <div className="flex items-start gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div>
+                    <p className="text-xs font-semibold text-red-800">Account Deactivated</p>
+                    <p className="text-xs text-red-700 mt-0.5">Your account has been deactivated. Contact a system administrator if you believe this is a mistake.</p>
+                  </div>
+                </div>
+              )}
 
               {/* 2FA setup required notice */}
               {show2FASetupNotice && (
