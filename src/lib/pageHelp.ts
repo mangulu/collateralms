@@ -505,6 +505,345 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       ],
     },
   },
+  '/collateral-dashboard': {
+    title: 'Collateral Dashboard',
+    narrative: 'The main portfolio landing page — KPI cards, a portfolio health bar, LTV/risk and obligor concentration panels, perfection trend and collateral-type charts, an overdue-items table, a recent activity feed, and a real-time monitoring section, all built from live data.',
+    steps: [
+      'Use Quick Actions to jump straight to Add Collateral, Perfection Workflow, Compliance Audit, Alerts Inbox, Bulk Upload, or Reports',
+      'Click Refresh to reload every widget on the page at once, or Export for a 6-month perfection-rate PDF summary',
+      'In Real-Time Monitoring at the bottom, switch between Volumes/Turnaround/Concentration/Delinquency — "Live" there just means polling every 30 seconds, not a push connection',
+      'An escalation badge next to the page title links straight to Workflow Instances if a workflow step gets escalated while you\'re on the page',
+    ],
+  },
+  '/collateral-management': {
+    title: 'Collateral Registry',
+    narrative: 'The primary data-entry and management screen for the whole collateral portfolio — create, edit, filter, bulk-assign, and start workflows on collateral records, with real-time updates when other users make changes.',
+    steps: [
+      'Click "Register Collateral" to add a new record, or "Start Workflow" to launch a perfection/valuation/release workflow for one',
+      'Use basic or advanced filters to narrow by type, status, registry, officer, date range, or value',
+      'Select rows to bulk-assign an officer or bulk-remove; Ctrl/Cmd+N opens New, Delete bulk-removes selected rows',
+      'Export the filtered list as CSV or PDF',
+      'A new record automatically gets document-upload, perfection, approval-routing, and valuation tasks queued for you — shown as a "Next Steps" banner',
+    ],
+  },
+  '/collateral-documents': {
+    title: 'Collateral Documents',
+    narrative: 'The central store for every document attached to a collateral record — upload, version, preview inline, and audit every upload, rollback, and delete — plus a separate Security Pocket view.',
+    steps: [
+      'Switch between Documents, Pockets (Security Pocket), and Audit tabs',
+      'Click a document name or the eye icon to preview it inline (PDF/image) or download it',
+      '"Upload New Version" adds a newer file under the same document type — full version history is kept and can be rolled back to',
+      'Deleting a document requires Collateral Delete/Edit permission',
+      'In the Audit tab, filter uploads/rollbacks/deletes by action, collateral, or search term',
+    ],
+  },
+  '/collateral-history': {
+    title: 'Collateral History',
+    narrative: 'A single search box that pulls together everything about one collateral record — linked loan requests, its approval/perfection timeline with status history and comments, and its full audit event feed — instead of checking three separate screens.',
+    steps: [
+      'Search by collateral ID, obligor name, or description, then pick a record from the dropdown',
+      'Review Linked Loan Requests for which loans this collateral secures and how much is allocated to each',
+      'Expand an entry in the Approval Timeline to see its status history and comments',
+      'Filter the Audit Events feed by action type, or Refresh to reload everything for the selected record',
+    ],
+  },
+  '/collateral-loan-visualization': {
+    title: 'Collateral–Loan Visualization',
+    narrative: 'Cross-references collaterals and the loans they secure in both directions — which loans a given collateral backs, and which collaterals back a given loan — to surface shared collateral and multi-collateral loans that a flat list would hide.',
+    steps: [
+      'Switch between "Collateral → Loans" and "Loan → Collaterals" tabs',
+      'Filter by utilization status (On Track/Near Limit/Critical) in the Collateral → Loans view',
+      'Expand a card to see per-loan allocation percentages, utilization bars, and rank',
+      'Search to jump to a specific collateral ID, loan account, or obligor',
+    ],
+  },
+  '/collateral-reports': {
+    title: 'Collateral Performance Reports',
+    narrative: 'Three focused reports — Monthly Perfection Trends, Registry Submission Compliance, and Overdue Summary — computed live from collateral records for a chosen date range, each exportable as CSV or PDF.',
+    steps: [
+      'Set the date range at the top — it drives Perfection Trends and Registry Compliance; Overdue Summary always shows everything currently overdue regardless of range',
+      'Pick which of the three report types to preview',
+      'Use "Download CSV" or "Export PDF" from the toolbar or the panel footer',
+      'This substantially overlaps with the "Collateral Reports" tab inside Reports — either works',
+    ],
+  },
+  '/collateral-settlement': {
+    title: 'Collateral Settlement Status',
+    narrative: "Tracks the post-repayment lifecycle of each loan — payoff progress, settlement status, and exactly which of its collaterals have been formally released versus still pending.",
+    steps: [
+      'Search by loan number, obligor, or facility type; filter by settlement status or whether releases are pending vs. complete',
+      'Expand a loan card for the full collateral-by-collateral release detail (allocated amount, release status, discharge date/number)',
+      'Use the summary KPIs (Settled Loans, Pending Releases, Completed Releases) to gauge overall backlog',
+      'This page is read-only reporting — actual releases happen in Batch Release, not here',
+    ],
+  },
+  '/collateral-substitution': {
+    title: 'Collateral Substitution',
+    narrative: 'Manages requests to swap one pledged collateral for another against an active facility, through a Pending → Under Review → Approved → Completed pipeline with a full audit trail per request.',
+    steps: [
+      'Click "New Substitution" to request swapping an outgoing collateral for an incoming one, with a reason',
+      'Click a KPI card or status pill to filter the list by that status',
+      'Start Review (Pending → Under Review), then Approve (effective date required) or Reject (reason required), or Mark Complete once approved',
+      'Click "View Audit Trail" on any request for its full history of status changes and notes',
+    ],
+  },
+  '/compliance-audit': {
+    title: 'Compliance & Audit Trail',
+    narrative: 'Legal-officer-facing compliance view — per-collateral compliance status, a regulatory deadline enforcement table across BRELA/Lands/TRA/DSE/TASAC, and a Risk Priority tab, with the ability to fire an SMS deadline warning directly from an overdue or critical row.',
+    steps: [
+      'Switch between "Compliance Overview" and "Risk Priority View" tabs',
+      'Filter the Regulatory Deadline Enforcement table by All/Overdue/Critical/This Week',
+      'Click the SMS icon on an overdue, critical, or warning row to send a deadline-warning text',
+      'Export the deadline data as CSV, or follow the link at the bottom to the full immutable Audit Trail',
+    ],
+  },
+  '/compliance-breach-log': {
+    title: 'Compliance Breach Log',
+    narrative: 'The log of actual breaches produced by evaluating active compliance rules (LTV limit, deadline, eligibility) against live collateral and obligor data — the real output of running the rule engine, not a static list.',
+    steps: [
+      'Click "Run Engine Now" to evaluate every active rule against current data immediately',
+      'Filter by Severity, Action (Block/Warn/Log), Rule Type, or Status, or search by rule/collateral/obligor',
+      'Expand a breach to see the trigger value vs. threshold and the rule\'s message',
+      'Click "Mark Resolved" once addressed — there\'s no "unresolve"',
+      '"Manage Compliance Rules" at the bottom goes to where the rules that generate these breaches are configured',
+    ],
+  },
+  '/compliance-rules': {
+    title: 'Compliance Rule Engine',
+    narrative: 'Configures the automated rules — LTV limits, deadline checks, eligibility conditions — that the compliance engine evaluates against collateral data, with Block/Warn/Log severity.',
+    steps: [
+      'Click "New Rule" to define a field/operator/value condition, an action, and a user-facing message',
+      'Toggle a rule active/inactive, or Edit/Delete it from its card',
+      'On an active Deadline-type rule, use the message icon to send an SMS alert to a specific officer, with a preview first',
+      'Block rules actually prevent submission and require override; Warn rules show a banner; Log rules only record silently — see Compliance Breach Log for what\'s actually fired',
+    ],
+  },
+  '/covenant-tracking': {
+    title: 'Covenant Tracking',
+    narrative: 'Tracks financial, legal, and operational covenants attached to loans against a threshold value, flags a breach automatically when a new measurement crosses it, and fires an SMS breach alert the moment that happens.',
+    steps: [
+      'Click "Add Covenant" and pick a loan, name the covenant, set its type and threshold value/unit',
+      'Click "Update" to log a new measurement — a breach flips the status and fires an SMS alert automatically',
+      'Click "Waive" on an active or breached covenant with a required justification',
+      'Filter by status (Active/Breached/Waived/Expired) or expand a row for measurement date and notes',
+    ],
+  },
+  '/custom-reports': {
+    title: 'Custom Reports',
+    narrative: 'Lets you build and save your own collateral report definitions — filters, a date range, and an export format — then run any saved report on demand for a CSV pulled fresh from the database.',
+    steps: [
+      'Click "New Report", set filters (type/status/registry/officer), a date range, and an export format, then save it',
+      'Click "Run Now" on a saved report to generate and download it immediately',
+      'Note that Run Now always produces CSV regardless of the saved format setting — only CSV export is actually wired up for on-demand runs',
+      'Edit or Delete a saved report from its card',
+    ],
+  },
+  '/export': {
+    title: 'Export Analytics',
+    narrative: 'A two-tab export center — General Export builds one of six standard collateral reports with filters, and Performance Export covers the same three performance-report categories as the dedicated Performance Export page.',
+    steps: [
+      'Switch between "General Export" and "Performance Export" tabs',
+      'In General Export, pick a report type and format, set a date range and filters, and toggle Include Charts/Summary/Details/Stakeholder Mode',
+      'Excel export here is really CSV saved with an .xlsx-style filename, not a real spreadsheet',
+      'The right-hand panel previews live record counts and portfolio stats before you export',
+    ],
+  },
+  '/glossary': {
+    title: 'Glossary of Terms',
+    narrative: 'A static reference glossary of financial, legal, workflow, risk/compliance, and archive/custody terms used throughout the app, for lookup only — no live data.',
+    steps: [
+      'Search by term or definition text',
+      'Filter by category (Financial/Legal/Workflow/Risk & Compliance/Archive & Custody)',
+      'Jump to a starting letter using the A–Z index',
+      'Click a "See also" related term to jump straight to it',
+    ],
+  },
+  '/insurance-tracking': {
+    title: 'Insurance Tracking',
+    narrative: 'Manages the insurance-policy lifecycle for collateral — policy number, coverage amount/type, premium, and start/end/renewal dates — with automatic expiry alerts for policies expiring within 30 days or already expired.',
+    steps: [
+      'Click "Add Policy", select the collateral it covers, and fill in insurer, coverage, premium, and dates',
+      'Filter by status (Active/Expiring Soon/Expired/Pending Renewal/Cancelled)',
+      'Click "Edit" to update coverage, premium, or dates',
+      'Expand a row for beneficiary, contact, and certificate-reference details',
+    ],
+  },
+  '/live-activity': {
+    title: 'Live Activity Stream',
+    narrative: 'A combined real-time feed of audit events, SMS alerts sent, and collateral status changes, auto-refreshing on a configurable interval, with newly-arrived items visually flagged for a few seconds.',
+    steps: [
+      'Filter by All Events / Audit Events / Alerts Sent / Status Changes, or search across messages, collateral IDs, officers, and phone numbers',
+      'Choose the auto-refresh interval (10s/30s/1m/2m), or Pause/Resume the stream',
+      'Click a row with field changes to expand and see the old-value → new-value diff',
+      'The KPI row shows running totals for the current filtered view',
+    ],
+  },
+  '/ltv-breach-alerts': {
+    title: 'LTV Breach Alerts',
+    narrative: 'Surfaces collateral whose loan-to-value ratio has crossed a warning or critical threshold, grouped by severity and status, plus a separate tab to configure the per-collateral-type thresholds and notification channels that drive these alerts.',
+    steps: [
+      'Switch between "Breach Alerts" and "Threshold Settings" tabs',
+      'Filter alerts by status (Open/Acknowledged/Resolved/Waived) or severity (Critical/High/Medium)',
+      'Acknowledge, then later Resolve (resolution notes required) to work an open alert through to closure',
+      'In Threshold Settings, set warning/critical percentages per collateral type and whether to notify by officer, email, and/or SMS',
+    ],
+  },
+  '/onboarding-guide': {
+    title: 'Onboarding Guide',
+    narrative: 'A static, module-by-module tour of the whole app — purpose, feature list, sample user journeys, and quick-access shortcuts for each — meant for orienting a new user rather than doing any work itself.',
+    steps: [
+      'Click a module to expand it, then switch its Features / User Journeys / Quick Access tabs',
+      'Search across module titles, taglines, and feature names to jump straight to a topic',
+      'Click any feature link or shortcut card to navigate directly to that real screen',
+      'Follow a User Journey\'s numbered steps to see a typical multi-step task for a given role',
+    ],
+  },
+  '/performance-export': {
+    title: 'Performance Export',
+    narrative: 'A focused export tool for three report categories — Collateral Performance Summary, Trend Analysis, and Compliance Metrics — in PDF, Excel, or CSV.',
+    steps: [
+      'Pick a report category — Trend Analysis has no CSV option',
+      'Set the date range (with quick presets for 30/90/180/365 days) and optionally filter by registry',
+      'Toggle Include Charts / Executive Summary / Detailed Breakdown',
+      'PDF and Excel are generated server-side; CSV is generated client-side',
+      'Check the Live Portfolio Snapshot panel for current stats and Recent Exports for what you\'ve generated this session',
+    ],
+  },
+  '/regulatory-submission-tracking': {
+    title: 'Regulatory Submission Tracking',
+    narrative: 'Tracks each regulatory report (to BOT, BRELA, etc.) through Pending Generation → Generated → Submitted → Acknowledged, flagging anything overdue against its due date — a manual status-tracking log, not an automated report generator.',
+    steps: [
+      'Click "New Submission" to log a report to track — regulatory body, report type, period, and due date',
+      'Mark Generated, then Mark Submitted (optional reference), then Mark Acknowledged (optional reference) as it progresses',
+      'Filter by status or regulatory body',
+      'Expand a submission to see its full timestamp and reference history',
+    ],
+  },
+  '/reports': {
+    title: 'Reports',
+    narrative: 'A seven-tab reporting hub — Analytics, Compliance, Calendar, Deadlines, Utilization, Officer Workload, and Collateral Reports — the richest reporting screen in the app.',
+    steps: [
+      'Switch between Analytics / Compliance / Calendar / Deadlines / Utilization / Officer Workload / Collateral Reports tabs',
+      'In Analytics, the past-months portion of the Perfection Rate Trend and Deadline Adherence charts is a computed estimate, not real historical data — only the current point is live',
+      'In Compliance, filter by status or registry and export/print the table',
+      'In Officer Workload, click an officer\'s bar to drill into their perfected/pending/overdue split',
+      'Use Refresh to reload the underlying data that all tabs are built from',
+    ],
+  },
+  '/reports-dashboard': {
+    title: 'Regulatory Reports Dashboard',
+    narrative: 'A print/export-oriented rollup combining Registry Compliance Status by authority, a Perfection Trend Analysis, Officer Workload, and a full Audit Trail export — each section has its own Print and Export CSV buttons.',
+    steps: [
+      'Click a per-authority KPI card (e.g. BRELA) to filter Registry Compliance to that authority, combined with the Status dropdown',
+      'Use Print or Export CSV on the Registry Compliance and Audit Trail sections independently',
+      'The "Monthly Perfection Rate vs. 80% Target" chart uses the same estimated-history approach as Reports — only the current month is real',
+      'The Audit Trail section is capped at 100 rows on-screen — export CSV for the full set',
+    ],
+  },
+  '/scheduled-report-delivery': {
+    title: 'Scheduled Report Delivery',
+    narrative: 'Manages automatic email delivery configs for recurring reports (e.g. weekly perfection summary, monthly portfolio review) — who receives them, whether the schedule is enabled, and lets you trigger an out-of-cycle send immediately.',
+    steps: [
+      'Toggle a config Enabled/Disabled to control whether its schedule fires automatically',
+      'Click "Manage Recipients" to add or remove named email recipients for a config',
+      'Click "Send Now" to immediately email current recipients a live summary, regardless of the schedule',
+      'Expand "Delivery Log" on a config to see recent send attempts and their status',
+    ],
+  },
+  '/stress-simulator': {
+    title: 'Portfolio Stress Simulator',
+    narrative: 'Models the effect of a 10%/20%/30% market decline on the collateral portfolio, applying asset-class-specific stress multipliers (not a flat percentage) to compute stressed LTV per position and flag which would breach their LTV threshold.',
+    steps: [
+      'Toggle which of the three decline scenarios are active — at least one must stay on',
+      'Review the per-scenario KPI cards and charts (value comparison, breach forecast, LTV progression)',
+      'Filter the position-level table (always worst-case 30% scenario) by asset class or "Show Breaches Only"',
+      'Expand a position to compare its stressed value/LTV across all three scenarios',
+      'This is a read-only simulation — nothing here writes back to collateral records',
+    ],
+  },
+  '/user-guide': {
+    title: 'User Guide',
+    narrative: 'A static, role-by-role manual covering each role\'s responsibilities, exact screen access, step-by-step key workflows, tips, and restrictions.',
+    steps: [
+      'Pick a role from the left sidebar to load its guide',
+      'Search within the guide to filter responsibilities and screen-access rows',
+      'Click a Screen Access row to expand its usage notes',
+      'Read the numbered Key Workflows for common end-to-end tasks, and Restrictions for what that role explicitly cannot do',
+    ],
+  },
+  '/valuation-pricing-flags': {
+    title: 'Valuation Pricing Flags',
+    narrative: 'Flags collateral whose LTV is being calculated from a non-market valuation — overdue valuation, no market data, or theoretical/desktop pricing — so officers know which LTV numbers elsewhere might be unreliable, and tracks each flag through to resolution.',
+    steps: [
+      'Click "Scan Overdue" to have the system scan for newly-overdue valuations and auto-create flags',
+      'Filter by status (Open/Acknowledged/Resolved/Suppressed), severity, or type, or search by title/collateral',
+      'On an open flag: Acknowledge, Resolve (note required, explaining the fix), or Suppress until a chosen date',
+      'Expand a flag for full detail — last/next valuation date, pricing method, theoretical vs. market value, and current LTV',
+    ],
+  },
+  '/valuation-workflow': {
+    title: 'Valuation Workflow',
+    narrative: 'Schedules, records, and approves collateral revaluations end-to-end — Scheduled → Overdue/In Progress → Completed → Approved/Rejected — with an inline document viewer and a batch mode for approving or rejecting many completed valuations at once.',
+    steps: [
+      'Click "Schedule Valuation" to book one against a collateral record, with type, date, valuer, and method',
+      'Open a valuation to view its attached documents inline alongside its details',
+      'On a due valuation, click "Record" to enter the completed date, amount, and report reference',
+      'On a Completed valuation, Approve or Reject (reason required, at least 10 characters)',
+      'Turn on "Batch Actions" to multi-select Completed valuations and approve or reject several at once',
+      'Overdue valuations trigger an SMS notification on every page load while they remain overdue — not a one-time alert',
+    ],
+  },
+  '/audit-report': {
+    title: 'Regulatory Audit Report',
+    narrative: 'Pulls together AI-flagged fraud alerts, compliance rule violations, and geomapped collateral into one report formatted for submission to a regulator, with a live KPI summary and a PDF export.',
+    steps: [
+      'Switch between the Fraud Alerts, Rule Violations, and Geomapped Collateral tabs',
+      'Set a date range for the report period — this is a display label and doesn\'t re-filter the underlying data, which is always current',
+      'Click Refresh to reload fraud alerts, rule violations, and geo records',
+      'Click "Export PDF for Regulator" to generate the official document',
+    ],
+  },
+  '/batch-release': {
+    title: 'Batch Collateral Release',
+    narrative: "Releases collateral allocations tied to loans that have already closed, and generates the discharge filing paperwork (BRELA/Lands Registry/TRA) needed to formally clear the charge. Only allocations whose loan is confirmed Closed show up — there's no \"days since closure\" heuristic, so ambiguous cases are deliberately excluded rather than guessed at.",
+    steps: [
+      'Select one or more Pending items (or "Select All") from closed-loan allocations',
+      'Expand a row to set the Registry, Discharge Number, and Discharge Date before releasing',
+      'Click the document icon to preview/print the discharge filing template — it flags second-or-later charges with a prior-charge disclosure notice',
+      'Click "Release Selected" to discharge the collateral link and record the discharge',
+    ],
+  },
+  '/board-report-builder': {
+    title: 'Board Report Builder',
+    narrative: 'Assembles a 6-section BOT-format board report (NPL Aging, Provision Reconciliation, Stress Test Results, Concentration Breach List, Valuation Flag Summary) from live portfolio data, ready for the board approval workflow.',
+    steps: [
+      'Review the live status bar and portfolio KPI strip before generating',
+      'Scroll through the 5 report sections — each is colour-coded Ready/No Issues/Review/Action Required based on current data',
+      'Click "Generate BOT PDF" to produce the full report',
+      'Click Refresh to recompute all sections from the latest data before generating',
+    ],
+  },
+  '/audit-trail': {
+    title: 'Security & Compliance Trail',
+    narrative: 'The immutable, searchable log of every collateral-related action (created, edited, perfected, signed off) plus logins and exports, kept for Bank of Tanzania and registry compliance purposes.',
+    steps: [
+      'Filter by Collateral Action pills (Created/Edited/Perfected/Signed Off) or Event Category pills (Login, Collateral Change, Status Transition, Export, Documents)',
+      'Search by message, collateral ID, officer, or IP address, or use "More Filters" for a date range or specific officer/collateral',
+      'Click a row with a "field(s) changed" indicator to expand and see the old-value → new-value diff',
+      'Export the current filtered view as CSV or a print-ready PDF',
+      'Check the sidebar for the top active users and most recent logins in the current view',
+    ],
+  },
+  '/bulk-upload': {
+    title: 'Bulk Upload Collateral',
+    narrative: 'Imports collateral records in bulk from a CSV file, validating every row and checking for duplicate collateral IDs — both within the file and against what\'s already in the database — before anything is committed.',
+    steps: [
+      'Download the CSV template first to see the exact required/optional columns and accepted values',
+      'Drop or browse for a CSV — Excel files are rejected with a message to re-save as CSV',
+      'Review the Preview step — filter by Valid/Warning/Error/Duplicate, expand a row for its specific issues',
+      'Click "Commit N Records" to insert only the valid/warning rows as Draft collateral records — errors and duplicates are skipped',
+    ],
+  },
 };
 
 export function getPageHelp(pathname: string): PageHelpContent | null {
