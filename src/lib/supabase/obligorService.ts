@@ -62,6 +62,21 @@ function rowToObligor(row: any): Obligor {
   };
 }
 
+/**
+ * Batch-resolve full names for a set of obligor ids in one query. Accepts an
+ * existing Supabase client so callers already holding one (inside a larger
+ * aggregation) don't create a second connection just for this lookup.
+ */
+export async function getNameMap(
+  supabase: ReturnType<typeof createClient>,
+  obligorIds: (string | null | undefined)[]
+): Promise<Map<string, string>> {
+  const ids = [...new Set(obligorIds.filter((id): id is string => !!id))];
+  if (ids.length === 0) return new Map();
+  const { data } = await supabase.from('obligors').select('id, full_name').in('id', ids);
+  return new Map((data ?? []).map((o: any) => [o.id, o.full_name as string]));
+}
+
 function obligorToRow(data: Partial<Obligor>): any {
   const row: any = {};
   if (data.obligorCode !== undefined) row.obligor_code = data.obligorCode;

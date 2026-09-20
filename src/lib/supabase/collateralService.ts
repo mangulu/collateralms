@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { complianceEngineService } from '@/lib/supabase/complianceEngineService';
+import { getNameMap } from '@/lib/supabase/obligorService';
 
 export type CollateralStatus =
   | 'Draft' | 'Submitted' | 'Under Review' | 'Perfected' | 'Monitoring' | 'Released' | 'Overdue' | 'Rejected';
@@ -775,13 +776,11 @@ export const dashboardService = {
       // Resolve real names for FK-linked obligors (in case the free-text
       // `obligor` column has drifted from the canonical obligors row).
       const realIds = [...byObligor.keys()].filter((k) => !k.startsWith('name:'));
-      if (realIds.length > 0) {
-        const { data: obligorRows } = await supabase.from('obligors').select('id, full_name').in('id', realIds);
-        (obligorRows ?? []).forEach((o: any) => {
-          const entry = byObligor.get(o.id);
-          if (entry) entry.name = o.full_name;
-        });
-      }
+      const names = await getNameMap(supabase, realIds);
+      names.forEach((name, id) => {
+        const entry = byObligor.get(id);
+        if (entry) entry.name = name;
+      });
 
       const sorted = [...byObligor.values()]
         .map((v) => ({ name: v.name, value: v.value, pct: portfolioTotal > 0 ? (v.value / portfolioTotal) * 100 : 0 }))

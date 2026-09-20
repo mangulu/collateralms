@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { complianceRulesService, type ComplianceRuleDB } from '@/lib/supabase/complianceRulesService';
+import { getNameMap } from '@/lib/supabase/obligorService';
 
 // ─── Field → data-source mapping ───────────────────────────────────────────────
 // Mirrors the field options offered when creating a rule in
@@ -122,13 +123,6 @@ async function resolveStale(supabase: ReturnType<typeof createClient>, ruleId: s
   }
 }
 
-async function obligorNameMap(supabase: ReturnType<typeof createClient>, obligorIds: (string | null)[]): Promise<Map<string, string>> {
-  const ids = [...new Set(obligorIds.filter((id): id is string => !!id))];
-  if (ids.length === 0) return new Map();
-  const { data } = await supabase.from('obligors').select('id, full_name').in('id', ids);
-  return new Map((data ?? []).map((o: any) => [o.id, o.full_name as string]));
-}
-
 async function bumpTriggeredCount(supabase: ReturnType<typeof createClient>, rule: ComplianceRuleDB, by: number) {
   if (by <= 0) return;
   await supabase.from('compliance_rules').update({ triggered_count: (rule.triggered_count ?? 0) + by }).eq('id', rule.id);
@@ -142,7 +136,7 @@ async function evaluateLtvRule(supabase: ReturnType<typeof createClient>, rule: 
     .select('id, collateral_id, description, collateral_type, ltv_ratio, obligor_ref_id')
     .not('ltv_ratio', 'is', null);
   const rows = collaterals ?? [];
-  const names = await obligorNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
+  const names = await getNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
   const threshold = Number(rule.condition.value);
   const breaching = new Set<string>();
   let created = 0;
@@ -189,7 +183,7 @@ async function evaluateUtilizationRule(supabase: ReturnType<typeof createClient>
     securedByCollateral.set(l.collateral_id, (securedByCollateral.get(l.collateral_id) ?? 0) + (parseFloat(l.allocated_amount) || 0));
   }
 
-  const names = await obligorNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
+  const names = await getNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
   const threshold = Number(rule.condition.value);
   const breaching = new Set<string>();
   let created = 0;
@@ -225,7 +219,7 @@ async function evaluateDeadlineRule(supabase: ReturnType<typeof createClient>, r
     .neq('status', 'Perfected')
     .not('days_to_deadline', 'is', null);
   const rows = collaterals ?? [];
-  const names = await obligorNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
+  const names = await getNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
   const threshold = Number(rule.condition.value);
   const breaching = new Set<string>();
   let created = 0;
@@ -253,7 +247,7 @@ async function evaluateValuationAgeRule(supabase: ReturnType<typeof createClient
     .from('collateral_records')
     .select('id, collateral_id, description, collateral_type, valuation_date, registration_date, obligor_ref_id');
   const rows = collaterals ?? [];
-  const names = await obligorNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
+  const names = await getNameMap(supabase, rows.map((r: any) => r.obligor_ref_id));
   const threshold = Number(rule.condition.value);
   const breaching = new Set<string>();
   const now = new Date();
@@ -367,7 +361,7 @@ export const complianceEngineService = {
       securedAmount = (links ?? []).reduce((sum: number, l: any) => sum + (parseFloat(l.allocated_amount) || 0), 0);
     }
 
-    const names = await obligorNameMap(supabase, [c.obligor_ref_id]);
+    const names = await getNameMap(supabase, [c.obligor_ref_id]);
     const obligorName = c.obligor_ref_id ? names.get(c.obligor_ref_id) ?? null : null;
     const now = new Date();
     let breachesCreated = 0;
