@@ -775,20 +775,19 @@ export default function ModuleHubPage() {
           </div>
 
           {/* ── Footer ──────────────────────────────────────────────────────── */}
-          <footer className="text-center py-4 text-xs" style={{ color: 'var(--izou-muted)' }}>
-            Powered by{' '}
+          <footer className="flex items-center justify-center gap-1.5 py-4 text-xs" style={{ color: 'var(--izou-muted)' }}>
+            <span>Powered by</span>
             <a
               href="https://contentpro.co.tz"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold hover:underline transition-colors"
-              style={{ color: 'var(--izou-muted)' }}
-              onMouseOver={(e) => (e.currentTarget.style.color = 'var(--izou-primary)')}
-              onMouseOut={(e) => (e.currentTarget.style.color = 'var(--izou-muted)')}
+              aria-label="Contentpro"
+              className="inline-flex items-center opacity-90 hover:opacity-100 transition-opacity"
             >
-              Contentpro
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/assets/images/contentpro_logo.svg" alt="Contentpro" className="h-3.5 w-auto" />
             </a>
-            <span className="mx-2 opacity-30">·</span>
+            <span className="mx-1 opacity-30">·</span>
             <span>v2.0</span>
           </footer>
         </main>
