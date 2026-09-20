@@ -37,6 +37,139 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       ],
     },
   },
+  '/workflows/tasks': {
+    title: 'Unified Task List',
+    narrative: 'My Tasks combines three separate item types — assigned tasks, perfection requests you submitted, and approval requests you submitted — into one feed, instead of checking three screens for what needs your attention.',
+    steps: [
+      'Use Active/All to see only open items, or everything ever assigned to you',
+      'Filter by type (My Tasks / Approvals / Perfections) or priority, or search by title',
+      '"Mark Complete" only appears on plain tasks — approvals and perfection requests move forward through their own screens instead',
+      'Click any item to open its detail page, or jump straight to the record it\'s about',
+    ],
+  },
+  '/approval-inbox': {
+    title: 'Perfection Queue',
+    narrative: 'Perfection Queue is where a Legal Officer reviews and decides every submitted perfection request — approve, reject, or send back for modification — with a live connection indicator, AI-assisted document classification per request, and optional desktop/SMS alerts for new arrivals.',
+    steps: [
+      'The Live/Connecting indicator shows whether new requests are arriving in real time; use Refresh if it drops',
+      'Turn on desktop notifications or SMS alerts to be notified the moment a new request lands',
+      'Expand a request to run AI Document Classification — a confidence-scored read on the supporting documents, not a substitute for review',
+      'Approve, Reject (reason required), or Request Modification — these are only available to Legal Officers and System Admins; everyone else sees the queue read-only',
+    ],
+  },
+  '/document-approval': {
+    title: 'Document Approval',
+    narrative: 'Document Approval is the parallel review queue for uploaded supporting documents rather than whole perfection requests, moving each one through Pending → Under Review → Approved/Rejected.',
+    steps: [
+      'Use the status cards to filter — All, Pending, Under Review, Approved, or Rejected',
+      'Click a document to open its detail drawer with a preview',
+      'Approve, Reject, or Mark Under Review — only available if you\'re a Legal Officer; other roles can view but not act',
+      'The drawer flags how long a pending document has been waiting, so the oldest ones stand out',
+    ],
+  },
+  '/release-approval': {
+    title: 'Release Approval',
+    narrative: 'Release Approval mirrors the Perfection Queue for the other end of the lifecycle — reviewing requests to discharge a collateral from its facility once the underlying loan is settled.',
+    steps: [
+      'Filter by status or search to find a specific request',
+      'Approve a release to discharge the collateral from the facility, Reject with a required reason, or mark it Under Review',
+      'Click a request to see the full collateral and loan context before deciding',
+    ],
+  },
+  '/workflows/registry-submissions': {
+    title: 'Registry Submissions',
+    narrative: "Registry Submissions tracks each collateral's registration with an external registry (BRELA, Lands, etc.) across a 5-stage flow — Pending → Submitted → Acknowledged → Registered, or Rejected — and automatically flags anything submitted more than 7 days ago with no acknowledgement as overdue.",
+    steps: [
+      'Update a single submission\'s status as the registry responds, or select several and use Bulk Update Status',
+      'Anything sitting in "Submitted" past 7 days with no acknowledgement is flagged overdue automatically',
+      'Add notes on any status change — they\'re kept as part of that submission\'s history',
+    ],
+  },
+  '/workflow-command-center': {
+    title: 'Workflow Command Center',
+    narrative: 'Command Center pulls perfection, valuation, release, and covenant workflows into one cross-cutting list with a shared SLA and bottleneck view, instead of checking each workflow type separately.',
+    steps: [
+      'Filter by workflow type, SLA status (ok/warning/critical/overdue), or search',
+      '"Bottlenecks only" surfaces items stuck unusually long in their current stage — not just ones that are simply overdue',
+      'Each row shows stage progress and days remaining so you can prioritize by how close something is to breaching, not just its type',
+      'This is a monitoring view — click through to an item\'s own page to actually approve, reject, or otherwise act on it',
+    ],
+  },
+  '/workflows/instances': {
+    title: 'Workflow Instances',
+    narrative: 'Workflow Instances is the operational view over every running instance of a custom Workflow Template — approve, reject, return, skip, escalate, hold, or cancel a step, and reassign it to someone else, with a full transition log kept per instance.',
+    steps: [
+      'Approve & Advance moves the instance to its next step; Return sends it back a step; Skip jumps past it',
+      'Escalate is what actually sends the escalation email configured in Escalation Configuration — nothing fires on its own from an SLA timer',
+      'Put a step On Hold to pause it, or Reassign it to a different role or person',
+      'Every action is written to the instance\'s transition log, visible from its detail view',
+    ],
+  },
+  '/staff-workspace': {
+    title: 'Staff Workspace',
+    narrative: "Staff Workspace is a manager-level view over every staff member's assigned tasks, not just your own — filter by workflow, assignee, or overdue status to see where the workload actually sits.",
+    steps: [
+      'Filter by workflow name, a specific assignee, status, or "Overdue only"',
+      'Expand a task row to add a comment or mark it complete on someone else\'s behalf',
+      'Search across all tasks by title or workflow name',
+    ],
+  },
+  '/workflows-admin/templates': {
+    title: 'Workflow Templates',
+    narrative: 'Workflow Templates builds the custom multi-step approval workflows that power Workflow Instances — each step gets an assigned role, optional conditions (e.g. only for collateral above a value threshold), and an escalation rule.',
+    steps: [
+      'Click New Template, then Add Step for each stage in the approval chain — order matters',
+      'Escalation only supports two real actions: Notify Manager, and Notify Manager & Flag Payment for Review — the SLA hours field is a reference target only, not automatically enforced',
+      'Pausing a template puts its running instances on hold; resuming restores them — it doesn\'t cancel anything',
+      'Configure an auto-trigger rule for a template directly from here, or manage all rules together in Auto-Trigger Rules',
+    ],
+  },
+  '/workflows-admin/trigger-rules': {
+    title: 'Auto-Trigger Rules',
+    narrative: 'Auto-Trigger Rules defines the conditions that automatically start a new workflow instance from a chosen template — e.g. an LTV breach or a value threshold — instead of someone manually starting it.',
+    steps: [
+      'New Rule: pick the triggering event (status change, days since submission, value threshold, LTV breach, days overdue, or document count change), its condition, and which template it starts',
+      'Run Now manually fires rule evaluation immediately and reports per-rule match/creation counts, instead of waiting for the hourly automatic pass',
+      'The run log below shows Success/Partial/Failed for every past evaluation, so you can confirm rules are actually firing',
+    ],
+  },
+  '/workflows-admin/escalation': {
+    title: 'Escalation Configuration',
+    narrative: 'Escalation Configuration sets the reference SLA and escalation action for each step of every active workflow template — but escalation only actually happens when someone clicks "Escalate" on a stuck instance in Workflow Instances; the SLA hours shown here is a target, not a timer.',
+    steps: [
+      'Expand a template to see and edit each step\'s SLA hours and escalation action',
+      'Only two actions actually do anything: Notify Manager, and Notify Manager & Flag Payment for Review',
+      'Nothing here starts a clock automatically — treat the SLA hours as guidance shown on the instance, not an automated trigger',
+    ],
+  },
+  '/workflows-admin/kpis': {
+    title: 'Analytics & KPIs',
+    narrative: 'Analytics & KPIs covers two tabs of workflow performance metrics — Efficiency KPIs (cycle time, SLA compliance, escalation counts) and Process Analytics (role distribution, throughput trends, and per-step bottleneck breakdown) — computed live from actual instance data.',
+    steps: [
+      'Switch between Efficiency KPIs and Process Analytics',
+      'Efficiency KPIs covers total instances, average cycle time, SLA compliance rate, and how many have been escalated',
+      'Process Analytics breaks the same data down further — by role, over time, and by which step tends to bottleneck',
+    ],
+  },
+  '/fast-track': {
+    title: 'Fast Track Tiers',
+    narrative: 'Fast Track assigns a service tier (Premier / Repeat / Standard) to each obligor based on risk rating and relationship history, which pre-fills or shortens certain steps of the standard collateral workflow for trusted, established customers.',
+    steps: [
+      'Tiers are suggested automatically from risk rating and years of relationship, but can be manually overridden per obligor with a reason',
+      'The workflow comparison table shows exactly which steps are shortened or pre-filled for a fast-tracked customer versus the standard flow',
+      'Search or browse the obligor list to check or change a specific customer\'s tier',
+    ],
+  },
+  '/workflows-admin/migration': {
+    title: 'Hybrid Migration Tool',
+    narrative: 'Hybrid Migration Tool moves older workflow-type instances (perfection, release, etc.) that predate the generic Workflow Template engine onto proper templates and steps, so they show up correctly in Workflow Instances instead of being invisible to it.',
+    steps: [
+      'Click Run Migration to scan every instance that has no step records yet',
+      'Anything with a clear, unambiguous status is auto-migrated at ≥80% confidence; anything ambiguous lands in the review queue below',
+      'For a flagged instance, pick the correct template and step yourself, then confirm — or Skip it if it shouldn\'t be migrated at all',
+      'Use the status tabs to see what\'s Pending Review, Auto-Migrated, Manually Migrated, or Skipped',
+    ],
+  },
   '/notifications-hub': {
     title: 'Notifications Hub',
     narrative: 'Notifications Hub pulls together everything that needs your attention across the app — open compliance breaches, your pending workflow tasks, recent status-change events, and insurance policies expiring soon — into one real-time feed, instead of requiring you to check each source separately.',
