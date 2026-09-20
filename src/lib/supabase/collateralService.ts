@@ -44,6 +44,7 @@ export interface CollateralRecord {
   description: string;
   valueTSh: number;
   facilityId: string;
+  loanId?: string | null;
   status: CollateralStatus;
   registry: RegistryType;
   registrationDate: string;

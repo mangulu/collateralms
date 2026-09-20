@@ -305,15 +305,20 @@ export default function AddEditCollateralModal({
       setLoanSaveError(null);
 
       if (editItem) {
-        // Pre-populate obligor picker
-        if (editItem.obligorRefId || editItem.obligor) {
+        // Pre-populate obligor picker — only when there's a real linked obligor record.
+        // A record with an obligor name but no obligorRefId is an orphaned legacy
+        // link; faking a "selected" state here would let it be re-saved unfixed.
+        if (editItem.obligorRefId) {
           setSelectedObligor({
-            id: editItem.obligorRefId ?? '',
+            id: editItem.obligorRefId,
             name: editItem.obligor ?? '',
             code: editItem.obligorId ?? '',
           });
         } else {
           setSelectedObligor(null);
+          if (editItem.obligor) {
+            setObligorError(`"${editItem.obligor}" isn't linked to a real obligor profile — search and select it below to fix this record.`);
+          }
         }
         // Pre-populate linked loan
         if ((editItem as any).loanId) {
@@ -512,6 +517,8 @@ export default function AddEditCollateralModal({
     }
     setLocationError(null);
 
+    const selectedLoan = availableLoans.find((l) => l.id === selectedLoanId);
+
     const savedData: Partial<Collateral> = {
       obligor: selectedObligor.name,
       obligorId: selectedObligor.code,
@@ -519,7 +526,7 @@ export default function AddEditCollateralModal({
       type: data.type as Collateral['type'],
       description: data.description,
       valueTSh: Number(data.valueTS.replace(/,/g, '')) || 0,
-      facilityId: selectedLoanId || '',
+      facilityId: selectedLoan?.loanNumber ?? '',
       registry: data.registry as Collateral['registry'],
       registrationDate: data.registrationDate,
       perfectionDeadline: data.requiresPerfection ? data.perfectionDeadline : '',
