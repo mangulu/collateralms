@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play, CheckCircle, Clock, AlertTriangle, Eye, Edit } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Download, Filter, Search, X, FileText, FileDown, ChevronDown, Play, CheckCircle, Clock, AlertTriangle, Eye, Edit, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { collateralService, CollateralRecord, CollateralStatus, CollateralWriteError } from '@/lib/supabase/collateralService';
 import { auditLogService } from '@/lib/supabase/auditLogService';
@@ -628,6 +629,14 @@ export default function CollateralManagementContent() {
               </div>
             )}
           </div>
+          <Link
+            href="/bulk-upload"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border rounded-md text-sm text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <Upload size={14} className="text-primary" />
+            <span className="hidden xs:inline">Bulk Upload</span>
+            <span className="xs:hidden">Upload</span>
+          </Link>
           <button
             onClick={() => {
               setWorkflowTarget(selectedIds.length === 1

@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
-import { Search, RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle, ChevronDown, ChevronUp, Loader2, FileText, Landmark, X, BadgeCheck } from 'lucide-react';
+import Link from 'next/link';
+import { Search, RefreshCw, CheckCircle2, Clock, XCircle, AlertTriangle, ChevronDown, ChevronUp, Loader2, FileText, Landmark, X, BadgeCheck, Unlock } from 'lucide-react';
 import { loanService, Loan } from '@/lib/supabase/loanService';
 
 
@@ -319,14 +320,23 @@ export default function CollateralSettlementContent() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--izou-primary)' }}>Collateral Settlement Status</h1>
             </div>
-            <button
-              onClick={load}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/batch-release"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                <Unlock className="w-4 h-4" />
+                Bulk Release
+              </Link>
+              <button
+                onClick={load}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Summary KPIs */}

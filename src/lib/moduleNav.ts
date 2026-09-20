@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, Upload, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, FolderArchive, ClipboardCheck, Eye, FileStack, FolderCheck, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, AlertTriangle, Thermometer, MapPin, HandCoins, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot, Trash2 } from 'lucide-react';
+import { FolderOpen, Files, Unlock, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, FolderArchive, ClipboardCheck, Eye, FileStack, FolderCheck, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, AlertTriangle, Thermometer, MapPin, HandCoins, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot, Trash2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -45,27 +45,25 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'Collateral Registry', icon: FolderOpen, href: '/collateral-management', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Loan–Collateral Map', icon: GitMerge, href: '/collateral-loan-visualization', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Collateral Documents', icon: Files, href: '/collateral-documents', permission: PERMISSIONS.COLLATERAL_VIEW },
+          { label: 'Collateral History', icon: ScrollText, href: '/collateral-history', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
       {
-        label: 'Operations',
-        items: [
-          { label: 'Bulk Release', icon: Unlock, href: '/batch-release', permission: PERMISSIONS.COLLATERAL_EDIT },
-          { label: 'Bulk Upload', icon: Upload, href: '/bulk-upload', permission: PERMISSIONS.COLLATERAL_EDIT },
-        ],
-      },
-      {
-        label: 'Lifecycle Management',
+        label: 'Lifecycle',
         items: [
           { label: 'Valuation Workflow', icon: RefreshCw, href: '/valuation-workflow', permission: PERMISSIONS.COLLATERAL_EDIT },
           { label: 'Valuation Pricing Flags', icon: Flag, href: '/valuation-pricing-flags', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Collateral Substitution', icon: ArrowLeftRight, href: '/collateral-substitution', permission: PERMISSIONS.COLLATERAL_EDIT },
+          { label: 'Settlement & Post-Settlement', icon: HandCoins, href: '/collateral-settlement', permission: PERMISSIONS.COLLATERAL_VIEW },
+        ],
+      },
+      {
+        label: 'Risk & Monitoring',
+        items: [
           { label: 'Covenant Tracking', icon: Scale, href: '/covenant-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Insurance Tracking', icon: Shield, href: '/insurance-tracking', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Settlement & Post-Settlement', icon: HandCoins, href: '/collateral-settlement', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'LTV Monitoring', icon: TrendingDown, href: '/ltv-breach-alerts', permission: PERMISSIONS.COLLATERAL_VIEW },
           { label: 'Stress Simulator', icon: FlaskConical, href: '/stress-simulator', permission: PERMISSIONS.COLLATERAL_VIEW },
-          { label: 'Collateral History', icon: ScrollText, href: '/collateral-history', permission: PERMISSIONS.COLLATERAL_VIEW },
         ],
       },
     ],
