@@ -49,7 +49,7 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
   modules: [
     { label: 'Collateral Registry', href: '/collateral-management', icon: FolderOpen, why: 'Primary screen for registering and editing all collateral records.' },
     { label: 'Collateral Dashboard', href: '/collateral-dashboard', icon: LayoutDashboard, why: 'Daily KPI overview — overdue alerts, portfolio health, and recent activity. Includes Portfolio Monitoring tab for live portfolio trends.' },
-    { label: 'Collateral Documents', href: '/collateral-documents', icon: Files, why: 'Upload and manage documents attached to each collateral record.' },
+    { label: 'Documents Library', href: '/collateral-documents', icon: Files, why: 'Upload and manage documents attached to each collateral record.' },
     { label: 'Bulk Upload', href: '/bulk-upload', icon: Upload, why: 'Import multiple collateral records at once via CSV template.' },
     { label: 'Valuation Workflow', href: '/valuation-workflow', icon: CalendarClock, why: 'Schedule and track valuation appointments for collateral assets.' },
     { label: 'Collateral Substitution', href: '/collateral-substitution', icon: RefreshCw, why: 'Initiate requests to swap one collateral asset for another.' },
@@ -69,7 +69,7 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
       steps: [
         { action: 'Open the Collateral Registry and click "Add Collateral"', where: 'Collateral Registry', href: '/collateral-management' },
         { action: 'Fill in asset type, description, estimated value, and obligor', where: 'Collateral Registry', href: '/collateral-management' },
-        { action: 'Upload the title deed, valuation certificate, and any supporting documents', where: 'Collateral Documents', href: '/collateral-documents' },
+        { action: 'Upload the title deed, valuation certificate, and any supporting documents', where: 'Documents Library', href: '/collateral-documents' },
         { action: 'Save the record — it enters "Pending Review" status automatically', where: 'Collateral Registry', href: '/collateral-management' },
         { action: 'Submit for legal review via the Approval Inbox', where: 'Approval Inbox', href: '/approval-inbox' },
       ],
@@ -159,7 +159,7 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
     { label: 'Registry Submissions', href: '/workflows/registry-submissions', icon: BookText, why: 'Review and verify registry filing submissions before they are sent to external registries.' },
     { label: 'Covenant Tracking', href: '/covenant-tracking', icon: FileText, why: 'Monitor and record covenant compliance for all active facilities.' },
     { label: 'Approval Inbox', href: '/approval-inbox', icon: MailCheck, why: 'Unified inbox for all items awaiting your legal sign-off.' },
-    { label: 'Collateral Documents', href: '/collateral-documents', icon: Files, why: 'Review documents and manage the Security Pocket for each asset.' },
+    { label: 'Documents Library', href: '/collateral-documents', icon: Files, why: 'Review documents and manage the Security Pocket for each asset.' },
     { label: 'Archive — Vault Management', href: '/archive/vault-management', icon: Building2, why: 'Manage physical vault locations and document placements.' },
     { label: 'Archive — Custody', href: '/archive/custody', icon: Eye, why: 'Track the physical custody status of every original document.' },
     { label: 'Archive — Access Requests', href: '/archive/access-requests', icon: ClipboardCheck, why: 'Handle requests to retrieve or loan out archived documents.' },
@@ -187,7 +187,7 @@ export const LEGAL_OFFICER_GUIDE: RoleGuide = {
       steps: [
         { action: 'Open Document Approval and find the pending submission', where: 'Document Approval', href: '/document-approval' },
         { action: 'Open the document in the review drawer and read the content', where: 'Document Approval', href: '/document-approval' },
-        { action: 'Verify the document matches the collateral record details', where: 'Collateral Documents', href: '/collateral-documents' },
+        { action: 'Verify the document matches the collateral record details', where: 'Documents Library', href: '/collateral-documents' },
         { action: 'Approve or return with a reason — the submitter is notified automatically', where: 'Document Approval', href: '/document-approval' },
       ],
     },

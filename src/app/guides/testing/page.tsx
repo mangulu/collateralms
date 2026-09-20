@@ -88,7 +88,7 @@ const TEST_PHASES: TestPhase[] = [
       { step: 2, action: 'Navigate to Obligors and create a new obligor', where: 'Obligors', href: '/obligors', expect: 'Obligor saved to DB. Appears in the obligors list with status "Active".' },
       { step: 3, action: 'Open Collateral Registry and click "Add Collateral"', where: 'Collateral Registry', href: '/collateral-management', expect: 'Add/Edit modal opens. Obligor picker shows the obligor just created.' },
       { step: 4, action: 'Fill in asset type, description, estimated value, and link to the obligor', where: 'Collateral Registry', href: '/collateral-management', expect: 'Form validates without errors. All required fields accept input.' },
-      { step: 5, action: 'Upload a title deed document and save the record', where: 'Collateral Documents', href: '/collateral-documents', expect: 'Record saved with status "Pending Review". Document appears in the Security Pocket.' },
+      { step: 5, action: 'Upload a title deed document and save the record', where: 'Documents Library', href: '/collateral-documents', expect: 'Record saved with status "Pending Review". Document appears in the Security Pocket.' },
       { step: 6, action: 'Verify the new record appears in the Collateral Dashboard KPIs', where: 'Collateral Dashboard', href: '/collateral-dashboard', expect: 'Total Collateral count increments by 1. Recent Activity feed shows the new record.' },
       { step: 7, action: 'Switch to the Portfolio Monitoring tab on the Collateral Dashboard', where: 'Collateral Dashboard', href: '/collateral-dashboard', expect: 'Portfolio Monitoring tab loads with daily volume chart and concentration breakdown by collateral type.' },
     ],

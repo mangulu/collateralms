@@ -69,7 +69,7 @@ const MODULES: ModuleGuide[] = [
       { label: 'Portfolio Monitoring', href: '/portfolio-monitoring', icon: Activity, description: 'Live portfolio health trends pulled from Supabase — daily collateral volumes by status and real-time concentration breakdown by collateral type.' },
       { label: 'Collateral Registry', href: '/collateral-management', icon: FolderOpen, description: 'Add, edit, and search all collateral records. The primary data entry point.' },
       { label: 'Loan–Collateral Map', href: '/collateral-loan-visualization', icon: GitMerge, description: 'Visual network map linking loans to their collateral assets.' },
-      { label: 'Collateral Documents', href: '/collateral-documents', icon: Files, description: 'Manage documents attached to collateral, including the Security Pocket.' },
+      { label: 'Documents Library', href: '/collateral-documents', icon: Files, description: 'Manage documents attached to collateral, including the Security Pocket.' },
       { label: 'Loan Registry', href: '/loan-registry', icon: Landmark, description: 'Register and manage loan facilities linked to obligors — supports multiple facility types, repayment schedules, linked-collateral view, and live status tracking.' },
       { label: 'Batch Release', href: '/batch-release', icon: Unlock, description: 'Release multiple collateral records simultaneously in a single operation.' },
       { label: 'Bulk Upload', href: '/bulk-upload', icon: Upload, description: 'Import hundreds of collateral records at once via CSV template.' },
@@ -82,7 +82,7 @@ const MODULES: ModuleGuide[] = [
         steps: [
           { action: 'Open the registry', where: 'Collateral Registry', href: '/collateral-management' },
           { action: 'Click "Add Collateral" and fill in asset details', where: 'Collateral Registry', href: '/collateral-management' },
-          { action: 'Upload title deed and valuation documents', where: 'Collateral Documents', href: '/collateral-documents' },
+          { action: 'Upload title deed and valuation documents', where: 'Documents Library', href: '/collateral-documents' },
           { action: 'Submit for legal review via Approvals', where: 'Approval Inbox', href: '/approval-inbox' },
         ],
       },
@@ -251,7 +251,7 @@ const MODULES: ModuleGuide[] = [
         steps: [
           { action: 'Check Deadline Reminders for upcoming expirations', where: 'Deadline Reminders', href: '/deadline-reminders' },
           { action: 'Open the flagged collateral record', where: 'Collateral Registry', href: '/collateral-management' },
-          { action: 'Update the valuation or document and resubmit', where: 'Collateral Documents', href: '/collateral-documents' },
+          { action: 'Update the valuation or document and resubmit', where: 'Documents Library', href: '/collateral-documents' },
           { action: 'Confirm the alert clears after resubmission', where: 'Alerts Inbox', href: '/alerts-inbox' },
         ],
       },

@@ -54,7 +54,7 @@ const ALL_SCREENS: ScreenDefinition[] = [
   // Collateral
   { id: 'collateral_registry', label: 'Collateral Registry', path: '/collateral-management', group: 'Collateral', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.create, SCREEN_ACTIONS.edit, SCREEN_ACTIONS.delete, SCREEN_ACTIONS.export] },
   { id: 'approval_workflow', label: 'Approval Workflow', path: '/perfection-workflow', group: 'Collateral', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.approve, SCREEN_ACTIONS.edit] },
-  { id: 'collateral_documents', label: 'Collateral Documents', path: '/collateral-documents', group: 'Collateral', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.upload, SCREEN_ACTIONS.delete] },
+  { id: 'collateral_documents', label: 'Documents Library', path: '/collateral-documents', group: 'Collateral', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.upload, SCREEN_ACTIONS.delete] },
   { id: 'batch_release', label: 'Batch Release', path: '/batch-release', group: 'Collateral', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.manage] },
   { id: 'bulk_upload', label: 'Bulk Upload', path: '/bulk-upload', group: 'Collateral', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.upload] },
   { id: 'scheduled_jobs', label: 'Scheduled Jobs', path: '/scheduled-jobs', group: 'Collateral', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.manage] },

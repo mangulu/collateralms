@@ -689,7 +689,7 @@ export default function CollateralDetailContent({
               <SectionHeader title="Quick Links" icon={ExternalLink} />
               <div className="space-y-2">
                 {[
-                  { label: 'Collateral Documents', href: '/collateral-documents', icon: Files },
+                  { label: 'Documents Library', href: '/collateral-documents', icon: Files },
                   { label: 'Perfection Workflow', href: '/perfection-workflow', icon: Activity },
                   { label: 'Fraud Prevention', href: '/fraud-prevention', icon: ShieldAlert },
                   { label: 'Security & Compliance Trail', href: '/audit-trail', icon: History },

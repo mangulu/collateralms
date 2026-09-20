@@ -820,18 +820,13 @@ function DocumentRow({
           <div className="min-w-0">
             <button
               onClick={onView}
-              className="text-sm font-medium text-foreground truncate max-w-[200px] hover:text-primary hover:underline text-left transition-colors"
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border hover:opacity-80 transition-opacity ${meta.bg} ${meta.color} ${meta.border}`}
             >
-              {doc.fileName}
+              {doc.documentType}
             </button>
-            <p className="text-xs text-muted-foreground">{documentService.formatFileSize(doc.fileSize)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{documentService.formatFileSize(doc.fileSize)}</p>
           </div>
         </div>
-      </td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${meta.bg} ${meta.color} ${meta.border}`}>
-          {doc.documentType}
-        </span>
       </td>
       <td className="px-4 py-3">
         {collateralRecord ? (
@@ -1248,14 +1243,16 @@ export default function CollateralDocumentsContent() {
   }, [latestDocs, search, filterDocType, filterCollateral]);
 
   // KPI counts
-  const totalDocs = documents.length;
-  const uniqueFiles = latestDocs.length;
+  const totalDocs = latestDocs.length;
   const versioned = latestDocs.filter((d) => {
     const key = `${d.collateralRecordId}::${d.fileName}`;
     return (versionMap[key]?.length ?? 0) > 1;
   }).length;
   const linkedCollaterals = new Set(documents.map((d) => d.collateralRecordId)).size;
-  const brelaReceipts = documents.filter((d) => d.documentType === 'BRELA Confirmation').length;
+  const addedThisWeek = latestDocs.filter((d) => {
+    const days = (Date.now() - new Date(d.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    return days <= 7;
+  }).length;
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -1289,7 +1286,7 @@ export default function CollateralDocumentsContent() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white shrink-0">
         <div>
-          <h1 className="text-lg font-semibold" style={{ color: 'var(--izou-primary)' }}>Collateral Documents</h1>
+          <h1 className="text-lg font-semibold" style={{ color: 'var(--izou-primary)' }}>Documents Library</h1>
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
@@ -1359,20 +1356,19 @@ export default function CollateralDocumentsContent() {
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Upload size={14} />
-              Upload Document
+              Upload
             </button>
           )}
         </div>
       </div>
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-5 gap-px bg-border border-b border-border shrink-0">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border-b border-border shrink-0">
         {[
-          { label: 'Total Versions', value: totalDocs, icon: FileText, color: 'text-primary' },
-          { label: 'Unique Files', value: uniqueFiles, icon: FolderOpen, color: 'text-amber-600' },
-          { label: 'Versioned Files', value: versioned, icon: GitBranch, color: 'text-purple-600' },
+          { label: 'Total Documents', value: totalDocs, icon: FileText, color: 'text-primary' },
           { label: 'Linked Collaterals', value: linkedCollaterals, icon: Link2, color: 'text-emerald-600' },
-          { label: 'BRELA Receipts', value: brelaReceipts, icon: FileType2, color: 'text-cyan-600' },
+          { label: 'With Revisions', value: versioned, icon: GitBranch, color: 'text-purple-600' },
+          { label: 'Added This Week', value: addedThisWeek, icon: Clock, color: 'text-amber-600' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white px-5 py-3 flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0`}>
@@ -1500,7 +1496,7 @@ export default function CollateralDocumentsContent() {
           <table className="w-full text-left">
             <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm z-10">
               <tr>
-                {['File', 'Type', 'Collateral', 'Version', 'Uploaded', 'Notes', 'Actions'].map((h) => (
+                {['Type', 'Collateral', 'Version', 'Uploaded', 'Notes', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                     {h}
                   </th>

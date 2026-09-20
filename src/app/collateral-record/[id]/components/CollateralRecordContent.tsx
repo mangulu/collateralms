@@ -1647,7 +1647,7 @@ export default function CollateralRecordContent({
                   { label: 'Full Detail View', href: `/collateral-detail/${collateral.id}`, icon: Shield },
                   { label: 'Approval Inbox', href: '/approval-inbox', icon: ClipboardList },
                   { label: 'Perfection Workflow', href: '/perfection-workflow', icon: Activity },
-                  { label: 'Collateral Documents', href: '/collateral-documents', icon: Files },
+                  { label: 'Documents Library', href: '/collateral-documents', icon: Files },
                   { label: 'Audit Trail', href: '/audit-trail', icon: History },
                 ].map((link) => (
                   <Link
