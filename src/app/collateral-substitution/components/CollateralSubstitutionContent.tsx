@@ -337,7 +337,7 @@ export default function CollateralSubstitutionContent() {
       ]);
       setCollateralOptions(cols);
       setLoanOptions(loans);
-      setFacilityOptions(workflowLookupsService.deriveFacilityOptions(cols));
+      setFacilityOptions(workflowLookupsService.deriveFacilityOptions(loans));
     } catch { /* silent */ } finally {
       setLookupsLoading(false);
     }
@@ -433,7 +433,7 @@ export default function CollateralSubstitutionContent() {
   const facilitySelectOptions: SelectOption[] = facilityOptions.map((f) => ({
     value: f.facilityId,
     label: f.facilityId,
-    sublabel: collateralOptions.filter((c) => c.facilityId === f.facilityId).map((c) => c.description).slice(0, 2).join(', '),
+    sublabel: collateralOptions.filter((c) => c.loanId === f.loanId).map((c) => c.description).slice(0, 2).join(', '),
   }));
 
   const loanSelectOptions: SelectOption[] = loanOptions.map((l) => ({
@@ -692,7 +692,7 @@ export default function CollateralSubstitutionContent() {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <SearchableSelect label="Facility *" required options={facilitySelectOptions} value={createForm.facilityId} onChange={(v) => setCreateForm((f) => ({ ...f, facilityId: v }))} placeholder="Select facility…" loading={lookupsLoading} />
+                <SearchableSelect label="Facility *" required options={facilitySelectOptions} value={createForm.facilityId} onChange={(v) => setCreateForm((f) => ({ ...f, facilityId: v, loanId: facilityOptions.find((fo) => fo.facilityId === v)?.loanId ?? f.loanId }))} placeholder="Select facility…" loading={lookupsLoading} />
                 <SearchableSelect label="Loan" options={loanSelectOptions} value={createForm.loanId} onChange={(v) => setCreateForm((f) => ({ ...f, loanId: v }))} placeholder="Select loan…" loading={lookupsLoading} />
               </div>
               <div className="grid grid-cols-2 gap-4">

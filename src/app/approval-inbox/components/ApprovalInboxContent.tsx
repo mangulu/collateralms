@@ -68,16 +68,19 @@ function CollateralDetailPanel({ collateralId }: { collateralId: string }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    collateralService.getAll().then((all) => {
-      if (cancelled) return;
-      const found = all.find(
-        (c) => c.collateralId === collateralId || c.id === collateralId
-      ) ?? null;
-      setRecord(found);
-      setLoading(false);
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
-    });
+    (async () => {
+      try {
+        let found = await collateralService.getById(collateralId);
+        if (!found) {
+          // Fallback for the rare case collateralId isn't the record's own PK
+          const all = await collateralService.getAll();
+          found = all.find((c) => c.collateralId === collateralId || c.id === collateralId) ?? null;
+        }
+        if (!cancelled) { setRecord(found); setLoading(false); }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => { cancelled = true; };
   }, [collateralId]);
 
@@ -98,12 +101,26 @@ function CollateralDetailPanel({ collateralId }: { collateralId: string }) {
     );
   }
 
-  const rows: { label: string; value: string | number | null | undefined }[] = [
+  const rows: { label: string; value: React.ReactNode }[] = [
     { label: 'Collateral ID',   value: record.collateralId },
     { label: 'Type',            value: record.type },
-    { label: 'Obligor',         value: record.obligor },
+    { label: 'Obligor',         value: record.obligorRefId ? (
+      <Link href={`/obligors/${record.obligorRefId}`} className="text-primary hover:underline">{record.obligor}</Link>
+    ) : record.obligor ? (
+      <span className="flex items-center gap-1.5">
+        {record.obligor}
+        <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">Not linked</span>
+      </span>
+    ) : '—' },
     { label: 'Obligor ID',      value: record.obligorId },
-    { label: 'Facility ID',     value: record.facilityId },
+    { label: 'Facility ID',     value: record.loanId ? (
+      <Link href={`/loan-registry?facility=${encodeURIComponent(record.facilityId)}`} className="text-primary hover:underline font-mono">{record.facilityId}</Link>
+    ) : record.facilityId ? (
+      <span className="flex items-center gap-1.5 font-mono">
+        {record.facilityId}
+        <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-sans">Not linked</span>
+      </span>
+    ) : '—' },
     { label: 'Value (TSh)',     value: record.valueTSh.toLocaleString() },
     { label: 'Registry',        value: record.registry },
     { label: 'Status',          value: record.status },

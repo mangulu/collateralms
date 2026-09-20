@@ -1594,11 +1594,46 @@ export default function CollateralRecordContent({
                   <div className="space-y-3">
                     {[
                       { label: 'Collateral ID', value: <span className="font-mono font-600 text-primary">{collateral.collateralId}</span> },
-                      { label: 'Obligor', value: <div><p className="font-500">{collateral.obligor}</p><p className="text-xs text-muted-foreground font-mono">{collateral.obligorId}</p></div> },
+                      { label: 'Obligor', value: (
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            {collateral.obligorRefId ? (
+                              <Link href={`/obligors/${collateral.obligorRefId}`} className="font-500 text-primary hover:underline flex items-center gap-1">
+                                {collateral.obligor}<ExternalLink size={10} className="shrink-0" />
+                              </Link>
+                            ) : (
+                              <>
+                                <p className="font-500">{collateral.obligor || '—'}</p>
+                                {collateral.obligor && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-600 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                    <AlertCircle size={9} /> Not linked
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono">{collateral.obligorId}</p>
+                        </div>
+                      ) },
                       { label: 'Collateral Type', value: collateral.type },
                       { label: 'Asset Description', value: <p className="text-xs leading-relaxed">{collateral.description}</p> },
                       { label: 'Collateral Value', value: <span className="font-mono font-600">TSh {collateral.valueTSh.toLocaleString()}</span> },
-                      { label: 'Facility ID', value: <span className="font-mono text-xs">{collateral.facilityId}</span> },
+                      { label: 'Facility ID', value: (
+                        collateral.loanId ? (
+                          <Link href={`/loan-registry?facility=${encodeURIComponent(collateral.facilityId)}`} className="font-mono text-xs text-primary hover:underline flex items-center gap-1">
+                            {collateral.facilityId}<ExternalLink size={10} className="shrink-0" />
+                          </Link>
+                        ) : collateral.facilityId ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs">{collateral.facilityId}</span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-600 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                              <AlertCircle size={9} /> Not linked
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-mono text-xs text-muted-foreground">—</span>
+                        )
+                      ) },
                       { label: 'Assigned Officer', value: collateral.assignedOfficer },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex items-start gap-3 py-2 border-b border-border/60 last:border-0">

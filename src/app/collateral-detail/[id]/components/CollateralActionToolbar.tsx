@@ -576,6 +576,7 @@ function SubstitutionModal({ collateral, onClose, onSaved }: { collateral: Colla
     try {
       await createSubstitution({
         facilityId: collateral.facilityId,
+        loanId: collateral.loanId ?? undefined,
         outgoingCollateralId: collateral.id,
         reason,
         requestedBy: user?.id,

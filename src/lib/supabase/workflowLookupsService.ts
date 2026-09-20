@@ -8,6 +8,7 @@ export interface CollateralOption {
   description: string;
   type: string;
   facilityId: string;
+  loanId: string | null;
   obligor: string;
 }
 
@@ -24,6 +25,7 @@ export interface LoanOption {
 export interface FacilityOption {
   facilityId: string;
   label: string;
+  loanId: string;
 }
 
 export const workflowLookupsService = {
@@ -31,7 +33,7 @@ export const workflowLookupsService = {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('collateral_records')
-      .select('id, collateral_id, description, collateral_type, facility_id, obligor')
+      .select('id, collateral_id, description, collateral_type, facility_id, loan_id, obligor')
       .order('created_at', { ascending: false });
     if (error) { console.error('workflowLookupsService.getCollateralOptions:', error.message); return []; }
     return (data ?? []).map((row) => ({
@@ -40,6 +42,7 @@ export const workflowLookupsService = {
       description: row.description,
       type: row.collateral_type,
       facilityId: row.facility_id,
+      loanId: row.loan_id ?? null,
       obligor: row.obligor,
     }));
   },
@@ -62,15 +65,10 @@ export const workflowLookupsService = {
     }));
   },
 
-  deriveFacilityOptions(collaterals: CollateralOption[]): FacilityOption[] {
-    const seen = new Set<string>();
-    const result: FacilityOption[] = [];
-    for (const c of collaterals) {
-      if (c.facilityId && !seen.has(c.facilityId)) {
-        seen.add(c.facilityId);
-        result.push({ facilityId: c.facilityId, label: c.facilityId });
-      }
-    }
-    return result;
+  // A "facility" IS a loan — derive facility options from the real loans table
+  // (keyed by loan.id) rather than deduping collateral_records' free-text
+  // facility_id, which drifts from the actual loan whenever it's edited by hand.
+  deriveFacilityOptions(loans: LoanOption[]): FacilityOption[] {
+    return loans.map((l) => ({ facilityId: l.loanNumber, label: l.loanNumber, loanId: l.id }));
   },
 };

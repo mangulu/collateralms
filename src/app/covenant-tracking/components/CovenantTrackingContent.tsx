@@ -118,7 +118,7 @@ export default function CovenantTrackingContent() {
       ]);
       setCollateralOptions(cols);
       setLoanOptions(loans);
-      setFacilityOptions(workflowLookupsService.deriveFacilityOptions(cols));
+      setFacilityOptions(workflowLookupsService.deriveFacilityOptions(loans));
     } catch { /* silent */ } finally {
       setLookupsLoading(false);
     }
@@ -227,7 +227,7 @@ export default function CovenantTrackingContent() {
   const facilitySelectOptions: SelectOption[] = facilityOptions.map((f) => ({
     value: f.facilityId,
     label: f.facilityId,
-    sublabel: collateralOptions.filter((c) => c.facilityId === f.facilityId).map((c) => c.description).slice(0, 2).join(', '),
+    sublabel: collateralOptions.filter((c) => c.loanId === f.loanId).map((c) => c.description).slice(0, 2).join(', '),
   }));
 
   return (
@@ -411,7 +411,7 @@ export default function CovenantTrackingContent() {
                   required
                   options={loanSelectOptions}
                   value={createForm.loanId}
-                  onChange={(v) => setCreateForm((f) => ({ ...f, loanId: v }))}
+                  onChange={(v) => setCreateForm((f) => ({ ...f, loanId: v, facilityId: loanOptions.find((l) => l.id === v)?.loanNumber ?? f.facilityId }))}
                   placeholder="Select loan…"
                   loading={lookupsLoading}
                 />

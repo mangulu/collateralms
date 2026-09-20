@@ -346,7 +346,7 @@ function SubstitutionDialog({ collateral, userId, onClose, onSuccess }: { collat
     if (!form.reason.trim()) { toast.error('Reason is required'); return; }
     setSubmitting(true);
     try {
-      await createSubstitution({ facilityId: collateral.facilityId, outgoingCollateralId: collateral.id, incomingCollateralId: form.incomingCollateralId || undefined, reason: form.reason.trim(), notes: form.notes || undefined, requestedBy: userId });
+      await createSubstitution({ facilityId: collateral.facilityId, loanId: collateral.loanId ?? undefined, outgoingCollateralId: collateral.id, incomingCollateralId: form.incomingCollateralId || undefined, reason: form.reason.trim(), notes: form.notes || undefined, requestedBy: userId });
       await startWorkflowEngineInstance('substitution', collateral, userId, `Substitution — ${collateral.collateralId}`);
       toast.success('Substitution request submitted successfully');
       onSuccess(); onClose();

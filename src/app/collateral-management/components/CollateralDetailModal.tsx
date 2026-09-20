@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Pencil,
   ExternalLink,
@@ -9,6 +10,7 @@ import {
   User,
   Building2,
   AlertTriangle,
+  AlertCircle,
   CheckCircle2,
   Clock,
   TrendingUp,
@@ -357,11 +359,46 @@ export default function CollateralDetailModal({
               <h4 className="text-xs font-700 text-muted-foreground uppercase tracking-wider mb-2">Collateral Information</h4>
               <div className="bg-muted/30 rounded-lg px-3 py-1">
                 <DetailRow label="Collateral ID" value={<span className="font-mono font-600 text-primary">{item.collateralId}</span>} icon={Shield} />
-                <DetailRow label="Obligor" value={<div><p className="font-500">{item.obligor}</p><p className="text-xs text-muted-foreground font-mono">{item.obligorId}</p></div>} icon={Building2} />
+                <DetailRow label="Obligor" value={
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      {item.obligorRefId ? (
+                        <Link href={`/obligors/${item.obligorRefId}`} className="font-500 text-primary hover:underline flex items-center gap-1">
+                          {item.obligor}<ExternalLink size={10} className="shrink-0" />
+                        </Link>
+                      ) : (
+                        <>
+                          <p className="font-500">{item.obligor || '—'}</p>
+                          {item.obligor && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-600 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                              <AlertCircle size={9} /> Not linked
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono">{item.obligorId}</p>
+                  </div>
+                } icon={Building2} />
                 <DetailRow label="Collateral Type" value={item.type} icon={FileText} />
                 <DetailRow label="Asset Description" value={<p className="text-xs leading-relaxed">{item.description}</p>} icon={FileText} />
                 <DetailRow label="Collateral Value" value={<span className="font-mono font-600 text-base">TSh {item.valueTSh.toLocaleString()}</span>} icon={Building2} />
-                <DetailRow label="Facility ID" value={<span className="font-mono text-xs">{item.facilityId}</span>} icon={FileText} />
+                <DetailRow label="Facility ID" value={
+                  item.loanId ? (
+                    <Link href={`/loan-registry?facility=${encodeURIComponent(item.facilityId)}`} className="font-mono text-xs text-primary hover:underline flex items-center gap-1">
+                      {item.facilityId}<ExternalLink size={10} className="shrink-0" />
+                    </Link>
+                  ) : item.facilityId ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs">{item.facilityId}</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-600 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        <AlertCircle size={9} /> Not linked
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="font-mono text-xs text-muted-foreground">—</span>
+                  )
+                } icon={FileText} />
                 <DetailRow label="Assigned Officer" value={item.assignedOfficer} icon={User} />
               </div>
             </div>

@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
-import { X, Edit, Calendar, User, FileText, CheckCircle, AlertTriangle, Clock, MapPin, Building, CalendarDays, DollarSign, Hash, Tag } from 'lucide-react';
+import Link from 'next/link';
+import { X, Edit, Calendar, User, FileText, CheckCircle, AlertTriangle, Clock, MapPin, Building, CalendarDays, DollarSign, Hash, Tag, ExternalLink, AlertCircle } from 'lucide-react';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 
 interface QuickViewModalProps {
@@ -49,7 +50,22 @@ export default function QuickViewModal({
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">{item.collateralId}</h2>
-              <p className="text-sm text-muted-foreground">{item.obligor}</p>
+              <div className="flex items-center gap-1.5">
+                {item.obligorRefId ? (
+                  <Link href={`/obligors/${item.obligorRefId}`} className="text-sm text-primary hover:underline flex items-center gap-1">
+                    {item.obligor}<ExternalLink size={10} className="shrink-0" />
+                  </Link>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">{item.obligor || '—'}</p>
+                    {item.obligor && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        <AlertCircle size={9} /> Not linked
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <button
@@ -111,7 +127,22 @@ export default function QuickViewModal({
                 <Building size={12} />
                 Facility ID
               </p>
-              <p className="text-sm">{item.facilityId}</p>
+              <div className="flex items-center gap-1.5">
+                {item.loanId ? (
+                  <Link href={`/loan-registry?facility=${encodeURIComponent(item.facilityId)}`} className="text-sm text-primary hover:underline flex items-center gap-1">
+                    {item.facilityId}<ExternalLink size={10} className="shrink-0" />
+                  </Link>
+                ) : item.facilityId ? (
+                  <>
+                    <p className="text-sm">{item.facilityId}</p>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                      <AlertCircle size={9} /> Not linked
+                    </span>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">—</p>
+                )}
+              </div>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
