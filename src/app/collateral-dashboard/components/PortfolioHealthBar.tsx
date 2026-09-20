@@ -89,7 +89,7 @@ export default function PortfolioHealthBar() {
 
   return (
     <div
-      className="rounded-2xl p-5"
+      className="rounded-2xl p-5 h-full flex flex-col"
       style={{
         backgroundColor: 'var(--izou-card)',
         border: '1px solid var(--izou-border)',
@@ -119,7 +119,7 @@ export default function PortfolioHealthBar() {
           </div>
         </div>
       ) : (
-        <>
+        <div className="flex-1 flex flex-col justify-center">
           {/* Stacked progress bar */}
           <div className="flex rounded-full overflow-hidden h-4 mb-4 gap-0.5">
             {segments.map((seg) => {
@@ -154,7 +154,7 @@ export default function PortfolioHealthBar() {
               );
             })}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

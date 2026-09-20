@@ -84,7 +84,7 @@ export default function LTVRiskPanel() {
 
   return (
     <div
-      className="rounded-2xl p-5"
+      className="rounded-2xl p-5 h-full flex flex-col"
       style={{
         backgroundColor: 'var(--izou-card)',
         border: '1px solid var(--izou-border)',
@@ -114,11 +114,11 @@ export default function LTVRiskPanel() {
           </div>
         </div>
       ) : total === 0 ? (
-        <div className="flex items-center justify-center h-20 text-sm" style={{ color: 'var(--izou-muted)' }}>
+        <div className="flex-1 flex items-center justify-center text-sm" style={{ color: 'var(--izou-muted)' }}>
           No LTV data available
         </div>
       ) : (
-        <>
+        <div className="flex-1 flex flex-col justify-center">
           {/* Stacked risk bar */}
           <div className="flex rounded-full overflow-hidden h-4 mb-4 gap-0.5">
             {segments.map((seg) => {
@@ -152,7 +152,7 @@ export default function LTVRiskPanel() {
               );
             })}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -42,7 +42,7 @@ export default function OverdueAlertsPanel() {
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden h-full flex flex-col"
       style={{
         backgroundColor: 'var(--izou-card)',
         border: '1px solid var(--izou-border)',
@@ -86,7 +86,7 @@ export default function OverdueAlertsPanel() {
           <p className="text-xs" style={{ color: 'var(--izou-muted)' }}>{error}</p>
         </div>
       ) : overdueItems.length === 0 ? (
-        <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--izou-muted)' }}>
+        <div className="flex-1 flex items-center justify-center px-5 py-8 text-center text-sm" style={{ color: 'var(--izou-muted)' }}>
           No overdue items — great work!
         </div>
       ) : (
