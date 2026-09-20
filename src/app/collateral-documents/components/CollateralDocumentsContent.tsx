@@ -129,6 +129,38 @@ const EXPIRY_STATUS_META: Record<ExpiryStatus, { label: string; color: string; b
   none:            { label: 'Not Set',        color: 'text-slate-500',  bg: 'bg-slate-50',   border: 'border-slate-200' },
 };
 
+type SortOption = 'newest' | 'oldest' | 'type-az' | 'collateral-az' | 'expiry-soonest';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'newest', label: 'Newest Upload First' },
+  { value: 'oldest', label: 'Oldest Upload First' },
+  { value: 'expiry-soonest', label: 'Expiry: Soonest First' },
+  { value: 'type-az', label: 'Document Type (A-Z)' },
+  { value: 'collateral-az', label: 'Collateral ID (A-Z)' },
+];
+
+function sortDocuments<T extends CollateralDocument>(docs: T[], option: SortOption): T[] {
+  const sorted = [...docs];
+  switch (option) {
+    case 'oldest':
+      return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    case 'type-az':
+      return sorted.sort((a, b) => a.documentType.localeCompare(b.documentType));
+    case 'collateral-az':
+      return sorted.sort((a, b) => a.collateralId.localeCompare(b.collateralId));
+    case 'expiry-soonest':
+      return sorted.sort((a, b) => {
+        if (!a.expiryDate && !b.expiryDate) return 0;
+        if (!a.expiryDate) return 1;
+        if (!b.expiryDate) return -1;
+        return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+      });
+    case 'newest':
+    default:
+      return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+}
+
 // ─── Upload Modal ─────────────────────────────────────────────────────────────
 
 interface UploadModalProps {
@@ -1500,6 +1532,7 @@ export default function CollateralDocumentsContent() {
   const [filterDocType, setFilterDocType] = useState<string>('All');
   const [filterCollateral, setFilterCollateral] = useState<string>('All');
   const [filterExpiryStatus, setFilterExpiryStatus] = useState<string>('All');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [showFilters, setShowFilters] = useState(false);
 
   // Modal state
@@ -1595,6 +1628,11 @@ export default function CollateralDocumentsContent() {
       return matchSearch && matchDocType && matchCollateral && matchExpiryStatus;
     });
   }, [latestDocs, search, filterDocType, filterCollateral, filterExpiryStatus]);
+
+  const sortedDocs = React.useMemo(
+    () => sortDocuments(filteredDocs, sortOption),
+    [filteredDocs, sortOption]
+  );
 
   // KPI counts
   const totalDocs = latestDocs.length;
@@ -1821,7 +1859,22 @@ export default function CollateralDocumentsContent() {
           </button>
         )}
 
-        <span className="ml-auto text-xs text-muted-foreground">
+        {/* Sort control */}
+        <div className="relative ml-auto">
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value as SortOption)}
+            className="appearance-none border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            title="Sort by"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>Sort: {opt.label}</option>
+            ))}
+          </select>
+          <ArrowUpDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        </div>
+
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
           {loading ? 'Loading…' : `${filteredDocs.length} file${filteredDocs.length !== 1 ? 's' : ''}`}
         </span>
       </div>
@@ -1887,7 +1940,7 @@ export default function CollateralDocumentsContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredDocs.map((doc) => {
+              {sortedDocs.map((doc) => {
                 const key = `${doc.collateralRecordId}::${doc.fileName}`;
                 const versions = versionMap[key] ?? [doc];
                 return (
