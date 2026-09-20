@@ -537,6 +537,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Set an optional expiry date when uploading (or later from the document viewer) to flag time-bound documents like insurance certificates or valuation reports as Expiring Soon or Expired',
       'Filter the table by expiry status, or check the "Expiring / Expired" KPI card for an at-a-glance count',
       'Use the "Sort" dropdown to order the table by upload date, expiry (soonest first), document type, or collateral ID',
+      'Check multiple documents\' row checkboxes (or the header checkbox to select all) to bulk-download or bulk-delete them',
       'The Checklist tab compares every collateral record against its type\'s required documents (configured in Settings → Collateral Types) and lets you upload any missing one directly from the list',
       'In the Audit tab, filter uploads/rollbacks/deletes by action, collateral, or search term',
     ],

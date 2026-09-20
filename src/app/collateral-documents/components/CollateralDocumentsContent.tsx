@@ -653,6 +653,53 @@ function DeleteConfirmModal({ doc, onConfirm, onCancel, deleting }: DeleteConfir
   );
 }
 
+// ─── Bulk Delete Confirm Modal ────────────────────────────────────────────────
+
+interface BulkDeleteConfirmProps {
+  docs: CollateralDocument[];
+  onConfirm: () => void;
+  onCancel: () => void;
+  deleting: boolean;
+}
+
+function BulkDeleteConfirmModal({ docs, onConfirm, onCancel, deleting }: BulkDeleteConfirmProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="px-6 py-5">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mb-3">
+            <Trash2 size={18} className="text-red-600" />
+          </div>
+          <h3 className="text-base font-semibold text-foreground mb-1">Delete {docs.length} Document{docs.length !== 1 ? 's' : ''}</h3>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete the following document{docs.length !== 1 ? 's' : ''}? This action cannot be undone.
+          </p>
+          <ul className="mt-3 max-h-40 overflow-y-auto space-y-1">
+            {docs.map((doc) => (
+              <li key={doc.id} className="text-xs text-foreground truncate">
+                {doc.fileName} <span className="text-muted-foreground">(v{doc.version})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <button onClick={onCancel} disabled={deleting} className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50">
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            {deleting ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+            {deleting ? 'Deleting…' : `Delete ${docs.length}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Document Viewer Drawer ───────────────────────────────────────────────────
 
 interface DocumentViewerDrawerProps {
@@ -956,14 +1003,25 @@ interface DocumentRowProps {
   onDelete: () => void;
   onView: () => void;
   canDelete: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
 }
 
 function DocumentRow({
   doc, collateralRecord, versionCount, onUploadVersion, onViewVersions, onDownload, onDelete, onView, canDelete,
+  selected, onToggleSelect,
 }: DocumentRowProps) {
   const meta = DOC_TYPE_META[doc.documentType] ?? DOC_TYPE_META['Other'];
   return (
-    <tr className="hover:bg-muted/30 transition-colors group">
+    <tr className={`hover:bg-muted/30 transition-colors group ${selected ? 'bg-primary/5' : ''}`}>
+      <td className="px-4 py-3 w-8">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
+        />
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2.5">
           {getFileIcon(doc.mimeType)}
@@ -1534,12 +1592,14 @@ export default function CollateralDocumentsContent() {
   const [filterExpiryStatus, setFilterExpiryStatus] = useState<string>('All');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Modal state
   const [uploadModal, setUploadModal] = useState<{ record: CollateralRecord; initialDocType?: DocumentType } | null>(null);
   const [uploadVersionModal, setUploadVersionModal] = useState<{ record: CollateralRecord; doc: CollateralDocument } | null>(null);
   const [versionModal, setVersionModal] = useState<{ docs: CollateralDocument[]; fileName: string } | null>(null);
   const [deleteModal, setDeleteModal] = useState<CollateralDocument | null>(null);
+  const [bulkDeleteModal, setBulkDeleteModal] = useState<CollateralDocument[] | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [activeView, setActiveView] = useState<'documents' | 'checklist' | 'pockets' | 'audit'>('documents');
   const [selectedPocketCollateral, setSelectedPocketCollateral] = useState<CollateralRecord | null>(null);
@@ -1582,6 +1642,15 @@ export default function CollateralDocumentsContent() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Drop selected ids that no longer exist (e.g. deleted individually elsewhere)
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      const validIds = new Set(documents.map((d) => d.id));
+      const next = new Set([...prev].filter((id) => validIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [documents]);
 
   // ─── Derived data ─────────────────────────────────────────────────────────
 
@@ -1673,6 +1742,47 @@ export default function CollateralDocumentsContent() {
       setDeleteModal(null);
       fetchData();
     }
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (ids: string[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = ids.length > 0 && ids.every((id) => prev.has(id));
+      return allSelected ? new Set() : new Set(ids);
+    });
+  };
+
+  const handleBulkDownload = (docs: CollateralDocument[]) => {
+    docs.forEach((doc, idx) => {
+      if (!doc.signedUrl) return;
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = doc.signedUrl as string;
+        a.download = doc.fileName;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, idx * 250);
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!bulkDeleteModal) return;
+    setDeleting(true);
+    await Promise.all(bulkDeleteModal.map((doc) => documentService.delete(doc)));
+    setDeleting(false);
+    setBulkDeleteModal(null);
+    setSelectedIds(new Set());
+    fetchData();
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -1879,6 +1989,35 @@ export default function CollateralDocumentsContent() {
         </span>
       </div>
 
+      {/* Bulk actions bar */}
+      {activeView === 'documents' && selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-6 py-2.5 border-b border-border bg-primary/5 shrink-0">
+          <span className="text-xs font-medium text-foreground">
+            {selectedIds.size} document{selectedIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <button
+            onClick={() => handleBulkDownload(sortedDocs.filter((d) => selectedIds.has(d.id)))}
+            className="flex items-center gap-1.5 text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            <Download size={13} /> Download
+          </button>
+          {canDelete && (
+            <button
+              onClick={() => setBulkDeleteModal(sortedDocs.filter((d) => selectedIds.has(d.id)))}
+              className="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+          )}
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X size={12} /> Clear selection
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className={`flex-1 overflow-auto ${activeView !== 'documents' ? 'hidden' : ''}`}>
         {/* Error state */}
@@ -1932,6 +2071,14 @@ export default function CollateralDocumentsContent() {
           <table className="w-full text-left">
             <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm z-10">
               <tr>
+                <th className="px-4 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    checked={sortedDocs.length > 0 && sortedDocs.every((d) => selectedIds.has(d.id))}
+                    onChange={() => toggleSelectAll(sortedDocs.map((d) => d.id))}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer"
+                  />
+                </th>
                 {['Type', 'Collateral', 'Version', 'Uploaded', 'Expiry', 'Notes', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                     {h}
@@ -1958,6 +2105,8 @@ export default function CollateralDocumentsContent() {
                     onDownload={() => handleDownload(doc)}
                     onDelete={() => setDeleteModal(doc)}
                     canDelete={canDelete}
+                    selected={selectedIds.has(doc.id)}
+                    onToggleSelect={() => toggleSelected(doc.id)}
                   />
                 );
               })}
@@ -2126,6 +2275,15 @@ export default function CollateralDocumentsContent() {
           doc={deleteModal}
           onConfirm={handleDelete}
           onCancel={() => setDeleteModal(null)}
+          deleting={deleting}
+        />
+      )}
+
+      {bulkDeleteModal && (
+        <BulkDeleteConfirmModal
+          docs={bulkDeleteModal}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkDeleteModal(null)}
           deleting={deleting}
         />
       )}
