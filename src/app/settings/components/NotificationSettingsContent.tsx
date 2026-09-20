@@ -545,9 +545,6 @@ export default function NotificationSettingsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Notification Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Customise which alerts you receive and how you are notified.
-          </p>
         </div>
         <button
           onClick={handleSave}

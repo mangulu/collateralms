@@ -321,9 +321,6 @@ export default function FastTrackContent() {
         </div>
         <div>
           <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Fast Track for Premier & Repeat Customers</h1>
-          <p className="text-sm text-muted-foreground">
-            Streamlined collateral registration for high-value and returning customers
-          </p>
         </div>
       </div>
 

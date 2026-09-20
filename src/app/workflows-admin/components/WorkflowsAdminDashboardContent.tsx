@@ -243,9 +243,6 @@ export default function WorkflowsAdminDashboardContent() {
             </div>
             <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Workflows Administration</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Design, configure, and monitor the workflow engine — templates, triggers, escalations, and KPIs
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-xs text-slate-600">

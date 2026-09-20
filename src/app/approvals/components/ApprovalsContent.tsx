@@ -610,9 +610,6 @@ export default function ApprovalsContent() {
                 <span className="text-xs text-gray-600 font-medium">Approvals</span>
               </div>
               <h1 className="text-lg font-semibold" style={{ color: 'var(--izou-primary)' }}>Approvals</h1>
-              <p className="text-sm text-gray-500">
-                Legal Officers &amp; Credit Managers — review routed collaterals, leave comments, and approve with compliance attestation
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">

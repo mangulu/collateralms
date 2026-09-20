@@ -235,9 +235,6 @@ export default function CollateralTypeDocumentsSettingsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Required Documents per Collateral Type</h1>
-          <p className="text-sm text-muted-foreground">
-            Configure which documents are required for each collateral type. These drive the checklist shown on collateral profiles.
-          </p>
         </div>
         <button
           onClick={fetchData}

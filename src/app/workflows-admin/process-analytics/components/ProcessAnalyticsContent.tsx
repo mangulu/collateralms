@@ -266,9 +266,6 @@ export default function ProcessAnalyticsContent() {
             </div>
             <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Process Analytics & KPIs</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Cycle times, SLA compliance, bottleneck analysis, role workload, and throughput trends
-          </p>
         </div>
         <button
           onClick={() => load(true)}

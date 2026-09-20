@@ -313,9 +313,6 @@ export default function WorkflowKPIsContent() {
             </div>
             <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Analytics & KPIs</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Workflow performance metrics, cycle times, SLA compliance, and process analytics
-          </p>
         </div>
         <button
           onClick={() => load(true)}

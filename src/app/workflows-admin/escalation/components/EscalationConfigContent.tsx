@@ -183,9 +183,6 @@ export default function EscalationConfigContent() {
             </div>
             <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Escalation Configuration</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Configure SLA thresholds and escalation actions for each step across all workflow templates
-          </p>
         </div>
         <button
           onClick={() => load()}

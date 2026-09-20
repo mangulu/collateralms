@@ -394,9 +394,6 @@ export default function ComplianceAuditContent() {
             </div>
             <h1 className="text-lg sm:text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Compliance & Audit Trail</h1>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground ml-10">
-            Legal officer review · Regulatory submission records · Deadline enforcement
-          </p>
           {lastRefreshed && (
             <p className="text-xs text-muted-foreground ml-10 mt-1 hidden sm:block">
               Last refreshed: {formatDateTime(lastRefreshed.toISOString())}

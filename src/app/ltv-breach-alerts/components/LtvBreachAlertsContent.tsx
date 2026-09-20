@@ -164,9 +164,6 @@ export default function LtvBreachAlertsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>LTV Breach Alerts</h1>
-          <p className="text-sm text-gray-500">
-            Automated flags when collateral value drops and pushes LTV above covenant threshold
-          </p>
         </div>
         <button onClick={load} className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
           <RefreshCw size={14} />

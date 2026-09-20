@@ -165,9 +165,6 @@ export default function StaffWorkspaceContent() {
             <span className="text-xs text-foreground font-medium">Staff Workspace</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Staff Workspace</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Unified view of all assigned tasks across all workflows
-          </p>
         </div>
         <button
           onClick={fetchTasks}

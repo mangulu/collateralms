@@ -715,9 +715,6 @@ export default function ExportContent() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white shrink-0">
         <div>
           <h1 className="text-lg font-700" style={{ color: 'var(--izou-primary)' }}>Export Analytics</h1>
-          <p className="text-sm text-muted-foreground">
-            Generate stakeholder-ready reports in PDF, Excel, or CSV
-          </p>
         </div>
         {activeTab === 'general' ? (
           <button

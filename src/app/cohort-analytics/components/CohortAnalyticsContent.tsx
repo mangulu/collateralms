@@ -424,9 +424,6 @@ export default function CohortAnalyticsContent() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Cohort & Trend Analytics</h1>
-            <p className="text-sm text-muted-foreground">
-              Perfection rates, officer performance distribution, and LTV drift with forecasting
-            </p>
           </div>
           <div className="flex items-center gap-3">
             {lastRefresh && (

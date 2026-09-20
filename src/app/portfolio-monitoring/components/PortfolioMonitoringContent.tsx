@@ -354,9 +354,6 @@ export default function PortfolioMonitoringContent() {
             </div>
             <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Real-Time Portfolio Monitoring</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Portfolio metrics, auto-refreshed every 30s while Live is on · Last updated: {lastUpdate}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

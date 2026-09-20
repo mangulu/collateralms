@@ -391,9 +391,6 @@ export default function UserProfileContent() {
           </div>
           <div>
             <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>My Profile</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage your account, security, and preferences
-            </p>
           </div>
         </div>
       </div>

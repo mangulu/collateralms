@@ -729,10 +729,6 @@ export default function FraudPreventionContent() {
             </div>
             <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>AI & Fraud Prevention</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            AI-powered anomaly detection, identity risk scoring, and document forgery analysis
-            {lastRefreshed && <span className="ml-2 text-xs">· Last refreshed {lastRefreshed}</span>}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

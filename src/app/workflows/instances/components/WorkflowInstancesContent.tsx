@@ -1169,9 +1169,6 @@ export default function WorkflowInstancesContent() {
             </div>
             <h1 className="text-2xl font-800" style={{ color: 'var(--izou-primary)' }}>Workflow Instances</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Live view of all running, completed, and escalated workflow instances
-          </p>
         </div>
         <button
           onClick={() => { load(); setRealtimeBadge(0); }}

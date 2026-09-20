@@ -573,9 +573,6 @@ export default function CustomReportsContent() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
           <h1 className="text-lg sm:text-xl font-black" style={{ color: 'var(--izou-primary)' }}>Custom Reports</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Build and save tailored collateral reports with custom filters and export formats, and run them on demand
-          </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button

@@ -363,9 +363,6 @@ export default function PortfolioHeatmapContent() {
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 ml-10">
-            Regional risk analysis — collateral concentration, LTV, and overdue rates by geography
-          </p>
         </div>
         <button
           onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 600); }}

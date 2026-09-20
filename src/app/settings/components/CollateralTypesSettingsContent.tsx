@@ -176,9 +176,6 @@ export default function CollateralTypesSettingsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Collateral Types</h1>
-          <p className="text-sm text-muted-foreground">
-            Define collateral categories and map each to its perfection authority and deadline.
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

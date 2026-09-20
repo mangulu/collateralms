@@ -456,9 +456,6 @@ export default function AuditLogContent() {
                 <Database size={10} /> Live
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Complete audit trail of all system actions — filter by action type, user, or collateral record
-            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {lastRefreshed && (

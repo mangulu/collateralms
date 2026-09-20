@@ -380,9 +380,6 @@ export default function OccupancyHeatmapContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Vault Occupancy Heatmap</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
-            Real-time room, cabinet, and slot occupancy with capacity alerts and filing trends
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>

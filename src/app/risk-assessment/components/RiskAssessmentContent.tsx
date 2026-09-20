@@ -450,9 +450,6 @@ export default function RiskAssessmentContent() {
               <Brain size={24} className="text-primary" />
               AI Risk Assessment
             </h1>
-            <p className="text-sm text-muted-foreground">
-              OpenAI-powered analysis of perfection risk, BRELA deadline risk, and fraud indicators
-            </p>
           </div>
           {assessmentHistory.length > 0 && (
             <div className="text-right">

@@ -315,9 +315,6 @@ export default function RegistrySubmissionsContent() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-800" style={{ color: 'var(--izou-primary)' }}>Registry Submissions</h1>
-          <p className="text-sm text-muted-foreground">
-            Cross-collateral tracking of perfection submissions across all registries
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">

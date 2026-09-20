@@ -406,9 +406,6 @@ export default function ReleaseApprovalContent() {
                 <span className="text-xs text-gray-600 font-medium">Release Approval</span>
               </div>
               <h1 className="text-lg font-semibold" style={{ color: 'var(--izou-primary)' }}>Release Approval</h1>
-              <p className="text-sm text-gray-500">
-                Authorise or reject collateral release and discharge requests
-              </p>
             </div>
           </div>
         </div>

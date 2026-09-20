@@ -316,9 +316,6 @@ export default function GeomappingContent() {
         </div>
         <div>
           <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Geomapping & Location Intelligence</h1>
-          <p className="text-sm text-muted-foreground">
-            Interactive collateral map, geographic risk zones, and borrower address validation
-          </p>
         </div>
       </div>
 

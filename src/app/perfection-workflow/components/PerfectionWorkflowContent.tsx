@@ -1903,9 +1903,6 @@ export default function PerfectionWorkflowContent() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Perfection Approval Workflow</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage collateral perfection requests between Credit and Legal Officers
-            </p>
           </div>
           <div className="flex items-center gap-2">
             {!batchMode ? (

@@ -818,9 +818,6 @@ export default function ReportsContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Reports</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Compliance summaries, deadline tracking, and collateral utilization
-          </p>
         </div>
         <button
           onClick={loadData}

@@ -210,9 +210,6 @@ export default function InsuranceTrackingContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Insurance Tracking</h1>
-          <p className="text-sm text-gray-500">
-            Manage insurance certificate lifecycle with expiry and renewal alerts
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500"><RefreshCw size={16} /></button>

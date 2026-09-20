@@ -285,9 +285,6 @@ export default function FileLocationStatusContent() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>
             File Location Status
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
-            Real-time location status for every physical collateral file
-          </p>
         </div>
         <div className="flex items-center gap-3">
           {lastRefreshed && (

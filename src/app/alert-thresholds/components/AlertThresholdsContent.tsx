@@ -187,7 +187,6 @@ export default function AlertThresholdsContent() {
           </div>
           <div>
             <h1 className="text-lg font-700" style={{ color: 'var(--izou-primary)' }}>Forecasting Alert Thresholds</h1>
-            <p className="text-sm text-muted-foreground">Loading your saved thresholds…</p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -213,9 +212,6 @@ export default function AlertThresholdsContent() {
           </div>
           <div>
             <h1 className="text-lg font-700" style={{ color: 'var(--izou-primary)' }}>Forecasting Alert Thresholds</h1>
-            <p className="text-sm text-muted-foreground">
-              Configure the trigger levels for automated forecasting alerts sent to officers.
-            </p>
           </div>
         </div>
 

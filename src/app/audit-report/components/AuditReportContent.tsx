@@ -332,9 +332,6 @@ export default function AuditReportContent() {
             </div>
             <h1 className="text-lg sm:text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Regulatory Audit Report</h1>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground ml-10">
-            Fraud alerts, compliance violations, and geomapped collateral for regulator submission
-          </p>
           {lastRefreshed && (
             <p className="text-xs text-muted-foreground ml-10 mt-1">
               Last refreshed: {lastRefreshed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}

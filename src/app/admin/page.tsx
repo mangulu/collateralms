@@ -38,9 +38,6 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Admin Console</h1>
-              <p className="text-sm text-muted-foreground">
-                System user management, role assignment, and access control
-              </p>
             </div>
           </div>
         </div>

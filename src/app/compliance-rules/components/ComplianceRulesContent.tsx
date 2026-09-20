@@ -575,9 +575,6 @@ export default function ComplianceRulesContent() {
           </div>
           <div>
             <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Compliance Rule Engine</h1>
-            <p className="text-sm text-muted-foreground">
-              Configure and manage automated compliance rules for LTV, deadlines, and eligibility
-            </p>
           </div>
         </div>
         <button

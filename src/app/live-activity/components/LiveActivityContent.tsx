@@ -548,9 +548,6 @@ export default function LiveActivityContent() {
             </div>
             <div>
               <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Live Activity Stream</h1>
-              <p className="text-sm text-muted-foreground">
-                Real-time audit events, alerts, and collateral status changes
-              </p>
             </div>
           </div>
 

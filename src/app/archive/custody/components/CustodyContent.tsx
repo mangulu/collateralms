@@ -355,9 +355,6 @@ export default function CustodyContent() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>Custody</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
-            Live custody status and full chain-of-custody history for all physical collateral files
-          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => { loadCustody(); loadChain(); }} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>

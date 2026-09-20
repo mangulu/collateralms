@@ -311,9 +311,6 @@ export default function CollateralHistoryContent() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Collateral History</h1>
-              <p className="text-sm text-gray-500">
-                Full history, linked loan requests, approval timeline, and audit events for any collateral.
-              </p>
             </div>
             {selectedCollateral && (
               <button

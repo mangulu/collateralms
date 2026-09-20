@@ -133,9 +133,6 @@ export default function DisposalQueueContent() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>
             Disposal Queue
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
-            Physical documents past their retention period and eligible for destruction
-          </p>
         </div>
         <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>
           <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />

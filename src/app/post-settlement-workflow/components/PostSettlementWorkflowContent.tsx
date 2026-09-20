@@ -564,9 +564,6 @@ export default function PostSettlementWorkflowContent() {
               <ShieldCheck className="w-5 h-5 text-blue-600" />
               <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>Post-Settlement Workflow</h1>
             </div>
-            <p className="text-sm text-slate-500">
-              Manage discharge sign-offs, stakeholder confirmations, and collateral return scheduling before final release
-            </p>
           </div>
           <button
             onClick={loadCases}

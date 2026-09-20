@@ -976,9 +976,6 @@ export default function ValuationWorkflowContent() {
                 <span className="text-xs text-gray-600 font-medium">Valuation Workflow</span>
               </div>
               <h1 className="text-lg font-bold" style={{ color: 'var(--izou-primary)' }}>Valuation Workflow</h1>
-              <p className="text-xs text-gray-500">
-                Schedule, record, and approve collateral revaluations
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">

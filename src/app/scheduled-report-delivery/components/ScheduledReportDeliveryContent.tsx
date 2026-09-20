@@ -177,9 +177,6 @@ export default function ScheduledReportDeliveryContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Scheduled Report Delivery</h1>
-          <p className="text-sm text-gray-500">
-            Auto-generate and email weekly perfection summaries and monthly portfolio reviews
-          </p>
         </div>
         <button
           onClick={load}

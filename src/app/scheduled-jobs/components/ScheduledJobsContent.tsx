@@ -945,9 +945,6 @@ export default function ScheduledJobsContent() {
           <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--izou-primary)' }}>
             <CalendarClock className="w-5 h-5 text-primary" /> Scheduled Batch Release Jobs
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Configure automated daily/weekly schedules that release collateral once its registry charge is already confirmed discharged
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={reload} className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-slate-50 transition-colors">

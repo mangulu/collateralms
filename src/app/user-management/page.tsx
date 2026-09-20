@@ -43,9 +43,6 @@ function UserManagementInner() {
         <div className="px-4 sm:px-6 pt-6 pb-0 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>User Management</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage users, roles, and security settings
-            </p>
           </div>
           {activeTab === 'users' && (
             <div className="flex items-center gap-2 shrink-0">

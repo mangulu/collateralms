@@ -327,9 +327,6 @@ export default function LoanClassificationContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Loan Classification</h1>
-          <p className="text-sm text-slate-500">
-            BOT 5-Tier Classification Engine &amp; Quarterly Provisioning — Risk Assets Regulations 2014
-          </p>
         </div>
         {tab === 'classifications' && (
           <div className="flex items-center gap-3">

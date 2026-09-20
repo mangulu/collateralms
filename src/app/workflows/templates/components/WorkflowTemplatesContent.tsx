@@ -814,9 +814,6 @@ export default function WorkflowTemplatesContent() {
             </button>
             <div>
               <h1 className="text-xl font-800" style={{ color: 'var(--izou-primary)' }}>Edit Template</h1>
-              <p className="text-xs text-muted-foreground">
-                Configure steps, actors, conditions, and escalation rules
-              </p>
             </div>
           </div>
           <button
@@ -920,9 +917,6 @@ export default function WorkflowTemplatesContent() {
             </div>
             <h1 className="text-2xl font-800" style={{ color: 'var(--izou-primary)' }}>Workflow Templates</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Define steps, assign actors by role, set conditions, and configure escalation rules per step
-          </p>
         </div>
         <button
           onClick={() => setShowNewForm(true)}

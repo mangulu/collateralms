@@ -373,9 +373,6 @@ export default function HaircutScheduleContent() {
             <Scissors size={22} className="text-blue-600" />
             Haircut Schedule Engine
           </h1>
-          <p className="text-sm text-slate-500">
-            Configurable asset-class haircut rates (0–30%) applied during valuation and LTV calculation
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

@@ -655,9 +655,6 @@ export default function CreditPolicyReviewContent() {
             <BookOpen className="w-5 h-5 text-blue-600" />
             <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Credit Policy Review Workflow</h1>
           </div>
-          <p className="text-sm text-slate-500">
-            Board-level annual credit policy reviews with approval stages and BOT submission tracking
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 transition-colors">

@@ -318,9 +318,6 @@ export default function CollateralSettlementContent() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--izou-primary)' }}>Collateral Settlement Status</h1>
-              <p className="text-sm text-slate-500">
-                Post-lifecycle management — release dates, payoff history, and discharge tracking per loan
-              </p>
             </div>
             <button
               onClick={load}

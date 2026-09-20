@@ -632,9 +632,6 @@ export default function CollateralLoanVisualizationContent() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Collateral–Loan Visualization</h1>
-            <p className="text-sm text-gray-500">
-              Cross-reference view of collaterals securing loans and loans secured by collaterals
-            </p>
           </div>
           <button
             onClick={loadData}

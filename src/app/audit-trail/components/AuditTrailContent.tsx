@@ -445,9 +445,6 @@ export default function AuditTrailContent() {
               <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Security &amp; Compliance Trail</h1>
               <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">Regulatory Compliance</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Immutable record of all collateral actions — created, edited, perfected, signed off — with officer names and timestamps
-            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {lastRefreshed && (

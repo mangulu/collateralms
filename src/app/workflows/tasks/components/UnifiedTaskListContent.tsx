@@ -292,9 +292,6 @@ export default function UnifiedTaskListContent() {
             <span className="text-xs text-foreground font-500">Task List</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Unified Task List</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            All assigned tasks, approvals, and workflow items in one place
-          </p>
         </div>
         <button
           onClick={loadAll}

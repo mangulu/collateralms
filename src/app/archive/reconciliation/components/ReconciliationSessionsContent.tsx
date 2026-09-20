@@ -209,9 +209,6 @@ export default function ReconciliationSessionsContent() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>Vault Reconciliation</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
-            Periodic stock-takes confirming physical vault contents match system records
-          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}><RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} /></button>

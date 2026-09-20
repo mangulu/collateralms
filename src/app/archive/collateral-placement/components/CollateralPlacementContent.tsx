@@ -542,9 +542,6 @@ export default function CollateralFilingContent() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>
             Collateral Filing
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
-            Assign physical vault slots to collateral records
-          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>

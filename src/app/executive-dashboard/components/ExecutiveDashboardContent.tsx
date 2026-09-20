@@ -232,10 +232,6 @@ export default function ExecutiveDashboardContent() {
               Live
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Real-time portfolio KPIs · EXIM Bank Tanzania
-            {lastUpdated && <span className="ml-2 text-xs">· Updated {lastUpdated}</span>}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

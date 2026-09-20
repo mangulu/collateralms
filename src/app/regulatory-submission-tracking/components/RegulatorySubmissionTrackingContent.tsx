@@ -140,9 +140,6 @@ export default function RegulatorySubmissionTrackingContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Regulatory Submission Tracking</h1>
-          <p className="text-sm text-gray-500">
-            Track when regulatory reports are generated, submitted, and acknowledged
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">

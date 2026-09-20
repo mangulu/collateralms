@@ -334,9 +334,6 @@ export default function StressSimulatorContent() {
               </div>
               <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Portfolio Stress Simulator</h1>
             </div>
-            <p className="text-sm text-gray-500 ml-10">
-              Collateral value impact under 10%, 20%, and 30% market decline scenarios with real-time LTV breach forecasting
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-lg">

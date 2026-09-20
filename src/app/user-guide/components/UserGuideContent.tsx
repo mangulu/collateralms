@@ -421,9 +421,6 @@ export default function UserGuideContent() {
             </div>
             <div>
               <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>User Guide</h1>
-              <p className="text-sm text-slate-500">
-                Role-specific workflows, screen access, and tips
-              </p>
             </div>
           </div>
           <div className="relative">

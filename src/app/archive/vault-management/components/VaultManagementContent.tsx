@@ -477,9 +477,6 @@ export default function VaultManagementContent() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>
             Vault Management
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
-            Hierarchical vault structure: Vault → Room → Cabinet → Slot
-          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="p-2 rounded-lg border transition-colors hover:bg-blue-50"

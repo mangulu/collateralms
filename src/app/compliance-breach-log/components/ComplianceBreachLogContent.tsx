@@ -291,9 +291,6 @@ export default function ComplianceBreachLogContent() {
             </div>
             <div>
               <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Compliance Breach Log</h1>
-              <p className="text-sm text-muted-foreground">
-                Real breaches from evaluating active compliance rules against live collateral &amp; obligor data
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
