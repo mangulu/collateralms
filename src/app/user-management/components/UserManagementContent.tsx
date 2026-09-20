@@ -1,8 +1,7 @@
 'use client';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import {
   Users,
-  Plus,
   Search,
   Edit2,
   ToggleLeft,
@@ -86,7 +85,12 @@ interface ToastState {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function UserManagementContent() {
+export interface UserManagementHandle {
+  refresh: () => Promise<void>;
+  openCreateModal: () => void;
+}
+
+const UserManagementContent = forwardRef<UserManagementHandle>(function UserManagementContent(_props, ref) {
   const supabase = createClient();
   const { hasPermission } = usePermissions();
   const { user: currentUser } = useAuth();
@@ -95,7 +99,6 @@ export default function UserManagementContent() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -117,7 +120,6 @@ export default function UserManagementContent() {
 
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    else setRefreshing(true);
 
     try {
       const [usersRes, rolesData] = await Promise.all([
@@ -147,7 +149,6 @@ export default function UserManagementContent() {
       showToast('Unexpected error loading users', 'error');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
@@ -170,6 +171,11 @@ export default function UserManagementContent() {
     setFormError(null);
     setModalOpen(true);
   }
+
+  useImperativeHandle(ref, () => ({
+    refresh: () => fetchData(true),
+    openCreateModal,
+  }));
 
   function openEditModal(user: UserProfile) {
     setEditingUser(user);
@@ -345,35 +351,6 @@ export default function UserManagementContent() {
           {toast.message}
         </div>
       )}
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-700 text-foreground">User Management</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage users, assign roles, and control account access
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => fetchData(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-          {canManage && (
-            <button
-              onClick={openCreateModal}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <Plus size={16} />
-              Add User
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -696,4 +673,6 @@ export default function UserManagementContent() {
       )}
     </div>
   );
-}
+});
+
+export default UserManagementContent;

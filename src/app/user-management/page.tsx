@@ -1,12 +1,12 @@
 'use client';
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import AppLayout from '@/components/AppLayout';
-import UserManagementContent from './components/UserManagementContent';
+import UserManagementContent, { UserManagementHandle } from './components/UserManagementContent';
 import RoleManagementContent from './components/RoleManagementContent';
 import ScreenAccessContent from './components/ScreenAccessContent';
 import TwoFASetup from '@/components/TwoFASetup';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Users, Shield, Lock, Monitor, Smartphone } from 'lucide-react';
+import { Users, Shield, Lock, Monitor, Smartphone, RefreshCw, Plus } from 'lucide-react';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 
 type Tab = 'users' | 'roles' | 'screen_access' | 'two_fa';
@@ -18,6 +18,16 @@ function UserManagementInner() {
   const { hasPermission, loading } = usePermissions();
 
   const canManageRoles = hasPermission(PERMISSIONS.ROLES_VIEW);
+  const canManageUsers = hasPermission(PERMISSIONS.USER_MANAGEMENT_MANAGE);
+
+  const userManagementRef = useRef<UserManagementHandle>(null);
+  const [refreshingUsers, setRefreshingUsers] = useState(false);
+
+  const handleRefreshUsers = async () => {
+    setRefreshingUsers(true);
+    await userManagementRef.current?.refresh();
+    setRefreshingUsers(false);
+  };
 
   useEffect(() => {
     const tab = searchParams.get('tab') as Tab | null;
@@ -30,11 +40,34 @@ function UserManagementInner() {
     <AppLayout currentPath={pathname}>
       <div className="space-y-0">
         {/* Page Header */}
-        <div className="px-4 sm:px-6 pt-6 pb-0">
-          <h1 className="text-2xl font-700 text-foreground">User Management</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage users, roles, and security settings
-          </p>
+        <div className="px-4 sm:px-6 pt-6 pb-0 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-700 text-foreground">User Management</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Manage users, roles, and security settings
+            </p>
+          </div>
+          {activeTab === 'users' && (
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleRefreshUsers}
+                disabled={refreshingUsers}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={refreshingUsers ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+              {canManageUsers && (
+                <button
+                  onClick={() => userManagementRef.current?.openCreateModal()}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Plus size={16} />
+                  Add User
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tab Bar */}
@@ -83,7 +116,7 @@ function UserManagementInner() {
 
         {/* Tab Content */}
         <div className="px-4 sm:px-6 py-6">
-          {activeTab === 'users' && <UserManagementContent />}
+          {activeTab === 'users' && <UserManagementContent ref={userManagementRef} />}
           {activeTab === 'roles' && (
             canManageRoles ? (
               <RoleManagementContent />
