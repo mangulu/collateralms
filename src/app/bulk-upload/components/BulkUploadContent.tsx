@@ -438,8 +438,8 @@ export default function BulkUploadContent() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-700 text-foreground tracking-tight">Bulk Upload Collateral</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-2xl font-700 tracking-tight" style={{ color: 'var(--izou-primary)' }}>Bulk Upload Collateral</h1>
+          <p className="text-sm text-muted-foreground">
             Import collateral records from CSV. Validation and duplicate detection run before commit.
           </p>
         </div>

@@ -278,7 +278,7 @@ export default function NotificationsHubContent() {
             <Bell size={20} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-700 text-foreground">Notifications Hub</h1>
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Notifications Hub</h1>
             <p className="text-sm text-muted-foreground">
               {unreadCount > 0
                 ? `${unreadCount} unread alert${unreadCount !== 1 ? 's' : ''}${highPriorityCount > 0 ? ` · ${highPriorityCount} high priority` : ''}`

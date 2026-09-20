@@ -348,7 +348,7 @@ export default function SmsNotificationRulesContent() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <MessageSquare size={20} className="text-primary" />
-            <h1 className="text-xl font-bold text-foreground">SMS Notification Rules</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>SMS Notification Rules</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Configure which officers receive real-time SMS alerts for critical collateral events via Twilio.

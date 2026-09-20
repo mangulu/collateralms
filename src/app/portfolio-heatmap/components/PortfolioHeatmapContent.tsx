@@ -355,7 +355,7 @@ export default function PortfolioHeatmapContent() {
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
               <Map className="w-4 h-4 text-white" />
             </div>
-            <h1 className="text-xl font-bold text-slate-900">Portfolio Heatmap</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Portfolio Heatmap</h1>
             {isSampleData && !loading && (
               <span className="inline-flex items-center gap-1 text-xs font-600 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
                 <Info className="w-3 h-3" />
@@ -363,7 +363,9 @@ export default function PortfolioHeatmapContent() {
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 ml-10">Regional risk analysis — collateral concentration, LTV, and overdue rates by geography</p>
+          <p className="text-sm text-slate-500 ml-10">
+            Regional risk analysis — collateral concentration, LTV, and overdue rates by geography
+          </p>
         </div>
         <button
           onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 600); }}

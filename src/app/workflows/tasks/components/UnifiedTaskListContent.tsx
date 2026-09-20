@@ -291,8 +291,8 @@ export default function UnifiedTaskListContent() {
             <ChevronRight size={12} className="text-muted-foreground" />
             <span className="text-xs text-foreground font-500">Task List</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-700 text-foreground">Unified Task List</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Unified Task List</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             All assigned tasks, approvals, and workflow items in one place
           </p>
         </div>

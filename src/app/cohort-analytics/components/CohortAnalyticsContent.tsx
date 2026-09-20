@@ -423,8 +423,8 @@ export default function CohortAnalyticsContent() {
       <div className="bg-white border-b border-border px-6 py-4 shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-700 text-foreground">Cohort & Trend Analytics</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Cohort & Trend Analytics</h1>
+            <p className="text-sm text-muted-foreground">
               Perfection rates, officer performance distribution, and LTV drift with forecasting
             </p>
           </div>

@@ -226,7 +226,7 @@ export default function ExecutiveDashboardContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Executive Dashboard</h1>
+            <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Executive Dashboard</h1>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full" aria-label="Live data">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
               Live

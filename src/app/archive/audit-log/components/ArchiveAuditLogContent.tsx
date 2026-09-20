@@ -72,8 +72,10 @@ export default function ArchiveAuditLogContent() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>Archive Audit Log</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>Every vault movement timestamped and attributed</p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>Archive Audit Log</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>
+            Every vault movement timestamped and attributed
+          </p>
         </div>
         <button onClick={load} className="p-2 rounded-lg border" style={{ borderColor: 'var(--izou-border)' }}>
           <RefreshCw size={16} style={{ color: 'var(--izou-secondary)' }} />

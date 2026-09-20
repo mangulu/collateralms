@@ -284,7 +284,7 @@ export default function WorkflowsDashboardContent() {
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
               <Zap size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-800 text-foreground">Workflows</h1>
+            <h1 className="text-2xl font-800" style={{ color: 'var(--izou-primary)' }}>Workflows</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             All assigned tasks, approvals, and workflow processes in one place

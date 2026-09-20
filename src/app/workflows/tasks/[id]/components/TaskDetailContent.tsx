@@ -421,7 +421,7 @@ export default function TaskDetailContent() {
                     {task.taskType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                   </span>
                 </div>
-                <h1 className="text-xl font-700 text-foreground leading-snug">{task.title}</h1>
+                <h1 className="text-xl font-700 leading-snug" style={{ color: 'var(--izou-primary)' }}>{task.title}</h1>
                 {task.description && (
                   <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{task.description}</p>
                 )}

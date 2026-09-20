@@ -1289,8 +1289,8 @@ export default function CollateralDocumentsContent() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white shrink-0">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Collateral Documents</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <h1 className="text-lg font-semibold" style={{ color: 'var(--izou-primary)' }}>Collateral Documents</h1>
+          <p className="text-xs text-muted-foreground">
             Upload, version, and manage loan &amp; property documents linked to collateral records
           </p>
         </div>

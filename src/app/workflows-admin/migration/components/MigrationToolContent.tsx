@@ -396,7 +396,7 @@ export default function MigrationToolContent() {
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
               <ArrowRightLeft size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Hybrid Migration Tool</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Hybrid Migration Tool</h1>
           </div>
           <p className="text-sm text-muted-foreground max-w-2xl">
             Auto-migrate old workflow instances to the new engine. Clear-status instances are migrated automatically;

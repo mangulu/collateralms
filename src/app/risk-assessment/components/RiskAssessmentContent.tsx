@@ -446,11 +446,11 @@ export default function RiskAssessmentContent() {
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-700 text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-700 flex items-center gap-2" style={{ color: 'var(--izou-primary)' }}>
               <Brain size={24} className="text-primary" />
               AI Risk Assessment
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">
               OpenAI-powered analysis of perfection risk, BRELA deadline risk, and fraud indicators
             </p>
           </div>

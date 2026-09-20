@@ -1902,8 +1902,8 @@ export default function PerfectionWorkflowContent() {
       <div className="px-6 py-5 border-b border-border bg-white shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Perfection Approval Workflow</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Perfection Approval Workflow</h1>
+            <p className="text-sm text-muted-foreground">
               Manage collateral perfection requests between Credit and Legal Officers
             </p>
           </div>

@@ -102,7 +102,7 @@ export default function DashboardHeader() {
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
       <div className="min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--izou-text)' }}>Collateral Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Collateral Dashboard</h1>
           <span
             className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full shrink-0"
             style={{ backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)' }}

@@ -652,7 +652,7 @@ export default function CollateralLibraryContent({ collateral, isLoading, error,
               <FileText size={18} className="text-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">Document Library</h1>
+              <h1 className="text-lg font-semibold" style={{ color: 'var(--izou-primary)' }}>Document Library</h1>
               <p className="text-sm text-muted-foreground">
                 {collateral.collateralId} · {collateral.obligor} · {collateral.type}
               </p>

@@ -381,7 +381,7 @@ export default function AlertsInboxContent() {
             <Inbox size={20} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-700 text-foreground">Alerts Inbox</h1>
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Alerts Inbox</h1>
             <p className="text-sm text-muted-foreground">
               {unreadCount > 0
                 ? `${unreadCount} unread alert${unreadCount !== 1 ? 's' : ''}${highPriorityUnread > 0 ? ` · ${highPriorityUnread} high priority` : ''}`

@@ -176,7 +176,7 @@ export default function BoardReportBuilderContent() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Building2 className="w-5 h-5 text-[var(--izou-secondary-mid)]" />
-            <h1 className="text-xl font-bold text-[var(--izou-secondary)]">Board Report Builder</h1>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Board Report Builder</h1>
           </div>
           <p className="text-sm text-gray-500">
             BOT-format PDF for board approval workflows · Period: <span className="font-semibold text-[var(--izou-secondary)]">{data.reportPeriod}</span> · As of {fmtDate(data.reportDate)}

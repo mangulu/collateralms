@@ -592,7 +592,7 @@ export default function CollateralManagementContent() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-700 text-foreground">Collateral Registry</h1>
+          <h1 className="text-xl sm:text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Collateral Registry</h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {collateralData.length} total records · {filtered.length} shown ·{' '}
             {collateralData.filter((c) => c.status === 'Overdue').length} overdue

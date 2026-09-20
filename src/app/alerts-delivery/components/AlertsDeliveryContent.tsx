@@ -415,7 +415,7 @@ export default function AlertsDeliveryContent() {
             <Send size={20} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-700 text-foreground">Alert Delivery Log</h1>
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Alert Delivery Log</h1>
             <p className="text-sm text-muted-foreground">
               SMS delivery history, failure tracking, and retry controls
             </p>

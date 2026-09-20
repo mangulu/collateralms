@@ -727,7 +727,7 @@ export default function FraudPreventionContent() {
             <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
               <ShieldAlert size={18} className="text-red-600" />
             </div>
-            <h1 className="text-xl font-700 text-foreground">AI & Fraud Prevention</h1>
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>AI & Fraud Prevention</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             AI-powered anomaly detection, identity risk scoring, and document forgery analysis

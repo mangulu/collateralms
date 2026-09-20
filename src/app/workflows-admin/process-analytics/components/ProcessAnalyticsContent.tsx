@@ -264,7 +264,7 @@ export default function ProcessAnalyticsContent() {
             <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center">
               <TrendingUp size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Process Analytics & KPIs</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Process Analytics & KPIs</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Cycle times, SLA compliance, bottleneck analysis, role workload, and throughput trends

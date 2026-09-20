@@ -451,7 +451,7 @@ export default function AuditLogContent() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <ClipboardList size={20} className="text-primary" />
-              <h1 className="text-xl font-bold text-foreground">Audit Log</h1>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Audit Log</h1>
               <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Database size={10} /> Live
               </span>

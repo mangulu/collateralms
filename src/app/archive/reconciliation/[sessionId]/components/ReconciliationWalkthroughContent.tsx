@@ -266,7 +266,7 @@ export default function ReconciliationWalkthroughContent() {
 
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>
             Reconciling {session.location?.name ?? 'Vault'}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>

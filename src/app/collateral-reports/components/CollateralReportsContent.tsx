@@ -479,8 +479,8 @@ export default function CollateralReportsContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 border-b border-border bg-white shrink-0 gap-3">
         <div>
-          <h1 className="text-lg font-700 text-foreground">Collateral Performance Reports</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-lg font-700" style={{ color: 'var(--izou-primary)' }}>Collateral Performance Reports</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Monthly perfection trends, registry compliance, and overdue summary
           </p>
         </div>

@@ -479,8 +479,8 @@ export default function PerformanceExportContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-4 border-b border-border bg-white shrink-0 gap-3">
         <div>
-          <h1 className="text-lg font-700 text-foreground">Performance Export</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-lg font-700" style={{ color: 'var(--izou-primary)' }}>Performance Export</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Export collateral performance summaries, trend PDFs, and compliance metrics
           </p>
         </div>

@@ -132,8 +132,8 @@ export default function DocumentTypesSettingsContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Document Types</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Document Types</h1>
+          <p className="text-sm text-muted-foreground">
             Configure the types of documents accepted for collateral records. Required types are enforced during collateral registration.
           </p>
         </div>

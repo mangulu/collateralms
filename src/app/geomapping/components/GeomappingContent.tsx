@@ -315,8 +315,10 @@ export default function GeomappingContent() {
           <Map size={18} className="text-teal-600" />
         </div>
         <div>
-          <h1 className="text-xl font-700 text-foreground">Geomapping & Location Intelligence</h1>
-          <p className="text-sm text-muted-foreground">Interactive collateral map, geographic risk zones, and borrower address validation</p>
+          <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Geomapping & Location Intelligence</h1>
+          <p className="text-sm text-muted-foreground">
+            Interactive collateral map, geographic risk zones, and borrower address validation
+          </p>
         </div>
       </div>
 

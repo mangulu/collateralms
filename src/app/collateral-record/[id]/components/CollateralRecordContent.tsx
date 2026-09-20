@@ -1513,7 +1513,7 @@ export default function CollateralRecordContent({
             <ArrowLeft size={14} /> Collateral Registry
           </button>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-700 text-foreground font-mono">{collateral.collateralId}</h1>
+            <h1 className="text-2xl font-700 font-mono" style={{ color: 'var(--izou-primary)' }}>{collateral.collateralId}</h1>
             <Badge variant={statusBadgeMap[collateral.status]} label={collateral.status} />
           </div>
           <p className="text-sm text-muted-foreground mt-1">

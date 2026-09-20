@@ -233,8 +233,8 @@ export default function LoanRegistryContent() {
       <div className="px-6 pt-6 pb-4 border-b border-border bg-white shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-700 text-foreground">Loan Registry</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Loan Registry</h1>
+            <p className="text-sm text-muted-foreground">
               Dedicated registry for all loan facilities — with linked collateral view and obligor relationship tracking
             </p>
           </div>

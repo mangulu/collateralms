@@ -588,8 +588,8 @@ export default function BatchReleaseContent() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Batch Collateral Release</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Batch Collateral Release</h1>
+          <p className="text-sm text-muted-foreground">
             Release collateral allocations for closed loans and generate discharge filing templates for BRELA / Lands Registry submission.
           </p>
         </div>

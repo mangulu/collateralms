@@ -37,7 +37,7 @@ export default function AdminPage() {
               <Settings2 size={18} className="text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-700 text-foreground">Admin Console</h1>
+              <h1 className="text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Admin Console</h1>
               <p className="text-sm text-muted-foreground">
                 System user management, role assignment, and access control
               </p>

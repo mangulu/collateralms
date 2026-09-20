@@ -435,8 +435,8 @@ export default function ReportsDashboardContent() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-700 text-foreground">Regulatory Reports Dashboard</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Regulatory Reports Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Registry compliance · Perfection trend · Officer workload · Audit trail
           </p>
         </div>

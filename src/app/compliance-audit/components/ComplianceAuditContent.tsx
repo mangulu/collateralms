@@ -392,7 +392,7 @@ export default function ComplianceAuditContent() {
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <ClipboardList size={18} className="text-primary" />
             </div>
-            <h1 className="text-lg sm:text-xl font-bold text-foreground">Compliance & Audit Trail</h1>
+            <h1 className="text-lg sm:text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Compliance & Audit Trail</h1>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground ml-10">
             Legal officer review · Regulatory submission records · Deadline enforcement

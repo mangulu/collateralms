@@ -196,8 +196,8 @@ export default function ValuationPricingFlagsContent() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Valuation Pricing Flags</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Valuation Pricing Flags</h1>
+          <p className="text-sm text-gray-500">
             Alerts for overdue or market-unavailable valuations requiring theoretical pricing — prevents incomplete LTV calculations
           </p>
         </div>

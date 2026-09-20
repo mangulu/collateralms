@@ -442,7 +442,7 @@ export default function AuditTrailContent() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheck size={20} className="text-primary" />
-              <h1 className="text-xl font-bold text-foreground">Security &amp; Compliance Trail</h1>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Security &amp; Compliance Trail</h1>
               <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">Regulatory Compliance</span>
             </div>
             <p className="text-sm text-muted-foreground">

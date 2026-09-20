@@ -391,7 +391,7 @@ export default function GlossaryContent() {
             <BookOpen size={18} style={{ color: 'var(--izou-primary)' }} />
           </div>
           <div>
-            <h1 className="text-base font-bold leading-tight" style={{ color: 'var(--izou-text)' }}>
+            <h1 className="text-base font-bold leading-tight" style={{ color: 'var(--izou-primary)' }}>
               Glossary of Terms
             </h1>
             <p className="text-xs leading-tight" style={{ color: 'var(--izou-text-muted)' }}>

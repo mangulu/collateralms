@@ -369,11 +369,11 @@ export default function HaircutScheduleContent() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: 'var(--izou-primary)' }}>
             <Scissors size={22} className="text-blue-600" />
             Haircut Schedule Engine
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500">
             Configurable asset-class haircut rates (0–30%) applied during valuation and LTV calculation
           </p>
         </div>

@@ -186,7 +186,7 @@ export default function AlertThresholdsContent() {
             <SlidersHorizontal size={20} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-700 text-foreground">Forecasting Alert Thresholds</h1>
+            <h1 className="text-lg font-700" style={{ color: 'var(--izou-primary)' }}>Forecasting Alert Thresholds</h1>
             <p className="text-sm text-muted-foreground">Loading your saved thresholds…</p>
           </div>
         </div>
@@ -212,7 +212,7 @@ export default function AlertThresholdsContent() {
             <SlidersHorizontal size={20} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-700 text-foreground">Forecasting Alert Thresholds</h1>
+            <h1 className="text-lg font-700" style={{ color: 'var(--izou-primary)' }}>Forecasting Alert Thresholds</h1>
             <p className="text-sm text-muted-foreground">
               Configure the trigger levels for automated forecasting alerts sent to officers.
             </p>

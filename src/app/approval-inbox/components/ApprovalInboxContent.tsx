@@ -996,7 +996,7 @@ export default function ApprovalInboxContent() {
               <span className="text-xs text-gray-600 font-medium">Perfection Queue</span>
             </div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold text-gray-900">Perfection Queue</h1>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Perfection Queue</h1>
               {/* Realtime status indicator */}
               <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border ${realtimeConnected ? 'text-green-700 bg-green-50 border-green-200' : 'text-gray-500 bg-gray-50 border-gray-200'}`}>
                 {realtimeConnected
@@ -1009,7 +1009,7 @@ export default function ApprovalInboxContent() {
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500">
               Review pending loan perfection requests, compare collateral details, and take action.
             </p>
           </div>

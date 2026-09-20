@@ -181,7 +181,7 @@ export default function EscalationConfigContent() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-warning)' }}>
               <AlertTriangle size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Escalation Configuration</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Escalation Configuration</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Configure SLA thresholds and escalation actions for each step across all workflow templates

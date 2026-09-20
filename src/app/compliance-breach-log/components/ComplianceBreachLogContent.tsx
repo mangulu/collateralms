@@ -290,8 +290,10 @@ export default function ComplianceBreachLogContent() {
               <ShieldAlert size={20} className="text-red-600" />
             </div>
             <div>
-              <h1 className="text-xl font-700 text-foreground">Compliance Breach Log</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">Real breaches from evaluating active compliance rules against live collateral &amp; obligor data</p>
+              <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Compliance Breach Log</h1>
+              <p className="text-sm text-muted-foreground">
+                Real breaches from evaluating active compliance rules against live collateral &amp; obligor data
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">

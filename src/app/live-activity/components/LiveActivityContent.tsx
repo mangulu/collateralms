@@ -547,8 +547,8 @@ export default function LiveActivityContent() {
               <Radio size={20} className="text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Live Activity Stream</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>Live Activity Stream</h1>
+              <p className="text-sm text-muted-foreground">
                 Real-time audit events, alerts, and collateral status changes
               </p>
             </div>

@@ -467,8 +467,10 @@ export default function CollateralSubstitutionContent() {
                 <ChevronRight size={11} className="text-gray-300" />
                 <span className="text-xs text-gray-600 font-medium">Collateral Substitution</span>
               </div>
-              <h1 className="text-lg font-bold text-gray-900">Collateral Substitution</h1>
-              <p className="text-xs text-gray-500">Swap collateral against active facilities with approval chain and audit trail</p>
+              <h1 className="text-lg font-bold" style={{ color: 'var(--izou-primary)' }}>Collateral Substitution</h1>
+              <p className="text-xs text-gray-500">
+                Swap collateral against active facilities with approval chain and audit trail
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">

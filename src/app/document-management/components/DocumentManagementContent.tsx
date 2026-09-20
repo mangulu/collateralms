@@ -490,8 +490,8 @@ export default function DocumentManagementContent() {
       <div className="px-6 py-5 border-b border-border bg-white shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-700 text-foreground">Document Management</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Document Management</h1>
+            <p className="text-sm text-muted-foreground">
               Upload, link, and version-control collateral supporting documents
             </p>
           </div>

@@ -171,8 +171,8 @@ export default function RegistriesSettingsContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Registries</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Registries</h1>
+          <p className="text-sm text-muted-foreground">
             Manage the registries used for collateral perfection and verification (e.g. BRELA, TRA, Land Registry, TASAC, DSE).
           </p>
         </div>

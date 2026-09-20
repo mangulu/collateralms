@@ -292,8 +292,8 @@ export default function EmailProviderSettingsContent() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Email Provider</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl font-semibold" style={{ color: 'var(--izou-primary)' }}>Email Provider</h1>
+          <p className="text-sm text-muted-foreground">
             Select the active email provider and enter its API credentials. All notification emails will be routed through the active provider.
           </p>
         </div>

@@ -211,7 +211,7 @@ export default function ObligorProfileContent({ id }: Props) {
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-700 text-foreground">{obligor.fullName}</h1>
+                <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>{obligor.fullName}</h1>
                 <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-600 border ${risk.bg} ${risk.color} ${risk.border}`}>
                   <RiskIcon size={11} />
                   {obligor.riskRating ?? 'MEDIUM'} Risk

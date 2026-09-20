@@ -282,7 +282,7 @@ export default function FileLocationStatusContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-secondary)', fontFamily: 'DM Sans, sans-serif' }}>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)', fontFamily: 'DM Sans, sans-serif' }}>
             File Location Status
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--izou-muted)' }}>

@@ -121,8 +121,10 @@ export default function ObligorsContent() {
             <Users size={20} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-700 text-foreground">Obligors</h1>
-            <p className="text-sm text-muted-foreground">Manage borrower profiles, contacts, and linked collaterals</p>
+            <h1 className="text-xl font-700" style={{ color: 'var(--izou-primary)' }}>Obligors</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage borrower profiles, contacts, and linked collaterals
+            </p>
           </div>
         </div>
         <button

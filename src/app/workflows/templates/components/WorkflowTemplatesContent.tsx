@@ -813,8 +813,10 @@ export default function WorkflowTemplatesContent() {
               <X size={16} />
             </button>
             <div>
-              <h1 className="text-xl font-800 text-foreground">Edit Template</h1>
-              <p className="text-xs text-muted-foreground">Configure steps, actors, conditions, and escalation rules</p>
+              <h1 className="text-xl font-800" style={{ color: 'var(--izou-primary)' }}>Edit Template</h1>
+              <p className="text-xs text-muted-foreground">
+                Configure steps, actors, conditions, and escalation rules
+              </p>
             </div>
           </div>
           <button
@@ -916,7 +918,7 @@ export default function WorkflowTemplatesContent() {
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
               <Settings2 size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-800 text-foreground">Workflow Templates</h1>
+            <h1 className="text-2xl font-800" style={{ color: 'var(--izou-primary)' }}>Workflow Templates</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Define steps, assign actors by role, set conditions, and configure escalation rules per step

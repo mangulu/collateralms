@@ -936,8 +936,10 @@ export default function DocumentApprovalContent() {
                 <ChevronRight size={11} className="text-gray-300" />
                 <span className="text-xs text-gray-600 font-medium">Document Approval</span>
               </div>
-              <h1 className="text-lg font-bold text-gray-900">Document Approval</h1>
-              <p className="text-xs text-gray-500">Legal Officer review queue — approve or reject collateral documents before registry entry</p>
+              <h1 className="text-lg font-bold" style={{ color: 'var(--izou-primary)' }}>Document Approval</h1>
+              <p className="text-xs text-gray-500">
+                Legal Officer review queue — approve or reject collateral documents before registry entry
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">

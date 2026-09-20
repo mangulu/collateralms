@@ -164,8 +164,8 @@ export default function StaffWorkspaceContent() {
             <ChevronRight size={11} className="text-muted-foreground" />
             <span className="text-xs text-foreground font-medium">Staff Workspace</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-700 text-foreground">Staff Workspace</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-700" style={{ color: 'var(--izou-primary)' }}>Staff Workspace</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Unified view of all assigned tasks across all workflows
           </p>
         </div>

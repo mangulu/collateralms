@@ -311,7 +311,7 @@ export default function WorkflowKPIsContent() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-success)' }}>
               <BarChart3 size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Analytics & KPIs</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Analytics & KPIs</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Workflow performance metrics, cycle times, SLA compliance, and process analytics

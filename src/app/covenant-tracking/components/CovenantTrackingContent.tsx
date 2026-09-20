@@ -235,8 +235,10 @@ export default function CovenantTrackingContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Covenant Tracking</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Monitor loan covenants and receive automatic breach alerts</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Covenant Tracking</h1>
+          <p className="text-sm text-gray-500">
+            Monitor loan covenants and receive automatic breach alerts
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500"><RefreshCw size={16} /></button>

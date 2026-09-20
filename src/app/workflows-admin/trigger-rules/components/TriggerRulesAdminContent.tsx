@@ -327,7 +327,7 @@ export default function TriggerRulesAdminContent() {
             <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
               <Zap size={16} className="text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Auto-Trigger Rules</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Auto-Trigger Rules</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Rules that automatically initiate workflow instances when conditions are met

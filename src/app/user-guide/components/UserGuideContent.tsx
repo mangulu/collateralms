@@ -420,8 +420,10 @@ export default function UserGuideContent() {
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">User Guide</h1>
-              <p className="text-sm text-slate-500">Role-specific workflows, screen access, and tips</p>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--izou-primary)' }}>User Guide</h1>
+              <p className="text-sm text-slate-500">
+                Role-specific workflows, screen access, and tips
+              </p>
             </div>
           </div>
           <div className="relative">

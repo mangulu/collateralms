@@ -476,8 +476,8 @@ export default function WorkflowCommandCenterContent() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Workflow Command Center</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--izou-primary)' }}>Workflow Command Center</h1>
+          <p className="text-sm text-muted-foreground">
             Centralized view of all active perfection, valuation, release, and covenant workflows
           </p>
         </div>
