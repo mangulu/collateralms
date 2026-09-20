@@ -11,6 +11,7 @@ import {
   Unlock,
   Archive,
   ChevronRight,
+  Link2,
 } from 'lucide-react';
 
 // ─── Lifecycle stage definitions ──────────────────────────────────────────────
@@ -95,6 +96,7 @@ interface Props {
   /** Already permission-filtered modules from the parent page; supporting tools are whichever of these aren't already a lifecycle stage above (Collaterals, Archive). */
   visibleModules: ModuleCard[];
   searchQuery?: string;
+  onShowRelationshipMap?: () => void;
 }
 
 function matchesSearch(query: string, ...fields: string[]): boolean {
@@ -103,7 +105,7 @@ function matchesSearch(query: string, ...fields: string[]): boolean {
   return fields.some((f) => f.toLowerCase().includes(q));
 }
 
-export default function CollateralLifecycleMap({ visibleModules, searchQuery = '' }: Props) {
+export default function CollateralLifecycleMap({ visibleModules, searchQuery = '', onShowRelationshipMap }: Props) {
   const [counts, setCounts] = useState<StageCounts | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -135,7 +137,21 @@ export default function CollateralLifecycleMap({ visibleModules, searchQuery = '
               <span style={{ width: 20, height: 3, borderRadius: 2, backgroundColor: 'var(--izou-primary)', display: 'inline-block' }} />
               <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--izou-primary)' }}>The Collateral Lifecycle</span>
             </div>
-            <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>6 stages, registration through release</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs" style={{ color: 'var(--izou-muted)' }}>6 stages, registration through release</span>
+              {onShowRelationshipMap && (
+                <button
+                  onClick={onShowRelationshipMap}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors"
+                  style={{ color: 'var(--izou-secondary)', backgroundColor: 'var(--izou-secondary-light)' }}
+                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-border)'; }}
+                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-secondary-light)'; }}
+                >
+                  <Link2 size={12} />
+                  How it connects
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-start overflow-x-auto pb-1">

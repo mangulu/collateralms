@@ -6,7 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
 import CollateralLifecycleMap from './components/CollateralLifecycleMap';
-import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, ArrowRight, Calendar, Activity, Zap, Search, ChevronDown, FlaskConical } from 'lucide-react';
+import CollateralRelationshipModal from './components/CollateralRelationshipModal';
+import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, ArrowRight, Calendar, Activity, Zap, Search, ChevronDown, FlaskConical, Link2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -190,6 +191,7 @@ export default function ModuleHubPage() {
   const [taskCount, setTaskCount] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDismissed, setShowDismissed] = useState(false);
+  const [showRelationshipMap, setShowRelationshipMap] = useState(false);
 
   // ─── Additional sub-label stats ───────────────────────────────────────────
   const [subStats, setSubStats] = useState({
@@ -742,7 +744,11 @@ export default function ModuleHubPage() {
                   {Array.from({ length: 3 }).map((_, i) => <ModuleSkeleton key={i} />)}
                 </div>
               ) : (
-                <CollateralLifecycleMap visibleModules={visibleModules} searchQuery={searchQuery} />
+                <CollateralLifecycleMap
+                  visibleModules={visibleModules}
+                  searchQuery={searchQuery}
+                  onShowRelationshipMap={() => setShowRelationshipMap(true)}
+                />
               )}
 
               {/* Onboarding Guide Section */}
@@ -758,6 +764,14 @@ export default function ModuleHubPage() {
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--izou-muted)' }}>
                     Step-by-step walkthroughs for all modules — from registering collateral to running compliance audits.
                   </p>
+                  <button
+                    onClick={() => setShowRelationshipMap(true)}
+                    className="flex items-center gap-1 text-xs font-semibold mt-1.5 hover:underline"
+                    style={{ color: 'var(--izou-secondary)' }}
+                  >
+                    <Link2 size={12} />
+                    See how collateral, obligors &amp; loans connect
+                  </button>
                 </div>
                 <button
                   onClick={() => router.push('/onboarding-guide')}
@@ -819,6 +833,10 @@ export default function ModuleHubPage() {
           </button>
         </div>
       </div>
+
+      {showRelationshipMap && (
+        <CollateralRelationshipModal onClose={() => setShowRelationshipMap(false)} />
+      )}
     </div>
   );
 }
