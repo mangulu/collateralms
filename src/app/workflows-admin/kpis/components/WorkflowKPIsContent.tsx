@@ -308,7 +308,7 @@ export default function WorkflowKPIsContent() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-success)' }}>
               <BarChart3 size={16} className="text-white" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Analytics & KPIs</h1>
@@ -375,17 +375,17 @@ function KPIsTab({ kpis }: { kpis: KPIData | null }) {
       {/* Top KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Instances', value: kpis.totalInstances, icon: <Activity size={16} className="text-blue-500" />, color: 'text-blue-700', bg: 'bg-blue-50' },
-          { label: 'Avg Cycle Time', value: kpis.avgCycleTimeDays !== null ? `${kpis.avgCycleTimeDays.toFixed(1)}d` : '—', icon: <Clock size={16} className="text-amber-500" />, color: 'text-amber-700', bg: 'bg-amber-50' },
-          { label: 'SLA Compliance', value: kpis.slaComplianceRate !== null ? `${kpis.slaComplianceRate}%` : '—', icon: <CheckCircle2 size={16} className="text-emerald-500" />, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-          { label: 'Escalated', value: kpis.escalatedInstances, icon: <AlertTriangle size={16} className="text-orange-500" />, color: 'text-orange-700', bg: 'bg-orange-50' },
+          { label: 'Total Instances', value: kpis.totalInstances, icon: <Activity size={16} style={{ color: 'var(--izou-secondary)' }} />, color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)' },
+          { label: 'Avg Cycle Time', value: kpis.avgCycleTimeDays !== null ? `${kpis.avgCycleTimeDays.toFixed(1)}d` : '—', icon: <Clock size={16} style={{ color: 'var(--izou-warning)' }} />, color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)' },
+          { label: 'SLA Compliance', value: kpis.slaComplianceRate !== null ? `${kpis.slaComplianceRate}%` : '—', icon: <CheckCircle2 size={16} style={{ color: 'var(--izou-success)' }} />, color: 'var(--izou-success)', bg: 'var(--izou-success-light)' },
+          { label: 'Escalated', value: kpis.escalatedInstances, icon: <AlertTriangle size={16} style={{ color: 'var(--izou-danger)' }} />, color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)' },
         ].map((kpi) => (
-          <div key={kpi.label} className={`${kpi.bg} border border-border rounded-xl p-4`}>
+          <div key={kpi.label} className="border border-border rounded-xl p-4" style={{ backgroundColor: kpi.bg }}>
             <div className="flex items-center gap-2 mb-2">
               {kpi.icon}
               <span className="text-xs text-muted-foreground">{kpi.label}</span>
             </div>
-            <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
+            <p className="text-2xl font-bold" style={{ color: kpi.color }}>{kpi.value}</p>
           </div>
         ))}
       </div>
@@ -395,7 +395,7 @@ function KPIsTab({ kpis }: { kpis: KPIData | null }) {
         {/* Pending by Role */}
         <div className="bg-white border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Users size={16} className="text-blue-500" />
+            <Users size={16} style={{ color: 'var(--izou-secondary)' }} />
             <h2 className="text-sm font-semibold text-foreground">Pending Steps by Role</h2>
           </div>
           {kpis.pendingByRole.length === 0 ? (
@@ -416,7 +416,7 @@ function KPIsTab({ kpis }: { kpis: KPIData | null }) {
         {/* Bottleneck Steps */}
         <div className="bg-white border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle size={16} className="text-orange-500" />
+            <AlertTriangle size={16} style={{ color: 'var(--izou-danger)' }} />
             <h2 className="text-sm font-semibold text-foreground">Bottleneck Steps (Active)</h2>
           </div>
           {kpis.bottleneckSteps.length === 0 ? (
@@ -432,11 +432,11 @@ function KPIsTab({ kpis }: { kpis: KPIData | null }) {
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-orange-400 rounded-full"
-                        style={{ width: `${Math.min(100, (step.count / (kpis.bottleneckSteps[0]?.count || 1)) * 100)}%` }}
+                        className="h-full rounded-full"
+                        style={{ width: `${Math.min(100, (step.count / (kpis.bottleneckSteps[0]?.count || 1)) * 100)}%`, backgroundColor: 'var(--izou-danger)' }}
                       />
                     </div>
-                    <span className="text-xs font-semibold text-orange-700 w-6 text-right">{step.count}</span>
+                    <span className="text-xs font-semibold w-6 text-right" style={{ color: 'var(--izou-danger)' }}>{step.count}</span>
                   </div>
                 </div>
               ))}
@@ -448,7 +448,7 @@ function KPIsTab({ kpis }: { kpis: KPIData | null }) {
       {/* Completion by Template */}
       <div className="bg-white border border-border rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
-          <GitBranch size={16} className="text-violet-500" />
+          <GitBranch size={16} style={{ color: 'var(--izou-highlight)' }} />
           <h2 className="text-sm font-semibold text-foreground">Instance Status by Template</h2>
         </div>
         {kpis.completionByTemplate.length === 0 ? (
@@ -488,17 +488,17 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
       {/* Summary KPI strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Instances', value: analytics.totalInstances, icon: <Activity size={16} className="text-blue-500" />, color: 'text-blue-700', bg: 'bg-blue-50' },
-          { label: 'Avg Cycle Time', value: analytics.avgCycleTimeDays !== null ? `${analytics.avgCycleTimeDays.toFixed(1)}d` : '—', icon: <Clock size={16} className="text-amber-500" />, color: 'text-amber-700', bg: 'bg-amber-50' },
-          { label: 'SLA Compliance', value: analytics.overallSLARate !== null ? `${analytics.overallSLARate}%` : '—', icon: <CheckCircle2 size={16} className="text-emerald-500" />, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-          { label: 'Escalated', value: analytics.escalatedInstances, icon: <AlertTriangle size={16} className="text-orange-500" />, color: 'text-orange-700', bg: 'bg-orange-50' },
+          { label: 'Total Instances', value: analytics.totalInstances, icon: <Activity size={16} style={{ color: 'var(--izou-secondary)' }} />, color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)' },
+          { label: 'Avg Cycle Time', value: analytics.avgCycleTimeDays !== null ? `${analytics.avgCycleTimeDays.toFixed(1)}d` : '—', icon: <Clock size={16} style={{ color: 'var(--izou-warning)' }} />, color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)' },
+          { label: 'SLA Compliance', value: analytics.overallSLARate !== null ? `${analytics.overallSLARate}%` : '—', icon: <CheckCircle2 size={16} style={{ color: 'var(--izou-success)' }} />, color: 'var(--izou-success)', bg: 'var(--izou-success-light)' },
+          { label: 'Escalated', value: analytics.escalatedInstances, icon: <AlertTriangle size={16} style={{ color: 'var(--izou-danger)' }} />, color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)' },
         ].map((kpi) => (
-          <div key={kpi.label} className={`${kpi.bg} border border-border rounded-xl p-4`}>
+          <div key={kpi.label} className="border border-border rounded-xl p-4" style={{ backgroundColor: kpi.bg }}>
             <div className="flex items-center gap-2 mb-2">
               {kpi.icon}
               <span className="text-xs text-muted-foreground">{kpi.label}</span>
             </div>
-            <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
+            <p className="text-2xl font-bold" style={{ color: kpi.color }}>{kpi.value}</p>
           </div>
         ))}
       </div>
@@ -506,7 +506,7 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
       {/* Throughput Trend */}
       <div className="bg-white border border-border rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
-          <TrendingUp size={16} className="text-blue-500" />
+          <TrendingUp size={16} style={{ color: 'var(--izou-secondary)' }} />
           <h2 className="text-sm font-semibold text-foreground">Weekly Throughput Trend</h2>
         </div>
         {analytics.throughputTrend.length === 0 ? (
@@ -532,7 +532,7 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
         {/* Step Durations */}
         <div className="bg-white border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Timer size={16} className="text-violet-500" />
+            <Timer size={16} style={{ color: 'var(--izou-highlight)' }} />
             <h2 className="text-sm font-semibold text-foreground">Avg Step Duration (days)</h2>
           </div>
           {analytics.stepDurations.length === 0 ? (
@@ -548,11 +548,11 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-violet-400 rounded-full"
-                        style={{ width: `${Math.min(100, (step.avgDays / (analytics.stepDurations[0]?.avgDays || 1)) * 100)}%` }}
+                        className="h-full rounded-full"
+                        style={{ width: `${Math.min(100, (step.avgDays / (analytics.stepDurations[0]?.avgDays || 1)) * 100)}%`, backgroundColor: 'var(--izou-highlight)' }}
                       />
                     </div>
-                    <span className="text-xs font-semibold text-violet-700 w-10 text-right">{step.avgDays.toFixed(1)}d</span>
+                    <span className="text-xs font-semibold w-10 text-right" style={{ color: 'var(--izou-highlight)' }}>{step.avgDays.toFixed(1)}d</span>
                   </div>
                 </div>
               ))}
@@ -563,7 +563,7 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
         {/* Bottleneck by Role */}
         <div className="bg-white border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Users size={16} className="text-orange-500" />
+            <Users size={16} style={{ color: 'var(--izou-warning)' }} />
             <h2 className="text-sm font-semibold text-foreground">Workload by Role</h2>
           </div>
           {analytics.bottleneckByRole.length === 0 ? (
@@ -586,7 +586,7 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
       {/* SLA by Template */}
       <div className="bg-white border border-border rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Gauge size={16} className="text-emerald-500" />
+          <Gauge size={16} style={{ color: 'var(--izou-success)' }} />
           <h2 className="text-sm font-semibold text-foreground">SLA Compliance by Template</h2>
         </div>
         {analytics.slaByTemplate.length === 0 ? (
@@ -601,11 +601,14 @@ function AnalyticsTab({ analytics }: { analytics: AnalyticsData | null }) {
                 </div>
                 <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${row.rate >= 80 ? 'bg-emerald-500' : row.rate >= 60 ? 'bg-amber-400' : 'bg-red-400'}`}
-                    style={{ width: `${row.rate}%` }}
+                    className="h-full rounded-full"
+                    style={{ width: `${row.rate}%`, backgroundColor: row.rate >= 80 ? 'var(--izou-success)' : row.rate >= 60 ? 'var(--izou-warning)' : 'var(--izou-danger)' }}
                   />
                 </div>
-                <span className={`text-xs font-semibold w-10 text-right shrink-0 ${row.rate >= 80 ? 'text-emerald-700' : row.rate >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
+                <span
+                  className="text-xs font-semibold w-10 text-right shrink-0"
+                  style={{ color: row.rate >= 80 ? 'var(--izou-success)' : row.rate >= 60 ? 'var(--izou-warning)' : 'var(--izou-danger)' }}
+                >
                   {row.rate}%
                 </span>
               </div>

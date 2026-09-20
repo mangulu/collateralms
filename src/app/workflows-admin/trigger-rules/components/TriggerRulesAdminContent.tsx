@@ -23,14 +23,16 @@ import { toast } from 'sonner';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TRIGGER_TYPE_COLORS: Record<string, string> = {
-  collateral_status_change: 'bg-blue-100 text-blue-700 border-blue-200',
-  days_since_submission: 'bg-amber-100 text-amber-700 border-amber-200',
-  value_threshold: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  ltv_breach: 'bg-red-100 text-red-700 border-red-200',
-  days_overdue: 'bg-orange-100 text-orange-700 border-orange-200',
-  document_count_change: 'bg-violet-100 text-violet-700 border-violet-200',
+const TRIGGER_TYPE_COLORS: Record<string, { bg: string; color: string; border: string }> = {
+  collateral_status_change: { bg: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)' },
+  days_since_submission: { bg: 'var(--izou-warning-light)', color: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
+  value_threshold: { bg: 'var(--izou-success-light)', color: 'var(--izou-success)', border: 'var(--izou-success-light)' },
+  ltv_breach: { bg: 'var(--izou-danger-light)', color: 'var(--izou-danger)', border: 'var(--izou-danger-light)' },
+  days_overdue: { bg: 'var(--izou-warning-light)', color: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
+  document_count_change: { bg: 'var(--izou-highlight-light)', color: 'var(--izou-highlight)', border: 'var(--izou-highlight-light)' },
 };
+
+const TRIGGER_TYPE_FALLBACK = { bg: 'var(--izou-bg)', color: 'var(--izou-muted)', border: 'var(--izou-border)' };
 
 const TRIGGER_EVENTS: WorkflowTriggerEvent[] = [
   'collateral_status_change',
@@ -51,20 +53,20 @@ const NUMERIC_OPERATORS: WorkflowTriggerOperator[] = [
 
 const STATUS_OPERATORS: WorkflowTriggerOperator[] = ['equals', 'not_equals'];
 
-const EVENT_COLORS: Record<WorkflowTriggerEvent, string> = {
-  collateral_status_change: 'bg-violet-50 border-violet-200',
-  days_since_submission: 'bg-blue-50 border-blue-200',
-  value_threshold: 'bg-emerald-50 border-emerald-200',
-  ltv_breach: 'bg-rose-50 border-rose-200',
-  days_overdue: 'bg-amber-50 border-amber-200',
-  document_count_change: 'bg-slate-50 border-slate-200',
+const EVENT_COLORS: Record<WorkflowTriggerEvent, { bg: string; border: string }> = {
+  collateral_status_change: { bg: 'var(--izou-highlight-light)', border: 'var(--izou-highlight-light)' },
+  days_since_submission: { bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)' },
+  value_threshold: { bg: 'var(--izou-success-light)', border: 'var(--izou-success-light)' },
+  ltv_breach: { bg: 'var(--izou-danger-light)', border: 'var(--izou-danger-light)' },
+  days_overdue: { bg: 'var(--izou-warning-light)', border: 'var(--izou-warning-light)' },
+  document_count_change: { bg: 'var(--izou-bg)', border: 'var(--izou-border)' },
 };
 
-const RUN_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  success: { label: 'Success', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={14} className="text-emerald-500" /> },
-  partial: { label: 'Partial', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: <AlertTriangle size={14} className="text-amber-500" /> },
-  failed: { label: 'Failed', color: 'text-red-700', bg: 'bg-red-50 border-red-200', icon: <XCircle size={14} className="text-red-500" /> },
-  running: { label: 'Running', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200', icon: <Loader2 size={14} className="animate-spin text-blue-500" /> },
+const RUN_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
+  success: { label: 'Success', color: 'var(--izou-success)', bg: 'var(--izou-success-light)', border: 'var(--izou-success-light)', icon: <CheckCircle2 size={14} style={{ color: 'var(--izou-success)' }} /> },
+  partial: { label: 'Partial', color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', border: 'var(--izou-warning-light)', icon: <AlertTriangle size={14} style={{ color: 'var(--izou-warning)' }} /> },
+  failed: { label: 'Failed', color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', border: 'var(--izou-danger-light)', icon: <XCircle size={14} style={{ color: 'var(--izou-danger)' }} /> },
+  running: { label: 'Running', color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)', icon: <Loader2 size={14} className="animate-spin" style={{ color: 'var(--izou-secondary)' }} /> },
 };
 
 function blankCondition(): Omit<WorkflowTriggerCondition, 'id' | 'ruleId' | 'createdAt'> {
@@ -110,7 +112,7 @@ function ConditionRow({ condition, index, logic, isLast, onChange, onDelete }: C
 
   return (
     <div className="space-y-0">
-      <div className={`p-3 rounded-xl border ${eventColor}`}>
+      <div className="p-3 rounded-xl border" style={{ backgroundColor: eventColor.bg, borderColor: eventColor.border }}>
         <div className="flex items-start gap-2">
           <div className="w-5 h-5 rounded-full bg-white/80 border border-current flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 text-slate-600">
             {index + 1}
@@ -572,7 +574,7 @@ export default function TriggerRulesAdminContent() {
                 const isExpanded = expandedRule === rule.id;
                 const isActive = rule.triggerStatus === 'active';
                 const firstEventType = rule.conditions?.[0]?.eventType ?? '';
-                const typeColor = TRIGGER_TYPE_COLORS[firstEventType] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+                const typeColor = TRIGGER_TYPE_COLORS[firstEventType] ?? TRIGGER_TYPE_FALLBACK;
                 const typeLabel = TRIGGER_EVENT_LABELS[firstEventType as keyof typeof TRIGGER_EVENT_LABELS] ?? firstEventType;
                 return (
                   <div key={rule.id} className="bg-white border border-border rounded-xl overflow-hidden">
@@ -596,7 +598,10 @@ export default function TriggerRulesAdminContent() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold text-foreground truncate">{rule.name}</span>
                           {firstEventType && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${typeColor}`}>
+                            <span
+                              className="text-xs px-2 py-0.5 rounded-full border font-medium"
+                              style={{ backgroundColor: typeColor.bg, color: typeColor.color, borderColor: typeColor.border }}
+                            >
                               {typeLabel}
                             </span>
                           )}
@@ -676,10 +681,13 @@ export default function TriggerRulesAdminContent() {
         <>
           {/* Last result banner */}
           {lastResult && (
-            <div className={`mb-6 p-4 rounded-xl border ${lastResult.status === 'success' ? 'bg-emerald-50 border-emerald-200' : lastResult.status === 'partial' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+            <div
+              className="mb-6 p-4 rounded-xl border"
+              style={{ backgroundColor: RUN_STATUS_CONFIG[lastResult.status]?.bg, borderColor: RUN_STATUS_CONFIG[lastResult.status]?.border }}
+            >
               <div className="flex items-center gap-2 mb-3">
                 {RUN_STATUS_CONFIG[lastResult.status]?.icon}
-                <h2 className={`text-sm font-semibold ${RUN_STATUS_CONFIG[lastResult.status]?.color}`}>
+                <h2 className="text-sm font-semibold" style={{ color: RUN_STATUS_CONFIG[lastResult.status]?.color }}>
                   Run completed — {RUN_STATUS_CONFIG[lastResult.status]?.label}
                 </h2>
                 <span className="ml-auto text-xs text-muted-foreground">{fmtDuration(lastResult.durationMs)}</span>
@@ -739,7 +747,10 @@ export default function TriggerRulesAdminContent() {
                         onClick={() => setExpandedLog(isExpanded ? null : log.id)}
                         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
                       >
-                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${cfg.bg} ${cfg.color} shrink-0`}>
+                        <div
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium shrink-0"
+                          style={{ backgroundColor: cfg.bg, borderColor: cfg.border, color: cfg.color }}
+                        >
                           {cfg.icon}
                           {cfg.label}
                         </div>
@@ -765,9 +776,9 @@ export default function TriggerRulesAdminContent() {
                               </div>
                             ))}
                             {log.errorMessages.length > 0 && (
-                              <div className="mt-2 p-2 bg-red-50 rounded-lg border border-red-100">
+                              <div className="mt-2 p-2 rounded-lg border" style={{ backgroundColor: 'var(--izou-danger-light)', borderColor: 'var(--izou-danger-light)' }}>
                                 {log.errorMessages.map((e, i) => (
-                                  <p key={i} className="text-xs text-red-700">{e}</p>
+                                  <p key={i} className="text-xs" style={{ color: 'var(--izou-danger)' }}>{e}</p>
                                 ))}
                               </div>
                             )}

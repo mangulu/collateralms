@@ -179,50 +179,57 @@ function normalizeCovenant(c: LoanCovenant): NormalizedWorkflow {
 const TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode; dot: string }> = {
   perfection: {
     label: 'Perfection',
-    color: 'text-violet-700',
-    bg: 'bg-violet-50',
-    border: 'border-violet-200',
-    dot: 'bg-violet-500',
-    icon: <GitBranch size={14} className="text-violet-600" />,
+    color: 'var(--izou-highlight)',
+    bg: 'var(--izou-highlight-light)',
+    border: 'var(--izou-highlight-light)',
+    dot: 'var(--izou-highlight)',
+    icon: <GitBranch size={14} style={{ color: 'var(--izou-highlight)' }} />,
   },
   valuation: {
     label: 'Valuation',
-    color: 'text-amber-700',
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
-    dot: 'bg-amber-500',
-    icon: <TrendingUp size={14} className="text-amber-600" />,
+    color: 'var(--izou-secondary)',
+    bg: 'var(--izou-secondary-light)',
+    border: 'var(--izou-secondary-light)',
+    dot: 'var(--izou-secondary)',
+    icon: <TrendingUp size={14} style={{ color: 'var(--izou-secondary)' }} />,
   },
   release: {
     label: 'Release',
-    color: 'text-rose-700',
-    bg: 'bg-rose-50',
-    border: 'border-rose-200',
-    dot: 'bg-rose-500',
-    icon: <Unlock size={14} className="text-rose-600" />,
+    color: 'var(--izou-secondary-mid)',
+    bg: 'var(--izou-secondary-light)',
+    border: 'var(--izou-secondary-light)',
+    dot: 'var(--izou-secondary-mid)',
+    icon: <Unlock size={14} style={{ color: 'var(--izou-secondary-mid)' }} />,
   },
   covenant: {
     label: 'Covenant',
-    color: 'text-teal-700',
-    bg: 'bg-teal-50',
-    border: 'border-teal-200',
-    dot: 'bg-teal-500',
-    icon: <Scale size={14} className="text-teal-600" />,
+    color: 'var(--izou-neutral)',
+    bg: 'var(--izou-bg)',
+    border: 'var(--izou-border)',
+    dot: 'var(--izou-neutral)',
+    icon: <Scale size={14} style={{ color: 'var(--izou-neutral)' }} />,
   },
 };
 
+// Note: "critical" keeps its own literal deep-orange hex (not a shared brand
+// token) so this 4-tier severity scale (ok/warning/critical/overdue) still
+// reads as 4 distinct steps — collapsing it onto the single warning-orange
+// token would make it indistinguishable from "warning".
 const SLA_CONFIG: Record<SLAStatus, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
-  ok: { label: 'On Track', color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: <CheckCircle2 size={12} className="text-emerald-600" /> },
-  warning: { label: 'Warning', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: <AlertCircle size={12} className="text-amber-600" /> },
-  critical: { label: 'Critical', color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', icon: <AlertTriangle size={12} className="text-orange-600" /> },
-  overdue: { label: 'Overdue', color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: <XCircle size={12} className="text-red-600" /> },
+  ok: { label: 'On Track', color: 'var(--izou-success)', bg: 'var(--izou-success-light)', border: 'var(--izou-success-light)', icon: <CheckCircle2 size={12} style={{ color: 'var(--izou-success)' }} /> },
+  warning: { label: 'Warning', color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', border: 'var(--izou-warning-light)', icon: <AlertCircle size={12} style={{ color: 'var(--izou-warning)' }} /> },
+  critical: { label: 'Critical', color: '#C2410C', bg: '#FFF1E0', border: '#FFE0BD', icon: <AlertTriangle size={12} style={{ color: '#C2410C' }} /> },
+  overdue: { label: 'Overdue', color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', border: 'var(--izou-danger-light)', icon: <XCircle size={12} style={{ color: 'var(--izou-danger)' }} /> },
 };
 
 function SLACountdown({ days, slaStatus }: { days: number | null; slaStatus: SLAStatus }) {
   const cfg = SLA_CONFIG[slaStatus];
   if (days === null) return <span className="text-xs text-muted-foreground">No deadline</span>;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border"
+      style={{ backgroundColor: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+    >
       {cfg.icon}
       {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `${days}d left`}
     </span>
@@ -231,19 +238,26 @@ function SLACountdown({ days, slaStatus }: { days: number | null; slaStatus: SLA
 
 function StageTimeline({ stages, currentIndex, slaStatus }: { stages: string[]; currentIndex: number; slaStatus: SLAStatus }) {
   const progressPct = stages.length > 1 ? (currentIndex / (stages.length - 1)) * 100 : 100;
-  const barColor = slaStatus === 'overdue' ? 'bg-red-500' : slaStatus === 'critical' ? 'bg-orange-500' : slaStatus === 'warning' ? 'bg-amber-500' : 'bg-emerald-500';
+  const barColor = slaStatus === 'overdue' ? 'var(--izou-danger)' : slaStatus === 'critical' ? '#C2410C' : slaStatus === 'warning' ? 'var(--izou-warning)' : 'var(--izou-success)';
 
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-1">
         {stages.map((stage, i) => (
           <div key={stage} className="flex flex-col items-center" style={{ flex: 1 }}>
-            <div className={`w-2.5 h-2.5 rounded-full border-2 z-10 ${i < currentIndex ? 'bg-slate-400 border-slate-400' : i === currentIndex ? `${barColor} border-transparent` : 'bg-white border-slate-300'}`} />
+            <div
+              className="w-2.5 h-2.5 rounded-full border-2 z-10"
+              style={
+                i < currentIndex ? { backgroundColor: 'var(--izou-muted)', borderColor: 'var(--izou-muted)' }
+                  : i === currentIndex ? { backgroundColor: barColor, borderColor: 'transparent' }
+                    : { backgroundColor: 'white', borderColor: 'var(--izou-border)' }
+              }
+            />
           </div>
         ))}
       </div>
       <div className="relative h-1 rounded-full bg-slate-100 -mt-1.5 mx-1.5">
-        <div className={`absolute left-0 top-0 h-full rounded-full transition-all ${barColor}`} style={{ width: `${progressPct}%` }} />
+        <div className="absolute left-0 top-0 h-full rounded-full transition-all" style={{ width: `${progressPct}%`, backgroundColor: barColor }} />
       </div>
       <div className="flex items-center justify-between mt-1">
         <span className="text-[10px] text-muted-foreground truncate">{stages[0]}</span>
@@ -258,15 +272,18 @@ function WorkflowRow({ wf }: { wf: NormalizedWorkflow }) {
   const slaCfg = SLA_CONFIG[wf.slaStatus];
 
   return (
-    <div className={`group relative bg-white rounded-xl border ${wf.bottleneck ? 'border-orange-300 shadow-sm shadow-orange-100' : 'border-slate-200'} p-4 hover:shadow-md transition-all duration-200`}>
+    <div
+      className={`group relative bg-white rounded-xl border ${wf.bottleneck ? 'shadow-sm' : ''} p-4 hover:shadow-md transition-all duration-200`}
+      style={wf.bottleneck ? { borderColor: 'var(--izou-warning-light)', boxShadow: '0 1px 4px var(--izou-warning-light)' } : { borderColor: 'var(--izou-border)' }}
+    >
       {/* Bottleneck indicator */}
       {wf.bottleneck && (
-        <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl bg-orange-400" />
+        <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ backgroundColor: 'var(--izou-warning)' }} />
       )}
 
       <div className="flex items-start gap-3 pl-1">
         {/* Type badge */}
-        <div className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${typeCfg.bg} border ${typeCfg.border}`}>
+        <div className="mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border" style={{ backgroundColor: typeCfg.bg, borderColor: typeCfg.border }}>
           {typeCfg.icon}
         </div>
 
@@ -275,12 +292,15 @@ function WorkflowRow({ wf }: { wf: NormalizedWorkflow }) {
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${typeCfg.bg} ${typeCfg.color}`}>
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: typeCfg.bg, color: typeCfg.color }}>
                   {typeCfg.label}
                 </span>
                 <span className="text-sm font-semibold text-foreground truncate">{wf.title}</span>
                 {wf.bottleneck && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border"
+                    style={{ backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)', borderColor: 'var(--izou-warning-light)' }}
+                  >
                     <Zap size={9} /> Bottleneck
                   </span>
                 )}
@@ -311,7 +331,7 @@ function WorkflowRow({ wf }: { wf: NormalizedWorkflow }) {
 
           {/* Bottleneck reason */}
           {wf.bottleneck && wf.bottleneckReason && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-1.5">
+            <div className="mt-2 flex items-center gap-1.5 text-xs border rounded-lg px-2.5 py-1.5" style={{ color: 'var(--izou-warning)', backgroundColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)' }}>
               <AlertTriangle size={11} className="shrink-0" />
               {wf.bottleneckReason}
             </div>
@@ -325,7 +345,7 @@ function WorkflowRow({ wf }: { wf: NormalizedWorkflow }) {
 function KPICard({ label, value, sub, icon, color, loading }: { label: string; value: number | null; sub?: string; icon: React.ReactNode; color: string; loading: boolean }) {
   return (
     <div className={`bg-white rounded-xl border border-slate-200 p-4 flex items-start gap-3`}>
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${color}`}>
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color }}>
         {icon}
       </div>
       <div className="min-w-0">
@@ -482,32 +502,32 @@ export default function WorkflowCommandCenterContent() {
           label="Total Active"
           value={total}
           sub="across all workflow types"
-          icon={<Activity size={18} className="text-slate-600" />}
-          color="bg-slate-100"
+          icon={<Activity size={18} style={{ color: 'var(--izou-secondary)' }} />}
+          color="var(--izou-secondary-light)"
           loading={loading}
         />
         <KPICard
           label="Overdue"
           value={overdueCount}
           sub="past SLA deadline"
-          icon={<XCircle size={18} className="text-red-600" />}
-          color="bg-red-50"
+          icon={<XCircle size={18} style={{ color: 'var(--izou-danger)' }} />}
+          color="var(--izou-danger-light)"
           loading={loading}
         />
         <KPICard
           label="Critical (≤2d)"
           value={criticalCount}
           sub="deadline within 2 days"
-          icon={<AlertTriangle size={18} className="text-orange-600" />}
-          color="bg-orange-50"
+          icon={<AlertTriangle size={18} style={{ color: '#C2410C' }} />}
+          color="#FFF1E0"
           loading={loading}
         />
         <KPICard
           label="Bottlenecks"
           value={bottleneckCount}
           sub="stalled workflows detected"
-          icon={<Zap size={18} className="text-amber-600" />}
-          color="bg-amber-50"
+          icon={<Zap size={18} style={{ color: 'var(--izou-warning)' }} />}
+          color="var(--izou-warning-light)"
           loading={loading}
         />
       </div>
@@ -528,9 +548,10 @@ export default function WorkflowCommandCenterContent() {
                 <button
                   key={type}
                   onClick={() => setActiveType(activeType === type as WorkflowType ? 'all' : type as WorkflowType)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium ${activeType === type ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs font-medium"
+                  style={activeType === type ? { backgroundColor: cfg.bg, borderColor: cfg.border, color: cfg.color } : { backgroundColor: 'var(--izou-bg)', borderColor: 'var(--izou-border)', color: 'var(--izou-muted)' }}
                 >
-                  <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.dot }} />
                   {cfg.label}
                   <span className="font-bold">{count}</span>
                   <span className="opacity-60">({pct}%)</span>
@@ -545,12 +566,12 @@ export default function WorkflowCommandCenterContent() {
               if (!cfg || count === 0) return null;
               const pct = (count / total) * 100;
               const barColors: Record<string, string> = {
-                perfection: 'bg-violet-400',
-                valuation: 'bg-amber-400',
-                release: 'bg-rose-400',
-                covenant: 'bg-teal-400',
+                perfection: 'var(--izou-highlight)',
+                valuation: 'var(--izou-secondary)',
+                release: 'var(--izou-secondary-mid)',
+                covenant: 'var(--izou-neutral)',
               };
-              return <div key={type} className={`${barColors[type]} rounded-sm`} style={{ width: `${pct}%` }} />;
+              return <div key={type} className="rounded-sm" style={{ width: `${pct}%`, backgroundColor: barColors[type] }} />;
             })}
           </div>
         </div>
@@ -602,12 +623,13 @@ export default function WorkflowCommandCenterContent() {
         {/* Bottleneck toggle */}
         <button
           onClick={() => setShowBottlenecksOnly(!showBottlenecksOnly)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${showBottlenecksOnly ? 'bg-orange-100 border-orange-300 text-orange-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+          style={showBottlenecksOnly ? { backgroundColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' } : { backgroundColor: 'white', borderColor: 'var(--izou-border)', color: 'var(--izou-muted)' }}
         >
           <Zap size={12} />
           Bottlenecks only
           {bottleneckCount > 0 && (
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${showBottlenecksOnly ? 'bg-orange-200 text-orange-800' : 'bg-orange-100 text-orange-700'}`}>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' }}>
               {bottleneckCount}
             </span>
           )}
@@ -622,7 +644,7 @@ export default function WorkflowCommandCenterContent() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-xl border border-slate-200">
-          <CheckCircle2 size={36} className="text-emerald-400" />
+          <CheckCircle2 size={36} style={{ color: 'var(--izou-success)' }} />
           <p className="text-base font-semibold text-foreground">No workflows match your filters</p>
           <p className="text-sm text-muted-foreground">
             {total === 0 ? 'All workflows are completed or no active workflows found.' : 'Try adjusting your filters to see more results.'}
@@ -644,10 +666,10 @@ export default function WorkflowCommandCenterContent() {
               {filtered.length !== total && ` (of ${total} total)`}
             </span>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Overdue</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block" /> Critical</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> Warning</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> On Track</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: 'var(--izou-danger)' }} /> Overdue</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#C2410C' }} /> Critical</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: 'var(--izou-warning)' }} /> Warning</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: 'var(--izou-success)' }} /> On Track</span>
             </div>
           </div>
           {filtered.map((wf) => (
@@ -659,17 +681,17 @@ export default function WorkflowCommandCenterContent() {
       {/* Quick links footer */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
         {[
-          { label: 'Perfection Queue', href: '/approval-inbox', icon: <GitBranch size={14} />, color: 'text-violet-600' },
-          { label: 'Valuation Workflow', href: '/valuation-workflow', icon: <TrendingUp size={14} />, color: 'text-amber-600' },
-          { label: 'Release Approvals', href: '/release-approval', icon: <Unlock size={14} />, color: 'text-rose-600' },
-          { label: 'Covenant Tracking', href: '/covenant-tracking', icon: <Scale size={14} />, color: 'text-teal-600' },
+          { label: 'Perfection Queue', href: '/approval-inbox', icon: <GitBranch size={14} />, color: 'var(--izou-highlight)' },
+          { label: 'Valuation Workflow', href: '/valuation-workflow', icon: <TrendingUp size={14} />, color: 'var(--izou-secondary)' },
+          { label: 'Release Approvals', href: '/release-approval', icon: <Unlock size={14} />, color: 'var(--izou-secondary-mid)' },
+          { label: 'Covenant Tracking', href: '/covenant-tracking', icon: <Scale size={14} />, color: 'var(--izou-neutral)' },
         ].map((link) => (
           <Link
             key={link.href}
             href={link.href}
             className="flex items-center justify-between gap-2 px-4 py-3 bg-white rounded-xl border border-slate-200 hover:shadow-sm hover:border-slate-300 transition-all group"
           >
-            <div className={`flex items-center gap-2 text-sm font-medium ${link.color}`}>
+            <div className="flex items-center gap-2 text-sm font-medium" style={{ color: link.color }}>
               {link.icon}
               {link.label}
             </div>

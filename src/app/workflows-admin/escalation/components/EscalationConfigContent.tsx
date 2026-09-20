@@ -12,13 +12,13 @@ import { toast } from 'sonner';
 // sends an escalation email when a human clicks "Escalate" on the instance) --
 // the other options this used to offer (reassign/auto_approve/auto_reject/
 // escalate_to_role/hold_payment) had no execution path at all.
-const ESCALATION_ACTIONS: { value: WorkflowEscalationAction; label: string; color: string }[] = [
-  { value: 'notify_manager', label: 'Notify Manager', color: 'bg-blue-100 text-blue-700' },
-  { value: 'notify_and_hold', label: 'Notify Manager & Flag Payment for Review', color: 'bg-rose-100 text-rose-700' },
+const ESCALATION_ACTIONS: { value: WorkflowEscalationAction; label: string; bg: string; color: string }[] = [
+  { value: 'notify_manager', label: 'Notify Manager', bg: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' },
+  { value: 'notify_and_hold', label: 'Notify Manager & Flag Payment for Review', bg: 'var(--izou-danger-light)', color: 'var(--izou-danger)' },
 ];
 
 function getActionMeta(action: string | null) {
-  return ESCALATION_ACTIONS.find((a) => a.value === action) ?? (action ? { value: action, label: action, color: 'bg-slate-100 text-slate-600' } : null);
+  return ESCALATION_ACTIONS.find((a) => a.value === action) ?? (action ? { value: action, label: action, bg: 'var(--izou-bg)', color: 'var(--izou-muted)' } : null);
 }
 
 // ─── Step Edit Row ────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
   };
 
   return (
-    <div className="px-4 py-3 bg-orange-50 border-t border-orange-200">
+    <div className="px-4 py-3 border-t" style={{ backgroundColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)' }}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         {/* SLA Hours */}
         <div>
@@ -64,7 +64,7 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
               value={slaHours}
               onChange={(e) => setSlaHours(e.target.value)}
               placeholder="e.g. 48"
-              className="w-full text-sm border border-border rounded-lg pl-7 pr-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full text-sm border border-border rounded-lg pl-7 pr-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--izou-warning)]/40"
             />
           </div>
           <p className="text-[10px] text-slate-400 mt-0.5">Shown on the instance as a reference target — not automatically enforced. Escalation only fires when someone clicks "Escalate" on the instance.</p>
@@ -78,7 +78,7 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
           <select
             value={action}
             onChange={(e) => setAction(e.target.value)}
-            className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-[var(--izou-warning)]/40"
           >
             <option value="">— None —</option>
             {ESCALATION_ACTIONS.map((a) => (
@@ -99,7 +99,8 @@ function StepEscalationEdit({ step, onSave, onCancel }: StepEscalationEditProps)
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors disabled:opacity-60"
+          className="flex items-center gap-1 px-3 py-1.5 text-xs text-white rounded-lg font-medium transition-colors disabled:opacity-60"
+          style={{ backgroundColor: 'var(--izou-warning)' }}
         >
           {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
           {saving ? 'Saving…' : 'Save Changes'}
@@ -177,7 +178,7 @@ export default function EscalationConfigContent() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-warning)' }}>
               <AlertTriangle size={16} className="text-white" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Escalation Configuration</h1>
@@ -197,35 +198,35 @@ export default function EscalationConfigContent() {
 
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-orange-700">{allTemplates.length}</p>
+        <div className="rounded-xl border p-3 text-center" style={{ backgroundColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)' }}>
+          <p className="text-xl font-bold" style={{ color: 'var(--izou-warning)' }}>{allTemplates.length}</p>
           <p className="text-xs text-muted-foreground">Templates</p>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-amber-700">
+        <div className="rounded-xl border p-3 text-center" style={{ backgroundColor: 'var(--izou-highlight-light)', borderColor: 'var(--izou-highlight-light)' }}>
+          <p className="text-xl font-bold" style={{ color: 'var(--izou-highlight)' }}>
             {allTemplates.reduce((acc, t) => acc + (t.steps?.filter((s) => s.escalationAction).length ?? 0), 0)}
           </p>
           <p className="text-xs text-muted-foreground">Steps with Escalation</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-red-700">{escalatedInstances.length}</p>
+        <div className="rounded-xl border p-3 text-center" style={{ backgroundColor: 'var(--izou-danger-light)', borderColor: 'var(--izou-danger-light)' }}>
+          <p className="text-xl font-bold" style={{ color: 'var(--izou-danger)' }}>{escalatedInstances.length}</p>
           <p className="text-xs text-muted-foreground">Currently Escalated</p>
         </div>
       </div>
 
       {/* Currently Escalated */}
       {escalatedInstances.length > 0 && (
-        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+        <div className="mb-6 p-4 rounded-xl border" style={{ backgroundColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)' }}>
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={16} className="text-orange-600" />
-            <h2 className="text-sm font-semibold text-orange-800">
+            <AlertTriangle size={16} style={{ color: 'var(--izou-warning)' }} />
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--izou-warning)' }}>
               {escalatedInstances.length} Currently Escalated Instance{escalatedInstances.length !== 1 ? 's' : ''}
             </h2>
           </div>
           <div className="space-y-2">
             {escalatedInstances.slice(0, 5).map((inst) => (
-              <div key={inst.id} className="flex items-center gap-3 text-xs bg-white rounded-lg px-3 py-2 border border-orange-100">
-                <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+              <div key={inst.id} className="flex items-center gap-3 text-xs bg-white rounded-lg px-3 py-2 border" style={{ borderColor: 'var(--izou-warning-light)' }}>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--izou-warning)' }} />
                 <span className="font-medium text-foreground truncate">{inst.referenceLabel ?? inst.referenceId}</span>
                 <span className="text-muted-foreground ml-auto shrink-0">
                   {inst.startedAt ? new Date(inst.startedAt).toLocaleDateString('en-GB') : '—'}
@@ -233,7 +234,7 @@ export default function EscalationConfigContent() {
               </div>
             ))}
             {escalatedInstances.length > 5 && (
-              <p className="text-xs text-orange-700 text-center">+{escalatedInstances.length - 5} more — view in Active Instances</p>
+              <p className="text-xs text-center" style={{ color: 'var(--izou-warning)' }}>+{escalatedInstances.length - 5} more — view in Active Instances</p>
             )}
           </div>
         </div>
@@ -263,21 +264,26 @@ export default function EscalationConfigContent() {
                   onClick={() => setExpandedTemplate(isExpanded ? null : template.id)}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                    <AlertTriangle size={15} className="text-orange-500" />
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--izou-warning-light)' }}>
+                    <AlertTriangle size={15} style={{ color: 'var(--izou-warning)' }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">{template.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {steps.length} step{steps.length !== 1 ? 's' : ''} ·{' '}
                       {configuredCount > 0
-                        ? <span className="text-orange-600 font-medium">{configuredCount} with escalation rules</span>
+                        ? <span className="font-medium" style={{ color: 'var(--izou-warning)' }}>{configuredCount} with escalation rules</span>
                         : <span className="text-slate-400">no escalation configured</span>
                       }
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${template.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={template.isActive
+                        ? { backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)' }
+                        : { backgroundColor: 'var(--izou-bg)', color: 'var(--izou-muted)' }}
+                    >
                       {template.isActive ? 'Active' : 'Inactive'}
                     </span>
                     {isExpanded ? <ChevronUp size={15} className="text-muted-foreground" /> : <ChevronDown size={15} className="text-muted-foreground" />}
@@ -301,8 +307,8 @@ export default function EscalationConfigContent() {
                             <div key={step.id}>
                               <div className="px-4 py-3 bg-slate-50 flex items-start gap-3">
                                 {/* Step order badge */}
-                                <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
-                                  <span className="text-xs font-bold text-orange-600">{step.stepOrder}</span>
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: 'var(--izou-warning-light)' }}>
+                                  <span className="text-xs font-bold" style={{ color: 'var(--izou-warning)' }}>{step.stepOrder}</span>
                                 </div>
 
                                 <div className="flex-1 min-w-0">
@@ -324,8 +330,8 @@ export default function EscalationConfigContent() {
 
                                     {actionMeta ? (
                                       <div className="flex items-center gap-1">
-                                        <Bell size={11} className="text-orange-500" />
-                                        <span className={`px-2 py-0.5 rounded-full font-medium ${actionMeta.color}`}>
+                                        <Bell size={11} style={{ color: 'var(--izou-warning)' }} />
+                                        <span className="px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: actionMeta.bg, color: actionMeta.color }}>
                                           {actionMeta.label}
                                         </span>
                                       </div>
@@ -352,10 +358,10 @@ export default function EscalationConfigContent() {
                                 {/* Edit / Done button */}
                                 <button
                                   onClick={() => setEditingStep(isEditing ? null : step.id)}
-                                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0 ${
-                                    isEditing
-                                      ? 'bg-slate-200 text-slate-600 hover:bg-slate-300' :'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                  }`}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shrink-0"
+                                  style={isEditing
+                                    ? { backgroundColor: 'var(--izou-bg)', color: 'var(--izou-muted)' }
+                                    : { backgroundColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' }}
                                 >
                                   {isEditing ? (
                                     <><X size={11} /> Close</>

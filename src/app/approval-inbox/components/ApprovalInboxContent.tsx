@@ -28,19 +28,19 @@ interface ActionModalState {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; textColor: string; bgColor: string; borderColor: string }> = {
-  Draft:         { label: 'Draft',        textColor: 'text-gray-600',   bgColor: 'bg-gray-100',   borderColor: 'border-gray-200' },
-  Submitted:     { label: 'Submitted',    textColor: 'text-blue-700',   bgColor: 'bg-blue-50',    borderColor: 'border-blue-200' },
-  'Under Review':{ label: 'Under Review', textColor: 'text-amber-700',  bgColor: 'bg-amber-50',   borderColor: 'border-amber-200' },
-  Approved:      { label: 'Approved',     textColor: 'text-green-700',  bgColor: 'bg-green-50',   borderColor: 'border-green-200' },
-  Perfected:     { label: 'Perfected',    textColor: 'text-emerald-700',bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' },
-  Rejected:      { label: 'Rejected',     textColor: 'text-red-700',    bgColor: 'bg-red-50',     borderColor: 'border-red-200' },
-  Returned:      { label: 'Returned',     textColor: 'text-orange-700', bgColor: 'bg-orange-50',  borderColor: 'border-orange-200' },
+  Draft:         { label: 'Draft',        textColor: 'var(--izou-muted)',      bgColor: 'var(--izou-bg)',              borderColor: 'var(--izou-border)' },
+  Submitted:     { label: 'Submitted',    textColor: 'var(--izou-secondary)',  bgColor: 'var(--izou-secondary-light)', borderColor: 'var(--izou-secondary-light)' },
+  'Under Review':{ label: 'Under Review', textColor: 'var(--izou-warning)',    bgColor: 'var(--izou-warning-light)',   borderColor: 'var(--izou-warning-light)' },
+  Approved:      { label: 'Approved',     textColor: 'var(--izou-success)',    bgColor: 'var(--izou-success-light)',   borderColor: 'var(--izou-success-light)' },
+  Perfected:     { label: 'Perfected',    textColor: 'var(--izou-success)',    bgColor: 'var(--izou-success-light)',   borderColor: 'var(--izou-success-light)' },
+  Rejected:      { label: 'Rejected',     textColor: 'var(--izou-danger)',     bgColor: 'var(--izou-danger-light)',    borderColor: 'var(--izou-danger-light)' },
+  Returned:      { label: 'Returned',     textColor: 'var(--izou-warning)',    bgColor: 'var(--izou-warning-light)',   borderColor: 'var(--izou-warning-light)' },
 };
 
 const PRIORITY_CONFIG: Record<string, { textColor: string; bgColor: string; dot: string }> = {
-  High:   { textColor: 'text-red-700',   bgColor: 'bg-red-50 border border-red-200',   dot: 'bg-red-500' },
-  Normal: { textColor: 'text-gray-600',  bgColor: 'bg-gray-50 border border-gray-200', dot: 'bg-gray-400' },
-  Low:    { textColor: 'text-blue-600',  bgColor: 'bg-blue-50 border border-blue-200', dot: 'bg-blue-400' },
+  High:   { textColor: 'var(--izou-danger)', bgColor: 'var(--izou-danger-light)', dot: 'var(--izou-danger)' },
+  Normal: { textColor: 'var(--izou-muted)',  bgColor: 'var(--izou-bg)',            dot: 'var(--izou-muted)' },
+  Low:    { textColor: 'var(--izou-secondary)', bgColor: 'var(--izou-secondary-light)', dot: 'var(--izou-secondary)' },
 };
 
 function formatDate(iso: string | null): string {
@@ -137,9 +137,9 @@ interface DocumentClassificationPanelProps {
 }
 
 const CONFIDENCE_CONFIG: Record<string, { textColor: string; bgColor: string; borderColor: string }> = {
-  High:   { textColor: 'text-green-700',  bgColor: 'bg-green-50',  borderColor: 'border-green-200' },
-  Medium: { textColor: 'text-amber-700',  bgColor: 'bg-amber-50',  borderColor: 'border-amber-200' },
-  Low:    { textColor: 'text-red-700',    bgColor: 'bg-red-50',    borderColor: 'border-red-200' },
+  High:   { textColor: 'var(--izou-success)', bgColor: 'var(--izou-success-light)', borderColor: 'var(--izou-success-light)' },
+  Medium: { textColor: 'var(--izou-warning)', bgColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)' },
+  Low:    { textColor: 'var(--izou-danger)',  bgColor: 'var(--izou-danger-light)',  borderColor: 'var(--izou-danger-light)' },
 };
 
 function DocumentClassificationPanel({ collateralId, collateralType, obligor, registry }: DocumentClassificationPanelProps) {
@@ -226,7 +226,10 @@ function DocumentClassificationPanel({ collateralId, collateralType, obligor, re
                 </div>
               </div>
               {confidenceCfg && (
-                <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${confidenceCfg.textColor} ${confidenceCfg.bgColor} ${confidenceCfg.borderColor}`}>
+                <span
+                  className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border"
+                  style={{ color: confidenceCfg.textColor, backgroundColor: confidenceCfg.bgColor, borderColor: confidenceCfg.borderColor }}
+                >
                   {result.confidence} Confidence
                 </span>
               )}
@@ -425,7 +428,7 @@ function RequestRow({ request, expanded, onToggle, onAction, canAct }: RequestRo
         </div>
 
         {/* Priority dot */}
-        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${priorityCfg.dot}`} title={`${request.priority} priority`} />
+        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: priorityCfg.dot }} title={`${request.priority} priority`} />
 
         {/* Main info */}
         <div className="flex-1 min-w-0 grid grid-cols-4 gap-4 items-center">
@@ -443,7 +446,7 @@ function RequestRow({ request, expanded, onToggle, onAction, canAct }: RequestRo
           </div>
           <div className="min-w-0">
             <p className="text-xs text-gray-500">Deadline</p>
-            <p className={`text-sm font-semibold ${isOverdue ? 'text-red-600' : isUrgent ? 'text-amber-600' : 'text-gray-700'}`}>
+            <p className="text-sm font-semibold" style={{ color: isOverdue ? 'var(--izou-danger)' : isUrgent ? 'var(--izou-warning)' : 'var(--izou-text)' }}>
               {formatDate(request.perfectionDeadline)}
               {isOverdue && <span className="ml-1 text-xs font-normal">(overdue)</span>}
               {isUrgent && !isOverdue && <span className="ml-1 text-xs font-normal">({days}d left)</span>}
@@ -452,7 +455,10 @@ function RequestRow({ request, expanded, onToggle, onAction, canAct }: RequestRo
         </div>
 
         {/* Status badge */}
-        <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${statusCfg.textColor} ${statusCfg.bgColor} ${statusCfg.borderColor}`}>
+        <span
+          className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border"
+          style={{ color: statusCfg.textColor, backgroundColor: statusCfg.bgColor, borderColor: statusCfg.borderColor }}
+        >
           {statusCfg.label}
         </span>
       </button>
@@ -629,13 +635,13 @@ function KPICards({ requests }: KPICardsProps) {
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center">
-              <Layers size={16} className="text-blue-600" />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+              <Layers size={16} style={{ color: 'var(--izou-secondary)' }} />
             </div>
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Queue Depth</span>
           </div>
           {highPriority > 0 && (
-            <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full border" style={{ color: 'var(--izou-danger)', backgroundColor: 'var(--izou-danger-light)', borderColor: 'var(--izou-danger-light)' }}>
               {highPriority} urgent
             </span>
           )}
@@ -646,11 +652,11 @@ function KPICards({ requests }: KPICardsProps) {
         </div>
         <div className="flex items-center gap-3 pt-1 border-t border-gray-100">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: 'var(--izou-secondary)' }} />
             <span className="text-xs text-gray-500">{submitted} awaiting</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: 'var(--izou-warning)' }} />
             <span className="text-xs text-gray-500">{underReview} in review</span>
           </div>
         </div>
@@ -660,18 +666,18 @@ function KPICards({ requests }: KPICardsProps) {
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${slaCompliance >= 80 ? 'bg-green-50' : slaCompliance >= 60 ? 'bg-amber-50' : 'bg-red-50'}`}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: slaCompliance >= 80 ? 'var(--izou-success-light)' : slaCompliance >= 60 ? 'var(--izou-warning-light)' : 'var(--izou-danger-light)' }}>
               {slaCompliance >= 80
-                ? <TrendingUp size={16} className="text-green-600" />
+                ? <TrendingUp size={16} style={{ color: 'var(--izou-success)' }} />
                 : slaCompliance >= 60
-                  ? <Minus size={16} className="text-amber-600" />
-                  : <TrendingDown size={16} className="text-red-600" />}
+                  ? <Minus size={16} style={{ color: 'var(--izou-warning)' }} />
+                  : <TrendingDown size={16} style={{ color: 'var(--izou-danger)' }} />}
             </div>
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">SLA Compliance</span>
           </div>
         </div>
         <div>
-          <p className={`text-3xl font-bold leading-none ${slaCompliance >= 80 ? 'text-green-700' : slaCompliance >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
+          <p className="text-3xl font-bold leading-none" style={{ color: slaCompliance >= 80 ? 'var(--izou-success)' : slaCompliance >= 60 ? 'var(--izou-warning)' : 'var(--izou-danger)' }}>
             {slaCompliance}%
           </p>
           <p className="text-xs text-gray-400 mt-1">within deadline</p>
@@ -680,19 +686,19 @@ function KPICards({ requests }: KPICardsProps) {
         <div className="space-y-1.5">
           <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${slaCompliance >= 80 ? 'bg-green-500' : slaCompliance >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
-              style={{ width: `${slaCompliance}%` }}
+              className="h-full rounded-full transition-all"
+              style={{ width: `${slaCompliance}%`, backgroundColor: slaCompliance >= 80 ? 'var(--izou-success)' : slaCompliance >= 60 ? 'var(--izou-warning)' : 'var(--izou-danger)' }}
             />
           </div>
           <div className="flex items-center gap-3">
             {slaBreached > 0 && (
-              <span className="text-xs text-red-600 font-medium">{slaBreached} breached</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--izou-danger)' }}>{slaBreached} breached</span>
             )}
             {slaNearBreach > 0 && (
-              <span className="text-xs text-amber-600 font-medium">{slaNearBreach} at risk</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--izou-warning)' }}>{slaNearBreach} at risk</span>
             )}
             {slaBreached === 0 && slaNearBreach === 0 && (
-              <span className="text-xs text-green-600 font-medium">All on track</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--izou-success)' }}>All on track</span>
             )}
           </div>
         </div>
@@ -701,13 +707,13 @@ function KPICards({ requests }: KPICardsProps) {
       {/* 3 — Avg Approval Time */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${avgTrend === 'good' ? 'bg-green-50' : avgTrend === 'warn' ? 'bg-amber-50' : 'bg-gray-50'}`}>
-            <Timer size={16} className={avgTrend === 'good' ? 'text-green-600' : avgTrend === 'warn' ? 'text-amber-600' : 'text-gray-500'} />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: avgTrend === 'good' ? 'var(--izou-success-light)' : avgTrend === 'warn' ? 'var(--izou-warning-light)' : 'var(--izou-bg)' }}>
+            <Timer size={16} style={{ color: avgTrend === 'good' ? 'var(--izou-success)' : avgTrend === 'warn' ? 'var(--izou-warning)' : 'var(--izou-muted)' }} />
           </div>
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Avg Approval Time</span>
         </div>
         <div>
-          <p className={`text-3xl font-bold leading-none ${avgTrend === 'good' ? 'text-green-700' : avgTrend === 'warn' ? 'text-amber-700' : 'text-gray-700'}`}>
+          <p className="text-3xl font-bold leading-none" style={{ color: avgTrend === 'good' ? 'var(--izou-success)' : avgTrend === 'warn' ? 'var(--izou-warning)' : 'var(--izou-text)' }}>
             {avgDisplay}
           </p>
           <p className="text-xs text-gray-400 mt-1">
@@ -725,8 +731,8 @@ function KPICards({ requests }: KPICardsProps) {
       {/* 4 — Bottleneck by Type */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center">
-            <BarChart2 size={16} className="text-purple-600" />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--izou-highlight-light)' }}>
+            <BarChart2 size={16} style={{ color: 'var(--izou-highlight)' }} />
           </div>
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bottleneck by Type</span>
         </div>
@@ -740,15 +746,15 @@ function KPICards({ requests }: KPICardsProps) {
                   <span className="text-xs text-gray-700 font-medium truncate max-w-[120px]" title={b.type}>{b.type}</span>
                   <div className="flex items-center gap-1.5">
                     {b.highPriority > 0 && (
-                      <span className="text-xs text-red-500 font-semibold">{b.highPriority}↑</span>
+                      <span className="text-xs font-semibold" style={{ color: 'var(--izou-danger)' }}>{b.highPriority}↑</span>
                     )}
                     <span className="text-xs font-bold text-gray-800">{b.count}</span>
                   </div>
                 </div>
                 <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${b.highPriority > 0 ? 'bg-red-400' : 'bg-purple-400'}`}
-                    style={{ width: `${Math.round((b.count / maxCount) * 100)}%` }}
+                    className="h-full rounded-full"
+                    style={{ width: `${Math.round((b.count / maxCount) * 100)}%`, backgroundColor: b.highPriority > 0 ? 'var(--izou-danger)' : 'var(--izou-highlight)' }}
                   />
                 </div>
               </div>
@@ -1094,15 +1100,15 @@ export default function ApprovalInboxContent() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mt-4">
           {[
-            { label: 'Awaiting Review', value: submitted, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', icon: <Clock size={16} className="text-blue-500" /> },
-            { label: 'Under Review', value: underReview, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200', icon: <Eye size={16} className="text-amber-500" /> },
-            { label: 'High Priority', value: highPriority, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: <AlertCircle size={16} className="text-red-500" /> },
-            { label: 'Overdue', value: overdue, color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200', icon: <XCircle size={16} className="text-rose-500" /> },
-          ].map(({ label, value, color, bg, border, icon }) => (
-            <div key={label} className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${bg} ${border}`}>
-              {icon}
+            { label: 'Awaiting Review', value: submitted, color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', icon: Clock },
+            { label: 'Under Review', value: underReview, color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', icon: Eye },
+            { label: 'High Priority', value: highPriority, color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: AlertCircle },
+            { label: 'Overdue', value: overdue, color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: XCircle },
+          ].map(({ label, value, color, bg, icon: StatIcon }) => (
+            <div key={label} className="flex items-center gap-3 px-4 py-3 rounded-xl border" style={{ backgroundColor: bg, borderColor: bg }}>
+              <StatIcon size={16} style={{ color }} />
               <div>
-                <p className={`text-xl font-bold ${color}`}>{value}</p>
+                <p className="text-xl font-bold" style={{ color }}>{value}</p>
                 <p className="text-xs text-gray-500">{label}</p>
               </div>
             </div>

@@ -20,11 +20,11 @@ import Icon from '@/components/ui/AppIcon';
 const STATUS_CONFIG: Record<RegistrySubmissionStatus, {
   label: string; color: string; bg: string; border: string; icon: React.ElementType;
 }> = {
-  Pending:      { label: 'Pending',      color: 'text-gray-600',  bg: 'bg-gray-100',  border: 'border-gray-300',  icon: Clock },
-  Submitted:    { label: 'Submitted',    color: 'text-blue-700',  bg: 'bg-blue-50',   border: 'border-blue-300',  icon: ArrowRight },
-  Acknowledged: { label: 'Acknowledged', color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-300', icon: CheckCircle2 },
-  Registered:   { label: 'Registered',   color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-300', icon: CheckCircle2 },
-  Rejected:     { label: 'Rejected',     color: 'text-red-700',   bg: 'bg-red-50',    border: 'border-red-300',   icon: XCircle },
+  Pending:      { label: 'Pending',      color: 'var(--izou-muted)',     bg: 'var(--izou-bg)',              border: 'var(--izou-border)' , icon: Clock },
+  Submitted:    { label: 'Submitted',    color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)', icon: ArrowRight },
+  Acknowledged: { label: 'Acknowledged', color: 'var(--izou-warning)',   bg: 'var(--izou-warning-light)',   border: 'var(--izou-warning-light)', icon: CheckCircle2 },
+  Registered:   { label: 'Registered',   color: 'var(--izou-success)',  bg: 'var(--izou-success-light)',   border: 'var(--izou-success-light)', icon: CheckCircle2 },
+  Rejected:     { label: 'Rejected',     color: 'var(--izou-danger)',   bg: 'var(--izou-danger-light)',    border: 'var(--izou-danger-light)', icon: XCircle },
 };
 
 // Overdue threshold in days (submitted but no acknowledgement)
@@ -43,7 +43,10 @@ function StatusBadge({ status }: { status: RegistrySubmissionStatus }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border"
+      style={{ backgroundColor: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+    >
       <Icon size={11} />
       {cfg.label}
     </span>
@@ -356,20 +359,21 @@ export default function RegistrySubmissionsContent() {
       {/* KPI Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total', value: kpis.total, color: 'text-foreground', bg: 'bg-muted/30', border: 'border-border' },
-          { label: 'Pending', value: kpis.pending, color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200' },
-          { label: 'Submitted', value: kpis.submitted, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
-          { label: 'Acknowledged', value: kpis.acknowledged, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
-          { label: 'Registered', value: kpis.registered, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' },
-          { label: 'Rejected', value: kpis.rejected, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
+          { label: 'Total', value: kpis.total, color: 'var(--izou-text)', bg: 'var(--izou-bg)', border: 'var(--izou-border)' },
+          { label: 'Pending', value: kpis.pending, color: 'var(--izou-muted)', bg: 'var(--izou-bg)', border: 'var(--izou-border)' },
+          { label: 'Submitted', value: kpis.submitted, color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)' },
+          { label: 'Acknowledged', value: kpis.acknowledged, color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', border: 'var(--izou-warning-light)' },
+          { label: 'Registered', value: kpis.registered, color: 'var(--izou-success)', bg: 'var(--izou-success-light)', border: 'var(--izou-success-light)' },
+          { label: 'Rejected', value: kpis.rejected, color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', border: 'var(--izou-danger-light)' },
         ].map((kpi) => (
           <button
             key={kpi.label}
             onClick={() => setFilterStatus(kpi.label === 'Total' ? '' : kpi.label as RegistrySubmissionStatus)}
-            className={`p-3 rounded-xl border ${kpi.bg} ${kpi.border} text-left hover:shadow-sm transition-all`}
+            className="p-3 rounded-xl border text-left hover:shadow-sm transition-all"
+            style={{ backgroundColor: kpi.bg, borderColor: kpi.border }}
           >
             <p className="text-[10px] font-500 text-muted-foreground uppercase tracking-wide">{kpi.label}</p>
-            <p className={`text-2xl font-800 ${kpi.color}`}>{kpi.value}</p>
+            <p className="text-2xl font-800" style={{ color: kpi.color }}>{kpi.value}</p>
           </button>
         ))}
       </div>

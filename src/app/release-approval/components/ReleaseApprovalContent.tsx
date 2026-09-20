@@ -16,16 +16,16 @@ import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
 
 const STATUS_CONFIG: Record<ReleaseRequest['status'], { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
-  Pending:        { label: 'Pending',      color: 'text-amber-700', bg: 'bg-amber-50',  border: 'border-amber-200',  icon: <Clock size={12} /> },
-  'Under Review': { label: 'Under Review', color: 'text-blue-700',  bg: 'bg-blue-50',   border: 'border-blue-200',   icon: <Eye size={12} /> },
-  Approved:       { label: 'Approved',     color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-200',  icon: <CheckCircle size={12} /> },
-  Rejected:       { label: 'Rejected',     color: 'text-red-700',   bg: 'bg-red-50',    border: 'border-red-200',    icon: <XCircle size={12} /> },
+  Pending:        { label: 'Pending',      color: 'var(--izou-warning)',   bg: 'var(--izou-warning-light)',   border: 'var(--izou-warning-light)',   icon: <Clock size={12} /> },
+  'Under Review': { label: 'Under Review', color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)', icon: <Eye size={12} /> },
+  Approved:       { label: 'Approved',     color: 'var(--izou-success)',   bg: 'var(--izou-success-light)',   border: 'var(--izou-success-light)',   icon: <CheckCircle size={12} /> },
+  Rejected:       { label: 'Rejected',     color: 'var(--izou-danger)',    bg: 'var(--izou-danger-light)',    border: 'var(--izou-danger-light)',    icon: <XCircle size={12} /> },
 };
 
 const PRIORITY_CONFIG: Record<ReleaseRequest['priority'], { color: string; bg: string }> = {
-  High:   { color: 'text-red-700',   bg: 'bg-red-50 border border-red-200' },
-  Normal: { color: 'text-gray-600',  bg: 'bg-gray-50 border border-gray-200' },
-  Low:    { color: 'text-blue-600',  bg: 'bg-blue-50 border border-blue-200' },
+  High:   { color: 'var(--izou-danger)',    bg: 'var(--izou-danger-light)' },
+  Normal: { color: 'var(--izou-muted)',     bg: 'var(--izou-bg)' },
+  Low:    { color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)' },
 };
 
 function formatCurrency(amount: number): string {
@@ -178,10 +178,13 @@ function DetailPanel({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${statusCfg.bg} ${statusCfg.color} ${statusCfg.border}`}>
+              <span
+                className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border"
+                style={{ backgroundColor: statusCfg.bg, color: statusCfg.color, borderColor: statusCfg.border }}
+              >
                 {statusCfg.icon} {statusCfg.label}
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded font-medium ${priorityCfg.bg} ${priorityCfg.color}`}>
+              <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ backgroundColor: priorityCfg.bg, color: priorityCfg.color }}>
                 {request.priority}
               </span>
             </div>
@@ -411,18 +414,19 @@ export default function ReleaseApprovalContent() {
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-3 mt-4">
           {[
-            { label: 'Pending',      value: stats.pending,     color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200',  key: 'Pending' },
-            { label: 'Under Review', value: stats.underReview, color: 'text-blue-700',  bg: 'bg-blue-50 border-blue-200',    key: 'Under Review' },
-            { label: 'Approved',     value: stats.approved,    color: 'text-green-700', bg: 'bg-green-50 border-green-200',  key: 'Approved' },
-            { label: 'Rejected',     value: stats.rejected,    color: 'text-red-700',   bg: 'bg-red-50 border-red-200',      key: 'Rejected' },
+            { label: 'Pending',      value: stats.pending,     color: 'var(--izou-warning)',   bg: 'var(--izou-warning-light)',   border: 'var(--izou-warning-light)',   key: 'Pending' },
+            { label: 'Under Review', value: stats.underReview, color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)', key: 'Under Review' },
+            { label: 'Approved',     value: stats.approved,    color: 'var(--izou-success)',   bg: 'var(--izou-success-light)',   border: 'var(--izou-success-light)',   key: 'Approved' },
+            { label: 'Rejected',     value: stats.rejected,    color: 'var(--izou-danger)',    bg: 'var(--izou-danger-light)',    border: 'var(--izou-danger-light)',    key: 'Rejected' },
           ].map((stat) => (
             <button
               key={stat.label}
               onClick={() => setStatusFilter(statusFilter === stat.key ? 'All' : stat.key)}
-              className={`rounded-lg border px-4 py-3 text-left transition-all ${stat.bg} ${statusFilter === stat.key ? 'ring-2 ring-blue-400 shadow-md' : 'hover:shadow-sm'}`}
+              className={`rounded-lg border px-4 py-3 text-left transition-all ${statusFilter === stat.key ? 'ring-2 ring-primary/40 shadow-md' : 'hover:shadow-sm'}`}
+              style={{ backgroundColor: stat.bg, borderColor: stat.border }}
             >
               <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
-              <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+              <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
             </button>
           ))}
         </div>
@@ -491,11 +495,14 @@ export default function ReleaseApprovalContent() {
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-sm font-semibold text-gray-900 truncate">{req.collateralRef}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${priorityCfg.bg} ${priorityCfg.color}`}>
+                        <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: priorityCfg.bg, color: priorityCfg.color }}>
                           {req.priority}
                         </span>
                       </div>
-                      <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 border ${statusCfg.bg} ${statusCfg.color} ${statusCfg.border}`}>
+                      <span
+                        className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0 border"
+                        style={{ backgroundColor: statusCfg.bg, color: statusCfg.color, borderColor: statusCfg.border }}
+                      >
                         {statusCfg.icon}
                         {statusCfg.label}
                       </span>

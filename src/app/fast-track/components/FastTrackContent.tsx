@@ -82,25 +82,25 @@ const workflowSteps: WorkflowStep[] = [
 const tierConfig: Record<CustomerTier, { label: string; color: string; bg: string; border: string; icon: React.ElementType; benefits: string[] }> = {
   PREMIER: {
     label: 'Premier',
-    color: 'text-amber-700',
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
+    color: 'var(--izou-warning)',
+    bg: 'var(--izou-warning-light)',
+    border: 'var(--izou-warning-light)',
     icon: Star,
     benefits: ['Pre-filled collateral forms', 'Reduced approval steps', 'Priority registry processing', 'Dedicated relationship manager'],
   },
   REPEAT: {
     label: 'Repeat',
-    color: 'text-blue-700',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
+    color: 'var(--izou-secondary)',
+    bg: 'var(--izou-secondary-light)',
+    border: 'var(--izou-secondary-light)',
     icon: RefreshCw,
     benefits: ['Auto-populate collateral details', 'Skip certain validation steps', 'Faster turnaround time'],
   },
   STANDARD: {
     label: 'Standard',
-    color: 'text-gray-600',
-    bg: 'bg-gray-50',
-    border: 'border-gray-200',
+    color: 'var(--izou-muted)',
+    bg: 'var(--izou-bg)',
+    border: 'var(--izou-border)',
     icon: User,
     benefits: ['Full workflow', 'Standard processing time', 'Complete KYC required'],
   },
@@ -110,7 +110,10 @@ function TierBadge({ tier }: { tier: CustomerTier }) {
   const conf = tierConfig[tier];
   const TierIcon = conf.icon;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-700 px-2 py-1 rounded-full border ${conf.bg} ${conf.color} ${conf.border}`}>
+    <span
+      className="inline-flex items-center gap-1 text-xs font-700 px-2 py-1 rounded-full border"
+      style={{ backgroundColor: conf.bg, color: conf.color, borderColor: conf.border }}
+    >
       <TierIcon size={11} />
       {conf.label}
     </span>
@@ -146,7 +149,7 @@ function CustomerCard({ customer, onSelect, selected }: { customer: Customer; on
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Defaults</p>
-          <p className={`text-sm font-600 ${customer.defaultCount === 0 ? 'text-green-600' : 'text-red-600'}`}>{customer.defaultCount}</p>
+          <p className="text-sm font-600" style={{ color: customer.defaultCount === 0 ? 'var(--izou-success)' : 'var(--izou-danger)' }}>{customer.defaultCount}</p>
         </div>
       </div>
     </div>
@@ -179,7 +182,11 @@ function TierEditModal({
             <label className="block text-xs font-600 text-muted-foreground mb-2">Tier</label>
             <div className="space-y-2">
               {(['PREMIER', 'REPEAT', 'STANDARD'] as CustomerTier[]).map((t) => (
-                <label key={t} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${tier === t ? `${tierConfig[t].bg} ${tierConfig[t].border}` : 'border-border bg-white hover:bg-muted/30'}`}>
+                <label
+                  key={t}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${tier === t ? '' : 'border-border bg-white hover:bg-muted/30'}`}
+                  style={tier === t ? { backgroundColor: tierConfig[t].bg, borderColor: tierConfig[t].border } : undefined}
+                >
                   <input type="radio" name="tier" value={t} checked={tier === t} onChange={() => setTier(t)} className="accent-primary" />
                   <TierBadge tier={t} />
                 </label>
@@ -309,8 +316,8 @@ export default function FastTrackContent() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-          <Zap size={18} className="text-amber-600" />
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--izou-warning-light)' }}>
+          <Zap size={18} style={{ color: 'var(--izou-warning)' }} />
         </div>
         <div>
           <h1 className="text-xl font-700 text-foreground">Fast Track for Premier & Repeat Customers</h1>
@@ -325,13 +332,13 @@ export default function FastTrackContent() {
           const TierIcon = c.icon;
           const count = tierCounts[tier];
           return (
-            <div key={tier} className={`rounded-xl p-5 border shadow-card ${c.bg} ${c.border}`}>
+            <div key={tier} className="rounded-xl p-5 border shadow-card" style={{ backgroundColor: c.bg, borderColor: c.border }}>
               <div className="flex items-center gap-2 mb-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.bg}`}>
-                  <TierIcon size={16} className={c.color} />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: c.bg }}>
+                  <TierIcon size={16} style={{ color: c.color }} />
                 </div>
                 <div>
-                  <p className={`text-sm font-700 ${c.color}`}>{c.label}</p>
+                  <p className="text-sm font-700" style={{ color: c.color }}>{c.label}</p>
                   <p className="text-xs text-muted-foreground">
                     {loading ? '…' : `${count} customer${count !== 1 ? 's' : ''}`}
                   </p>
@@ -340,7 +347,7 @@ export default function FastTrackContent() {
               <ul className="space-y-1">
                 {c.benefits.map((b) => (
                   <li key={b} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                    <CheckCircle2 size={11} className={`${c.color} mt-0.5 shrink-0`} />
+                    <CheckCircle2 size={11} className="mt-0.5 shrink-0" style={{ color: c.color }} />
                     {b}
                   </li>
                 ))}
@@ -392,13 +399,16 @@ export default function FastTrackContent() {
           {selectedCustomer && conf ? (
             <>
               {/* Customer Header */}
-              <div className={`rounded-xl p-5 border shadow-card ${conf.bg} ${conf.border}`}>
+              <div className="rounded-xl p-5 border shadow-card" style={{ backgroundColor: conf.bg, borderColor: conf.border }}>
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <TierBadge tier={selectedCustomer.tier} />
                       {isFastTrack && (
-                        <span className="inline-flex items-center gap-1 text-xs font-700 px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">
+                        <span
+                          className="inline-flex items-center gap-1 text-xs font-700 px-2 py-1 rounded-full border"
+                          style={{ backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)', borderColor: 'var(--izou-success-light)' }}
+                        >
                           <Zap size={10} /> Fast Track Eligible
                         </span>
                       )}
@@ -419,10 +429,8 @@ export default function FastTrackContent() {
                     {isFastTrack && selectedCustomer.lastCollateralType && (
                       <button
                         onClick={handleClone}
-                        className={`flex items-center gap-1.5 px-3 py-2 text-sm font-600 rounded-lg transition-colors ${
-                          cloneSuccess
-                            ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-white border border-border text-foreground hover:bg-muted'
-                        }`}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-sm font-600 rounded-lg border transition-colors ${cloneSuccess ? '' : 'bg-white border-border text-foreground hover:bg-muted'}`}
+                        style={cloneSuccess ? { backgroundColor: 'var(--izou-success-light)', color: 'var(--izou-success)', borderColor: 'var(--izou-success-light)' } : undefined}
                       >
                         {cloneSuccess ? <CheckCircle2 size={14} /> : <Copy size={14} />}
                         {cloneSuccess ? 'Cloned!' : 'Clone Previous Collateral'}
@@ -513,8 +521,15 @@ export default function FastTrackContent() {
 
                   {activeTab === 'form' && (
                     <div>
-                      <div className={`flex items-start gap-2 p-3 rounded-lg mb-4 ${isFastTrack ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
-                        {isFastTrack ? <CheckCircle2 size={15} className="text-green-600 mt-0.5 shrink-0" /> : <AlertCircle size={15} className="text-amber-600 mt-0.5 shrink-0" />}
+                      <div
+                        className="flex items-start gap-2 p-3 rounded-lg border mb-4"
+                        style={isFastTrack
+                          ? { backgroundColor: 'var(--izou-success-light)', borderColor: 'var(--izou-success-light)' }
+                          : { backgroundColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)' }}
+                      >
+                        {isFastTrack
+                          ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--izou-success)' }} />
+                          : <AlertCircle size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--izou-warning)' }} />}
                         <p className="text-xs font-500 text-foreground">
                           {isFastTrack
                             ? `Fast Track active: ${selectedCustomer.lastCollateralType ? 'Previous collateral details pre-filled.' : 'Reduced form fields shown.'} Audit log will record fast track usage.`

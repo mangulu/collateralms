@@ -21,13 +21,13 @@ const WORKFLOW_TYPE_LABELS: Record<WorkflowTemplateType, string> = {
   custom: 'Custom Workflow',
 };
 
-const WORKFLOW_TYPE_COLORS: Record<WorkflowTemplateType, string> = {
-  perfection: 'bg-violet-100 text-violet-700 border-violet-200',
-  release: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  valuation: 'bg-amber-100 text-amber-700 border-amber-200',
-  substitution: 'bg-rose-100 text-rose-700 border-rose-200',
-  document_approval: 'bg-blue-100 text-blue-700 border-blue-200',
-  custom: 'bg-slate-100 text-slate-700 border-slate-200',
+const WORKFLOW_TYPE_COLORS: Record<WorkflowTemplateType, { bg: string; color: string; border: string }> = {
+  perfection: { bg: 'var(--izou-highlight-light)', color: 'var(--izou-highlight)', border: 'var(--izou-highlight-light)' },
+  release: { bg: 'var(--izou-success-light)', color: 'var(--izou-success)', border: 'var(--izou-success-light)' },
+  valuation: { bg: 'var(--izou-warning-light)', color: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
+  substitution: { bg: 'var(--izou-danger-light)', color: 'var(--izou-danger)', border: 'var(--izou-danger-light)' },
+  document_approval: { bg: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)' },
+  custom: { bg: 'var(--izou-bg)', color: 'var(--izou-muted)', border: 'var(--izou-border)' },
 };
 
 const CONDITION_FIELD_LABELS: Record<WorkflowConditionField, string> = {
@@ -549,7 +549,14 @@ function TemplateCard({ template, onEdit, onToggle, onToggleVisibility, onManage
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-700 border ${WORKFLOW_TYPE_COLORS[template.workflowType]}`}>
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-700 border"
+              style={{
+                backgroundColor: WORKFLOW_TYPE_COLORS[template.workflowType].bg,
+                color: WORKFLOW_TYPE_COLORS[template.workflowType].color,
+                borderColor: WORKFLOW_TYPE_COLORS[template.workflowType].border,
+              }}
+            >
               {WORKFLOW_TYPE_LABELS[template.workflowType]}
             </span>
             {template.isBuiltin && (
@@ -837,7 +844,14 @@ export default function WorkflowTemplatesContent() {
             </div>
             <div>
               <label className="block text-xs font-600 text-foreground mb-1.5">Type</label>
-              <div className={`px-3 py-2 text-sm rounded-lg border ${WORKFLOW_TYPE_COLORS[editingTemplate.workflowType]} font-600`}>
+              <div
+                className="px-3 py-2 text-sm rounded-lg border font-600"
+                style={{
+                  backgroundColor: WORKFLOW_TYPE_COLORS[editingTemplate.workflowType].bg,
+                  color: WORKFLOW_TYPE_COLORS[editingTemplate.workflowType].color,
+                  borderColor: WORKFLOW_TYPE_COLORS[editingTemplate.workflowType].border,
+                }}
+              >
                 {WORKFLOW_TYPE_LABELS[editingTemplate.workflowType]}
               </div>
             </div>

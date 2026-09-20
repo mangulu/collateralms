@@ -7,19 +7,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import { useStaffWorkspaceRealtime } from '@/lib/hooks/useStaffWorkspaceRealtime';
 
-const STATUS_META: Record<string, { label: string; cls: string; dot: string }> = {
-  pending:     { label: 'Pending',     cls: 'bg-amber-50 text-amber-700 border-amber-200',   dot: 'bg-amber-400' },
-  in_progress: { label: 'In Progress', cls: 'bg-blue-50 text-blue-700 border-blue-200',      dot: 'bg-blue-500' },
-  completed:   { label: 'Completed',   cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  cancelled:   { label: 'Cancelled',   cls: 'bg-slate-100 text-slate-500 border-slate-200',  dot: 'bg-slate-400' },
-  dismissed:   { label: 'Dismissed',   cls: 'bg-slate-100 text-slate-400 border-slate-200',  dot: 'bg-slate-300' },
+const STATUS_META: Record<string, { label: string; bg: string; color: string; border: string; dot: string }> = {
+  pending:     { label: 'Pending',     bg: 'var(--izou-warning-light)', color: 'var(--izou-warning)', border: 'var(--izou-warning-light)', dot: 'var(--izou-warning)' },
+  in_progress: { label: 'In Progress', bg: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)', dot: 'var(--izou-secondary)' },
+  completed:   { label: 'Completed',   bg: 'var(--izou-success-light)', color: 'var(--izou-success)', border: 'var(--izou-success-light)', dot: 'var(--izou-success)' },
+  cancelled:   { label: 'Cancelled',   bg: 'var(--izou-bg)', color: 'var(--izou-muted)', border: 'var(--izou-border)', dot: 'var(--izou-muted)' },
+  dismissed:   { label: 'Dismissed',   bg: 'var(--izou-bg)', color: 'var(--izou-muted)', border: 'var(--izou-border)', dot: 'var(--izou-muted)' },
 };
 
-const PRIORITY_META: Record<string, { label: string; cls: string }> = {
-  urgent: { label: 'Urgent', cls: 'bg-red-100 text-red-700 border-red-200' },
-  high:   { label: 'High',   cls: 'bg-amber-100 text-amber-700 border-amber-200' },
-  normal: { label: 'Normal', cls: 'bg-blue-50 text-blue-600 border-blue-200' },
-  low:    { label: 'Low',    cls: 'bg-slate-100 text-slate-500 border-slate-200' },
+const PRIORITY_META: Record<string, { label: string; bg: string; color: string; border: string }> = {
+  urgent: { label: 'Urgent', bg: 'var(--izou-danger-light)', color: 'var(--izou-danger)', border: 'var(--izou-danger-light)' },
+  high:   { label: 'High',   bg: 'var(--izou-warning-light)', color: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
+  normal: { label: 'Normal', bg: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)' },
+  low:    { label: 'Low',    bg: 'var(--izou-bg)', color: 'var(--izou-muted)', border: 'var(--izou-border)' },
 };
 
 function isOverdue(task: UserTask): boolean {
@@ -182,31 +182,31 @@ export default function StaffWorkspaceContent() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Clock size={14} className="text-amber-500" />
+            <Clock size={14} style={{ color: 'var(--izou-warning)' }} />
             <p className="text-xs text-muted-foreground">Pending</p>
           </div>
-          <p className="text-2xl font-700 text-amber-600">{pendingCount}</p>
+          <p className="text-2xl font-700" style={{ color: 'var(--izou-warning)' }}>{pendingCount}</p>
         </div>
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Workflow size={14} className="text-blue-500" />
+            <Workflow size={14} style={{ color: 'var(--izou-secondary)' }} />
             <p className="text-xs text-muted-foreground">In Progress</p>
           </div>
-          <p className="text-2xl font-700 text-blue-600">{inProgressCount}</p>
+          <p className="text-2xl font-700" style={{ color: 'var(--izou-secondary)' }}>{inProgressCount}</p>
         </div>
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1">
-            <CheckCircle2 size={14} className="text-emerald-500" />
+            <CheckCircle2 size={14} style={{ color: 'var(--izou-success)' }} />
             <p className="text-xs text-muted-foreground">Completed</p>
           </div>
-          <p className="text-2xl font-700 text-emerald-600">{completedCount}</p>
+          <p className="text-2xl font-700" style={{ color: 'var(--izou-success)' }}>{completedCount}</p>
         </div>
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle size={14} className="text-red-500" />
+            <AlertTriangle size={14} style={{ color: 'var(--izou-danger)' }} />
             <p className="text-xs text-muted-foreground">Overdue</p>
           </div>
-          <p className="text-2xl font-700 text-red-600">{overdueCount}</p>
+          <p className="text-2xl font-700" style={{ color: 'var(--izou-danger)' }}>{overdueCount}</p>
         </div>
       </div>
 
@@ -315,8 +315,8 @@ export default function StaffWorkspaceContent() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white border border-border rounded-xl">
-          <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
-            <CheckCheck size={24} className="text-emerald-500" />
+          <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--izou-success-light)' }}>
+            <CheckCheck size={24} style={{ color: 'var(--izou-success)' }} />
           </div>
           <div className="text-center">
             <p className="text-base font-600 text-foreground">
@@ -357,12 +357,13 @@ export default function StaffWorkspaceContent() {
                   return (
                     <React.Fragment key={task.id}>
                       <tr
-                        className={`hover:bg-muted/20 transition-colors cursor-pointer ${overdue ? 'bg-red-50/40' : ''}`}
+                        className="hover:bg-muted/20 transition-colors cursor-pointer"
+                        style={overdue ? { backgroundColor: 'var(--izou-danger-light)' } : undefined}
                         onClick={() => setExpandedRow(isExpanded ? null : task.id)}
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-start gap-2">
-                            {overdue && <AlertTriangle size={13} className="text-red-500 mt-0.5 shrink-0" />}
+                            {overdue && <AlertTriangle size={13} className="mt-0.5 shrink-0" style={{ color: 'var(--izou-danger)' }} />}
                             <div>
                               <p className="font-500 text-foreground text-sm leading-snug">{task.title}</p>
                               {task.workflowName && (
@@ -396,7 +397,7 @@ export default function StaffWorkspaceContent() {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {task.deadline ? (
-                            <span className={`text-sm font-500 ${overdue ? 'text-red-600' : 'text-foreground'}`}>
+                            <span className="text-sm font-500" style={overdue ? { color: 'var(--izou-danger)' } : undefined}>
                               {formatDate(task.deadline)}
                             </span>
                           ) : (
@@ -404,13 +405,19 @@ export default function StaffWorkspaceContent() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-500 border ${statusMeta.cls}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-500 border"
+                            style={{ backgroundColor: statusMeta.bg, color: statusMeta.color, borderColor: statusMeta.border }}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusMeta.dot }} />
                             {statusMeta.label}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-500 border ${priorityMeta.cls}`}>
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-500 border"
+                            style={{ backgroundColor: priorityMeta.bg, color: priorityMeta.color, borderColor: priorityMeta.border }}
+                          >
                             {priorityMeta.label}
                           </span>
                         </td>
@@ -429,7 +436,8 @@ export default function StaffWorkspaceContent() {
                               <button
                                 onClick={() => handleMarkComplete(task)}
                                 disabled={actionLoading === task.id + '_complete'}
-                                className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600 transition-colors disabled:opacity-50"
+                                className="p-1.5 rounded-md hover:bg-[var(--izou-success-light)] transition-colors disabled:opacity-50"
+                                style={{ color: 'var(--izou-success)' }}
                                 title="Mark complete"
                               >
                                 {actionLoading === task.id + '_complete' ? (
@@ -499,7 +507,7 @@ export default function StaffWorkspaceContent() {
                                   <button
                                     onClick={() => handleCancel(task)}
                                     disabled={actionLoading === task.id + '_cancel'}
-                                    className="px-4 py-2 bg-white border border-border text-muted-foreground text-sm rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-colors"
+                                    className="px-4 py-2 bg-white border border-border text-muted-foreground text-sm rounded-lg hover:bg-[var(--izou-danger-light)] hover:text-[var(--izou-danger)] hover:border-[var(--izou-danger-light)] disabled:opacity-50 transition-colors"
                                   >
                                     {actionLoading === task.id + '_cancel' ? <Loader2 size={13} className="animate-spin" /> : 'Cancel Task'}
                                   </button>
@@ -520,7 +528,7 @@ export default function StaffWorkspaceContent() {
               Showing <span className="font-600 text-foreground">{filtered.length}</span> of <span className="font-600 text-foreground">{tasks.length}</span> tasks
             </p>
             {overdueCount > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-red-600 font-500">
+              <div className="flex items-center gap-1.5 text-xs font-500" style={{ color: 'var(--izou-danger)' }}>
                 <AlertTriangle size={11} />
                 {overdueCount} overdue task{overdueCount !== 1 ? 's' : ''}
               </div>

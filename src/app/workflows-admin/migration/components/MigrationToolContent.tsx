@@ -32,15 +32,18 @@ const ADMIN_ROLES = ['system_admin', 'legal_manager', 'credit_manager'];
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    pending_review: { label: 'Pending Review', cls: 'bg-amber-100 text-amber-700 border-amber-200' },
-    auto_migrated: { label: 'Auto-Migrated', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-    manually_migrated: { label: 'Manually Migrated', cls: 'bg-blue-100 text-blue-700 border-blue-200' },
-    skipped: { label: 'Skipped', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
+  const map: Record<string, { label: string; bg: string; color: string; border: string }> = {
+    pending_review: { label: 'Pending Review', bg: 'var(--izou-warning-light)', color: 'var(--izou-warning)', border: 'var(--izou-warning-light)' },
+    auto_migrated: { label: 'Auto-Migrated', bg: 'var(--izou-success-light)', color: 'var(--izou-success)', border: 'var(--izou-success-light)' },
+    manually_migrated: { label: 'Manually Migrated', bg: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', border: 'var(--izou-secondary-light)' },
+    skipped: { label: 'Skipped', bg: 'var(--izou-bg)', color: 'var(--izou-muted)', border: 'var(--izou-border)' },
   };
-  const s = map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600 border-gray-200' };
+  const s = map[status] ?? { label: status, bg: 'var(--izou-bg)', color: 'var(--izou-muted)', border: 'var(--izou-border)' };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${s.cls}`}>
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border"
+      style={{ backgroundColor: s.bg, color: s.color, borderColor: s.border }}
+    >
       {s.label}
     </span>
   );
@@ -49,11 +52,11 @@ function StatusBadge({ status }: { status: string }) {
 // ─── Confidence Bar ───────────────────────────────────────────────────────────
 
 function ConfidenceBar({ value }: { value: number }) {
-  const color = value >= 80 ? 'bg-emerald-500' : value >= 50 ? 'bg-amber-500' : 'bg-red-400';
+  const color = value >= 80 ? 'var(--izou-success)' : value >= 50 ? 'var(--izou-warning)' : 'var(--izou-danger)';
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
+        <div className="h-full rounded-full" style={{ width: `${Math.min(value, 100)}%`, backgroundColor: color }} />
       </div>
       <span className="text-xs font-medium text-muted-foreground w-8 text-right">{value.toFixed(0)}%</span>
     </div>
@@ -64,12 +67,12 @@ function ConfidenceBar({ value }: { value: number }) {
 
 function SummaryStrip({ summary, loading }: { summary: MigrationSummary | null; loading: boolean }) {
   const kpis = [
-    { label: 'Total Instances', value: summary?.totalOldInstances, icon: <Layers size={14} className="text-slate-500" />, color: 'text-slate-700' },
-    { label: 'Already Migrated', value: summary?.alreadyMigrated, icon: <CheckCircle2 size={14} className="text-emerald-500" />, color: 'text-emerald-700' },
-    { label: 'Auto-Migrated', value: summary?.autoMigrated, icon: <Activity size={14} className="text-blue-500" />, color: 'text-blue-700' },
-    { label: 'Pending Review', value: summary?.pendingReview, icon: <AlertTriangle size={14} className="text-amber-500" />, color: 'text-amber-700' },
-    { label: 'Manually Done', value: summary?.manuallyMigrated, icon: <Check size={14} className="text-violet-500" />, color: 'text-violet-700' },
-    { label: 'Skipped', value: summary?.skipped, icon: <SkipForward size={14} className="text-slate-400" />, color: 'text-slate-600' },
+    { label: 'Total Instances', value: summary?.totalOldInstances, icon: <Layers size={14} style={{ color: 'var(--izou-muted)' }} />, color: 'var(--izou-muted)' },
+    { label: 'Already Migrated', value: summary?.alreadyMigrated, icon: <CheckCircle2 size={14} style={{ color: 'var(--izou-success)' }} />, color: 'var(--izou-success)' },
+    { label: 'Auto-Migrated', value: summary?.autoMigrated, icon: <Activity size={14} style={{ color: 'var(--izou-secondary)' }} />, color: 'var(--izou-secondary)' },
+    { label: 'Pending Review', value: summary?.pendingReview, icon: <AlertTriangle size={14} style={{ color: 'var(--izou-warning)' }} />, color: 'var(--izou-warning)' },
+    { label: 'Manually Done', value: summary?.manuallyMigrated, icon: <Check size={14} style={{ color: 'var(--izou-highlight)' }} />, color: 'var(--izou-highlight)' },
+    { label: 'Skipped', value: summary?.skipped, icon: <SkipForward size={14} style={{ color: 'var(--izou-muted)' }} />, color: 'var(--izou-muted)' },
   ];
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
@@ -78,7 +81,7 @@ function SummaryStrip({ summary, loading }: { summary: MigrationSummary | null; 
           <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">{k.icon}</div>
           <div>
             <p className="text-[11px] text-muted-foreground leading-tight">{k.label}</p>
-            <p className={`text-lg font-bold ${k.color}`}>
+            <p className="text-lg font-bold" style={{ color: k.color }}>
               {loading ? <Loader2 size={13} className="animate-spin inline" /> : (k.value ?? 0)}
             </p>
           </div>
@@ -139,7 +142,10 @@ function ReviewRow({ item, templates, onConfirm, onSkip }: ReviewRowProps) {
     item.migrationStatus === 'skipped';
 
   return (
-    <div className={`border rounded-xl overflow-hidden transition-all ${isDone ? 'border-slate-100 bg-slate-50/50' : 'border-amber-100 bg-white'}`}>
+    <div
+      className="border rounded-xl overflow-hidden transition-all"
+      style={isDone ? { borderColor: 'var(--izou-border)', backgroundColor: 'var(--izou-bg)' } : { borderColor: 'var(--izou-warning-light)', backgroundColor: 'white' }}
+    >
       {/* Row header */}
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
@@ -165,16 +171,16 @@ function ReviewRow({ item, templates, onConfirm, onSkip }: ReviewRowProps) {
               {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           )}
-          {isDone && <CheckCircle2 size={16} className="text-emerald-500" />}
+          {isDone && <CheckCircle2 size={16} style={{ color: 'var(--izou-success)' }} />}
         </div>
       </div>
 
       {/* Expanded review panel */}
       {expanded && !isDone && (
-        <div className="border-t border-amber-100 px-4 py-4 bg-amber-50/30 space-y-4">
+        <div className="border-t px-4 py-4 space-y-4" style={{ borderColor: 'var(--izou-warning-light)', backgroundColor: 'var(--izou-warning-light)' }}>
           {/* Ambiguity reason */}
           {item.ambiguityReason && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+            <div className="flex items-start gap-2 p-3 rounded-lg border text-xs" style={{ backgroundColor: 'var(--izou-warning-light)', borderColor: 'var(--izou-warning-light)', color: 'var(--izou-warning)' }}>
               <Info size={13} className="mt-0.5 shrink-0" />
               <span>{item.ambiguityReason}</span>
             </div>
@@ -423,7 +429,7 @@ export default function MigrationToolContent() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        <div className="flex items-center gap-2 p-3 mb-4 rounded-lg border text-sm" style={{ backgroundColor: 'var(--izou-danger-light)', borderColor: 'var(--izou-danger-light)', color: 'var(--izou-danger)' }}>
           <XCircle size={15} />
           {error}
         </div>
@@ -431,17 +437,17 @@ export default function MigrationToolContent() {
 
       {/* Migration result banner */}
       {migrationResult && (
-        <div className="flex items-start gap-3 p-4 mb-5 bg-emerald-50 border border-emerald-200 rounded-xl">
-          <CheckCircle2 size={18} className="text-emerald-600 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 p-4 mb-5 rounded-xl border" style={{ backgroundColor: 'var(--izou-success-light)', borderColor: 'var(--izou-success-light)' }}>
+          <CheckCircle2 size={18} className="mt-0.5 shrink-0" style={{ color: 'var(--izou-success)' }} />
           <div>
-            <p className="text-sm font-semibold text-emerald-800">Migration run complete</p>
-            <p className="text-xs text-emerald-700 mt-0.5">
+            <p className="text-sm font-semibold" style={{ color: 'var(--izou-success)' }}>Migration run complete</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--izou-success)' }}>
               Scanned <strong>{migrationResult.totalOldInstances}</strong> unmigrated instances —{' '}
               <strong>{migrationResult.autoMigrated}</strong> auto-migrated,{' '}
               <strong>{migrationResult.pendingReview}</strong> flagged for review.
             </p>
           </div>
-          <button onClick={() => setMigrationResult(null)} className="ml-auto text-emerald-500 hover:text-emerald-700">
+          <button onClick={() => setMigrationResult(null)} className="ml-auto hover:opacity-70" style={{ color: 'var(--izou-success)' }}>
             <XCircle size={15} />
           </button>
         </div>
@@ -452,12 +458,12 @@ export default function MigrationToolContent() {
 
       {/* How it works info box */}
       {queueItems.length === 0 && !loadingData && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-6">
+        <div className="rounded-xl border p-5 mb-6" style={{ backgroundColor: 'var(--izou-secondary-light)', borderColor: 'var(--izou-secondary-light)' }}>
           <div className="flex items-start gap-3">
-            <Info size={18} className="text-blue-500 mt-0.5 shrink-0" />
+            <Info size={18} className="mt-0.5 shrink-0" style={{ color: 'var(--izou-secondary)' }} />
             <div>
-              <p className="text-sm font-semibold text-blue-800 mb-1">How the hybrid migration works</p>
-              <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--izou-secondary)' }}>How the hybrid migration works</p>
+              <ul className="text-xs space-y-1 list-disc list-inside" style={{ color: 'var(--izou-secondary)' }}>
                 <li>Click <strong>Run Migration</strong> to scan all workflow instances that have no step records.</li>
                 <li>Instances with a clear status (e.g. <em>pending → Step 1</em>, <em>under_review → Step 2</em>) are auto-migrated with ≥80% confidence.</li>
                 <li>Ambiguous instances (low confidence or no matching template) are placed in the review queue below.</li>
@@ -526,7 +532,7 @@ export default function MigrationToolContent() {
       {/* Empty state when no queue and not loading */}
       {queueItems.length === 0 && !loadingData && summary && summary.totalOldInstances === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <CheckCircle2 size={40} className="text-emerald-400 mb-3" />
+          <CheckCircle2 size={40} className="mb-3" style={{ color: 'var(--izou-success)' }} />
           <p className="text-base font-semibold text-foreground">All instances are migrated</p>
           <p className="text-sm text-muted-foreground mt-1">No old workflow instances found that need migration.</p>
         </div>

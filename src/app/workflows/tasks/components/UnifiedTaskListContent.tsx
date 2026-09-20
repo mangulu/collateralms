@@ -31,30 +31,30 @@ interface UnifiedItem {
 // ── Meta configs ───────────────────────────────────────────────────────────────
 
 const CATEGORY_META: Record<ItemCategory, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
-  task:       { label: 'My Task',    icon: <CheckSquare size={13} />,  color: 'text-teal-700',   bg: 'bg-teal-50',   border: 'border-teal-200' },
-  approval:   { label: 'Approval',   icon: <ShieldCheck size={13} />,  color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-200' },
-  perfection: { label: 'Perfection', icon: <GitBranch size={13} />,    color: 'text-violet-700', bg: 'bg-violet-50', border: 'border-violet-200' },
+  task:       { label: 'My Task',    icon: <CheckSquare size={13} />,  color: 'var(--izou-secondary)',     bg: 'var(--izou-secondary-light)',     border: 'var(--izou-secondary-light)' },
+  approval:   { label: 'Approval',   icon: <ShieldCheck size={13} />,  color: 'var(--izou-secondary-mid)', bg: 'var(--izou-secondary-light)',     border: 'var(--izou-secondary-light)' },
+  perfection: { label: 'Perfection', icon: <GitBranch size={13} />,    color: 'var(--izou-highlight)',     bg: 'var(--izou-highlight-light)',     border: 'var(--izou-highlight-light)' },
 };
 
-const PRIORITY_META: Record<string, { label: string; dot: string; cls: string }> = {
-  urgent: { label: 'Urgent', dot: 'bg-red-500',    cls: 'bg-red-50 text-red-700 border-red-200' },
-  high:   { label: 'High',   dot: 'bg-orange-400', cls: 'bg-orange-50 text-orange-700 border-orange-200' },
-  High:   { label: 'High',   dot: 'bg-orange-400', cls: 'bg-orange-50 text-orange-700 border-orange-200' },
-  normal: { label: 'Normal', dot: 'bg-blue-400',   cls: 'bg-blue-50 text-blue-600 border-blue-200' },
-  Normal: { label: 'Normal', dot: 'bg-blue-400',   cls: 'bg-blue-50 text-blue-600 border-blue-200' },
-  low:    { label: 'Low',    dot: 'bg-slate-300',  cls: 'bg-slate-50 text-slate-500 border-slate-200' },
-  Low:    { label: 'Low',    dot: 'bg-slate-300',  cls: 'bg-slate-50 text-slate-500 border-slate-200' },
+const PRIORITY_META: Record<string, { label: string; dot: string; color: string; bg: string; border: string }> = {
+  urgent: { label: 'Urgent', dot: 'var(--izou-danger)',    color: 'var(--izou-danger)',    bg: 'var(--izou-danger-light)',    border: 'var(--izou-danger-light)' },
+  high:   { label: 'High',   dot: 'var(--izou-warning)',   color: 'var(--izou-warning)',   bg: 'var(--izou-warning-light)',   border: 'var(--izou-warning-light)' },
+  High:   { label: 'High',   dot: 'var(--izou-warning)',   color: 'var(--izou-warning)',   bg: 'var(--izou-warning-light)',   border: 'var(--izou-warning-light)' },
+  normal: { label: 'Normal', dot: 'var(--izou-secondary)', color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)' },
+  Normal: { label: 'Normal', dot: 'var(--izou-secondary)', color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)' },
+  low:    { label: 'Low',    dot: 'var(--izou-muted)',     color: 'var(--izou-muted)',     bg: 'var(--izou-bg)',              border: 'var(--izou-border)' },
+  Low:    { label: 'Low',    dot: 'var(--izou-muted)',     color: 'var(--izou-muted)',     bg: 'var(--izou-bg)',              border: 'var(--izou-border)' },
 };
 
 const STATUS_META: Record<string, { color: string; bg: string }> = {
-  pending:       { color: 'text-amber-700',  bg: 'bg-amber-50' },
-  in_progress:   { color: 'text-blue-700',   bg: 'bg-blue-50' },
-  completed:     { color: 'text-green-700',  bg: 'bg-green-50' },
-  Pending:       { color: 'text-amber-700',  bg: 'bg-amber-50' },
-  'Under Review':{ color: 'text-blue-700',   bg: 'bg-blue-50' },
-  Approved:      { color: 'text-green-700',  bg: 'bg-green-50' },
-  Rejected:      { color: 'text-red-700',    bg: 'bg-red-50' },
-  Submitted:     { color: 'text-indigo-700', bg: 'bg-indigo-50' },
+  pending:       { color: 'var(--izou-warning)',      bg: 'var(--izou-warning-light)' },
+  in_progress:   { color: 'var(--izou-secondary)',    bg: 'var(--izou-secondary-light)' },
+  completed:     { color: 'var(--izou-success)',      bg: 'var(--izou-success-light)' },
+  Pending:       { color: 'var(--izou-warning)',      bg: 'var(--izou-warning-light)' },
+  'Under Review':{ color: 'var(--izou-secondary)',    bg: 'var(--izou-secondary-light)' },
+  Approved:      { color: 'var(--izou-success)',      bg: 'var(--izou-success-light)' },
+  Rejected:      { color: 'var(--izou-danger)',       bg: 'var(--izou-danger-light)' },
+  Submitted:     { color: 'var(--izou-secondary-mid)',bg: 'var(--izou-secondary-light)' },
 };
 
 function CheckSquare({ size, className }: { size: number; className?: string }) {
@@ -86,26 +86,32 @@ function timeAgo(iso: string | null | undefined): string {
 function ItemCard({ item, onMarkComplete }: { item: UnifiedItem; onMarkComplete?: (id: string) => void }) {
   const catMeta = CATEGORY_META[item.category];
   const priMeta = PRIORITY_META[item.priority] ?? PRIORITY_META['normal'];
-  const statusMeta = STATUS_META[item.status] ?? { color: 'text-gray-600', bg: 'bg-gray-50' };
+  const statusMeta = STATUS_META[item.status] ?? { color: 'var(--izou-muted)', bg: 'var(--izou-bg)' };
 
   return (
     <div className="group bg-white border border-border rounded-xl p-4 hover:shadow-sm hover:border-indigo-200 transition-all">
       <div className="flex items-start gap-3">
         {/* Priority dot */}
         <div className="mt-1.5 shrink-0">
-          <div className={`w-2.5 h-2.5 rounded-full ${priMeta.dot}`} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: priMeta.dot }} />
         </div>
 
         <div className="flex-1 min-w-0">
           {/* Top row */}
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-600 border ${catMeta.bg} ${catMeta.color} ${catMeta.border}`}>
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-600 border"
+                style={{ backgroundColor: catMeta.bg, color: catMeta.color, borderColor: catMeta.border }}
+              >
                 {catMeta.icon} {catMeta.label}
               </span>
               <span className="text-xs text-muted-foreground">{item.type}</span>
             </div>
-            <span className={`shrink-0 text-[10px] font-600 px-2 py-0.5 rounded-full ${statusMeta.bg} ${statusMeta.color}`}>
+            <span
+              className="shrink-0 text-[10px] font-600 px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: statusMeta.bg, color: statusMeta.color }}
+            >
               {item.status}
             </span>
           </div>

@@ -13,20 +13,26 @@ import { collateralLookupsService } from '@/lib/supabase/collateralLookupsServic
 import { registrySubmissionTrackerService } from '@/lib/supabase/registrySubmissionTrackerService';
 import WorkflowDrawer from '@/components/ui/WorkflowDrawer';
 
+// Returned uses a literal (non-token) orange, distinct from the shared
+// warning token which Under Review already occupies in this vocabulary.
+const RETURNED_COLOR = '#C2410C';
+const RETURNED_BG = '#FFF1E0';
+const RETURNED_BORDER = '#FFE0BD';
+
 const STATUS_CONFIG: Record<PerfectionRequestStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  Draft: { label: 'Draft', color: 'text-gray-600', bg: 'bg-gray-100', icon: <Clock size={12} /> },
-  Submitted: { label: 'Submitted', color: 'text-blue-700', bg: 'bg-blue-100', icon: <Send size={12} /> },
-  'Under Review': { label: 'Under Review', color: 'text-amber-700', bg: 'bg-amber-100', icon: <Eye size={12} /> },
-  Approved: { label: 'Approved', color: 'text-green-700', bg: 'bg-green-100', icon: <CheckCircle size={12} /> },
-  Perfected: { label: 'Perfected', color: 'text-emerald-700', bg: 'bg-emerald-100', icon: <Award size={12} /> },
-  Rejected: { label: 'Rejected', color: 'text-red-700', bg: 'bg-red-100', icon: <XCircle size={12} /> },
-  Returned: { label: 'Returned', color: 'text-orange-700', bg: 'bg-orange-100', icon: <RotateCcw size={12} /> },
+  Draft: { label: 'Draft', color: 'var(--izou-muted)', bg: 'var(--izou-bg)', icon: <Clock size={12} /> },
+  Submitted: { label: 'Submitted', color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', icon: <Send size={12} /> },
+  'Under Review': { label: 'Under Review', color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', icon: <Eye size={12} /> },
+  Approved: { label: 'Approved', color: 'var(--izou-success)', bg: 'var(--izou-success-light)', icon: <CheckCircle size={12} /> },
+  Perfected: { label: 'Perfected', color: 'var(--izou-highlight)', bg: 'var(--izou-highlight-light)', icon: <Award size={12} /> },
+  Rejected: { label: 'Rejected', color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', icon: <XCircle size={12} /> },
+  Returned: { label: 'Returned', color: RETURNED_COLOR, bg: RETURNED_BG, icon: <RotateCcw size={12} /> },
 };
 
-const PRIORITY_CONFIG: Record<string, { color: string; bg: string }> = {
-  High: { color: 'text-red-700', bg: 'bg-red-50 border border-red-200' },
-  Normal: { color: 'text-gray-600', bg: 'bg-gray-50 border border-gray-200' },
-  Low: { color: 'text-blue-600', bg: 'bg-blue-50 border border-blue-200' },
+const PRIORITY_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
+  High: { color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', border: 'var(--izou-danger-light)' },
+  Normal: { color: 'var(--izou-muted)', bg: 'var(--izou-bg)', border: 'var(--izou-border)' },
+  Low: { color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)' },
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -41,24 +47,24 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ACTION_COLORS: Record<string, string> = {
-  submitted: 'bg-blue-500',
-  reviewed: 'bg-amber-500',
-  approved: 'bg-green-500',
-  perfected: 'bg-emerald-500',
-  rejected: 'bg-red-500',
-  returned: 'bg-orange-500',
-  commented: 'bg-gray-400',
-  reopened: 'bg-purple-500',
+  submitted: 'var(--izou-secondary)',
+  reviewed: 'var(--izou-warning)',
+  approved: 'var(--izou-success)',
+  perfected: 'var(--izou-highlight)',
+  rejected: 'var(--izou-danger)',
+  returned: RETURNED_COLOR,
+  commented: 'var(--izou-muted)',
+  reopened: 'var(--izou-secondary-mid)',
 };
 
 const STAGE_STATUS_COLORS: Record<string, string> = {
-  Draft: 'bg-gray-400',
-  Submitted: 'bg-blue-500',
-  'Under Review': 'bg-amber-500',
-  Perfected: 'bg-emerald-500',
-  Approved: 'bg-green-500',
-  Rejected: 'bg-red-500',
-  Returned: 'bg-orange-500',
+  Draft: 'var(--izou-muted)',
+  Submitted: 'var(--izou-secondary)',
+  'Under Review': 'var(--izou-warning)',
+  Perfected: 'var(--izou-highlight)',
+  Approved: 'var(--izou-success)',
+  Rejected: 'var(--izou-danger)',
+  Returned: RETURNED_COLOR,
 };
 
 function formatDate(iso: string | null): string {
@@ -297,11 +303,11 @@ function StatusHistoryPanel({ history }: { history: PerfectionStatusHistory[] })
   return (
     <div className="space-y-2">
       {history.map((h) => {
-        const dotColor = STAGE_STATUS_COLORS[h.toStatus] ?? 'bg-gray-400';
+        const dotColor = STAGE_STATUS_COLORS[h.toStatus] ?? 'var(--izou-muted)';
         return (
           <div key={h.id} className="flex gap-3">
             <div className="flex flex-col items-center">
-              <div className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${dotColor}`} />
+              <div className="w-3 h-3 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: dotColor }} />
               <div className="w-px flex-1 bg-border mt-1" />
             </div>
             <div className="pb-4 flex-1 min-w-0">
@@ -315,13 +321,13 @@ function StatusHistoryPanel({ history }: { history: PerfectionStatusHistory[] })
               <div className="flex items-center gap-2 flex-wrap">
                 {h.fromStatus && (
                   <>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${STAGE_STATUS_COLORS[h.fromStatus] ?? 'bg-gray-400'} text-white`}>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded text-white" style={{ backgroundColor: STAGE_STATUS_COLORS[h.fromStatus] ?? 'var(--izou-muted)' }}>
                       {h.fromStatus}
                     </span>
                     <span className="text-sm text-muted-foreground">→</span>
                   </>
                 )}
-                <span className={`text-xs font-medium px-2 py-0.5 rounded ${dotColor} text-white`}>
+                <span className="text-xs font-medium px-2 py-0.5 rounded text-white" style={{ backgroundColor: dotColor }}>
                   {h.toStatus}
                 </span>
               </div>
@@ -748,10 +754,10 @@ function DetailModal({ request, comments, history, userRole, userId, userName, o
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-white shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <h2 className="text-base font-semibold text-foreground truncate">{request.obligor}</h2>
-            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${statusCfg.bg} ${statusCfg.color}`}>
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full shrink-0" style={{ backgroundColor: statusCfg.bg, color: statusCfg.color }}>
               {statusCfg.icon}{statusCfg.label}
             </span>
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${priorityCfg.bg} ${priorityCfg.color}`}>
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full shrink-0 border" style={{ backgroundColor: priorityCfg.bg, color: priorityCfg.color, borderColor: priorityCfg.border }}>
               {request.priority}
             </span>
           </div>
@@ -1837,20 +1843,20 @@ export default function PerfectionWorkflowContent() {
     rejected: requests.filter(r => r.requestStatus === 'Rejected').length,
   };
 
-  function getActionRequired(req: PerfectionRequest): { label: string; color: string } | null {
+  function getActionRequired(req: PerfectionRequest): { label: string; bg: string; color: string } | null {
     if (!userRole) return null;
     const isAdmin = userRole === 'system_admin';
     if ((userRole === 'credit_officer' || isAdmin) && (req.requestStatus === 'Draft' || req.requestStatus === 'Returned')) {
-      return { label: req.requestStatus === 'Returned' ? 'Needs Resubmission' : 'Ready to Submit', color: 'bg-blue-100 text-blue-700' };
+      return { label: req.requestStatus === 'Returned' ? 'Needs Resubmission' : 'Ready to Submit', bg: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' };
     }
     if ((userRole === 'legal_officer' || isAdmin) && req.requestStatus === 'Submitted') {
-      return { label: 'Needs Review', color: 'bg-amber-100 text-amber-700' };
+      return { label: 'Needs Review', bg: 'var(--izou-warning-light)', color: 'var(--izou-warning)' };
     }
     if ((userRole === 'legal_officer' || isAdmin) && req.requestStatus === 'Under Review') {
-      return { label: 'Awaiting Decision', color: 'bg-orange-100 text-orange-700' };
+      return { label: 'Awaiting Decision', bg: RETURNED_BG, color: RETURNED_COLOR };
     }
     if ((userRole === 'legal_officer' || isAdmin) && req.requestStatus === 'Approved') {
-      return { label: 'Awaiting Perfection Confirmation', color: 'bg-green-100 text-green-700' };
+      return { label: 'Awaiting Perfection Confirmation', bg: 'var(--izou-success-light)', color: 'var(--izou-success)' };
     }
     return null;
   }
@@ -1931,12 +1937,12 @@ export default function PerfectionWorkflowContent() {
         {/* KPI Strip */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4">
           {[
-            { label: 'Total', value: kpis.total, color: 'text-foreground', bg: 'bg-muted/50', filter: '' },
-            { label: 'Submitted', value: kpis.submitted, color: 'text-blue-700', bg: 'bg-blue-50', filter: 'Submitted' },
-            { label: 'Under Review', value: kpis.underReview, color: 'text-amber-700', bg: 'bg-amber-50', filter: 'Under Review' },
-            { label: 'Approved', value: kpis.approved, color: 'text-green-700', bg: 'bg-green-50', filter: 'Approved' },
-            { label: 'Perfected', value: kpis.perfected, color: 'text-emerald-700', bg: 'bg-emerald-50', filter: 'Perfected' },
-            { label: 'Rejected', value: kpis.rejected, color: 'text-red-700', bg: 'bg-red-50', filter: 'Rejected' },
+            { label: 'Total', value: kpis.total, color: 'var(--izou-text)', bg: 'var(--izou-bg)', filter: '' },
+            { label: 'Submitted', value: kpis.submitted, color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', filter: 'Submitted' },
+            { label: 'Under Review', value: kpis.underReview, color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', filter: 'Under Review' },
+            { label: 'Approved', value: kpis.approved, color: 'var(--izou-success)', bg: 'var(--izou-success-light)', filter: 'Approved' },
+            { label: 'Perfected', value: kpis.perfected, color: 'var(--izou-highlight)', bg: 'var(--izou-highlight-light)', filter: 'Perfected' },
+            { label: 'Rejected', value: kpis.rejected, color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', filter: 'Rejected' },
           ].map((k) => (
             <button
               key={k.label}
@@ -1944,9 +1950,10 @@ export default function PerfectionWorkflowContent() {
               className={`rounded-lg p-3 text-left transition-all border ${
                 statusFilter === k.filter
                   ? 'border-primary/40 ring-1 ring-primary/20' : 'border-border hover:border-primary/20'
-              } ${k.bg}`}
+              }`}
+              style={{ backgroundColor: k.bg }}
             >
-              <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
+              <p className="text-2xl font-bold" style={{ color: k.color }}>{k.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{k.label}</p>
             </button>
           ))}
@@ -2057,14 +2064,14 @@ export default function PerfectionWorkflowContent() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                           <span className="text-xs font-mono text-muted-foreground">{req.collateralId}</span>
-                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
                             {cfg.icon}{cfg.label}
                           </span>
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${priorityCfg.bg} ${priorityCfg.color}`}>
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full border" style={{ backgroundColor: priorityCfg.bg, color: priorityCfg.color, borderColor: priorityCfg.border }}>
                             {req.priority}
                           </span>
                           {actionRequired && !batchMode && (
-                            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${actionRequired.color}`}>
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: actionRequired.bg, color: actionRequired.color }}>
                               <Zap size={10} /> {actionRequired.label}
                             </span>
                           )}

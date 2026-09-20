@@ -15,33 +15,36 @@ import { useWorkflowInstancesRealtime } from '@/lib/hooks/useWorkflowInstancesRe
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const INSTANCE_STATUS_CONFIG: Record<WorkflowInstanceStatus, { label: string; color: string; bg: string; dot: string }> = {
-  active: { label: 'Active', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200', dot: 'bg-blue-500' },
-  completed: { label: 'Completed', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200', dot: 'bg-emerald-500' },
-  cancelled: { label: 'Cancelled', color: 'text-red-700', bg: 'bg-red-50 border-red-200', dot: 'bg-red-500' },
-  on_hold: { label: 'On Hold', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', dot: 'bg-amber-500' },
-  escalated: { label: 'Escalated', color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200', dot: 'bg-orange-500' },
+// "escalated" keeps its own literal deep-orange hex (not a shared brand
+// token), distinct from the warning-orange used for "on_hold", so the two
+// remain visually distinguishable.
+const INSTANCE_STATUS_CONFIG: Record<WorkflowInstanceStatus, { label: string; color: string; bg: string; border: string; dot: string }> = {
+  active: { label: 'Active', color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)', dot: 'var(--izou-secondary)' },
+  completed: { label: 'Completed', color: 'var(--izou-success)', bg: 'var(--izou-success-light)', border: 'var(--izou-success-light)', dot: 'var(--izou-success)' },
+  cancelled: { label: 'Cancelled', color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', border: 'var(--izou-danger-light)', dot: 'var(--izou-danger)' },
+  on_hold: { label: 'On Hold', color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', border: 'var(--izou-warning-light)', dot: 'var(--izou-warning)' },
+  escalated: { label: 'Escalated', color: '#C2410C', bg: '#FFF1E0', border: '#FFE0BD', dot: '#C2410C' },
 };
 
 const STEP_STATUS_CONFIG: Record<WorkflowStepStatus, { label: string; color: string; bg: string }> = {
-  pending: { label: 'Pending', color: 'text-slate-600', bg: 'bg-slate-100' },
-  active: { label: 'In Progress', color: 'text-blue-700', bg: 'bg-blue-100' },
-  completed: { label: 'Completed', color: 'text-emerald-700', bg: 'bg-emerald-100' },
-  skipped: { label: 'Skipped', color: 'text-slate-500', bg: 'bg-slate-100' },
-  rejected: { label: 'Rejected', color: 'text-red-700', bg: 'bg-red-100' },
-  escalated: { label: 'Escalated', color: 'text-orange-700', bg: 'bg-orange-100' },
+  pending: { label: 'Pending', color: 'var(--izou-muted)', bg: 'var(--izou-bg)' },
+  active: { label: 'In Progress', color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)' },
+  completed: { label: 'Completed', color: 'var(--izou-success)', bg: 'var(--izou-success-light)' },
+  skipped: { label: 'Skipped', color: 'var(--izou-muted)', bg: 'var(--izou-bg)' },
+  rejected: { label: 'Rejected', color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)' },
+  escalated: { label: 'Escalated', color: '#C2410C', bg: '#FFF1E0' },
 };
 
 const ACTION_LOG_LABELS: Record<string, { label: string; color: string }> = {
-  started: { label: 'Workflow Started', color: 'bg-blue-500' },
-  approve: { label: 'Approved', color: 'bg-emerald-500' },
-  reject: { label: 'Rejected', color: 'bg-red-500' },
-  return: { label: 'Returned', color: 'bg-orange-500' },
-  skip: { label: 'Step Skipped', color: 'bg-slate-400' },
-  escalate: { label: 'Escalated', color: 'bg-amber-500' },
-  cancel: { label: 'Cancelled', color: 'bg-red-600' },
-  hold: { label: 'Put On Hold', color: 'bg-amber-400' },
-  reassign: { label: 'Step Reassigned', color: 'bg-violet-500' },
+  started: { label: 'Workflow Started', color: 'var(--izou-secondary)' },
+  approve: { label: 'Approved', color: 'var(--izou-success)' },
+  reject: { label: 'Rejected', color: 'var(--izou-danger)' },
+  return: { label: 'Returned', color: 'var(--izou-warning)' },
+  skip: { label: 'Step Skipped', color: 'var(--izou-muted)' },
+  escalate: { label: 'Escalated', color: '#C2410C' },
+  cancel: { label: 'Cancelled', color: 'var(--izou-danger)' },
+  hold: { label: 'Put On Hold', color: 'var(--izou-warning)' },
+  reassign: { label: 'Step Reassigned', color: 'var(--izou-highlight)' },
 };
 
 function formatDate(iso: string | null): string {
@@ -160,7 +163,7 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
         <h2 className="text-sm font-700 text-foreground">Workflow Efficiency KPIs</h2>
-        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-600 rounded-full border border-indigo-100">Live</span>
+        <span className="px-2 py-0.5 text-[10px] font-600 rounded-full border" style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)', borderColor: 'var(--izou-secondary-light)' }}>Live</span>
       </div>
 
       {/* Top KPI Cards */}
@@ -168,8 +171,8 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
         {/* Avg Cycle Time */}
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Clock size={13} className="text-blue-600" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-secondary-light)' }}>
+              <Clock size={13} style={{ color: 'var(--izou-secondary)' }} />
             </div>
             <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Avg Cycle Time</span>
           </div>
@@ -187,22 +190,22 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
         {/* SLA Compliance */}
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <ShieldCheck size={13} className="text-emerald-600" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-success-light)' }}>
+              <ShieldCheck size={13} style={{ color: 'var(--izou-success)' }} />
             </div>
             <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">SLA Compliance</span>
           </div>
           {kpis.slaComplianceRate !== null ? (
             <>
               <div className="flex items-baseline gap-1">
-                <span className={`text-2xl font-800 ${kpis.slaComplianceRate >= 80 ? 'text-emerald-700' : kpis.slaComplianceRate >= 60 ? 'text-amber-700' : 'text-red-700'}`}>
+                <span className="text-2xl font-800" style={{ color: kpis.slaComplianceRate >= 80 ? 'var(--izou-success)' : kpis.slaComplianceRate >= 60 ? 'var(--izou-warning)' : 'var(--izou-danger)' }}>
                   {kpis.slaComplianceRate}%
                 </span>
               </div>
               <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full ${kpis.slaComplianceRate >= 80 ? 'bg-emerald-500' : kpis.slaComplianceRate >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
-                  style={{ width: `${kpis.slaComplianceRate}%` }}
+                  className="h-full rounded-full"
+                  style={{ width: `${kpis.slaComplianceRate}%`, backgroundColor: kpis.slaComplianceRate >= 80 ? 'var(--izou-success)' : kpis.slaComplianceRate >= 60 ? 'var(--izou-warning)' : 'var(--izou-danger)' }}
                 />
               </div>
             </>
@@ -215,14 +218,14 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
         {/* Escalation Frequency */}
         <div className="bg-white border border-border rounded-xl p-4 col-span-2 sm:col-span-1">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center">
-              <AlertTriangle size={13} className="text-orange-600" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-warning-light)' }}>
+              <AlertTriangle size={13} style={{ color: 'var(--izou-warning)' }} />
             </div>
             <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Escalation Rate</span>
           </div>
           {kpis.escalationFrequency !== null ? (
             <div className="flex items-baseline gap-1">
-              <span className={`text-2xl font-800 ${kpis.escalationFrequency === 0 ? 'text-emerald-700' : kpis.escalationFrequency <= 15 ? 'text-amber-700' : 'text-red-700'}`}>
+              <span className="text-2xl font-800" style={{ color: kpis.escalationFrequency === 0 ? 'var(--izou-success)' : kpis.escalationFrequency <= 15 ? 'var(--izou-warning)' : 'var(--izou-danger)' }}>
                 {kpis.escalationFrequency}%
               </span>
             </div>
@@ -238,8 +241,8 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
         {/* Pending Actions by Role */}
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center">
-              <Users size={13} className="text-violet-600" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-highlight-light)' }}>
+              <Users size={13} style={{ color: 'var(--izou-highlight)' }} />
             </div>
             <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Pending Actions by Role</span>
           </div>
@@ -254,10 +257,10 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
                   <div key={role}>
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="text-xs font-500 text-foreground capitalize">{role.replace(/_/g, ' ')}</span>
-                      <span className="text-xs font-700 text-violet-700">{count}</span>
+                      <span className="text-xs font-700" style={{ color: 'var(--izou-highlight)' }}>{count}</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-violet-400 rounded-full" style={{ width: `${pct}%` }} />
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: 'var(--izou-highlight)' }} />
                     </div>
                   </div>
                 );
@@ -269,8 +272,8 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
         {/* Bottleneck Steps */}
         <div className="bg-white border border-border rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-rose-50 flex items-center justify-center">
-              <GitBranch size={13} className="text-rose-600" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-danger-light)' }}>
+              <GitBranch size={13} style={{ color: 'var(--izou-danger)' }} />
             </div>
             <span className="text-[11px] font-600 text-muted-foreground uppercase tracking-wide">Bottleneck Steps</span>
           </div>
@@ -279,15 +282,15 @@ function WorkflowEfficiencyKPIs({ instances, templates }: WorkflowEfficiencyKPIs
           ) : (
             <div className="space-y-2">
               {kpis.bottleneckSteps.map(({ stepName, count, templateName }, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-2 rounded-lg bg-rose-50/60 border border-rose-100">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
-                    <span className="text-[10px] font-700 text-rose-700">{count}</span>
+                <div key={idx} className="flex items-center gap-3 p-2 rounded-lg border" style={{ backgroundColor: 'var(--izou-danger-light)', borderColor: 'var(--izou-danger-light)' }}>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--izou-danger-light)' }}>
+                    <span className="text-[10px] font-700" style={{ color: 'var(--izou-danger)' }}>{count}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-600 text-foreground truncate">{stepName}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{templateName}</p>
                   </div>
-                  <span className="text-[10px] text-rose-600 font-600 shrink-0">{count} stuck</span>
+                  <span className="text-[10px] font-600 shrink-0" style={{ color: 'var(--izou-danger)' }}>{count} stuck</span>
                 </div>
               ))}
             </div>
@@ -340,8 +343,11 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting, on
             <p className="text-xs text-muted-foreground">{template?.name ?? 'Workflow Instance'}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-600 border ${INSTANCE_STATUS_CONFIG[instance.instanceStatus].bg} ${INSTANCE_STATUS_CONFIG[instance.instanceStatus].color}`}>
-              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${INSTANCE_STATUS_CONFIG[instance.instanceStatus].dot}`} />
+            <span
+              className="px-2.5 py-1 rounded-full text-xs font-600 border"
+              style={{ backgroundColor: INSTANCE_STATUS_CONFIG[instance.instanceStatus].bg, color: INSTANCE_STATUS_CONFIG[instance.instanceStatus].color, borderColor: INSTANCE_STATUS_CONFIG[instance.instanceStatus].border }}
+            >
+              <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: INSTANCE_STATUS_CONFIG[instance.instanceStatus].dot }} />
               {INSTANCE_STATUS_CONFIG[instance.instanceStatus].label}
             </span>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
@@ -353,30 +359,31 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting, on
         <div className="flex-1 overflow-y-auto">
           {/* Current Step Banner — with assignee info */}
           {currentStep && instance.instanceStatus === 'active' && (
-            <div className="mx-4 mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="mx-4 mt-4 p-4 rounded-xl border" style={{ backgroundColor: 'var(--izou-secondary-light)', borderColor: 'var(--izou-secondary)' }}>
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <Activity size={13} className="text-blue-600" />
-                  <span className="text-xs font-700 text-blue-800">Current Step</span>
+                  <Activity size={13} style={{ color: 'var(--izou-secondary)' }} />
+                  <span className="text-xs font-700" style={{ color: 'var(--izou-secondary)' }}>Current Step</span>
                 </div>
                 <button
                   onClick={onReassign}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-violet-100 hover:bg-violet-200 text-violet-700 text-[10px] font-600 rounded-lg border border-violet-200 transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-600 rounded-lg border transition-colors"
+                  style={{ backgroundColor: 'var(--izou-highlight-light)', color: 'var(--izou-highlight)', borderColor: 'var(--izou-highlight-light)' }}
                 >
                   <UserCog size={10} /> Reassign / Delegate
                 </button>
               </div>
-              <p className="text-sm font-600 text-blue-900">{currentStep.name}</p>
+              <p className="text-sm font-600" style={{ color: 'var(--izou-secondary)' }}>{currentStep.name}</p>
               {currentStep.description && (
-                <p className="text-xs text-blue-700 mt-0.5">{currentStep.description}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--izou-secondary)' }}>{currentStep.description}</p>
               )}
 
               {/* Assignee info */}
-              <div className="mt-3 pt-3 border-t border-blue-200 space-y-1.5">
+              <div className="mt-3 pt-3 border-t space-y-1.5" style={{ borderColor: 'var(--izou-secondary)' }}>
                 {/* Current assignee (role or specific user) */}
                 <div className="flex items-center gap-2">
-                  <User size={11} className="text-blue-500 shrink-0" />
-                  <span className="text-[11px] text-blue-700 font-500">
+                  <User size={11} className="shrink-0" style={{ color: 'var(--izou-secondary)' }} />
+                  <span className="text-[11px] font-500" style={{ color: 'var(--izou-secondary)' }}>
                     <span className="font-600">Assigned to: </span>
                     {currentInstanceStep?.assignedTo && userProfiles[currentInstanceStep.assignedTo]
                       ? userProfiles[currentInstanceStep.assignedTo].fullName
@@ -390,8 +397,8 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting, on
                 {/* Assignment date/time */}
                 {(currentInstanceStep?.assignedAt ?? currentInstanceStep?.startedAt) && (
                   <div className="flex items-center gap-2">
-                    <Calendar size={11} className="text-blue-500 shrink-0" />
-                    <span className="text-[11px] text-blue-700 font-500">
+                    <Calendar size={11} className="shrink-0" style={{ color: 'var(--izou-secondary)' }} />
+                    <span className="text-[11px] font-500" style={{ color: 'var(--izou-secondary)' }}>
                       <span className="font-600">Assigned: </span>
                       {formatDateTime(currentInstanceStep?.assignedAt ?? currentInstanceStep?.startedAt ?? null)}
                     </span>
@@ -403,7 +410,7 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting, on
               {currentStep.actors.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {currentStep.actors.map((a) => (
-                    <span key={a.id} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-600">
+                    <span key={a.id} className="px-2 py-0.5 rounded-full text-[10px] font-600" style={{ backgroundColor: 'var(--izou-secondary-light)', color: 'var(--izou-secondary)' }}>
                       {a.actorLabel}
                     </span>
                   ))}
@@ -433,18 +440,31 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting, on
                   const assignedAt = instStep?.assignedAt ?? instStep?.startedAt ?? null;
 
                   return (
-                    <div key={step.id} className={`flex flex-col gap-1.5 p-3 rounded-xl border transition-all ${isCurrent ? 'border-blue-200 bg-blue-50' : 'border-border bg-white'}`}>
+                    <div
+                      key={step.id}
+                      className="flex flex-col gap-1.5 p-3 rounded-xl border transition-all"
+                      style={isCurrent ? { borderColor: 'var(--izou-secondary-light)', backgroundColor: 'var(--izou-secondary-light)' } : { borderColor: 'var(--izou-border)', backgroundColor: 'white' }}
+                    >
                       <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-700 shrink-0 ${status === 'completed' ? 'bg-emerald-500 text-white' : status === 'active' ? 'bg-blue-500 text-white' : status === 'rejected' ? 'bg-red-500 text-white' : status === 'skipped' ? 'bg-slate-300 text-slate-600' : 'bg-slate-100 text-slate-500'}`}>
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-700 shrink-0"
+                          style={
+                            status === 'completed' ? { backgroundColor: 'var(--izou-success)', color: 'white' }
+                              : status === 'active' ? { backgroundColor: 'var(--izou-secondary)', color: 'white' }
+                                : status === 'rejected' ? { backgroundColor: 'var(--izou-danger)', color: 'white' }
+                                  : status === 'skipped' ? { backgroundColor: 'var(--izou-border)', color: 'var(--izou-muted)' }
+                                    : { backgroundColor: 'var(--izou-bg)', color: 'var(--izou-muted)' }
+                          }
+                        >
                           {status === 'completed' ? <CheckCircle2 size={12} /> : status === 'rejected' ? <XCircle size={12} /> : status === 'skipped' ? <SkipForward size={12} /> : i + 1}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-600 ${isCurrent ? 'text-blue-800' : 'text-foreground'}`}>{step.name}</p>
+                          <p className="text-xs font-600" style={{ color: isCurrent ? 'var(--izou-secondary)' : 'var(--izou-text)' }}>{step.name}</p>
                           {step.slaHours && (
                             <p className="text-[10px] text-muted-foreground">SLA: {step.slaHours}h</p>
                           )}
                         </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-600 ${cfg.bg} ${cfg.color}`}>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-600" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
                           {cfg.label}
                         </span>
                       </div>
@@ -541,10 +561,10 @@ function InstanceDetail({ instance, template, log, onAction, onClose, acting, on
                 <div className="absolute left-2.5 top-0 bottom-0 w-px bg-border" />
                 <div className="space-y-3">
                   {log.map((entry) => {
-                    const cfg = ACTION_LOG_LABELS[entry.action] ?? { label: entry.action, color: 'bg-slate-400' };
+                    const cfg = ACTION_LOG_LABELS[entry.action] ?? { label: entry.action, color: 'var(--izou-muted)' };
                     return (
                       <div key={entry.id} className="flex gap-3 pl-7 relative">
-                        <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full ${cfg.color} flex items-center justify-center`}>
+                        <div className="absolute left-0 top-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: cfg.color }}>
                           <Activity size={9} className="text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -617,14 +637,17 @@ function InstanceRow({ instance, template, onOpen, onReassign, userProfiles }: I
           <p className="text-sm font-600 text-foreground truncate">{instance.referenceLabel ?? instance.referenceId}</p>
           <p className="text-xs text-muted-foreground">{template?.name ?? '—'}</p>
         </div>
-        <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-600 border ${cfg.bg} ${cfg.color}`}>
-          <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${cfg.dot}`} />
+        <span
+          className="shrink-0 px-2.5 py-1 rounded-full text-xs font-600 border"
+          style={{ backgroundColor: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+        >
+          <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: cfg.dot }} />
           {cfg.label}
         </span>
       </div>
       {currentStep && (
         <div className="flex items-center gap-1.5 mb-2">
-          <Activity size={11} className="text-blue-500 shrink-0" />
+          <Activity size={11} className="shrink-0" style={{ color: 'var(--izou-secondary)' }} />
           <span className="text-xs text-muted-foreground">Current: <span className="font-600 text-foreground">{currentStep.name}</span></span>
         </div>
       )}
@@ -633,13 +656,13 @@ function InstanceRow({ instance, template, onOpen, onReassign, userProfiles }: I
         <div className="flex flex-wrap gap-x-3 gap-y-1 mb-2 px-0.5">
           {assigneeName && (
             <div className="flex items-center gap-1">
-              <User size={10} className="text-violet-500 shrink-0" />
+              <User size={10} className="shrink-0" style={{ color: 'var(--izou-highlight)' }} />
               <span className="text-[10px] text-muted-foreground font-500">{assigneeName}</span>
             </div>
           )}
           {assignedAt && (
             <div className="flex items-center gap-1">
-              <Calendar size={10} className="text-violet-500 shrink-0" />
+              <Calendar size={10} className="shrink-0" style={{ color: 'var(--izou-highlight)' }} />
               <span className="text-[10px] text-muted-foreground">{formatDateTime(assignedAt)}</span>
             </div>
           )}
@@ -653,8 +676,11 @@ function InstanceRow({ instance, template, onOpen, onReassign, userProfiles }: I
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${instance.instanceStatus === 'completed' ? 'bg-emerald-500' : instance.instanceStatus === 'cancelled' ? 'bg-red-400' : 'bg-indigo-500'}`}
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${progress}%`,
+                backgroundColor: instance.instanceStatus === 'completed' ? 'var(--izou-success)' : instance.instanceStatus === 'cancelled' ? 'var(--izou-danger)' : 'var(--izou-secondary)',
+              }}
             />
           </div>
         </div>
@@ -665,12 +691,13 @@ function InstanceRow({ instance, template, onOpen, onReassign, userProfiles }: I
           {instance.instanceStatus === 'active' && onReassign && (
             <button
               onClick={onReassign}
-              className="flex items-center gap-1 px-2 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 text-[10px] font-600 rounded-md border border-violet-200 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-600 rounded-md border transition-colors"
+              style={{ backgroundColor: 'var(--izou-highlight-light)', color: 'var(--izou-highlight)', borderColor: 'var(--izou-highlight-light)' }}
             >
               <UserCog size={10} /> Reassign
             </button>
           )}
-          <span className="text-[10px] font-600 text-indigo-600 group-hover:text-indigo-700 flex items-center gap-1">
+          <span className="text-[10px] font-600 flex items-center gap-1" style={{ color: 'var(--izou-secondary)' }}>
             View <ChevronRight size={10} />
           </span>
         </div>
@@ -774,8 +801,8 @@ function ReassignStepModal({ instance, template, onClose, onReassigned, currentU
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-              <UserCog size={15} className="text-violet-700" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-highlight-light)' }}>
+              <UserCog size={15} style={{ color: 'var(--izou-highlight)' }} />
             </div>
             <div>
               <h3 className="text-sm font-700 text-foreground">Reassign / Delegate Step</h3>
@@ -871,7 +898,8 @@ function ReassignStepModal({ instance, template, onClose, onReassigned, currentU
                 <button
                   onClick={handleReassign}
                   disabled={saving || !newRole || !selectedStepId}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-600 rounded-lg transition-colors disabled:opacity-60"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-white text-sm font-600 rounded-lg transition-colors disabled:opacity-60"
+                  style={{ backgroundColor: 'var(--izou-highlight)' }}
                 >
                   {saving ? <Loader2 size={13} className="animate-spin" /> : <UserCog size={13} />}
                   Confirm Reassignment
@@ -1136,7 +1164,7 @@ export default function WorkflowInstancesContent() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--izou-secondary)' }}>
               <Activity size={16} className="text-white" />
             </div>
             <h1 className="text-2xl font-800 text-foreground">Workflow Instances</h1>
@@ -1152,7 +1180,7 @@ export default function WorkflowInstancesContent() {
         >
           <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           {realtimeBadge > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-indigo-500 text-white text-[10px] font-700 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 text-white text-[10px] font-700 rounded-full flex items-center justify-center shadow-sm animate-pulse" style={{ backgroundColor: 'var(--izou-secondary)' }}>
               {realtimeBadge > 9 ? '9+' : realtimeBadge}
             </span>
           )}
@@ -1162,25 +1190,25 @@ export default function WorkflowInstancesContent() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {[
-          { label: 'Active', value: stats.active, color: 'text-blue-700', bg: 'bg-blue-50 border-blue-100', dot: 'bg-blue-500' },
-          { label: 'Completed', value: stats.completed, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-100', dot: 'bg-emerald-500' },
-          { label: 'Escalated', value: stats.escalated, color: 'text-orange-700', bg: 'bg-orange-50 border-orange-100', dot: 'bg-orange-500', badge: newEscalationCount },
-          { label: 'On Hold', value: stats.onHold, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-100', dot: 'bg-amber-500' },
-          { label: 'Cancelled', value: stats.cancelled, color: 'text-red-700', bg: 'bg-red-50 border-red-100', dot: 'bg-red-500' },
+          { label: 'Active', value: stats.active, color: 'var(--izou-secondary)', bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)', dot: 'var(--izou-secondary)' },
+          { label: 'Completed', value: stats.completed, color: 'var(--izou-success)', bg: 'var(--izou-success-light)', border: 'var(--izou-success-light)', dot: 'var(--izou-success)' },
+          { label: 'Escalated', value: stats.escalated, color: '#C2410C', bg: '#FFF1E0', border: '#FFE0BD', dot: '#C2410C', badge: newEscalationCount },
+          { label: 'On Hold', value: stats.onHold, color: 'var(--izou-warning)', bg: 'var(--izou-warning-light)', border: 'var(--izou-warning-light)', dot: 'var(--izou-warning)' },
+          { label: 'Cancelled', value: stats.cancelled, color: 'var(--izou-danger)', bg: 'var(--izou-danger-light)', border: 'var(--izou-danger-light)', dot: 'var(--izou-danger)' },
         ].map((s) => (
           <div
             key={s.label}
-            className={`relative flex items-center gap-3 p-3 rounded-xl border ${s.bg}`}
+            className="relative flex items-center gap-3 p-3 rounded-xl border"
             onClick={s.label === 'Escalated' && newEscalationCount > 0 ? () => { setFilterStatus('escalated'); setNewEscalationCount(0); } : undefined}
-            style={s.label === 'Escalated' && newEscalationCount > 0 ? { cursor: 'pointer' } : undefined}
+            style={{ backgroundColor: s.bg, borderColor: s.border, cursor: s.label === 'Escalated' && newEscalationCount > 0 ? 'pointer' : undefined }}
           >
-            <div className={`w-2 h-2 rounded-full ${s.dot} shrink-0`} />
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
             <div>
-              <p className={`text-lg font-800 ${s.color}`}>{s.value}</p>
+              <p className="text-lg font-800" style={{ color: s.color }}>{s.value}</p>
               <p className="text-[10px] text-muted-foreground">{s.label}</p>
             </div>
             {'badge' in s && (s as any).badge > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-orange-500 text-white text-[10px] font-700 rounded-full flex items-center justify-center shadow-sm animate-pulse">
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 text-white text-[10px] font-700 rounded-full flex items-center justify-center shadow-sm animate-pulse" style={{ backgroundColor: '#C2410C' }}>
                 {(s as any).badge > 9 ? '9+' : (s as any).badge}
               </span>
             )}

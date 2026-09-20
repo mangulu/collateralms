@@ -22,10 +22,10 @@ type ActionType = 'approve' | 'reject' | 'under_review';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<DocumentApprovalStatus, { label: string; textColor: string; bgColor: string; borderColor: string; dot: string; icon: React.ReactNode }> = {
-  pending:      { label: 'Pending',      textColor: 'text-amber-700',  bgColor: 'bg-amber-50',   borderColor: 'border-amber-200',  dot: 'bg-amber-500',  icon: <Clock size={12} /> },
-  under_review: { label: 'Under Review', textColor: 'text-blue-700',   bgColor: 'bg-blue-50',    borderColor: 'border-blue-200',   dot: 'bg-blue-500',   icon: <Eye size={12} /> },
-  approved:     { label: 'Approved',     textColor: 'text-green-700',  bgColor: 'bg-green-50',   borderColor: 'border-green-200',  dot: 'bg-green-500',  icon: <CheckCircle size={12} /> },
-  rejected:     { label: 'Rejected',     textColor: 'text-red-700',    bgColor: 'bg-red-50',     borderColor: 'border-red-200',    dot: 'bg-red-500',    icon: <XCircle size={12} /> },
+  pending:      { label: 'Pending',      textColor: 'var(--izou-warning)',   bgColor: 'var(--izou-warning-light)',   borderColor: 'var(--izou-warning-light)',   dot: 'var(--izou-warning)',   icon: <Clock size={12} /> },
+  under_review: { label: 'Under Review', textColor: 'var(--izou-secondary)', bgColor: 'var(--izou-secondary-light)', borderColor: 'var(--izou-secondary-light)', dot: 'var(--izou-secondary)', icon: <Eye size={12} /> },
+  approved:     { label: 'Approved',     textColor: 'var(--izou-success)',   bgColor: 'var(--izou-success-light)',   borderColor: 'var(--izou-success-light)',   dot: 'var(--izou-success)',   icon: <CheckCircle size={12} /> },
+  rejected:     { label: 'Rejected',     textColor: 'var(--izou-danger)',    bgColor: 'var(--izou-danger-light)',    borderColor: 'var(--izou-danger-light)',    dot: 'var(--izou-danger)',    icon: <XCircle size={12} /> },
 };
 
 function formatDate(iso: string | null): string {
@@ -52,11 +52,11 @@ function StatsBar({ stats, activeFilter, onFilter }: {
   onFilter: (f: DocumentApprovalStatus | 'all') => void;
 }) {
   const cards = [
-    { key: 'all' as const,          label: 'All',          value: stats.total,       icon: FileText,    color: 'text-gray-700',   bg: 'bg-gray-50',   border: 'border-gray-200' },
-    { key: 'pending' as const,      label: 'Pending',      value: stats.pending,     icon: Clock,       color: 'text-amber-700',  bg: 'bg-amber-50',  border: 'border-amber-200' },
-    { key: 'under_review' as const, label: 'Under Review', value: stats.underReview, icon: FileSearch,  color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200' },
-    { key: 'approved' as const,     label: 'Approved',     value: stats.approved,    icon: FileCheck,   color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-200' },
-    { key: 'rejected' as const,     label: 'Rejected',     value: stats.rejected,    icon: FileMinus,   color: 'text-red-700',    bg: 'bg-red-50',    border: 'border-red-200' },
+    { key: 'all' as const,          label: 'All',          value: stats.total,       icon: FileText,    color: 'var(--izou-muted)',      bg: 'var(--izou-bg)',              border: 'var(--izou-border)' },
+    { key: 'pending' as const,      label: 'Pending',      value: stats.pending,     icon: Clock,       color: 'var(--izou-warning)',    bg: 'var(--izou-warning-light)',   border: 'var(--izou-warning-light)' },
+    { key: 'under_review' as const, label: 'Under Review', value: stats.underReview, icon: FileSearch,  color: 'var(--izou-secondary)',  bg: 'var(--izou-secondary-light)', border: 'var(--izou-secondary-light)' },
+    { key: 'approved' as const,     label: 'Approved',     value: stats.approved,    icon: FileCheck,   color: 'var(--izou-success)',    bg: 'var(--izou-success-light)',   border: 'var(--izou-success-light)' },
+    { key: 'rejected' as const,     label: 'Rejected',     value: stats.rejected,    icon: FileMinus,   color: 'var(--izou-danger)',     bg: 'var(--izou-danger-light)',    border: 'var(--izou-danger-light)' },
   ];
 
   return (
@@ -67,13 +67,14 @@ function StatsBar({ stats, activeFilter, onFilter }: {
           <button
             key={key}
             onClick={() => onFilter(key)}
-            className={`flex flex-col gap-1 p-3 rounded-xl border transition-all text-left ${bg} ${border} ${isActive ? 'ring-2 ring-blue-400 shadow-md' : 'hover:shadow-sm'}`}
+            className={`flex flex-col gap-1 p-3 rounded-xl border transition-all text-left ${isActive ? 'ring-2 ring-primary/40 shadow-md' : 'hover:shadow-sm'}`}
+            style={{ backgroundColor: bg, borderColor: border }}
           >
             <div className="flex items-center justify-between">
-              <Icon size={15} className={color} />
-              <span className={`text-lg font-bold ${color}`}>{value}</span>
+              <Icon size={15} style={{ color }} />
+              <span className="text-lg font-bold" style={{ color }}>{value}</span>
             </div>
-            <span className={`text-xs font-medium ${color}`}>{label}</span>
+            <span className="text-xs font-medium" style={{ color }}>{label}</span>
           </button>
         );
       })}
@@ -264,8 +265,11 @@ function DetailPanel({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <h2 className="text-base font-semibold text-gray-900 truncate">{doc.fileName}</h2>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${statusCfg.bgColor} ${statusCfg.textColor} ${statusCfg.borderColor}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0"
+              style={{ backgroundColor: statusCfg.bgColor, color: statusCfg.textColor, borderColor: statusCfg.borderColor }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusCfg.dot }} />
               {statusCfg.label}
             </span>
           </div>
@@ -1071,13 +1075,16 @@ export default function DocumentApprovalContent() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="shrink-0 w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                              <FileText size={13} className="text-blue-600" />
+                            <div className="shrink-0 w-7 h-7 rounded-lg border flex items-center justify-center" style={{ backgroundColor: 'var(--izou-secondary-light)', borderColor: 'var(--izou-secondary-light)' }}>
+                              <FileText size={13} style={{ color: 'var(--izou-secondary)' }} />
                             </div>
                             <p className="text-sm font-semibold text-gray-900 truncate">{doc.fileName}</p>
                           </div>
-                          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${statusCfg.bgColor} ${statusCfg.textColor} ${statusCfg.borderColor}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                          <span
+                            className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0"
+                            style={{ backgroundColor: statusCfg.bgColor, color: statusCfg.textColor, borderColor: statusCfg.borderColor }}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: statusCfg.dot }} />
                             {statusCfg.label}
                           </span>
                         </div>
