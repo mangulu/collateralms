@@ -1,8 +1,10 @@
 'use client';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2, Package, MapPin, ShieldCheck, ArrowUpDown, Eye, ExternalLink, Info, Calendar, User, Tag, HardDrive, Hash } from 'lucide-react';
+import { Upload, Search, FileText, Trash2, Download, ChevronDown, X, RefreshCw, Clock, AlertCircle, GitBranch, Link2, Filter, FolderOpen, File, FileImage, FileType2, Package, MapPin, ShieldCheck, ArrowUpDown, Eye, ExternalLink, Info, Calendar, User, Tag, HardDrive, Hash, ListChecks, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { documentService, CollateralDocument, DocumentType, DocumentVersionAudit } from '@/lib/supabase/documentService';
 import { collateralService, CollateralRecord } from '@/lib/supabase/collateralService';
+import { collateralTypeRequiredDocsService, CollateralTypeRequiredDoc } from '@/lib/supabase/collateralTypeRequiredDocsService';
+import { resolveDocType, docTypeMatchesRequired } from '@/lib/documentTypeMatching';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import Icon from '@/components/ui/AppIcon';
@@ -135,12 +137,16 @@ interface UploadModalProps {
   onUploaded: () => void;
   userId: string;
   userName: string;
+  initialDocType?: DocumentType;
 }
 
-function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName }: UploadModalProps) {
+function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName, initialDocType }: UploadModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [docType, setDocType] = useState<DocumentType>('Other');
+  const [docType, setDocType] = useState<DocumentType>(initialDocType ?? 'Other');
+  const typeOptions = initialDocType && !DOCUMENT_TYPES.includes(initialDocType)
+    ? [initialDocType, ...DOCUMENT_TYPES]
+    : DOCUMENT_TYPES;
   const [notes, setNotes] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -263,7 +269,7 @@ function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName }
                 onChange={(e) => setDocType(e.target.value as DocumentType)}
                 className="w-full appearance-none border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 pr-8"
               >
-                {DOCUMENT_TYPES.map((t) => (
+                {typeOptions.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
@@ -1258,11 +1264,225 @@ function AuditTrailTab({ collateralRecords }: AuditTrailTabProps) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Required vs Uploaded Checklist Tab ──────────────────────────────────────
 
 interface DocumentWithRecord extends CollateralDocument {
   collateralRecord?: CollateralRecord;
 }
+
+interface ChecklistRow {
+  record: CollateralRecord;
+  statuses: { name: string; uploaded: boolean; fileName?: string }[];
+  uploadedCount: number;
+  totalCount: number;
+  complete: boolean;
+}
+
+interface ChecklistTabProps {
+  collateralRecords: CollateralRecord[];
+  documents: DocumentWithRecord[];
+  requiredDocsByType: Record<string, CollateralTypeRequiredDoc[]>;
+  loading: boolean;
+  onUploadFor: (record: CollateralRecord, docType: DocumentType) => void;
+}
+
+function ChecklistTab({ collateralRecords, documents, requiredDocsByType, loading, onUploadFor }: ChecklistTabProps) {
+  const [filter, setFilter] = useState<'incomplete' | 'complete' | 'all'>('incomplete');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const rows: ChecklistRow[] = React.useMemo(() => {
+    return collateralRecords
+      .map((record): ChecklistRow | null => {
+        const mandatoryDocs = (requiredDocsByType[record.type] ?? []).filter((d) => d.isMandatory);
+        if (mandatoryDocs.length === 0) return null;
+        const uploadedForRecord = documents.filter((d) => d.collateralRecordId === record.id);
+        const statuses = mandatoryDocs.map((req) => {
+          const match = uploadedForRecord.find((u) => docTypeMatchesRequired(u.documentType, req.documentName));
+          return { name: req.documentName, uploaded: !!match, fileName: match?.fileName };
+        });
+        const uploadedCount = statuses.filter((s) => s.uploaded).length;
+        return {
+          record,
+          statuses,
+          uploadedCount,
+          totalCount: statuses.length,
+          complete: uploadedCount === statuses.length,
+        };
+      })
+      .filter((r): r is ChecklistRow => r !== null);
+  }, [collateralRecords, documents, requiredDocsByType]);
+
+  const completeCount = rows.filter((r) => r.complete).length;
+  const incompleteCount = rows.length - completeCount;
+  const totalMissing = rows.reduce((sum, r) => sum + (r.totalCount - r.uploadedCount), 0);
+
+  const filteredRows = rows.filter((r) => {
+    if (filter === 'complete') return r.complete;
+    if (filter === 'incomplete') return !r.complete;
+    return true;
+  });
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-border bg-white shrink-0 flex-wrap">
+        <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
+          {([
+            { key: 'incomplete', label: `Incomplete (${incompleteCount})` },
+            { key: 'complete', label: `Complete (${completeCount})` },
+            { key: 'all', label: `All (${rows.length})` },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                filter === key ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {loading ? 'Loading…' : `${totalMissing} missing document${totalMissing !== 1 ? 's' : ''} across ${incompleteCount} collateral record${incompleteCount !== 1 ? 's' : ''}`}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto">
+        {loading && (
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-12 bg-muted/50 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {!loading && rows.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+              <ListChecks size={24} className="text-muted-foreground" />
+            </div>
+            <h3 className="text-base font-semibold text-foreground mb-1">No required documents configured</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Admins can configure required documents per collateral type in Settings → Collateral Types to enable this checklist.
+            </p>
+          </div>
+        )}
+
+        {!loading && rows.length > 0 && filteredRows.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+            <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <CheckCircle2 size={24} className="text-green-600" />
+            </div>
+            <h3 className="text-base font-semibold text-foreground mb-1">
+              {filter === 'incomplete' ? 'Every collateral record is fully documented' : 'Nothing to show for this filter'}
+            </h3>
+          </div>
+        )}
+
+        {!loading && filteredRows.length > 0 && (
+          <table className="w-full text-left">
+            <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm z-10">
+              <tr>
+                {['Collateral', 'Type', 'Progress', 'Missing', ''].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filteredRows.map((row) => {
+                const pct = row.totalCount > 0 ? Math.round((row.uploadedCount / row.totalCount) * 100) : 0;
+                const isExpanded = expandedId === row.record.id;
+                const missing = row.statuses.filter((s) => !s.uploaded);
+                return (
+                  <React.Fragment key={row.record.id}>
+                    <tr
+                      className="hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => setExpandedId(isExpanded ? null : row.record.id)}
+                    >
+                      <td className="px-4 py-3">
+                        <p className="text-xs font-medium text-foreground">{row.record.collateralId}</p>
+                        <p className="text-xs text-muted-foreground truncate max-w-[160px]">{row.record.obligor}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs text-muted-foreground">{row.record.type}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 min-w-[140px]">
+                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden shrink-0">
+                            <div
+                              className={`h-full rounded-full ${row.complete ? 'bg-green-500' : row.uploadedCount > 0 ? 'bg-amber-500' : 'bg-red-400'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-foreground whitespace-nowrap">
+                            {row.uploadedCount}/{row.totalCount}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.complete ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
+                            <CheckCircle2 size={13} /> Complete
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
+                            <AlertCircle size={13} /> {missing.length} missing
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <ChevronRight size={14} className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={5} className="px-4 pb-4 pt-1 bg-muted/20">
+                          <ul className="space-y-1.5 max-w-xl">
+                            {row.statuses.map((s) => (
+                              <li
+                                key={s.name}
+                                className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-xs ${
+                                  s.uploaded ? 'bg-green-50 border-green-200' : 'bg-red-50/60 border-red-200/70'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2 min-w-0">
+                                  {s.uploaded ? (
+                                    <CheckCircle2 size={13} className="text-green-600 shrink-0" />
+                                  ) : (
+                                    <AlertCircle size={13} className="text-red-500 shrink-0" />
+                                  )}
+                                  <span className={`truncate ${s.uploaded ? 'text-green-800' : 'text-red-700'}`}>{s.name}</span>
+                                </span>
+                                {!s.uploaded && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); onUploadFor(row.record, resolveDocType(s.name)); }}
+                                    className="flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded-md shrink-0 transition-colors"
+                                  >
+                                    <Upload size={10} /> Upload
+                                  </button>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CollateralDocumentsContent() {
   const { user, userProfile } = useAuth();
@@ -1271,6 +1491,7 @@ export default function CollateralDocumentsContent() {
   // Data state
   const [documents, setDocuments] = useState<DocumentWithRecord[]>([]);
   const [collateralRecords, setCollateralRecords] = useState<CollateralRecord[]>([]);
+  const [requiredDocsByType, setRequiredDocsByType] = useState<Record<string, CollateralTypeRequiredDoc[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -1282,12 +1503,12 @@ export default function CollateralDocumentsContent() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Modal state
-  const [uploadModal, setUploadModal] = useState<CollateralRecord | null>(null);
+  const [uploadModal, setUploadModal] = useState<{ record: CollateralRecord; initialDocType?: DocumentType } | null>(null);
   const [uploadVersionModal, setUploadVersionModal] = useState<{ record: CollateralRecord; doc: CollateralDocument } | null>(null);
   const [versionModal, setVersionModal] = useState<{ docs: CollateralDocument[]; fileName: string } | null>(null);
   const [deleteModal, setDeleteModal] = useState<CollateralDocument | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [activeView, setActiveView] = useState<'documents' | 'pockets' | 'audit'>('documents');
+  const [activeView, setActiveView] = useState<'documents' | 'checklist' | 'pockets' | 'audit'>('documents');
   const [selectedPocketCollateral, setSelectedPocketCollateral] = useState<CollateralRecord | null>(null);
   const [viewerDoc, setViewerDoc] = useState<DocumentWithRecord | null>(null);
 
@@ -1301,8 +1522,12 @@ export default function CollateralDocumentsContent() {
     setLoading(true);
     setError(null);
     try {
-      const records = await collateralService.getAll();
+      const [records, requiredGrouped] = await Promise.all([
+        collateralService.getAll(),
+        collateralTypeRequiredDocsService.getAllGrouped(),
+      ]);
       setCollateralRecords(records);
+      setRequiredDocsByType(requiredGrouped);
 
       // Fetch documents for all collateral records in parallel
       const docArrays = await Promise.all(
@@ -1433,6 +1658,14 @@ export default function CollateralDocumentsContent() {
               <FileText size={13} /> Documents
             </button>
             <button
+              onClick={() => setActiveView('checklist')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'checklist' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ListChecks size={13} /> Checklist
+            </button>
+            <button
               onClick={() => setActiveView('pockets')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 activeView === 'pockets' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
@@ -1463,7 +1696,7 @@ export default function CollateralDocumentsContent() {
                 value=""
                 onChange={(e) => {
                   const rec = collateralRecords.find((r) => r.id === e.target.value);
-                  if (rec) setUploadModal(rec);
+                  if (rec) setUploadModal({ record: rec });
                 }}
               >
                 <option value="" disabled>Upload to collateral…</option>
@@ -1480,7 +1713,7 @@ export default function CollateralDocumentsContent() {
             <button
               onClick={() => {
                 if (collateralRecords.length > 0) {
-                  setUploadModal(collateralRecords[0]);
+                  setUploadModal({ record: collateralRecords[0] });
                 } else {
                   setError('No collateral records found. Please add a collateral record before uploading documents.');
                 }
@@ -1517,7 +1750,7 @@ export default function CollateralDocumentsContent() {
       </div>
 
       {/* Filters */}
-      <div className={`flex items-center gap-3 px-6 py-3 border-b border-border bg-white shrink-0 flex-wrap ${activeView === 'pockets' ? 'hidden' : ''}`}>
+      <div className={`flex items-center gap-3 px-6 py-3 border-b border-border bg-white shrink-0 flex-wrap ${activeView !== 'documents' ? 'hidden' : ''}`}>
         {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -1777,6 +2010,19 @@ export default function CollateralDocumentsContent() {
         </div>
       )}
 
+      {/* Required vs Uploaded Checklist View */}
+      {activeView === 'checklist' && (
+        <div className="flex-1 overflow-auto flex flex-col min-h-0">
+          <ChecklistTab
+            collateralRecords={collateralRecords}
+            documents={documents}
+            requiredDocsByType={requiredDocsByType}
+            loading={loading}
+            onUploadFor={(record, docType) => setUploadModal({ record, initialDocType: docType })}
+          />
+        </div>
+      )}
+
       {/* Audit Trail View */}
       {activeView === 'audit' && (
         <div className="flex-1 overflow-auto flex flex-col min-h-0">
@@ -1787,7 +2033,8 @@ export default function CollateralDocumentsContent() {
       {/* Modals */}
       {uploadModal && (
         <UploadModal
-          collateralRecord={uploadModal}
+          collateralRecord={uploadModal.record}
+          initialDocType={uploadModal.initialDocType}
           onClose={() => setUploadModal(null)}
           onUploaded={fetchData}
           userId={userId}

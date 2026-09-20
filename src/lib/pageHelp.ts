@@ -528,14 +528,15 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
   },
   '/collateral-documents': {
     title: 'Documents Library',
-    narrative: 'The central store for every document attached to a collateral record — upload, version, preview inline, and audit every upload, rollback, and delete — plus a separate Security Pocket view.',
+    narrative: 'The central store for every document attached to a collateral record — upload, version, preview inline, and audit every upload, rollback, and delete — plus a Required vs Uploaded checklist and a separate Security Pocket view.',
     steps: [
-      'Switch between Documents, Pockets (Security Pocket), and Audit tabs',
+      'Switch between Documents, Checklist, Pockets (Security Pocket), and Audit tabs',
       'Click a document\'s type badge or the eye icon to preview it inline (PDF/image) or download it',
       '"Upload New Version" adds a newer file under the same document type — full version history is kept and can be rolled back to',
       'Deleting a document requires Collateral Delete/Edit permission',
       'Set an optional expiry date when uploading (or later from the document viewer) to flag time-bound documents like insurance certificates or valuation reports as Expiring Soon or Expired',
       'Filter the table by expiry status, or check the "Expiring / Expired" KPI card for an at-a-glance count',
+      'The Checklist tab compares every collateral record against its type\'s required documents (configured in Settings → Collateral Types) and lets you upload any missing one directly from the list',
       'In the Audit tab, filter uploads/rollbacks/deletes by action, collateral, or search term',
     ],
   },

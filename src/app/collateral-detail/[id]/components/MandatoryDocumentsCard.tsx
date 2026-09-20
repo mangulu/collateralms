@@ -7,7 +7,8 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { CollateralRecord } from '@/lib/supabase/collateralService';
 import { collateralTypeRequiredDocsService, CollateralTypeRequiredDoc } from '@/lib/supabase/collateralTypeRequiredDocsService';
-import { documentService, DocumentType } from '@/lib/supabase/documentService';
+import { documentService } from '@/lib/supabase/documentService';
+import { resolveDocType, docTypeMatchesRequired } from '@/lib/documentTypeMatching';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -40,115 +41,6 @@ function getFileIconDetail(mimeType: string) {
   if (mimeType?.includes('image')) return <FileImage size={16} className="text-blue-500" />;
   if (mimeType?.includes('word') || mimeType?.includes('document')) return <File size={16} className="text-indigo-500" />;
   return <FileText size={16} className="text-slate-500" />;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const VALID_DOC_TYPES: DocumentType[] = [
-  'Title Deed',
-  'Charge Certificate',
-  'Valuation Report',
-  'BRELA Confirmation',
-  'Insurance Certificate',
-  'Board Resolution',
-  'Deed',
-  'Appraisal',
-  'Insurance Policy',
-  'Other',
-  // Motor Vehicle
-  'Vehicle Registration Certificate (Original)',
-  'Logbook (Original)',
-  'TRA Encumbrance Search Certificate',
-  'Comprehensive Insurance Policy',
-  'Hire Purchase / Charge Agreement',
-  // Mortgage
-  'Title Deed (Original)',
-  'Valuation Report (Certified)',
-  'Land Rent Clearance Certificate',
-  'Mortgage Deed / Charge Instrument',
-  'Lands Registry Search Certificate',
-  'Survey Plan / Plot Map',
-  'Building Permit (if applicable)',
-  // Debenture
-  'Debenture Deed (Executed)',
-  'Certificate of Incorporation',
-  'Board Resolution (Authorising Charge)',
-  'BRELA Registration Certificate',
-  'Memorandum & Articles of Association',
-  'Audited Financial Statements (Latest)',
-  'Asset Schedule / Inventory List',
-  // Shares (DSE)
-  'Share Certificate(s) (Original)',
-  'DSE Pledge Confirmation Letter',
-  'CDS Account Statement',
-  'Board Resolution (Authorising Pledge)',
-  'Share Transfer Form (Blank, Signed)',
-  'DSE Registry Search',
-  // FDR
-  'Fixed Deposit Receipt (Original)',
-  'Bank Lien Letter / Pledge Confirmation',
-  'Account Statement',
-  'Deed of Assignment',
-  // Guarantee
-  'Guarantee Deed (Executed)',
-  'Guarantor Financial Statements',
-  'Board Resolution (if Corporate Guarantor)',
-  'Certificate of Incorporation (if Corporate)',
-  'Guarantor ID / KYC Documents',
-  // Ship/Vessel
-  'Ship Registration Certificate (TASAC)',
-  'Mortgage of Ship Deed',
-  'TASAC Encumbrance Search',
-  'Hull & Machinery Insurance Policy',
-  'Valuation / Survey Report',
-  'Classification Society Certificate',
-  'Crew & Manning Certificate',
-];
-
-// Map a free-text required-doc name to the closest DocumentType enum value.
-// Priority: 1) exact match (case-insensitive), 2) keyword heuristics, 3) 'Other'
-function resolveDocType(name: string): DocumentType {
-  const trimmed = name.trim();
-  const lower = trimmed.toLowerCase();
-
-  // 1. Exact match against known DocumentType values (case-insensitive)
-  const exactMatch = VALID_DOC_TYPES.find((t) => t.toLowerCase() === lower);
-  if (exactMatch) return exactMatch;
-
-  // 2. Keyword heuristics
-  if (lower.includes('title') || lower.includes('deed')) return 'Title Deed';
-  if (lower.includes('charge')) return 'Charge Certificate';
-  if (lower.includes('valuation') || lower.includes('appraisal')) return 'Valuation Report';
-  if (lower.includes('brela')) return 'BRELA Confirmation';
-  if (lower.includes('insurance')) return 'Insurance Certificate';
-  if (lower.includes('board') || lower.includes('resolution')) return 'Board Resolution';
-
-  return 'Other';
-}
-
-/**
- * Check whether a stored document_type value matches a required document name.
- * Uses three strategies:
- *   1. Direct case-insensitive match between stored type and required name
- *   2. Stored type matches the resolved DocumentType of the required name
- *   3. Required name matches the resolved DocumentType of the stored type
- */
-function docTypeMatchesRequired(storedDocType: string, requiredDocName: string): boolean {
-  const storedLower = storedDocType.toLowerCase().trim();
-  const requiredLower = requiredDocName.toLowerCase().trim();
-
-  // Strategy 1: direct name match
-  if (storedLower === requiredLower) return true;
-
-  // Strategy 2: stored type equals resolved type of required name
-  const resolvedRequired = resolveDocType(requiredDocName).toLowerCase().trim();
-  if (storedLower === resolvedRequired) return true;
-
-  // Strategy 3: resolved type of stored value equals resolved type of required name
-  const resolvedStored = resolveDocType(storedDocType).toLowerCase().trim();
-  if (resolvedStored === resolvedRequired) return true;
-
-  return false;
 }
 
 // ─── File Preview Panel ───────────────────────────────────────────────────────
