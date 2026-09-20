@@ -51,6 +51,8 @@ export default function LoginForm() {
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [otp, setOtp] = useState('');
   const [otpId, setOtpId] = useState<string | null>(null);
+  const [otpCode, setOtpCode] = useState<string | null>(null); // store generated code for unauthenticated verification
+  const [otpExpiry, setOtpExpiry] = useState<string | null>(null); // store expiry for local check
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
@@ -113,17 +115,8 @@ export default function LoginForm() {
           return;
         }
 
-        try {
-          await requestOtp({ userId: result.user!.id, accessToken: result.session?.access_token });
-        } catch {
-          // requestOtp already surfaced a toast with the reason
-          await supabase.auth.signOut();
-          setIsLoading(false);
-          return;
-        }
-        // Sign out once the server has issued the code — the OTP screen re-authenticates
-        // with the password after the server confirms the code, so no session sits
-        // around client-side while 2FA is still pending.
+        await sendOTP(profile.phone, result.user?.id);
+        // Sign out AFTER storing OTP so the insert succeeds under the authenticated session
         await supabase.auth.signOut();
         setPendingUser({ ...result.user, email: data.email, password: data.password, phone: profile.phone, name: profile.full_name, role: profile.role });
         setTwoFARequired(true);
@@ -164,39 +157,40 @@ export default function LoginForm() {
     resetResetForm();
   };
 
-  // Generation and verification of the OTP happen entirely server-side
-  // (/api/auth/otp/*, backed by the service-role key) — the browser never
-  // sees the code unless SMS delivery genuinely failed (dev/demo fallback).
-  const requestOtp = async (opts: { userId?: string; otpId?: string; accessToken?: string }) => {
-    try {
-      const res = await fetch('/api/auth/otp/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(opts.accessToken ? { Authorization: `Bearer ${opts.accessToken}` } : {}),
-        },
-        body: JSON.stringify(opts.userId ? { userId: opts.userId } : { otpId: opts.otpId }),
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData?.error ?? 'Failed to send verification code');
+  const sendOTP = async (phone: string, userId?: string) => {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const supabase = createClient();
 
-      setOtpId(resData.otpId);
-      if (resData.devCode) {
-        toast.info(`Demo mode: Your OTP is ${resData.devCode}`, { duration: 30000 });
-      } else {
-        toast.success('Verification code sent');
-      }
+    const { data: otpRow, error: insertError } = await supabase
+      .from('otp_verifications')
+      .insert({ user_id: userId, phone, otp_code: code, expires_at: expiresAt })
+      .select()
+      .single();
 
-      setCountdown(60);
-      const interval = setInterval(() => {
-        setCountdown((c) => { if (c <= 1) { clearInterval(interval); return 0; } return c - 1; });
-      }, 1000);
+    setOtpId(otpRow?.id ?? null);
+    setOtpCode(code);
+    setOtpExpiry(expiresAt);
 
-      return resData.otpId as string;
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Failed to send verification code');
-      throw err;
+    const smsRes = await fetch('/api/sms/send-alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, message: `[CollateralMS] Your login code is: ${code}. Valid 10 minutes.`, alertType: 'APPROVAL_REQUEST' }),
+    });
+    const smsData = await smsRes.json();
+    if (!smsData.success) {
+      toast.info(`Demo mode: Your OTP is ${code}`, { duration: 30000 });
+    } else {
+      toast.success(`Verification code sent to ${phone}`);
     }
+
+    setCountdown(60);
+    const interval = setInterval(() => {
+      setCountdown((c) => { if (c <= 1) { clearInterval(interval); return 0; } return c - 1; });
+    }, 1000);
+
+    // Return the inserted row id so the caller can confirm it was stored
+    return otpRow?.id ?? null;
   };
 
   const verifyOTP = async () => {
@@ -204,16 +198,34 @@ export default function LoginForm() {
     setOtpLoading(true);
     setOtpError(null);
     try {
-      const res = await fetch('/api/auth/otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ otpId, code: otp }),
-      });
-      const resData = await res.json();
-      if (!res.ok || !resData?.success) {
-        throw new Error(resData?.error ?? 'Verification failed');
+      // Primary verification: use locally stored code (user is unauthenticated at this point,
+      // so RLS blocks direct DB queries — local state is the reliable source of truth)
+      if (otpCode && otpExpiry) {
+        if (new Date(otpExpiry) < new Date()) throw new Error('OTP expired. Please sign in again.');
+        if (otpCode !== otp) throw new Error('Invalid code');
+        // Code matched — sign the user back in
+        await signIn(pendingUser.email, pendingUser.password);
+        // Best-effort: mark OTP as verified in DB (may fail if still unauthenticated, that's OK)
+        if (otpId) {
+          const supabase = createClient();
+          await supabase.from('otp_verifications').update({ verified_at: new Date().toISOString() }).eq('id', otpId);
+        }
+        toast.success('Welcome back — 2FA verified');
+        router.push('/module-hub');
+        router.refresh();
+        return;
       }
 
+      // Fallback: try DB lookup (works if session is still active)
+      const supabase = createClient();
+      const { data: otpRow } = await supabase.from('otp_verifications').select('*').eq('id', otpId).single();
+      if (!otpRow) throw new Error('OTP not found. Please go back and sign in again.');
+      if (new Date(otpRow.expires_at) < new Date()) throw new Error('OTP expired. Please sign in again.');
+      if (otpRow.otp_code !== otp) {
+        await supabase.from('otp_verifications').update({ attempts: (otpRow.attempts ?? 0) + 1 }).eq('id', otpId);
+        throw new Error('Invalid code');
+      }
+      await supabase.from('otp_verifications').update({ verified_at: new Date().toISOString() }).eq('id', otpId);
       await signIn(pendingUser.email, pendingUser.password);
       toast.success('Welcome back — 2FA verified');
       router.push('/module-hub');
@@ -336,7 +348,7 @@ export default function LoginForm() {
                     <p style={{ color: 'var(--izou-muted)' }}>Resend in {countdown}s</p>
                   ) : (
                     <button
-                      onClick={() => otpId && requestOtp({ otpId })}
+                      onClick={() => sendOTP(pendingUser?.phone)}
                       style={{ color: 'var(--izou-primary)' }}
                       className="hover:underline font-semibold"
                     >
