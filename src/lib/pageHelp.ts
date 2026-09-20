@@ -534,6 +534,8 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
       'Click a document\'s type badge or the eye icon to preview it inline (PDF/image) or download it',
       '"Upload New Version" adds a newer file under the same document type — full version history is kept and can be rolled back to',
       'Deleting a document requires Collateral Delete/Edit permission',
+      'Set an optional expiry date when uploading (or later from the document viewer) to flag time-bound documents like insurance certificates or valuation reports as Expiring Soon or Expired',
+      'Filter the table by expiry status, or check the "Expiring / Expired" KPI card for an at-a-glance count',
       'In the Audit tab, filter uploads/rollbacks/deletes by action, collateral, or search term',
     ],
   },

@@ -108,6 +108,25 @@ function getFileIcon(mimeType: string) {
   return <FileText size={18} className="text-slate-500" />;
 }
 
+type ExpiryStatus = 'expired' | 'expiring-soon' | 'valid' | 'none';
+
+const EXPIRY_SOON_WINDOW_DAYS = 30;
+
+function getExpiryStatus(expiryDate?: string | null): ExpiryStatus {
+  if (!expiryDate) return 'none';
+  const days = (new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  if (days < 0) return 'expired';
+  if (days <= EXPIRY_SOON_WINDOW_DAYS) return 'expiring-soon';
+  return 'valid';
+}
+
+const EXPIRY_STATUS_META: Record<ExpiryStatus, { label: string; color: string; bg: string; border: string }> = {
+  expired:         { label: 'Expired',        color: 'text-red-700',     bg: 'bg-red-50',     border: 'border-red-200' },
+  'expiring-soon': { label: 'Expiring Soon',  color: 'text-amber-700',   bg: 'bg-amber-50',   border: 'border-amber-200' },
+  valid:           { label: 'Valid',          color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  none:            { label: 'Not Set',        color: 'text-slate-500',  bg: 'bg-slate-50',   border: 'border-slate-200' },
+};
+
 // ─── Upload Modal ─────────────────────────────────────────────────────────────
 
 interface UploadModalProps {
@@ -123,6 +142,7 @@ function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName }
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docType, setDocType] = useState<DocumentType>('Other');
   const [notes, setNotes] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -164,6 +184,7 @@ function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName }
       notes,
       userId,
       userName,
+      expiryDate || null,
     );
     setUploading(false);
     if (result.error) {
@@ -250,6 +271,19 @@ function UploadModal({ collateralRecord, onClose, onUploaded, userId, userName }
             </div>
           </div>
 
+          {/* Expiry date */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Expiry Date <span className="text-muted-foreground font-normal">(optional, for time-bound documents)</span>
+            </label>
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+
           {/* Notes */}
           <div>
             <label className="block text-xs font-medium text-foreground mb-1.5">
@@ -304,6 +338,7 @@ function UploadVersionModal({ collateralRecord, existingDoc, onClose, onUploaded
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
+  const [expiryDate, setExpiryDate] = useState(existingDoc.expiryDate ?? '');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -345,6 +380,7 @@ function UploadVersionModal({ collateralRecord, existingDoc, onClose, onUploaded
       notes,
       userId,
       userName,
+      expiryDate || null,
     );
     setUploading(false);
     if (result.error) {
@@ -418,6 +454,19 @@ function UploadVersionModal({ collateralRecord, existingDoc, onClose, onUploaded
             <div className="w-full border border-border rounded-lg px-3 py-2 text-sm text-muted-foreground bg-muted/30">
               {existingDoc.documentType}
             </div>
+          </div>
+
+          {/* Expiry date */}
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1.5">
+              Expiry Date <span className="text-muted-foreground font-normal">(optional, for time-bound documents)</span>
+            </label>
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
           </div>
 
           {/* Notes */}
@@ -576,6 +625,7 @@ interface DocumentViewerDrawerProps {
   onUploadVersion: () => void;
   onViewVersions: () => void;
   onDelete: () => void;
+  onUpdateExpiry: (expiryDate: string | null) => Promise<void>;
   canDelete: boolean;
 }
 
@@ -587,12 +637,26 @@ function DocumentViewerDrawer({
   onUploadVersion,
   onViewVersions,
   onDelete,
+  onUpdateExpiry,
   canDelete,
 }: DocumentViewerDrawerProps) {
   const meta = DOC_TYPE_META[doc.documentType] ?? DOC_TYPE_META['Other'];
   const isPdf = doc.mimeType?.includes('pdf');
   const isImage = doc.mimeType?.includes('image');
   const isViewable = isPdf || isImage;
+
+  const [editingExpiry, setEditingExpiry] = useState(false);
+  const [expiryDraft, setExpiryDraft] = useState(doc.expiryDate ?? '');
+  const [savingExpiry, setSavingExpiry] = useState(false);
+  const expiryStatus = getExpiryStatus(doc.expiryDate);
+  const expiryMeta = EXPIRY_STATUS_META[expiryStatus];
+
+  const handleSaveExpiry = async () => {
+    setSavingExpiry(true);
+    await onUpdateExpiry(expiryDraft || null);
+    setSavingExpiry(false);
+    setEditingExpiry(false);
+  };
 
   return (
     <>
@@ -717,6 +781,54 @@ function DocumentViewerDrawer({
               <MetaRow icon={<Calendar size={13} className="text-muted-foreground" />} label="Upload Date" value={formatDateTime(doc.createdAt)} />
               {doc.workflowStage && (
                 <MetaRow icon={<Info size={13} className="text-muted-foreground" />} label="Workflow Stage" value={doc.workflowStage} />
+              )}
+            </div>
+
+            {/* Expiry date */}
+            <div className="px-4 py-3 border-b border-border">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Expiry Date</p>
+                {!editingExpiry && (
+                  <button
+                    onClick={() => { setExpiryDraft(doc.expiryDate ?? ''); setEditingExpiry(true); }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {doc.expiryDate ? 'Edit' : 'Set'}
+                  </button>
+                )}
+              </div>
+              {editingExpiry ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    value={expiryDraft}
+                    onChange={(e) => setExpiryDraft(e.target.value)}
+                    className="flex-1 min-w-0 border border-border rounded-lg px-2 py-1.5 text-xs text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <button
+                    onClick={handleSaveExpiry}
+                    disabled={savingExpiry}
+                    className="px-2 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingExpiry(false)}
+                    disabled={savingExpiry}
+                    className="px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : doc.expiryDate ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-foreground">{formatDate(doc.expiryDate)}</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${expiryMeta.bg} ${expiryMeta.color} ${expiryMeta.border}`}>
+                    {expiryMeta.label}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Not set</span>
               )}
             </div>
 
@@ -860,6 +972,21 @@ function DocumentRow({
           <p className="text-xs font-medium text-foreground">{doc.uploadedByName || 'Unknown'}</p>
           <p className="text-xs text-muted-foreground">{formatDate(doc.createdAt)}</p>
         </div>
+      </td>
+      <td className="px-4 py-3">
+        {(() => {
+          const status = getExpiryStatus(doc.expiryDate);
+          if (status === 'none') return <span className="text-xs text-muted-foreground">—</span>;
+          const meta = EXPIRY_STATUS_META[status];
+          return (
+            <div>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${meta.bg} ${meta.color} ${meta.border}`}>
+                {meta.label}
+              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">{formatDate(doc.expiryDate!)}</p>
+            </div>
+          );
+        })()}
       </td>
       <td className="px-4 py-3">
         {doc.notes ? (
@@ -1151,6 +1278,7 @@ export default function CollateralDocumentsContent() {
   const [search, setSearch] = useState('');
   const [filterDocType, setFilterDocType] = useState<string>('All');
   const [filterCollateral, setFilterCollateral] = useState<string>('All');
+  const [filterExpiryStatus, setFilterExpiryStatus] = useState<string>('All');
   const [showFilters, setShowFilters] = useState(false);
 
   // Modal state
@@ -1237,10 +1365,11 @@ export default function CollateralDocumentsContent() {
 
       const matchDocType = filterDocType === 'All' || doc.documentType === filterDocType;
       const matchCollateral = filterCollateral === 'All' || doc.collateralRecordId === filterCollateral;
+      const matchExpiryStatus = filterExpiryStatus === 'All' || getExpiryStatus(doc.expiryDate) === filterExpiryStatus;
 
-      return matchSearch && matchDocType && matchCollateral;
+      return matchSearch && matchDocType && matchCollateral && matchExpiryStatus;
     });
-  }, [latestDocs, search, filterDocType, filterCollateral]);
+  }, [latestDocs, search, filterDocType, filterCollateral, filterExpiryStatus]);
 
   // KPI counts
   const totalDocs = latestDocs.length;
@@ -1252,6 +1381,10 @@ export default function CollateralDocumentsContent() {
   const addedThisWeek = latestDocs.filter((d) => {
     const days = (Date.now() - new Date(d.createdAt).getTime()) / (1000 * 60 * 60 * 24);
     return days <= 7;
+  }).length;
+  const expiringOrExpired = latestDocs.filter((d) => {
+    const status = getExpiryStatus(d.expiryDate);
+    return status === 'expired' || status === 'expiring-soon';
   }).length;
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
@@ -1363,12 +1496,13 @@ export default function CollateralDocumentsContent() {
       </div>
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border-b border-border shrink-0">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-border border-b border-border shrink-0">
         {[
           { label: 'Total Documents', value: totalDocs, icon: FileText, color: 'text-primary' },
           { label: 'Linked Collaterals', value: linkedCollaterals, icon: Link2, color: 'text-emerald-600' },
           { label: 'With Revisions', value: versioned, icon: GitBranch, color: 'text-purple-600' },
           { label: 'Added This Week', value: addedThisWeek, icon: Clock, color: 'text-amber-600' },
+          { label: 'Expiring / Expired', value: expiringOrExpired, icon: AlertCircle, color: expiringOrExpired > 0 ? 'text-red-600' : 'text-muted-foreground' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white px-5 py-3 flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0`}>
@@ -1429,9 +1563,25 @@ export default function CollateralDocumentsContent() {
           <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         </div>
 
-        {(search || filterDocType !== 'All' || filterCollateral !== 'All') && (
+        {/* Expiry status filter */}
+        <div className="relative">
+          <select
+            value={filterExpiryStatus}
+            onChange={(e) => setFilterExpiryStatus(e.target.value)}
+            className="appearance-none border border-border rounded-lg pl-3 pr-8 py-2 text-sm text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="All">All Expiry Statuses</option>
+            <option value="expired">Expired</option>
+            <option value="expiring-soon">Expiring Soon</option>
+            <option value="valid">Valid</option>
+            <option value="none">Not Set</option>
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        </div>
+
+        {(search || filterDocType !== 'All' || filterCollateral !== 'All' || filterExpiryStatus !== 'All') && (
           <button
-            onClick={() => { setSearch(''); setFilterDocType('All'); setFilterCollateral('All'); }}
+            onClick={() => { setSearch(''); setFilterDocType('All'); setFilterCollateral('All'); setFilterExpiryStatus('All'); }}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <X size={12} /> Clear filters
@@ -1483,10 +1633,10 @@ export default function CollateralDocumentsContent() {
               <FolderOpen size={24} className="text-muted-foreground" />
             </div>
             <h3 className="text-base font-semibold text-foreground mb-1">
-              {search || filterDocType !== 'All' || filterCollateral !== 'All' ?'No documents match your filters' :'No documents uploaded yet'}
+              {search || filterDocType !== 'All' || filterCollateral !== 'All' || filterExpiryStatus !== 'All' ?'No documents match your filters' :'No documents uploaded yet'}
             </h3>
             <p className="text-sm text-muted-foreground max-w-xs">
-              {search || filterDocType !== 'All' || filterCollateral !== 'All' ?'Try adjusting your search or filter criteria.' :'Upload your first document using the button above.'}
+              {search || filterDocType !== 'All' || filterCollateral !== 'All' || filterExpiryStatus !== 'All' ?'Try adjusting your search or filter criteria.' :'Upload your first document using the button above.'}
             </p>
           </div>
         )}
@@ -1496,7 +1646,7 @@ export default function CollateralDocumentsContent() {
           <table className="w-full text-left">
             <thead className="sticky top-0 bg-muted/60 backdrop-blur-sm z-10">
               <tr>
-                {['Type', 'Collateral', 'Version', 'Uploaded', 'Notes', 'Actions'].map((h) => (
+                {['Type', 'Collateral', 'Version', 'Uploaded', 'Expiry', 'Notes', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                     {h}
                   </th>
@@ -1696,6 +1846,13 @@ export default function CollateralDocumentsContent() {
           }}
           onViewVersions={() => { handleViewVersions(viewerDoc); setViewerDoc(null); }}
           onDelete={() => { setDeleteModal(viewerDoc); setViewerDoc(null); }}
+          onUpdateExpiry={async (expiryDate) => {
+            const ok = await documentService.updateExpiryDate(viewerDoc.id, expiryDate);
+            if (ok) {
+              setViewerDoc((prev) => (prev ? { ...prev, expiryDate } : prev));
+              fetchData();
+            }
+          }}
           canDelete={canDelete}
         />
       )}

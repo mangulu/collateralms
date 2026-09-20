@@ -49,6 +49,7 @@ export interface CollateralDocument {
   rolledBackFromVersion?: number | null;
   rolledBackByName?: string | null;
   rolledBackAt?: string | null;
+  expiryDate?: string | null;
 }
 
 export interface DocumentVersionAudit {
@@ -88,6 +89,7 @@ function rowToDocument(row: any): CollateralDocument {
     rolledBackFromVersion: row.rolled_back_from_version ?? null,
     rolledBackByName: row.rolled_back_by_name ?? null,
     rolledBackAt: row.rolled_back_at ?? null,
+    expiryDate: row.expiry_date ?? null,
   };
 }
 
@@ -191,7 +193,8 @@ export const documentService = {
     documentType: DocumentType,
     notes: string,
     userId: string,
-    userName: string
+    userName: string,
+    expiryDate?: string | null
   ): Promise<{ doc: CollateralDocument; error?: never } | { doc?: never; error: string }> {
     const supabase = createClient();
     try {
@@ -249,6 +252,7 @@ export const documentService = {
           uploaded_by: userId,
           uploaded_by_name: userName,
           is_rollback: false,
+          expiry_date: expiryDate ?? null,
         })
         .select()
         .single();
@@ -295,6 +299,18 @@ export const documentService = {
       console.error('Document upload failed:', err.message);
       return { error: err.message || 'An unexpected error occurred during upload.' };
     }
+  },
+
+  /**
+   * Sets or clears the expiry date on an already-uploaded document.
+   */
+  async updateExpiryDate(docId: string, expiryDate: string | null): Promise<boolean> {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('collateral_documents')
+      .update({ expiry_date: expiryDate })
+      .eq('id', docId);
+    return !error;
   },
 
   /**
