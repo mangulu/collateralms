@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, RefreshCw, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
+import ContentproFooter from '@/components/ui/ContentproFooter';
 import { createClient } from '@/lib/supabase/client';
 
 interface ResetPasswordFormData {
@@ -241,6 +242,7 @@ export default function ResetPasswordPage() {
               </>
             )}
           </div>
+          <ContentproFooter />
         </div>
       </aside>
     </div>

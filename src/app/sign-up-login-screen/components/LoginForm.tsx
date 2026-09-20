@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, RefreshCw, ShieldCheck, BadgeCheck, Mail, ArrowLeft } from 'lucide-react';
 import AppLogo from '@/components/ui/AppLogo';
+import ContentproFooter from '@/components/ui/ContentproFooter';
 import { useAuth } from '@/contexts/AuthContext';
 import { createClient } from '@/lib/supabase/client';
 import Icon from '@/components/ui/AppIcon';
@@ -357,6 +358,7 @@ export default function LoginForm() {
                 </div>
               </div>
             </div>
+            <ContentproFooter />
           </div>
         </div>
       </div>
@@ -622,19 +624,7 @@ export default function LoginForm() {
               </div>
             </div>
 
-            <p className="mt-4 text-center text-xs" style={{ color: 'var(--izou-muted)' }}>
-              A product by{' '}
-              <a
-                href="https://www.contentpro.co.tz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold hover:underline"
-                style={{ color: 'var(--izou-primary)' }}
-              >
-                Contentpro
-              </a>
-              {' '}· Deployable for any bank
-            </p>
+            <ContentproFooter />
             <p className="mt-2 text-center text-xs">
               <Link
                 href="/glossary"
