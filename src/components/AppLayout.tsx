@@ -3,10 +3,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import GlobalSearch from './GlobalSearch';
-import { Menu, LogOut, CheckSquare, ChevronDown, AlertCircle, LayoutGrid, BookOpen, Library, FlaskConical, HelpCircle } from 'lucide-react';
+import { Menu, LogOut, CheckSquare, ChevronDown, AlertCircle, LayoutGrid, BookOpen, Library, FlaskConical, HelpCircle, Bell, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/lib/rbac';
 import { userTaskService, UserTask } from '@/lib/supabase/userTaskService';
+import { notificationsService, AppNotification } from '@/lib/supabase/notificationsService';
 import { getRoleGuideHref } from '@/app/guides/data/guideData';
 import { getPageHelp } from '@/lib/pageHelp';
 import PageHelpDrawer from './ui/PageHelpDrawer';
@@ -23,19 +25,34 @@ const priorityColor: Record<string, string> = {
   low: 'text-gray-400',
 };
 
+const notificationPriorityColor: Record<string, string> = {
+  high: 'text-red-600',
+  medium: 'text-orange-500',
+  low: 'text-gray-400',
+};
+
 export default function AppLayout({ children, currentPath }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [pageHelpOpen, setPageHelpOpen] = useState(false);
   const [tasks, setTasks] = useState<UserTask[]>([]);
   const [taskCount, setTaskCount] = useState(0);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const pathname = usePathname();
   const router = useRouter();
   const { userProfile, signOut } = useAuth();
+  const { isSystemAdmin } = usePermissions();
   const tasksRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  const unreadNotifications = notifications.filter(n => !n.isRead);
+  const unreadCount = unreadNotifications.length;
 
   const activePath = pathname || currentPath;
   const pageHelpContent = activePath ? getPageHelp(activePath) : null;
@@ -45,23 +62,22 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
       ? userProfile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
       : 'U');
   const displayName = userProfile?.full_name || userProfile?.email || 'User';
-  const displayRole = userProfile?.role
-    ? userProfile.role.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
-    : '';
 
-  // Fetch tasks for current user
+  // Fetch tasks + notifications for current user
   useEffect(() => {
     if (!userProfile?.id) return;
     let cancelled = false;
     async function load() {
       try {
-        const [myTasks, count] = await Promise.all([
+        const [myTasks, count, fetchedNotifications] = await Promise.all([
           userTaskService.getMyTasks(userProfile!.id),
           userTaskService.getPendingCount(userProfile!.id),
+          notificationsService.getAll(userProfile!.id).catch(() => []),
         ]);
         if (!cancelled) {
           setTasks(myTasks.filter(t => t.taskStatus === 'pending' || t.taskStatus === 'in_progress'));
           setTaskCount(count);
+          setNotifications(fetchedNotifications);
         }
       } catch { /* silent */ }
     }
@@ -78,6 +94,12 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
       }
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
+        setNotificationsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -161,52 +183,155 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
         </div>
       </div>
 
-      {/* Glossary icon */}
-      <div className="relative group">
-        <Link
-          href="/glossary"
+      {/* More menu: Glossary + (admin-only) Testing Guide */}
+      <div className="relative" ref={moreMenuRef}>
+        <button
+          onClick={() => { setMoreMenuOpen(o => !o); setTasksOpen(false); setUserMenuOpen(false); setNotificationsOpen(false); }}
           className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
           style={{ color: 'var(--izou-text-muted)', border: '1px solid var(--izou-border)' }}
-          onMouseOver={e => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)';
-          }}
-          onMouseOut={e => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-            (e.currentTarget as HTMLElement).style.color = 'var(--izou-text-muted)';
-          }}
+          onMouseOver={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)'; }}
+          onMouseOut={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-text-muted)'; }}
+          aria-label="More resources"
+          title="More"
         >
-          <Library size={16} />
-        </Link>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="text-white text-xs px-2 py-1 rounded-md whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
-            Glossary
+          <MoreHorizontal size={16} />
+        </button>
+        {moreMenuOpen && (
+          <div
+            className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg z-50 overflow-hidden"
+            style={{ backgroundColor: 'var(--izou-card)', border: '1px solid var(--izou-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+          >
+            <Link
+              href="/glossary"
+              onClick={() => setMoreMenuOpen(false)}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs transition-colors"
+              style={{ color: 'var(--izou-text)' }}
+              onMouseOver={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'}
+              onMouseOut={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'}
+            >
+              <Library size={13} />
+              Glossary
+            </Link>
+            {isSystemAdmin && (
+              <Link
+                href="/guides/testing"
+                onClick={() => setMoreMenuOpen(false)}
+                className="flex items-center gap-2 px-4 py-2.5 text-xs transition-colors"
+                style={{ color: 'var(--izou-text)', borderTop: '1px solid var(--izou-border)' }}
+                onMouseOver={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'}
+                onMouseOut={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'}
+              >
+                <FlaskConical size={13} />
+                Testing Guide
+              </Link>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Testing Guide icon */}
-      <div className="relative group">
-        <Link
-          href="/guides/testing"
-          className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+      {/* Notification Bell */}
+      <div className="relative" ref={notificationsRef}>
+        <button
+          onClick={() => { setNotificationsOpen(o => !o); setTasksOpen(false); setUserMenuOpen(false); setMoreMenuOpen(false); }}
+          className="relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
           style={{ color: 'var(--izou-text-muted)', border: '1px solid var(--izou-border)' }}
-          onMouseOver={e => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)';
-          }}
-          onMouseOut={e => {
-            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-            (e.currentTarget as HTMLElement).style.color = 'var(--izou-text-muted)';
-          }}
+          onMouseOver={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-primary)'; }}
+          onMouseOut={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--izou-text-muted)'; }}
+          aria-label="Notifications"
+          title="Notifications"
         >
-          <FlaskConical size={16} />
-        </Link>
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="text-white text-xs px-2 py-1 rounded-md whitespace-nowrap" style={{ backgroundColor: 'rgba(0,60,90,0.92)', backdropFilter: 'blur(8px)' }}>
-            Testing Guide
+          <Bell size={16} />
+          {unreadCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white text-[10px] font-bold leading-none min-w-[16px] h-[16px] px-1"
+              style={{ backgroundColor: 'var(--izou-primary)' }}
+            >
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+
+        {/* Notifications Dropdown */}
+        {notificationsOpen && (
+          <div
+            className="absolute right-0 top-full mt-2 w-80 rounded-xl shadow-lg z-50 overflow-hidden"
+            style={{
+              backgroundColor: 'var(--izou-card)',
+              border: '1px solid var(--izou-border)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }}
+          >
+            <div
+              className="px-4 py-3 flex items-center justify-between"
+              style={{ borderBottom: '1px solid var(--izou-border)' }}
+            >
+              <span className="text-sm font-semibold" style={{ color: 'var(--izou-text)' }}>
+                Notifications
+              </span>
+              <Link
+                href="/notifications-hub"
+                onClick={() => setNotificationsOpen(false)}
+                className="text-xs font-medium"
+                style={{ color: 'var(--izou-primary)' }}
+              >
+                View all
+              </Link>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto">
+              {unreadNotifications.length === 0 ? (
+                <div className="px-4 py-6 text-center">
+                  <Bell size={24} className="mx-auto mb-2 opacity-30" style={{ color: 'var(--izou-text-muted)' }} />
+                  <p className="text-xs" style={{ color: 'var(--izou-text-muted)' }}>No unread notifications</p>
+                </div>
+              ) : (
+                unreadNotifications.slice(0, 6).map(n => (
+                  <button
+                    key={n.id}
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      if (userProfile?.id) notificationsService.markRead(userProfile.id, n.id).catch(() => {});
+                      router.push(n.actionHref || '/notifications-hub');
+                    }}
+                    className="w-full text-left px-4 py-3 transition-colors"
+                    style={{ borderBottom: '1px solid var(--izou-border)' }}
+                    onMouseOver={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'}
+                    onMouseOut={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'}
+                  >
+                    <div className="flex items-start gap-2">
+                      <AlertCircle
+                        size={13}
+                        className={`mt-0.5 shrink-0 ${notificationPriorityColor[n.priority] ?? 'text-gray-400'}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate" style={{ color: 'var(--izou-text)' }}>
+                          {n.title}
+                        </p>
+                        <p className="text-xs mt-0.5 line-clamp-1" style={{ color: 'var(--izou-text-muted)' }}>
+                          {n.message}
+                        </p>
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--izou-text-muted)' }}>
+                          {new Date(n.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="px-4 py-2.5" style={{ borderTop: '1px solid var(--izou-border)' }}>
+              <Link
+                href="/notifications-hub"
+                onClick={() => setNotificationsOpen(false)}
+                className="block w-full text-center text-xs font-medium py-1.5 rounded-lg transition-colors"
+                style={{ color: 'var(--izou-primary)', backgroundColor: 'var(--izou-primary-light)' }}
+              >
+                Go to Notifications Hub
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Divider */}
@@ -215,7 +340,7 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
       {/* Tasks Pill */}
       <div className="relative" ref={tasksRef}>
         <button
-          onClick={() => { setTasksOpen(o => !o); setUserMenuOpen(false); }}
+          onClick={() => { setTasksOpen(o => !o); setUserMenuOpen(false); setMoreMenuOpen(false); setNotificationsOpen(false); }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
           style={{
             backgroundColor: taskCount > 0 ? 'var(--izou-primary)' : 'var(--izou-border)',
@@ -346,7 +471,7 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
       {/* User Avatar + Menu */}
       <div className="relative" ref={userMenuRef}>
         <button
-          onClick={() => { setUserMenuOpen(o => !o); setTasksOpen(false); }}
+          onClick={() => { setUserMenuOpen(o => !o); setTasksOpen(false); setMoreMenuOpen(false); setNotificationsOpen(false); }}
           className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors"
           style={{ border: '1px solid var(--izou-border)' }}
           onMouseOver={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--izou-primary-light)'}
@@ -360,11 +485,8 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
             {initials}
           </div>
           <div className="hidden sm:block text-left">
-            <p className="text-xs font-semibold leading-tight truncate max-w-[100px]" style={{ color: 'var(--izou-text)' }}>
+            <p className="text-xs font-semibold truncate max-w-[100px]" style={{ color: 'var(--izou-text)' }}>
               {displayName}
-            </p>
-            <p className="text-xs leading-tight truncate max-w-[100px]" style={{ color: 'var(--izou-text-muted)' }}>
-              {displayRole}
             </p>
           </div>
           <ChevronDown size={12} className={`shrink-0 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--izou-text-muted)' }} />
@@ -381,7 +503,6 @@ export default function AppLayout({ children, currentPath }: AppLayoutProps) {
           >
             <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--izou-border)' }}>
               <p className="text-xs font-semibold truncate" style={{ color: 'var(--izou-text)' }}>{displayName}</p>
-              <p className="text-xs truncate" style={{ color: 'var(--izou-text-muted)' }}>{displayRole}</p>
             </div>
             <Link
               href="/user-profile"

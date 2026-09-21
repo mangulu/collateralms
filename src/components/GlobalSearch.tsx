@@ -237,11 +237,29 @@ export default function GlobalSearch() {
     const found: DbResult[] = [];
 
     try {
-      const { data: cols } = await supabase
-        .from('collateral_records')
-        .select('id, collateral_id, obligor, collateral_type, status')
-        .or(`collateral_id.ilike.${term},obligor.ilike.${term},facility_id.ilike.${term}`)
-        .limit(4);
+      const [{ data: cols }, { data: docs }, { data: logs }, { data: users }] = await Promise.all([
+        supabase
+          .from('collateral_records')
+          .select('id, collateral_id, obligor, collateral_type, status')
+          .or(`collateral_id.ilike.${term},obligor.ilike.${term},facility_id.ilike.${term}`)
+          .limit(4),
+        supabase
+          .from('collateral_documents')
+          .select('id, file_name, document_type, collateral_id')
+          .or(`file_name.ilike.${term},document_type.ilike.${term}`)
+          .limit(3),
+        supabase
+          .from('audit_logs')
+          .select('id, action, message, collateral_id, performed_by_name')
+          .or(`message.ilike.${term},collateral_id.ilike.${term},performed_by_name.ilike.${term}`)
+          .order('created_at', { ascending: false })
+          .limit(3),
+        supabase
+          .from('user_profiles')
+          .select('id, full_name, email, role')
+          .or(`full_name.ilike.${term},email.ilike.${term}`)
+          .limit(3),
+      ]);
 
       (cols ?? []).forEach((r: any) => {
         found.push({
@@ -254,12 +272,6 @@ export default function GlobalSearch() {
         });
       });
 
-      const { data: docs } = await supabase
-        .from('collateral_documents')
-        .select('id, file_name, document_type, collateral_id')
-        .or(`file_name.ilike.${term},document_type.ilike.${term}`)
-        .limit(3);
-
       (docs ?? []).forEach((r: any) => {
         found.push({
           id: r.id, kind: 'db', type: 'document',
@@ -271,13 +283,6 @@ export default function GlobalSearch() {
         });
       });
 
-      const { data: logs } = await supabase
-        .from('audit_logs')
-        .select('id, action, message, collateral_id, performed_by_name')
-        .or(`message.ilike.${term},collateral_id.ilike.${term},performed_by_name.ilike.${term}`)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
       (logs ?? []).forEach((r: any) => {
         found.push({
           id: r.id, kind: 'db', type: 'audit',
@@ -288,12 +293,6 @@ export default function GlobalSearch() {
           badgeColor: 'bg-amber-100 text-amber-700',
         });
       });
-
-      const { data: users } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email, role')
-        .or(`full_name.ilike.${term},email.ilike.${term}`)
-        .limit(3);
 
       (users ?? []).forEach((r: any) => {
         found.push({

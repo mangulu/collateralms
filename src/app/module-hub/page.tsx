@@ -5,6 +5,7 @@ import { usePermissions, PERMISSIONS } from '@/lib/rbac';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 import { userTaskService } from '@/lib/supabase/userTaskService';
+import { notificationsService } from '@/lib/supabase/notificationsService';
 import CollateralLifecycleMap from './components/CollateralLifecycleMap';
 import CollateralRelationshipModal from './components/CollateralRelationshipModal';
 import { FolderOpen, Brain, Bell, BarChart2, ShieldCheck, Settings, LogOut, ChevronRight, Layers, Archive, Users, CheckSquare, BookOpen, HelpCircle, AlertTriangle, Clock, ArrowRight, Calendar, Activity, Zap, Search, ChevronDown, FlaskConical, Link2 } from 'lucide-react';
@@ -189,6 +190,7 @@ export default function ModuleHubPage() {
   const [priorityItems, setPriorityItems] = useState<PriorityItem[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
   const [taskCount, setTaskCount] = useState<number | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDismissed, setShowDismissed] = useState(false);
   const [showRelationshipMap, setShowRelationshipMap] = useState(false);
@@ -367,6 +369,19 @@ export default function ModuleHubPage() {
     fetchTaskCount();
   }, [userProfile?.id]);
 
+  useEffect(() => {
+    async function fetchUnreadCount() {
+      if (!userProfile?.id) return;
+      try {
+        const notifications = await notificationsService.getAll(userProfile.id);
+        setUnreadCount(notifications.filter((n) => !n.isRead).length);
+      } catch {
+        setUnreadCount(null);
+      }
+    }
+    fetchUnreadCount();
+  }, [userProfile?.id]);
+
   // ─── Helper functions ──────────────────────────────────────────────────────
 
   // Note: `color` stays a literal hex (not a CSS var) because it's alpha-suffixed
@@ -497,13 +512,13 @@ export default function ModuleHubPage() {
             style={{ color: 'var(--izou-muted)' }}
             onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.06)')}
             onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            onClick={() => router.push('/notifications')}
+            onClick={() => router.push('/notifications-hub')}
             aria-label="Notifications"
           >
             <Bell size={18} />
-            {taskCount !== null && taskCount > 0 && (
+            {unreadCount !== null && unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center rounded-full text-white text-[10px] font-bold leading-none min-w-[18px] h-[18px] px-1" style={{ backgroundColor: 'var(--izou-danger)' }}>
-                {taskCount > 9 ? '9+' : taskCount}
+                {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
@@ -822,11 +837,11 @@ export default function ModuleHubPage() {
             <Search size={20} />
             <span>Search</span>
           </button>
-          <button className="flex flex-col items-center gap-1 text-xs relative" style={{ color: 'var(--izou-muted)' }} onClick={() => router.push('/notifications')}>
+          <button className="flex flex-col items-center gap-1 text-xs relative" style={{ color: 'var(--izou-muted)' }} onClick={() => router.push('/notifications-hub')}>
             <Bell size={20} />
-            {taskCount !== null && taskCount > 0 && (
+            {unreadCount !== null && unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-white text-[10px] flex items-center justify-center" style={{ backgroundColor: 'var(--izou-danger)' }}>
-                {taskCount > 9 ? '9+' : taskCount}
+                {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
             <span>Alerts</span>
