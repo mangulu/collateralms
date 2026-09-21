@@ -103,14 +103,14 @@ export default function CollateralTypeChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" horizontal={false} />
             <XAxis
               type="number"
-              tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'Plus Jakarta Sans' }}
+              tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'IBM Plex Sans' }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               type="category"
               dataKey="type"
-              tick={{ fontSize: 11, fill: 'var(--izou-text)', fontFamily: 'Plus Jakarta Sans' }}
+              tick={{ fontSize: 11, fill: 'var(--izou-text)', fontFamily: 'IBM Plex Sans' }}
               axisLine={false}
               tickLine={false}
               width={58}

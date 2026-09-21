@@ -131,18 +131,18 @@ export default function PerfectionTrendChart() {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--izou-border)" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'Plus Jakarta Sans' }}
+                tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'IBM Plex Sans' }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'Plus Jakarta Sans' }}
+                tick={{ fontSize: 11, fill: 'var(--izou-muted)', fontFamily: 'IBM Plex Sans' }}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend
-                wrapperStyle={{ fontSize: '11px', paddingTop: '12px', fontFamily: 'Plus Jakarta Sans' }}
+                wrapperStyle={{ fontSize: '11px', paddingTop: '12px', fontFamily: 'IBM Plex Sans' }}
               />
               <Area
                 type="monotone"

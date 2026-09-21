@@ -28,7 +28,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
 
@@ -44,9 +44,9 @@ export default function RootLayout({
           position="bottom-right"
           toastOptions={{
             style: {
-              fontFamily: 'Plus Jakarta Sans, sans-serif',
+              fontFamily: 'IBM Plex Sans, sans-serif',
               fontSize: '14px',
-              borderRadius: '14px',
+              borderRadius: '8px',
               border: '1px solid var(--izou-border)',
             },
           }}
