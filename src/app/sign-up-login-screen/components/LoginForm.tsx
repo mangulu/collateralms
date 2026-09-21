@@ -276,6 +276,9 @@ export default function LoginForm() {
               <p className="mt-2 text-white/70 text-sm">EXIM Bank Tanzania</p>
             </div>
           </div>
+          <div className="relative z-10 pb-8">
+            <ContentproFooter variant="dark" />
+          </div>
         </div>
 
         {/* Mobile header (shown only on mobile) */}
@@ -438,6 +441,9 @@ export default function LoginForm() {
               </div>
             </div>
           </main>
+          <div className="relative z-10 pb-8">
+            <ContentproFooter variant="dark" />
+          </div>
         </div>
 
         {/* Mobile header (shown only on mobile) */}
