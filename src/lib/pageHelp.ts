@@ -182,8 +182,8 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
     ],
   },
   '/alerts-inbox': {
-    title: 'Alerts Inbox',
-    narrative: 'Alerts Inbox is your triage view over the SMS alerts the system has sent you — fraud detection, BRELA deadlines, approval requests, overdue collateral, and status changes — with the full message text and a link to the relevant record for each one. Alert Delivery Log is the separate place to check delivery status and retry failed sends for the same alerts.',
+    title: 'SMS Alerts',
+    narrative: 'SMS Alerts is your triage view over the SMS alerts the system has sent you — fraud detection, BRELA deadlines, approval requests, overdue collateral, and status changes — with the full message text and a link to the relevant record for each one. Alert Delivery Log is the separate place to check delivery status and retry failed sends for the same alerts.',
     steps: [
       'Use the type tabs, the read/unread filter, or search to find specific alerts',
       'Click an alert row to expand it and read the full message',
@@ -194,7 +194,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
   },
   '/alerts-delivery': {
     title: 'Alert Delivery Log',
-    narrative: "Alert Delivery Log tracks the outcome of every SMS alert the system has attempted to send — Sent, Delivered, Failed, or Pending — with the Twilio message ID and error detail for failures, plus a per-recipient send history. It's the ops view for whether alerts actually went out; Alerts Inbox is where you read the alerts sent to you.",
+    narrative: "Alert Delivery Log tracks the outcome of every SMS alert the system has attempted to send — Sent, Delivered, Failed, or Pending — with the Twilio message ID and error detail for failures, plus a per-recipient send history. It's the ops view for whether alerts actually went out; SMS Alerts is where you read the alerts sent to you.",
     steps: [
       'Use the status tabs (Sent, Delivered, Failed, Pending) or the alert-type filter to narrow the delivery history',
       'Click a row to expand it and see the full message, timestamps, Twilio message SID, and — for failures — the error detail',
@@ -509,7 +509,7 @@ export const PAGE_HELP: Record<string, PageHelpContent> = {
     title: 'Collateral Dashboard',
     narrative: 'The main portfolio landing page — KPI cards, a portfolio health bar, LTV/risk and obligor concentration panels, perfection trend and collateral-type charts, an overdue-items table, a recent activity feed, and a real-time monitoring section, all built from live data.',
     steps: [
-      'Use Quick Actions to jump straight to Add Collateral, Perfection Workflow, Compliance Audit, Alerts Inbox, Bulk Upload, or Reports',
+      'Use Quick Actions to jump straight to Add Collateral, Perfection Workflow, Compliance Audit, SMS Alerts, Bulk Upload, or Reports',
       'Click Refresh to reload every widget on the page at once, or Export for a 6-month perfection-rate PDF summary',
       'In Real-Time Monitoring at the bottom, switch between Volumes/Turnaround/Concentration/Delinquency — "Live" there just means polling every 30 seconds, not a push connection',
       'An escalation badge next to the page title links straight to Workflow Instances if a workflow step gets escalated while you\'re on the page',

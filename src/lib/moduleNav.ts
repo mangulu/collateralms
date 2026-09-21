@@ -155,7 +155,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
         label: 'Notifications',
         items: [
           { label: 'Notifications Hub', icon: Bell, href: '/notifications-hub', permission: PERMISSIONS.DASHBOARD_VIEW },
-          { label: 'Alerts Inbox', icon: Inbox, href: '/alerts-inbox', permission: PERMISSIONS.DASHBOARD_VIEW },
+          { label: 'SMS Alerts', icon: Inbox, href: '/alerts-inbox', permission: PERMISSIONS.DASHBOARD_VIEW },
           { label: 'Deadline Reminders', icon: AlarmClock, href: '/deadline-reminders', permission: PERMISSIONS.DASHBOARD_VIEW },
           { label: 'Alert Delivery Log', icon: SendHorizonal, href: '/alerts-delivery', permission: PERMISSIONS.DASHBOARD_VIEW },
           { label: 'SMS Notification Rules', icon: MessageSquare, href: '/sms-notification-rules', permission: PERMISSIONS.SETTINGS_VIEW },

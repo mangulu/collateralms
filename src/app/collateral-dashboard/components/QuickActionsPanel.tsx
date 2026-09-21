@@ -47,8 +47,8 @@ const actions: QuickAction[] = [
     iconStyle: { color: 'var(--izou-secondary)' },
   },
   {
-    label: 'Alerts Inbox',
-    description: 'View pending alerts & actions',
+    label: 'SMS Alerts',
+    description: 'View pending SMS alerts & actions',
     href: '/alerts-inbox',
     icon: AlertTriangle,
     iconBgStyle: { backgroundColor: 'var(--izou-warning-light)' },

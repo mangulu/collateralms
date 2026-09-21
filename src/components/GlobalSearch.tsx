@@ -76,7 +76,7 @@ const NAV_INDEX: NavResult[] = [
 
   // ── Alerts & Notifications ──
   { id: 'n-alt-hub', kind: 'screen', module: 'Alerts & Notifications', moduleId: 'alerts', label: 'Notifications Hub', description: 'Central hub for all system notifications', href: '/notifications-hub', icon: Bell, keywords: ['notifications', 'hub', 'alerts', 'messages'] },
-  { id: 'n-alt-inbox', kind: 'screen', module: 'Alerts & Notifications', moduleId: 'alerts', label: 'Alerts Inbox', description: 'Unread alerts requiring attention', href: '/alerts-inbox', icon: Inbox, keywords: ['alerts', 'inbox', 'unread'] },
+  { id: 'n-alt-inbox', kind: 'screen', module: 'Alerts & Notifications', moduleId: 'alerts', label: 'SMS Alerts', description: 'Unread SMS alerts requiring attention', href: '/alerts-inbox', icon: Inbox, keywords: ['alerts', 'inbox', 'unread', 'sms'] },
   { id: 'n-alt-remind', kind: 'screen', module: 'Alerts & Notifications', moduleId: 'alerts', label: 'Deadline Reminders', description: 'Upcoming deadline notifications', href: '/deadline-reminders', icon: AlarmClock, keywords: ['deadline', 'reminder', 'due', 'upcoming'] },
   { id: 'n-alt-log', kind: 'screen', module: 'Alerts & Notifications', moduleId: 'alerts', label: 'Alert Delivery Log', description: 'History of sent alert notifications', href: '/alerts-delivery', icon: SendHorizonal, keywords: ['delivery', 'log', 'sent', 'history'] },
 

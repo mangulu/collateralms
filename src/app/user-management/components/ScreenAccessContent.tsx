@@ -66,7 +66,7 @@ const ALL_SCREENS: ScreenDefinition[] = [
   { id: 'compliance_rules', label: 'Compliance Rules', path: '/compliance-rules', group: 'Intelligence', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.create, SCREEN_ACTIONS.edit, SCREEN_ACTIONS.delete] },
   // Alerts & Notifications
   { id: 'notifications_hub', label: 'Notifications Hub', path: '/notifications-hub', group: 'Alerts & Notifications', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.manage] },
-  { id: 'alerts_inbox', label: 'Alerts Inbox', path: '/alerts-inbox', group: 'Alerts & Notifications', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.manage] },
+  { id: 'alerts_inbox', label: 'SMS Alerts', path: '/alerts-inbox', group: 'Alerts & Notifications', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.manage] },
   { id: 'alerts_delivery', label: 'Alert Delivery Log', path: '/alerts-delivery', group: 'Alerts & Notifications', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.manage] },
   // Audit & Reports
   { id: 'audit_trail', label: 'Security & Compliance Trail', path: '/audit-trail', group: 'Audit & Reports', actions: [SCREEN_ACTIONS.view, SCREEN_ACTIONS.export] },

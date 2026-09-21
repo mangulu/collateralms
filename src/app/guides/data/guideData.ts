@@ -57,7 +57,7 @@ export const CREDIT_OFFICER_GUIDE: RoleGuide = {
     { label: 'LTV Monitoring', href: '/ltv-breach-alerts', icon: TrendingDown, why: 'Monitor assets where the loan-to-value ratio has exceeded thresholds.' },
     { label: 'Loan–Collateral Map', href: '/collateral-loan-visualization', icon: GitMerge, why: 'Visual network showing which loans are secured by which assets.' },
     { label: 'Approval Inbox', href: '/approval-inbox', icon: MailCheck, why: 'Track submissions you have sent for legal review and approval.' },
-    { label: 'Alerts Inbox', href: '/alerts-inbox', icon: Inbox, why: 'Operational alerts for expiry, LTV breaches, and overdue items.' },
+    { label: 'SMS Alerts', href: '/alerts-inbox', icon: Inbox, why: 'Operational alerts for expiry, LTV breaches, and overdue items.' },
     { label: 'Deadline Reminders', href: '/deadline-reminders', icon: AlarmClock, why: 'Upcoming collateral expiry and perfection deadlines.' },
     { label: 'My Tasks', href: '/my-tasks', icon: CheckSquare, why: 'Tasks assigned to you across all workflows.' },
     { label: 'Fast Track', href: '/fast-track', icon: Zap, why: 'Assign fast-track priority tiers to collateral items that need expedited processing.' },

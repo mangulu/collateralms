@@ -11,7 +11,7 @@ export default function AlertsInboxPage() {
   return (
     <AppLayout currentPath="/alerts-inbox">
       {!loading && !hasPermission(PERMISSIONS?.DASHBOARD_VIEW) ? (
-        <AccessDenied title="Alerts Inbox" />
+        <AccessDenied title="SMS Alerts" />
       ) : (
         <AlertsInboxContent />
       )}
