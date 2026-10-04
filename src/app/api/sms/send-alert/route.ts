@@ -8,6 +8,43 @@ const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+/**
+ * @swagger
+ * /api/sms/send-alert:
+ *   post:
+ *     tags: [SMS]
+ *     summary: Send an SMS alert via Twilio and log it to sms_alerts
+ *     description: Backs the "SMS Alerts" inbox page — this is the write path that creates the rows it later triages.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [to, message]
+ *             properties:
+ *               to: { type: string, description: Recipient phone number }
+ *               message: { type: string }
+ *               alertType: { type: string, default: OVERDUE_COLLATERAL, enum: [FRAUD_DETECTION, BRELA_DEADLINE, APPROVAL_REQUEST, OVERDUE_COLLATERAL] }
+ *               collateralId: { type: string, nullable: true }
+ *               recipientName: { type: string, nullable: true }
+ *               actionUrl: { type: string, nullable: true }
+ *     responses:
+ *       200:
+ *         description: Sent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 messageSid: { type: string }
+ *                 status: { type: string, enum: [SENT] }
+ *       400:
+ *         description: Missing to or message
+ *       500:
+ *         description: Twilio not configured, or the send failed (Twilio's own status code is mirrored where available)
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

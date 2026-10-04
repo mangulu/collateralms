@@ -106,6 +106,46 @@ const alertTypeLabel: Record<string, string> = {
 
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
+/**
+ * @swagger
+ * /api/audit-report/pdf:
+ *   post:
+ *     tags: [Reports]
+ *     summary: Generate a fraud/compliance audit PDF report
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [dateFrom, dateTo, fraudAlerts, ruleViolations, geoCollateral]
+ *             properties:
+ *               dateFrom: { type: string, format: date }
+ *               dateTo: { type: string, format: date }
+ *               fraudAlerts: { type: array, items: { type: object } }
+ *               ruleViolations: { type: array, items: { type: object } }
+ *               geoCollateral: { type: array, items: { type: object } }
+ *               summary:
+ *                 type: object
+ *                 nullable: true
+ *                 properties:
+ *                   totalFraudAlerts: { type: integer }
+ *                   highRiskAlerts: { type: integer }
+ *                   pendingReview: { type: integer }
+ *                   ruleViolations: { type: integer }
+ *                   activeViolations: { type: integer }
+ *                   geoCollateral: { type: integer }
+ *                   unverifiedLocations: { type: integer }
+ *                   reportDate: { type: string }
+ *     responses:
+ *       200:
+ *         description: Generated PDF
+ *         content:
+ *           application/pdf:
+ *             schema: { type: string, format: binary }
+ *       500:
+ *         description: Generation failed
+ */
 export async function POST(request: NextRequest) {
   try {
     const body: AuditReportRequest = await request.json();

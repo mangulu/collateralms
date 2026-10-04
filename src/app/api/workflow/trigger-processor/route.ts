@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient as createSessionClient } from '@/lib/supabase/server';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,21 +120,67 @@ function evaluateRule(rule: TriggerRule, collateral: CollateralRow): boolean {
 
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
+/**
+ * @swagger
+ * /api/workflow/trigger-processor:
+ *   post:
+ *     tags: [Workflow]
+ *     summary: Evaluate active workflow trigger rules against all collaterals and create matching workflow instances
+ *     description: >
+ *       Two valid ways to call this: (1) the x-trigger-secret header shown in the
+ *       security scheme below, for a future scheduler/cron integration, or (2) a
+ *       valid Supabase session cookie — this is how the app's own "Run Now" button
+ *       calls it, verified server-side via the caller's session rather than any
+ *       client-supplied header, so it can't be spoofed with a header value alone.
+ *     security:
+ *       - triggerSecret: []
+ *     responses:
+ *       200:
+ *         description: Run summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, enum: [success, partial, failed] }
+ *                 rulesEvaluated: { type: integer }
+ *                 rulesMatched: { type: integer }
+ *                 instancesCreated: { type: integer }
+ *                 instancesSkipped: { type: integer }
+ *                 errors: { type: integer }
+ *                 durationMs: { type: integer }
+ *                 detail: { type: array, items: { type: object } }
+ *       401:
+ *         description: "Neither a valid x-trigger-secret header nor an authenticated session was present"
+ *       500:
+ *         description: Run failed
+ */
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
-  // Validate secret header for cron/scheduler calls
+  // Scheduler path: a real secret, with no hardcoded fallback — if the env
+  // var isn't set, this path is simply unavailable rather than falling back
+  // to a well-known default string.
   const authHeader = req.headers.get('x-trigger-secret');
-  const expectedSecret = process.env.WORKFLOW_TRIGGER_SECRET ?? 'workflow-trigger-secret';
-  if (authHeader !== expectedSecret) {
-    // Also allow calls from the app itself (no secret needed for manual runs from UI)
-    const isManual = req.headers.get('x-trigger-source') === 'manual';
-    if (!isManual) {
+  const expectedSecret = process.env.WORKFLOW_TRIGGER_SECRET;
+  const hasValidSchedulerSecret = !!expectedSecret && authHeader === expectedSecret;
+
+  let triggeredBy: 'manual' | 'scheduler';
+  if (hasValidSchedulerSecret) {
+    triggeredBy = 'scheduler';
+  } else {
+    // Manual "Run Now" path: the UI never has the scheduler secret, so this
+    // is only valid for a genuinely logged-in app user — verified via the
+    // caller's own Supabase session cookie, not a client-supplied header
+    // (an `x-trigger-source: manual` header alone used to be enough here,
+    // which meant anyone could trigger a run with no credentials at all).
+    const sessionClient = await createSessionClient();
+    const { data: { user } } = await sessionClient.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    triggeredBy = 'manual';
   }
-
-  const triggeredBy = req.headers.get('x-trigger-source') === 'manual' ? 'manual' : 'scheduler';
 
   // Use service-role key for server-side operations
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -398,6 +445,25 @@ export async function POST(req: NextRequest) {
 
 // ─── GET: Fetch recent job logs ───────────────────────────────────────────────
 
+/**
+ * @swagger
+ * /api/workflow/trigger-processor:
+ *   get:
+ *     tags: [Workflow]
+ *     summary: Fetch the 50 most recent trigger-processor job log entries
+ *     description: No authentication — open to any caller.
+ *     responses:
+ *       200:
+ *         description: Recent job logs, newest first
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 logs: { type: array, items: { type: object } }
+ *       500:
+ *         description: Query failed
+ */
 export async function GET() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

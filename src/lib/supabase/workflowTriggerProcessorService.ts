@@ -66,12 +66,13 @@ export const workflowTriggerProcessorService = {
   /**
    * Manually invoke the trigger processor job from the UI.
    * Calls the Next.js API route which runs the full evaluation loop.
+   * Authenticated via the caller's own Supabase session cookie — fetch()
+   * sends it automatically, no extra header needed.
    */
   async runNow(): Promise<TriggerProcessorResult> {
     const res = await fetch('/api/workflow/trigger-processor', {
       method: 'POST',
       headers: {
-        'x-trigger-source': 'manual',
         'Content-Type': 'application/json',
       },
     });

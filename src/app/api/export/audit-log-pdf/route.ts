@@ -55,6 +55,35 @@ function addFooter(doc: any, pageWidth: number, pageHeight: number) {
   doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, pageWidth - 14, pageHeight - 3, { align: 'right' });
 }
 
+/**
+ * @swagger
+ * /api/export/audit-log-pdf:
+ *   post:
+ *     tags: [Exports]
+ *     summary: Export filtered audit log entries as a PDF
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               search: { type: string }
+ *               action: { type: string }
+ *               entityType: { type: string }
+ *               eventCategory: { type: string }
+ *               dateFrom: { type: string, format: date }
+ *               dateTo: { type: string, format: date }
+ *               performedBy: { type: string }
+ *               collateralId: { type: string }
+ *     responses:
+ *       200:
+ *         description: Generated PDF
+ *         content:
+ *           application/pdf:
+ *             schema: { type: string, format: binary }
+ *       500:
+ *         description: Generation failed
+ */
 export async function POST(request: NextRequest) {
   try {
     const body: AuditLogPdfRequest = await request.json();

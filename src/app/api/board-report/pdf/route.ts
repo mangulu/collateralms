@@ -142,6 +142,38 @@ const BOT_CONCENTRATION_LIMIT = 25;
 
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
+/**
+ * @swagger
+ * /api/board-report/pdf:
+ *   post:
+ *     tags: [Reports]
+ *     summary: Generate a board-level PDF report (NPL aging, provisions, stress tests, concentration)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reportDate, reportPeriod, generatedAt, nplAging, provisionReconciliation, stressTests, concentrationBreaches, valuationFlagSummary, portfolioStats]
+ *             properties:
+ *               reportDate: { type: string }
+ *               reportPeriod: { type: string }
+ *               generatedAt: { type: string }
+ *               nplAging: { type: object }
+ *               provisionReconciliation: { type: object }
+ *               stressTests: { type: array, items: { type: object } }
+ *               concentrationBreaches: { type: array, items: { type: object } }
+ *               valuationFlagSummary: { type: array, items: { type: object } }
+ *               portfolioStats: { type: object }
+ *     responses:
+ *       200:
+ *         description: Generated PDF
+ *         content:
+ *           application/pdf:
+ *             schema: { type: string, format: binary }
+ *       500:
+ *         description: Generation failed
+ */
 export async function POST(request: NextRequest) {
   try {
     const body: BoardReportRequest = await request.json();

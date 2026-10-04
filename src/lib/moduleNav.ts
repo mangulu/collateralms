@@ -4,7 +4,7 @@
  */
 
 import { PERMISSIONS } from '@/lib/rbac';
-import { FolderOpen, Files, Unlock, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, FolderArchive, ClipboardCheck, Eye, FileStack, FolderCheck, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, AlertTriangle, Thermometer, MapPin, HandCoins, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot, Trash2 } from 'lucide-react';
+import { FolderOpen, Files, Unlock, CalendarClock, GitMerge, ShieldAlert, ScanSearch, Target, Zap, Map, LineChart, TrendingUp, Activity, LayoutDashboard, Bell, Inbox, AlarmClock, SendHorizonal, BarChart2, BarChart3, Download, DatabaseZap, ScrollText, BookOpen, ShieldCheck, Radio, Scale, Users, Settings, Landmark, Archive, Building2, FolderArchive, ClipboardCheck, Eye, FileStack, FolderCheck, ArrowLeftRight, Shield, RefreshCw, MessageSquare, Mail, TrendingDown, FileCheck, Workflow, Layers, Settings2, AlertTriangle, Thermometer, MapPin, HandCoins, BookMarked, BookText, Layers2, Scissors, Flag, FlaskConical, ClipboardSignature, CheckSquare, MonitorDot, Trash2, FileCode } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface ModuleNavItem {
@@ -223,6 +223,7 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
           { label: 'User Management', icon: Users, href: '/user-management', permission: PERMISSIONS.USER_MANAGEMENT_VIEW },
           { label: 'Scheduled Jobs', icon: CalendarClock, href: '/scheduled-jobs', permission: PERMISSIONS.SETTINGS_VIEW },
           { label: 'System Settings', icon: Settings, href: '/settings', permission: PERMISSIONS.SETTINGS_VIEW },
+          { label: 'API Docs', icon: FileCode, href: '/api-docs', permission: PERMISSIONS.SETTINGS_VIEW },
         ],
       },
       {

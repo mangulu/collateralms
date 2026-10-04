@@ -53,6 +53,38 @@ function isSameUtcDate(a: string | null, b: Date): boolean {
   return d.getUTCFullYear() === b.getUTCFullYear() && d.getUTCMonth() === b.getUTCMonth() && d.getUTCDate() === b.getUTCDate();
 }
 
+/**
+ * @swagger
+ * /api/cron/send-scheduled-reports:
+ *   post:
+ *     tags: [Cron]
+ *     summary: Send due scheduled reports (pg_cron-triggered)
+ *     security:
+ *       - cronSecret: []
+ *     responses:
+ *       200:
+ *         description: Report configs checked and their results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 checked: { type: integer }
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       configId: { type: string }
+ *                       reportLabel: { type: string }
+ *                       sent: { type: integer }
+ *                       failed: { type: integer }
+ *                       skipped: { type: integer }
+ *       401:
+ *         description: Missing/invalid CRON_SECRET bearer token
+ *       500:
+ *         description: Server misconfigured or run failed
+ */
 export async function POST(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   const auth = request.headers.get('authorization');

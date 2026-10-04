@@ -19,6 +19,34 @@ function formatErrorResponse(error: unknown, provider?: string) {
   };
 }
 
+/**
+ * @swagger
+ * /api/ai/chat-completion:
+ *   post:
+ *     tags: [AI]
+ *     summary: Proxy a chat completion request to OpenAI/Anthropic/Gemini/Perplexity
+ *     description: Keeps provider API keys server-side. Streams via text/event-stream when stream is true.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [provider, model, messages]
+ *             properties:
+ *               provider: { type: string, enum: [OPEN_AI, ANTHROPIC, GEMINI, PERPLEXITY] }
+ *               model: { type: string }
+ *               messages: { type: array, items: { type: object } }
+ *               stream: { type: boolean, default: false }
+ *               parameters: { type: object }
+ *     responses:
+ *       200:
+ *         description: Completion result (JSON) or an SSE stream when stream=true
+ *       400:
+ *         description: Missing provider, model, or messages
+ *       500:
+ *         description: Provider error — status code mirrors the provider's own where available
+ */
 export async function POST(request: NextRequest) {
   let body: any = {};
 

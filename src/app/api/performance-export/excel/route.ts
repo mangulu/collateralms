@@ -565,6 +565,38 @@ function buildComplianceMetricsSheets(
 
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
+/**
+ * @swagger
+ * /api/performance-export/excel:
+ *   post:
+ *     tags: [Exports]
+ *     summary: Export a performance report as an Excel workbook
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reportType, dateFrom, dateTo]
+ *             properties:
+ *               reportType: { type: string, enum: [performance_summary, trend_analysis, compliance_metrics] }
+ *               dateFrom: { type: string, format: date }
+ *               dateTo: { type: string, format: date }
+ *               registries: { type: array, items: { type: string } }
+ *               includeSummary: { type: boolean }
+ *               includeCharts: { type: boolean }
+ *               includeBreakdown: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Generated Excel workbook
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema: { type: string, format: binary }
+ *       400:
+ *         description: Missing reportType, dateFrom, or dateTo, or invalid reportType
+ *       500:
+ *         description: Generation failed
+ */
 export async function POST(request: NextRequest) {
   try {
     const body: ExcelExportRequest = await request.json();

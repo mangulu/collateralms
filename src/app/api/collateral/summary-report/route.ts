@@ -104,6 +104,29 @@ function addKpiBoxes(
 
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
+/**
+ * @swagger
+ * /api/collateral/summary-report:
+ *   get:
+ *     tags: [Reports]
+ *     summary: Generate a single collateral record's summary PDF
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Collateral record UUID
+ *     responses:
+ *       200:
+ *         description: Generated PDF
+ *         content:
+ *           application/pdf:
+ *             schema: { type: string, format: binary }
+ *       400:
+ *         description: Missing id query param
+ *       404:
+ *         description: Collateral record not found
+ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const collateralRecordId = searchParams.get('id');

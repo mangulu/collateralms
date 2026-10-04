@@ -484,6 +484,40 @@ async function generateGenericPDF(records: any[], config: PdfRequestBody, report
 
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
+/**
+ * @swagger
+ * /api/export/pdf:
+ *   post:
+ *     tags: [Exports]
+ *     summary: Export a collateral registry report as PDF
+ *     description: reportType selects the report layout/content branch (e.g. registry, stakeholder summary); see src/app/export for the UI that drives this.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reportType, dateFrom, dateTo]
+ *             properties:
+ *               reportType: { type: string }
+ *               dateFrom: { type: string, format: date }
+ *               dateTo: { type: string, format: date }
+ *               registries: { type: array, items: { type: string } }
+ *               statuses: { type: array, items: { type: string } }
+ *               collateralTypes: { type: array, items: { type: string } }
+ *               includeCharts: { type: boolean }
+ *               includeSummary: { type: boolean }
+ *               includeDetails: { type: boolean }
+ *               stakeholderMode: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Generated PDF
+ *         content:
+ *           application/pdf:
+ *             schema: { type: string, format: binary }
+ *       500:
+ *         description: Generation failed
+ */
 export async function POST(request: NextRequest) {
   try {
     const body: PdfRequestBody = await request.json();

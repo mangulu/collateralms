@@ -61,12 +61,14 @@
     "leaflet": "1.9.4",
     "lucide-react": "^1.7.0",
     "next": "15.1.11",
+    "next-swagger-doc": "^0.5.0",
     "react": "19.0.3",
     "react-dom": "19.0.3",
     "react-hook-form": "^7.73.1",
     "react-hot-toast": "^2.6.0",
     "recharts": "^2.15.2",
     "sonner": "^1.7.4",
+    "swagger-ui-react": "^5.33.1",
     "xlsx": "0.18.5"
   },
   "devDependencies": {
@@ -77,6 +79,7 @@
     "@types/node": "^20",
     "@types/react": "19.0.3",
     "@types/react-dom": "19.0.3",
+    "@types/swagger-ui-react": "^5.18.0",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
     "@typescript-eslint/parser": "^8.29.0",
     "autoprefixer": "10.4.2",
